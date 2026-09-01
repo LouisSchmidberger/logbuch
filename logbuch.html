@@ -76,9 +76,13 @@
   .habit-options { display: flex; gap: 6px; flex-shrink: 0; }
 
   .opt-btn {
-    font-family: inherit; font-size: 12px; width: 28px; height: 28px; border-radius: 50%;
+    font-family: inherit; font-size: 12px; width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
     border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .opt-btn--text {
+    width: auto; min-width: 28px; height: 28px; border-radius: 14px; padding: 0 10px;
+    white-space: nowrap;
   }
   .opt-btn--selected { color: var(--paper); }
 
@@ -175,8 +179,8 @@ const HABITS = [
   { id: 'kraftsport', name: 'Kraftsport gemacht', type: 'bool' },
   { id: 'ausdauersport', name: 'Ausdauersport gemacht', type: 'bool' },
   { id: 'gelernt', name: 'Etwas Neues gelernt', type: 'bool' },
-  { id: 'gekifft', name: 'Gekifft', type: 'scale', min: 1, max: 5, good: 'low' },
-  { id: 'gevaped', name: 'Gevaped', type: 'scale', min: 1, max: 5, good: 'low' },
+  { id: 'gekifft', name: 'Gekifft', type: 'scale', min: 0, max: 2, good: 'low', labels: ['Nein', 'Ein bisschen', 'Ja'] },
+  { id: 'gevaped', name: 'Gevaped', type: 'scale', min: 0, max: 2, good: 'low', labels: ['Nein', 'Ein bisschen', 'Ja'] },
   { id: 'sex', name: 'Sex gehabt', type: 'bool' },
   { id: 'gefuehlslage', name: 'Gefühlslage', type: 'scale', min: 1, max: 5, good: 'high' },
   { id: 'guterTag', name: 'Guter Tag', type: 'scale', min: 1, max: 5, good: 'high' },
@@ -420,14 +424,16 @@ function renderAuth() {
 function renderHabitOptions(habit, value) {
   const options = habit.type === 'bool'
     ? [[false, 'Nein'], [true, 'Ja']]
-    : Array.from({ length: habit.max - habit.min + 1 }, (_, i) => habit.min + i).map((n) => [n, String(n)]);
+    : Array.from({ length: habit.max - habit.min + 1 }, (_, i) => habit.min + i)
+        .map((n, i) => [n, habit.labels ? habit.labels[i] : String(n)]);
 
   return options.map(([v, label]) => {
     const selected = value === v;
     const score = normalize(habit, v);
     const style = selected ? `background:${scoreColor(score)};border-color:${scoreColor(score)};` : '';
-    return `<button type="button" class="opt-btn${selected ? ' opt-btn--selected' : ''}" style="${style}"
-      data-action="select" data-habit="${habit.id}" data-value='${JSON.stringify(v)}' aria-pressed="${selected}">${label}</button>`;
+    const isText = label.length > 1;
+    return `<button type="button" class="opt-btn${isText ? ' opt-btn--text' : ''}${selected ? ' opt-btn--selected' : ''}" style="${style}"
+      data-action="select" data-habit="${habit.id}" data-value='${JSON.stringify(v)}' aria-pressed="${selected}">${esc(label)}</button>`;
   }).join('');
 }
 
@@ -652,6 +658,31 @@ app.addEventListener('keydown', (e) => {
     handleSaveWeight(formatKey(state.currentDate), e.target.value);
   }
 });
+
+// --- Swipe-Navigation (Heute-Ansicht: vorheriger/nächster Tag) ------------
+let touchStartX = null;
+let touchStartY = null;
+const SWIPE_THRESHOLD = 50;
+
+app.addEventListener('touchstart', (e) => {
+  if (state.view !== 'today' || e.touches.length !== 1) return;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+app.addEventListener('touchend', (e) => {
+  if (touchStartX === null || state.view !== 'today') return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  touchStartX = null;
+  touchStartY = null;
+  if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+  const dir = dx < 0 ? 1 : -1;
+  const isToday = formatKey(state.currentDate) === formatKey(new Date());
+  if (dir === 1 && isToday) return; // nicht in die Zukunft
+  state.currentDate = addDays(state.currentDate, dir);
+  render();
+}, { passive: true });
 
 // --- Auth-Status & Start ---------------------------------------------------
 supabase.auth.onAuthStateChange(async (_event, session) => {
