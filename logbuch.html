@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Logbuch</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  :root {
+    --paper: #eae7df;
+    --ink: #24261f;
+    --line: #c7c1b2;
+    --moss: #4b6b4f;
+    --rust: #a2503a;
+    --sand: #8c8371;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 20px 18px 40px;
+  }
+
+  .header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; }
+  .header h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 22px; margin: 0; }
+  .logout-btn { background: none; border: none; color: var(--sand); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
+
+  .push-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink); background: rgba(75,107,79,0.08); border: 1px solid var(--line); border-radius: 3px; padding: 7px 10px; margin-bottom: 16px; }
+  .push-row--muted { color: var(--sand); background: transparent; }
+  .push-toggle { background: none; border: none; color: var(--moss); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
+
+  .tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+  .tab {
+    background: none; border: none; padding: 6px 0 10px; font-family: inherit; font-size: 14px;
+    color: var(--sand); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tab--active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+
+  .day-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .nav-btn {
+    background: none; border: 1px solid var(--line); border-radius: 50%; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center; color: var(--ink); cursor: pointer; font-size: 15px;
+  }
+  .nav-btn:disabled { opacity: 0.35; cursor: default; }
+  .day-label { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .day-weekday { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; }
+  .day-date { font-size: 12px; color: var(--sand); }
+
+  .today-jump {
+    display: block; margin: 0 auto 14px; background: none; border: none; color: var(--moss);
+    font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0;
+  }
+
+  .habit-list { display: flex; flex-direction: column; }
+  .habit-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 11px 0; border-bottom: 1px solid var(--line);
+  }
+  .habit-row:first-child { border-top: 1px solid var(--line); }
+  .habit-name { font-size: 13px; line-height: 1.35; flex: 1; }
+  .habit-options { display: flex; gap: 6px; flex-shrink: 0; }
+
+  .opt-btn {
+    font-family: inherit; font-size: 12px; width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .opt-btn--selected { color: var(--paper); }
+
+  .reset-btn {
+    display: block; margin: 18px auto 0; background: none; border: none; color: var(--sand);
+    font-family: inherit; font-size: 12px; cursor: pointer; text-decoration: underline;
+  }
+
+  .weight-box {
+    border: 1px solid var(--line); border-radius: 4px; padding: 12px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .weight-box label { font-size: 13px; flex: 1; }
+  .weight-box .weight-last { display: block; font-size: 11px; color: var(--sand); margin-top: 2px; }
+  .weight-input {
+    width: 72px; font-family: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--line);
+    border-radius: 3px; background: #fff; color: var(--ink);
+  }
+  .weight-save {
+    font-family: inherit; font-size: 12px; padding: 7px 10px; border: 1px solid var(--ink);
+    border-radius: 3px; background: var(--ink); color: var(--paper); cursor: pointer;
+  }
+
+  .grid-scroll { overflow-x: auto; }
+  .grid-table { min-width: 440px; }
+  .grid-row { display: grid; grid-template-columns: 108px repeat(7, 1fr) 40px; align-items: center; }
+  .grid-row--header { padding-bottom: 6px; }
+  .grid-label { font-size: 11px; padding-right: 6px; line-height: 1.25; }
+  .grid-col-header { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: var(--sand); }
+  .grid-col-date { font-size: 11px; color: var(--ink); }
+  .grid-col-header--avg { font-family: 'Fraunces', serif; font-style: italic; color: var(--ink); }
+  .grid-cell { height: 22px; margin: 2px; border-radius: 2px; border: 1px solid var(--line); }
+  .grid-cell--avg { display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--paper); font-weight: 600; }
+
+  .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 20px; }
+  .month-weekday { font-size: 10px; color: var(--sand); text-align: center; padding-bottom: 4px; }
+  .month-cell { aspect-ratio: 1; border-radius: 3px; border: 1px solid var(--line); display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px; }
+  .month-cell--empty { border: none; }
+  .month-cell-num { font-size: 10px; color: var(--ink); mix-blend-mode: multiply; }
+
+  .month-stats { border-top: 1px solid var(--line); padding-top: 8px; }
+  .month-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .month-stat-value { font-weight: 600; }
+  .month-stat-count { font-weight: 400; color: var(--sand); }
+
+  .notice {
+    font-size: 12px; padding: 8px 10px; border-radius: 3px; margin-bottom: 14px;
+    background: rgba(162, 80, 58, 0.12); color: var(--rust); border: 1px solid rgba(162, 80, 58, 0.3);
+  }
+  .notice--ok { background: rgba(75, 107, 79, 0.12); color: var(--moss); border-color: rgba(75, 107, 79, 0.3); }
+  .loading { font-size: 13px; color: var(--sand); padding: 40px 0; text-align: center; }
+
+  .auth-box { max-width: 320px; margin: 60px auto; }
+  .auth-box h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 24px; margin: 0 0 4px; text-align: center; }
+  .auth-box p.sub { font-size: 12px; color: var(--sand); text-align: center; margin: 0 0 24px; }
+  .auth-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  .auth-field label { font-size: 12px; color: var(--sand); }
+  .auth-field input {
+    font-family: inherit; font-size: 14px; padding: 9px 10px; border: 1px solid var(--line);
+    border-radius: 3px; background: #fff; color: var(--ink);
+  }
+  .auth-submit {
+    width: 100%; padding: 10px; margin-top: 8px; font-family: inherit; font-size: 14px; font-weight: 600;
+    background: var(--ink); color: var(--paper); border: none; border-radius: 3px; cursor: pointer;
+  }
+  .auth-toggle { display: block; margin: 14px auto 0; background: none; border: none; color: var(--moss); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; text-align: center; width: 100%; }
+</style>
+</head>
+<body>
+<div id="app"><div class="loading">Lädt …</div></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// --- Konfiguration -----------------------------------------------------
+const SUPABASE_URL = 'https://qdadoqcnqmrauhshvcts.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_c8VJ-dqy-WD_y01aQy1Dzw_LJE-Ornr';
+const VAPID_PUBLIC_KEY = 'BNkzoYzP_rabpS-PHqGiZuWlBvrmu5tdjWEOLDZFzEFyA9AThNrUZDTU3yYF2hUXb7sNb2alqB0FHvnbvilxjlU';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+}
+
+// --- Habit-Definitionen --------------------------------------------------
+const HABITS = [
+  { id: 'morgenroutine', name: 'Morgenroutine', type: 'scale', min: 1, max: 5, good: 'high' },
+  { id: 'zaehne', name: 'Zähne geputzt', type: 'scale', min: 1, max: 3, good: 'high' },
+  { id: 'ernaehrung', name: 'Gesund ernährt', type: 'scale', min: 1, max: 5, good: 'high' },
+  { id: 'getrunken', name: 'Genug getrunken', type: 'scale', min: 1, max: 5, good: 'high' },
+  { id: 'kraftsport', name: 'Kraftsport gemacht', type: 'bool' },
+  { id: 'ausdauersport', name: 'Ausdauersport gemacht', type: 'bool' },
+  { id: 'gelernt', name: 'Etwas Neues gelernt', type: 'bool' },
+  { id: 'gekifft', name: 'Gekifft', type: 'scale', min: 1, max: 5, good: 'low' },
+  { id: 'gevaped', name: 'Gevaped', type: 'scale', min: 1, max: 5, good: 'low' },
+  { id: 'sex', name: 'Sex gehabt', type: 'bool' },
+  { id: 'gefuehlslage', name: 'Gefühlslage', type: 'scale', min: 1, max: 5, good: 'high' },
+  { id: 'guterTag', name: 'Guter Tag', type: 'scale', min: 1, max: 5, good: 'high' },
+  { id: 'bettzeit', name: 'Ins Bett zur geplanten Zeit', type: 'bool' },
+];
+
+const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+const WEEKDAYS_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+
+// --- Datum-Helfer ----------------------------------------------------------
+function formatKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+function startOfDay(date) { const d = new Date(date); d.setHours(0, 0, 0, 0); return d; }
+function startOfWeek(date) { const d = startOfDay(date); const off = (d.getDay() + 6) % 7; d.setDate(d.getDate() - off); return d; }
+function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
+
+// 0 = schlechtester, 1 = bester Wert
+function normalize(habit, value) {
+  if (value === undefined || value === null) return null;
+  if (habit.type === 'bool') return value ? 1 : 0;
+  const raw = (value - habit.min) / (habit.max - habit.min);
+  return habit.good === 'low' ? 1 - raw : raw;
+}
+function scoreColor(score) {
+  if (score === null || score === undefined) return 'transparent';
+  const rust = [162, 80, 58], sand = [150, 142, 124], moss = [75, 107, 79];
+  let c;
+  if (score < 0.5) { const t = score / 0.5; c = rust.map((v, i) => Math.round(v + (sand[i] - v) * t)); }
+  else { const t = (score - 0.5) / 0.5; c = sand.map((v, i) => Math.round(v + (moss[i] - v) * t)); }
+  return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+}
+
+// --- App-State ---------------------------------------------------------
+const state = {
+  session: null,
+  entries: {},       // { 'YYYY-MM-DD': { habitId: value, ... } }
+  loading: true,
+  notice: null,       // { type: 'error'|'ok', text }
+  view: 'today',
+  currentDate: startOfDay(new Date()),
+  weekAnchor: startOfWeek(new Date()),
+  monthAnchor: (() => { const d = startOfDay(new Date()); d.setDate(1); return d; })(),
+  authMode: 'signin', // 'signin' | 'signup'
+  authError: null,
+  pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy'
+};
+
+const app = document.getElementById('app');
+
+function esc(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// --- Datenzugriff --------------------------------------------------------
+async function loadEntries() {
+  const { data, error } = await supabase.from('habit_entries').select('entry_date, data');
+  if (error) {
+    state.notice = { type: 'error', text: 'Einträge konnten nicht geladen werden: ' + error.message };
+    return;
+  }
+  const map = {};
+  for (const row of data) map[row.entry_date] = row.data || {};
+  state.entries = map;
+}
+
+async function saveDay(dateKey, dayData) {
+  const { error } = await supabase
+    .from('habit_entries')
+    .upsert({ user_id: state.session.user.id, entry_date: dateKey, data: dayData }, { onConflict: 'user_id,entry_date' });
+  if (error) {
+    state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + error.message };
+    render();
+  }
+}
+
+function handleSelect(dateKey, habitId, value) {
+  const day = { ...(state.entries[dateKey] || {}) };
+  if (day[habitId] === value) delete day[habitId];
+  else day[habitId] = value;
+  state.entries = { ...state.entries, [dateKey]: day };
+  render();
+  saveDay(dateKey, day);
+}
+
+function handleReset(dateKey) {
+  state.entries = { ...state.entries, [dateKey]: {} };
+  render();
+  saveDay(dateKey, {});
+}
+
+function handleSaveWeight(dateKey, rawValue) {
+  const day = { ...(state.entries[dateKey] || {}) };
+  const trimmed = String(rawValue).trim().replace(',', '.');
+  if (trimmed === '') {
+    delete day.weight;
+  } else {
+    const num = parseFloat(trimmed);
+    if (Number.isNaN(num)) {
+      state.notice = { type: 'error', text: 'Das ist keine gültige Zahl für das Gewicht.' };
+      render();
+      return;
+    }
+    day.weight = num;
+  }
+  state.entries = { ...state.entries, [dateKey]: day };
+  render();
+  saveDay(dateKey, day);
+}
+
+function findLastWeight(beforeOrOnDateKey) {
+  const keys = Object.keys(state.entries)
+    .filter((k) => k <= beforeOrOnDateKey && state.entries[k]?.weight !== undefined)
+    .sort();
+  if (!keys.length) return null;
+  const lastKey = keys[keys.length - 1];
+  return { dateKey: lastKey, value: state.entries[lastKey].weight };
+}
+
+// --- Push-Benachrichtigungen ------------------------------------------
+async function checkPushStatus() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    state.pushStatus = 'unsupported';
+    return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.register('./sw.js');
+    const sub = await reg.pushManager.getSubscription();
+    state.pushStatus = sub ? 'on' : 'off';
+  } catch {
+    state.pushStatus = 'unsupported';
+  }
+}
+
+async function enablePush() {
+  state.pushStatus = 'busy';
+  render();
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      state.pushStatus = 'off';
+      state.notice = { type: 'error', text: 'Ohne Benachrichtigungs-Erlaubnis im Browser geht das leider nicht.' };
+      render();
+      return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+    const json = sub.toJSON();
+    const { error } = await supabase.from('push_subscriptions').upsert(
+      {
+        user_id: state.session.user.id,
+        endpoint: json.endpoint,
+        p256dh: json.keys.p256dh,
+        auth_key: json.keys.auth,
+      },
+      { onConflict: 'endpoint' }
+    );
+    if (error) throw error;
+    state.pushStatus = 'on';
+    state.notice = { type: 'ok', text: 'Erinnerungen sind aktiv.' };
+  } catch (err) {
+    state.pushStatus = 'off';
+    state.notice = { type: 'error', text: 'Aktivieren fehlgeschlagen: ' + (err.message || err) };
+  }
+  render();
+}
+
+async function disablePush() {
+  state.pushStatus = 'busy';
+  render();
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+      await sub.unsubscribe();
+    }
+    state.pushStatus = 'off';
+  } catch (err) {
+    state.notice = { type: 'error', text: 'Deaktivieren fehlgeschlagen: ' + (err.message || err) };
+  }
+  render();
+}
+
+// --- Rendering: Auth -------------------------------------------------------
+function renderAuth() {
+  const isSignup = state.authMode === 'signup';
+  app.innerHTML = `
+    <div class="auth-box">
+      <h1>Logbuch</h1>
+      <p class="sub">${isSignup ? 'Neuen Account anlegen' : 'Anmelden'}</p>
+      ${state.authError ? `<div class="notice">${esc(state.authError)}</div>` : ''}
+      ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+      <form id="auth-form">
+        <div class="auth-field">
+          <label for="email">E-Mail</label>
+          <input type="email" id="email" required autocomplete="email" />
+        </div>
+        <div class="auth-field">
+          <label for="password">Passwort</label>
+          <input type="password" id="password" required autocomplete="${isSignup ? 'new-password' : 'current-password'}" minlength="6" />
+        </div>
+        <button type="submit" class="auth-submit">${isSignup ? 'Account erstellen' : 'Anmelden'}</button>
+      </form>
+      <button type="button" class="auth-toggle" data-action="toggle-auth-mode">
+        ${isSignup ? 'Schon einen Account? Anmelden' : 'Noch keinen Account? Registrieren'}
+      </button>
+    </div>
+  `;
+
+  document.getElementById('auth-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    state.authError = null;
+    state.notice = null;
+    if (isSignup) {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) { state.authError = error.message; render(); return; }
+      if (!data.session) {
+        state.notice = { type: 'ok', text: 'Fast fertig: Bestätige deine E-Mail über den Link, den wir dir geschickt haben, und melde dich dann an.' };
+        state.authMode = 'signin';
+        render();
+        return;
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) { state.authError = error.message; render(); return; }
+    }
+  });
+}
+
+// --- Rendering: Habit-Row ---------------------------------------------
+function renderHabitOptions(habit, value) {
+  const options = habit.type === 'bool'
+    ? [[false, 'Nein'], [true, 'Ja']]
+    : Array.from({ length: habit.max - habit.min + 1 }, (_, i) => habit.min + i).map((n) => [n, String(n)]);
+
+  return options.map(([v, label]) => {
+    const selected = value === v;
+    const score = normalize(habit, v);
+    const style = selected ? `background:${scoreColor(score)};border-color:${scoreColor(score)};` : '';
+    return `<button type="button" class="opt-btn${selected ? ' opt-btn--selected' : ''}" style="${style}"
+      data-action="select" data-habit="${habit.id}" data-value='${JSON.stringify(v)}' aria-pressed="${selected}">${label}</button>`;
+  }).join('');
+}
+
+// --- Rendering: Today ----------------------------------------------------
+function renderToday() {
+  const dateKey = formatKey(state.currentDate);
+  const isToday = dateKey === formatKey(new Date());
+  const dayEntry = state.entries[dateKey] || {};
+  const currentWeight = dayEntry.weight !== undefined ? dayEntry.weight : '';
+  const lastWeight = findLastWeight(dateKey);
+  const lastWeightNote =
+    lastWeight && lastWeight.dateKey !== dateKey
+      ? `zuletzt: ${lastWeight.value} kg (${lastWeight.dateKey.split('-').reverse().join('.')})`
+      : '';
+
+  return `
+    <div class="day-nav">
+      <button type="button" class="nav-btn" data-action="nav-day" data-dir="-1" aria-label="Vorheriger Tag">‹</button>
+      <div class="day-label">
+        <span class="day-weekday">${WEEKDAYS_FULL[(state.currentDate.getDay() + 6) % 7]}</span>
+        <span class="day-date">${state.currentDate.getDate()}. ${MONTHS[state.currentDate.getMonth()]} ${state.currentDate.getFullYear()}</span>
+      </div>
+      <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" ${isToday ? 'disabled' : ''} aria-label="Nächster Tag">›</button>
+    </div>
+    ${!isToday ? `<button type="button" class="today-jump" data-action="jump-today">Zu heute springen</button>` : ''}
+    <div class="weight-box">
+      <label for="weight-input">Gewicht (kg)${lastWeightNote ? `<span class="weight-last">${esc(lastWeightNote)}</span>` : ''}</label>
+      <input type="number" inputmode="decimal" step="0.1" min="20" max="300" id="weight-input" class="weight-input" value="${esc(currentWeight)}" />
+      <button type="button" class="weight-save" data-action="save-weight">Speichern</button>
+    </div>
+    <div class="habit-list">
+      ${HABITS.map((h) => `
+        <div class="habit-row">
+          <span class="habit-name">${esc(h.name)}</span>
+          <div class="habit-options">${renderHabitOptions(h, dayEntry[h.id])}</div>
+        </div>
+      `).join('')}
+    </div>
+    <button type="button" class="reset-btn" data-action="reset-day">Tag zurücksetzen</button>
+  `;
+}
+
+// --- Rendering: Week -----------------------------------------------------
+function renderWeek() {
+  const days = Array.from({ length: 7 }, (_, i) => addDays(state.weekAnchor, i));
+  const rows = HABITS.map((h) => {
+    const scores = days.map((d) => normalize(h, state.entries[formatKey(d)]?.[h.id]));
+    const valid = scores.filter((s) => s !== null);
+    const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
+    return `
+      <div class="grid-row">
+        <div class="grid-label">${esc(h.name)}</div>
+        ${scores.map((s) => `<div class="grid-cell" style="background:${scoreColor(s)}"></div>`).join('')}
+        <div class="grid-cell grid-cell--avg" style="background:${scoreColor(avg)}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="day-nav">
+      <button type="button" class="nav-btn" data-action="nav-week" data-dir="-1" aria-label="Vorherige Woche">‹</button>
+      <div class="day-label"><span class="day-date">${days[0].getDate()}. ${MONTHS[days[0].getMonth()]} – ${days[6].getDate()}. ${MONTHS[days[6].getMonth()]}</span></div>
+      <button type="button" class="nav-btn" data-action="nav-week" data-dir="1" aria-label="Nächste Woche">›</button>
+    </div>
+    <div class="grid-scroll">
+      <div class="grid-table">
+        <div class="grid-row grid-row--header">
+          <div class="grid-label"></div>
+          ${days.map((d) => `<div class="grid-col-header"><span>${WEEKDAYS[(d.getDay() + 6) % 7]}</span><span class="grid-col-date">${d.getDate()}</span></div>`).join('')}
+          <div class="grid-col-header grid-col-header--avg">Ø</div>
+        </div>
+        ${rows}
+      </div>
+    </div>
+  `;
+}
+
+// --- Rendering: Month ------------------------------------------------------
+function renderMonth() {
+  const year = state.monthAnchor.getFullYear();
+  const month = state.monthAnchor.getMonth();
+  const first = new Date(year, month, 1);
+  const startOffset = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const cells = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+
+  function overallScore(date) {
+    const day = state.entries[formatKey(date)];
+    if (!day) return null;
+    const scores = HABITS.map((h) => normalize(h, day[h.id])).filter((s) => s !== null);
+    if (!scores.length) return null;
+    return scores.reduce((a, b) => a + b, 0) / scores.length;
+  }
+
+  const monthStats = HABITS.map((h) => {
+    let sum = 0, count = 0;
+    cells.forEach((d) => {
+      if (!d) return;
+      const s = normalize(h, state.entries[formatKey(d)]?.[h.id]);
+      if (s !== null) { sum += s; count++; }
+    });
+    return { habit: h, avg: count ? sum / count : null, count };
+  });
+
+  return `
+    <div class="day-nav">
+      <button type="button" class="nav-btn" data-action="nav-month" data-dir="-1" aria-label="Vorheriger Monat">‹</button>
+      <div class="day-label"><span class="day-date">${MONTHS[month]} ${year}</span></div>
+      <button type="button" class="nav-btn" data-action="nav-month" data-dir="1" aria-label="Nächster Monat">›</button>
+    </div>
+    <div class="month-grid">
+      ${WEEKDAYS.map((w) => `<div class="month-weekday">${w}</div>`).join('')}
+      ${cells.map((d) => {
+        if (!d) return `<div class="month-cell month-cell--empty"></div>`;
+        const s = overallScore(d);
+        return `<div class="month-cell" style="background:${scoreColor(s)}"><span class="month-cell-num">${d.getDate()}</span></div>`;
+      }).join('')}
+    </div>
+    <div class="month-stats">
+      ${monthStats.map(({ habit, avg, count }) => `
+        <div class="month-stat-row">
+          <span class="habit-name">${esc(habit.name)}</span>
+          <span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : scoreColor(avg)}">${avg !== null ? Math.round(avg * 100) + '%' : '–'} <span class="month-stat-count">(${count}×)</span></span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// --- Rendering: Haupt-App --------------------------------------------------
+function renderPushRow() {
+  if (state.pushStatus === 'unsupported') {
+    return `<div class="push-row push-row--muted">Erinnerungen werden von diesem Browser nicht unterstützt.</div>`;
+  }
+  if (state.pushStatus === 'unknown' || state.pushStatus === 'busy') {
+    return `<div class="push-row push-row--muted">Erinnerungsstatus wird geprüft …</div>`;
+  }
+  if (state.pushStatus === 'on') {
+    return `<div class="push-row">🔔 Erinnerungen aktiv <button type="button" class="push-toggle" data-action="disable-push">deaktivieren</button></div>`;
+  }
+  return `<div class="push-row">🔕 Keine Erinnerungen <button type="button" class="push-toggle" data-action="enable-push">aktivieren</button></div>`;
+}
+
+function renderApp() {
+  const noticeHtml = state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : '';
+  const body = state.loading ? `<div class="loading">Lädt …</div>` :
+    state.view === 'today' ? renderToday() :
+    state.view === 'week' ? renderWeek() : renderMonth();
+
+  app.innerHTML = `
+    <div class="header">
+      <h1>Logbuch</h1>
+      <button type="button" class="logout-btn" data-action="logout">Abmelden</button>
+    </div>
+    ${renderPushRow()}
+    <div class="tabs">
+      <button type="button" class="tab${state.view === 'today' ? ' tab--active' : ''}" data-action="set-view" data-view="today">Heute</button>
+      <button type="button" class="tab${state.view === 'week' ? ' tab--active' : ''}" data-action="set-view" data-view="week">Woche</button>
+      <button type="button" class="tab${state.view === 'month' ? ' tab--active' : ''}" data-action="set-view" data-view="month">Monat</button>
+    </div>
+    ${noticeHtml}
+    ${body}
+  `;
+}
+
+function render() {
+  if (!state.session) { renderAuth(); return; }
+  renderApp();
+}
+
+// --- Event-Delegation ----------------------------------------------------
+app.addEventListener('click', async (e) => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const action = el.dataset.action;
+
+  if (action === 'toggle-auth-mode') {
+    state.authMode = state.authMode === 'signup' ? 'signin' : 'signup';
+    state.authError = null;
+    render();
+  } else if (action === 'logout') {
+    await supabase.auth.signOut();
+  } else if (action === 'set-view') {
+    state.view = el.dataset.view;
+    render();
+  } else if (action === 'nav-day') {
+    state.currentDate = addDays(state.currentDate, Number(el.dataset.dir));
+    render();
+  } else if (action === 'jump-today') {
+    state.currentDate = startOfDay(new Date());
+    render();
+  } else if (action === 'nav-week') {
+    state.weekAnchor = addDays(state.weekAnchor, Number(el.dataset.dir) * 7);
+    render();
+  } else if (action === 'nav-month') {
+    const d = new Date(state.monthAnchor);
+    d.setMonth(d.getMonth() + Number(el.dataset.dir));
+    state.monthAnchor = d;
+    render();
+  } else if (action === 'select') {
+    const dateKey = formatKey(state.currentDate);
+    const value = JSON.parse(el.dataset.value);
+    handleSelect(dateKey, el.dataset.habit, value);
+  } else if (action === 'reset-day') {
+    handleReset(formatKey(state.currentDate));
+  } else if (action === 'enable-push') {
+    enablePush();
+  } else if (action === 'disable-push') {
+    disablePush();
+  } else if (action === 'save-weight') {
+    const input = document.getElementById('weight-input');
+    handleSaveWeight(formatKey(state.currentDate), input.value);
+  }
+});
+
+app.addEventListener('keydown', (e) => {
+  if (e.target && e.target.id === 'weight-input' && e.key === 'Enter') {
+    e.preventDefault();
+    handleSaveWeight(formatKey(state.currentDate), e.target.value);
+  }
+});
+
+// --- Auth-Status & Start ---------------------------------------------------
+supabase.auth.onAuthStateChange(async (_event, session) => {
+  state.session = session;
+  state.authError = null;
+  if (session) {
+    state.loading = true;
+    render();
+    await loadEntries();
+    state.loading = false;
+  } else {
+    state.entries = {};
+  }
+  render();
+});
+
+const { data: { session } } = await supabase.auth.getSession();
+state.session = session;
+if (session) {
+  await loadEntries();
+  checkPushStatus().then(render);
+}
+state.loading = false;
+render();
+</script>
+</body>
+</html>
