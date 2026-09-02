@@ -174,10 +174,16 @@
   }
   .manage-row:first-child { border-top: 1px solid var(--line); }
   .manage-row--archived { opacity: 0.55; }
-  .manage-info { display: flex; flex-direction: column; gap: 2px; }
+  .manage-row--dragging { position: relative; z-index: 5; background: var(--paper); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+  .manage-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
   .manage-name { font-size: 13px; }
   .manage-meta { font-size: 11px; color: var(--sand); }
   .manage-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .drag-handle {
+    display: flex; flex-direction: column; justify-content: center; gap: 3px; width: 20px; height: 28px;
+    flex-shrink: 0; cursor: grab; touch-action: none;
+  }
+  .drag-handle span { display: block; width: 14px; height: 2px; background: var(--sand); border-radius: 1px; }
   .manage-btn {
     font-family: inherit; font-size: 11px; padding: 5px 9px; border-radius: 12px;
     border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
@@ -935,7 +941,8 @@ function renderManage() {
   const archived = state.habits.filter((h) => h.archivedAt);
 
   const row = (h) => `
-    <div class="manage-row${h.archivedAt ? ' manage-row--archived' : ''}">
+    <div class="manage-row${h.archivedAt ? ' manage-row--archived' : ''}" data-def-id="${h.defId}">
+      ${!h.archivedAt ? `<span class="drag-handle" data-action="drag-handle" aria-label="Reihenfolge ändern"><span></span><span></span></span>` : ''}
       <div class="manage-info">
         <span class="manage-name">${esc(h.name)}</span>
         <span class="manage-meta">${esc(formatScale(h))} · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}</span>
@@ -1129,6 +1136,77 @@ app.addEventListener('touchend', (e) => {
   state.currentDate = addDays(state.currentDate, dir);
   render();
 }, { passive: true });
+
+// --- Felder-Reihenfolge per Drag (Tab "Felder") ---------------------------
+// Während des Ziehens wird NIE render() aufgerufen (das würde den gesamten #app-Inhalt
+// ersetzen und damit die Pointer-Capture/laufende Geste kaputtmachen) — stattdessen nur
+// direkte Style-Änderungen an den vorhandenen Zeilen. Erst beim Loslassen wird die neue
+// Reihenfolge in state.habits übernommen, gespeichert und einmal sauber neu gerendert.
+let dragState = null;
+
+app.addEventListener('pointerdown', (e) => {
+  const handle = e.target.closest('[data-action="drag-handle"]');
+  if (!handle) return;
+  const row = handle.closest('.manage-row');
+  const rows = [...row.parentElement.children];
+  const fromIndex = rows.indexOf(row);
+  const first = rows[0].getBoundingClientRect();
+  const last = rows[rows.length - 1].getBoundingClientRect();
+  const rowHeight = rows.length > 1 ? (last.top - first.top) / (rows.length - 1) : first.height;
+
+  dragState = { pointerId: e.pointerId, row, rows, fromIndex, toIndex: fromIndex, startY: e.clientY, rowHeight };
+  row.setPointerCapture(e.pointerId);
+  row.classList.add('manage-row--dragging');
+  e.preventDefault();
+});
+
+app.addEventListener('pointermove', (e) => {
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  const deltaY = e.clientY - dragState.startY;
+  dragState.row.style.transform = `translateY(${deltaY}px)`;
+
+  let toIndex = dragState.fromIndex + Math.round(deltaY / dragState.rowHeight);
+  toIndex = Math.max(0, Math.min(dragState.rows.length - 1, toIndex));
+  if (toIndex === dragState.toIndex) return;
+  dragState.toIndex = toIndex;
+  dragState.rows.forEach((r, i) => {
+    if (r === dragState.row) return;
+    let shift = 0;
+    if (toIndex > dragState.fromIndex && i > dragState.fromIndex && i <= toIndex) shift = -dragState.rowHeight;
+    else if (toIndex < dragState.fromIndex && i < dragState.fromIndex && i >= toIndex) shift = dragState.rowHeight;
+    r.style.transition = 'transform 150ms ease';
+    r.style.transform = shift ? `translateY(${shift}px)` : '';
+  });
+});
+
+app.addEventListener('pointerup', async (e) => {
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  const { row, rows, fromIndex, toIndex } = dragState;
+  row.releasePointerCapture(e.pointerId);
+  row.classList.remove('manage-row--dragging');
+  rows.forEach((r) => { r.style.transform = ''; r.style.transition = ''; });
+  dragState = null;
+  if (toIndex === fromIndex) return;
+
+  const reordered = [...rows];
+  const [movedEl] = reordered.splice(fromIndex, 1);
+  reordered.splice(toIndex, 0, movedEl);
+  const newIds = reordered.map((r) => r.dataset.defId);
+
+  const activeInOrder = newIds.map((id, i) => ({ ...state.habits.find((h) => h.defId === id), sortOrder: i + 1 }));
+  const others = state.habits.filter((h) => !newIds.includes(h.defId));
+  state.habits = [...activeInOrder, ...others];
+  render();
+
+  const results = await Promise.all(
+    activeInOrder.map((h) => supabase.from('habit_definitions').update({ sort_order: h.sortOrder }).eq('id', h.defId))
+  );
+  const failed = results.find((r) => r.error);
+  if (failed) {
+    state.notice = { type: 'error', text: 'Reihenfolge konnte nicht gespeichert werden: ' + failed.error.message };
+    render();
+  }
+});
 
 // --- Auth-Status & Start ---------------------------------------------------
 supabase.auth.onAuthStateChange(async (_event, session) => {
