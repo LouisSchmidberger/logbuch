@@ -1,7 +1,8 @@
 // Datei nach dem Deployment ablegen unter: supabase/functions/send-notifications/index.ts
 //
 // Läuft einmal täglich (per pg_cron, siehe supabase-setup.sql) und:
-// 1. schickt eine Erinnerung an alle Nutzer, die heute noch nichts eingetragen haben
+// 1. schickt eine Erinnerung an alle Nutzer, die heute noch nicht ALLE ihre aktiven
+//    Felder ausgefüllt haben (nicht erst, wenn der Tag komplett leer ist)
 // 2. schickt sonntags einen Hinweis, dass die Wochenübersicht bereit ist
 // 3. schickt am letzten Tag des Monats einen Hinweis, dass die Monatsübersicht bereit ist
 
@@ -131,8 +132,10 @@ Deno.serve(async () => {
 
     if (berlin.hour === 22) {
       const habitIds = habitIdsByUser.get(sub.user_id) ?? [];
-      const hasHabitEntry = habitIds.some((id) => dayData[id] !== undefined);
-      if (!hasHabitEntry) {
+      // Erinnerung, sobald mindestens EIN aktives Feld heute noch fehlt — nicht erst,
+      // wenn der ganze Tag leer ist. Ohne aktive Felder gibt es nichts zu erinnern.
+      const allFilled = habitIds.length === 0 || habitIds.every((id) => dayData[id] !== undefined);
+      if (!allFilled) {
         messages.push({
           title: 'Logbuch',
           body: 'Erinnerung: Trage heute noch deine Habits ein.',

@@ -50,9 +50,11 @@ Tabelle `habit_entries`: eine Zeile pro Nutzer und Kalendertag.
 Tabelle `push_subscriptions`: eine Zeile pro Browser/Gerät mit aktivierten Erinnerungen
 (Web-Push-Endpoint + Schlüssel). RLS wie oben.
 
-**Der 22-Uhr-Reminder-Check** ("wurde heute überhaupt was eingetragen?") in der Edge
+**Der 22-Uhr-Reminder-Check** ("sind noch nicht alle Felder ausgefüllt?") in der Edge
 Function fragt dafür live die aktiven (nicht archivierten) `habit_definitions` je Nutzer
-ab – keine hartkodierte Liste mehr, kein manuelles Synchronhalten nötig.
+ab – keine hartkodierte Liste mehr, kein manuelles Synchronhalten nötig. Erinnert wird,
+sobald mindestens ein aktives Feld an dem Tag noch fehlt, nicht erst wenn der ganze Tag
+leer ist.
 
 ## Skalen-/Farblogik
 
@@ -74,8 +76,9 @@ nicht auf generische Tailwind-/Card-Optik wechseln.
 
 Eine einzige Edge Function `send-notifications` deckt beide Zeitpunkte ab:
 - **8 Uhr Berliner Zeit**: Gewicht heute noch nicht eingetragen? → Erinnerung.
-- **22 Uhr Berliner Zeit**: Kein Habit heute eingetragen? → Erinnerung. Zusätzlich
-  sonntags "Wochenübersicht ist da", am Monatsletzten "Monatsübersicht ist da".
+- **22 Uhr Berliner Zeit**: Mindestens ein aktives Feld heute noch nicht eingetragen?
+  → Erinnerung (nicht erst wenn der ganze Tag leer ist). Zusätzlich sonntags
+  "Wochenübersicht ist da", am Monatsletzten "Monatsübersicht ist da".
 
 **DST-sicher ohne manuelles Nachjustieren**: `pg_cron` kennt keine Zeitzonen mit
 Sommerzeit-Umstellung, läuft nur in UTC. Statt die Cron-Zeit zweimal im Jahr von Hand zu
