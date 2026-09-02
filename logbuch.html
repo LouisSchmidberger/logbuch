@@ -29,6 +29,7 @@
     font-family: 'IBM Plex Sans', sans-serif;
     background: var(--paper);
     color: var(--ink);
+    overflow-x: hidden; /* Sicherheitsnetz: nichts soll je die ganze Seite breiter machen */
   }
   #app {
     max-width: 480px;
@@ -44,10 +45,15 @@
   .push-row--muted { color: var(--sand); background: transparent; }
   .push-toggle { background: none; border: none; color: var(--moss); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
 
-  .tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+  .tabs {
+    display: flex; gap: 14px; border-bottom: 1px solid var(--line); margin-bottom: 20px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
   .tab {
     background: none; border: none; padding: 6px 0 10px; font-family: inherit; font-size: 14px;
     color: var(--sand); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    white-space: nowrap; flex-shrink: 0;
   }
   .tab--active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
 
@@ -72,8 +78,13 @@
     padding: 11px 0; border-bottom: 1px solid var(--line);
   }
   .habit-row:first-child { border-top: 1px solid var(--line); }
-  .habit-name { font-size: 13px; line-height: 1.35; flex: 1; }
-  .habit-options { display: flex; gap: 6px; flex-shrink: 0; }
+  .habit-name { font-size: 13px; line-height: 1.35; flex: 1; min-width: 0; }
+  .habit-options {
+    display: flex; gap: 6px; flex-shrink: 1; min-width: 0; max-width: 60%;
+    overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .habit-options::-webkit-scrollbar { display: none; }
 
   .opt-btn {
     font-family: inherit; font-size: 12px; width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
@@ -127,6 +138,12 @@
   .month-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
   .month-stat-value { font-weight: 600; }
   .month-stat-count { font-weight: 400; color: var(--sand); }
+
+  .year-grid { display: flex; flex-direction: column; gap: 3px; margin-bottom: 20px; }
+  .year-month { display: flex; align-items: center; gap: 6px; }
+  .year-month-label { width: 24px; font-size: 9px; color: var(--sand); flex-shrink: 0; }
+  .year-month-grid { display: grid; grid-template-columns: repeat(31, 1fr); gap: 2px; flex: 1; }
+  .year-day-cell { aspect-ratio: 1; border-radius: 1px; min-width: 0; }
 
   .notice {
     font-size: 12px; padding: 8px 10px; border-radius: 3px; margin-bottom: 14px;
@@ -268,6 +285,27 @@ function scoreColor(score) {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
 
+// Gesamt-Score eines Tages über alle Felder gemittelt (für Monats-/Jahres-Heatmap).
+function dayOverallScore(date) {
+  const day = state.entries[formatKey(date)];
+  if (!day) return null;
+  const scores = state.habits.map((h) => normalize(h, day[h.id])).filter((s) => s !== null);
+  if (!scores.length) return null;
+  return scores.reduce((a, b) => a + b, 0) / scores.length;
+}
+
+// Durchschnitt + Anzahl je Feld über eine Menge von Datums-Keys ('YYYY-MM-DD').
+function computeHabitStats(habits, dateKeys) {
+  return habits.map((h) => {
+    let sum = 0, count = 0;
+    for (const k of dateKeys) {
+      const s = normalize(h, state.entries[k]?.[h.id]);
+      if (s !== null) { sum += s; count++; }
+    }
+    return { habit: h, avg: count ? sum / count : null, count };
+  });
+}
+
 // --- App-State ---------------------------------------------------------
 const state = {
   session: null,
@@ -278,6 +316,7 @@ const state = {
   currentDate: startOfDay(new Date()),
   weekAnchor: startOfWeek(new Date()),
   monthAnchor: (() => { const d = startOfDay(new Date()); d.setDate(1); return d; })(),
+  yearAnchor: new Date().getFullYear(),
   authMode: 'signin', // 'signin' | 'signup'
   authError: null,
   pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy'
@@ -750,27 +789,12 @@ function renderMonth() {
   for (let i = 0; i < startOffset; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
 
-  function overallScore(date) {
-    const day = state.entries[formatKey(date)];
-    if (!day) return null;
-    const scores = state.habits.map((h) => normalize(h, day[h.id])).filter((s) => s !== null);
-    if (!scores.length) return null;
-    return scores.reduce((a, b) => a + b, 0) / scores.length;
-  }
-
+  const cellKeys = cells.filter(Boolean).map(formatKey);
   // Archivierte Felder bleiben sichtbar, solange sie in diesem Monat Daten haben.
   const visibleHabits = state.habits.filter(
-    (h) => !h.archivedAt || cells.some((d) => d && state.entries[formatKey(d)]?.[h.id] !== undefined)
+    (h) => !h.archivedAt || cellKeys.some((k) => state.entries[k]?.[h.id] !== undefined)
   );
-  const monthStats = visibleHabits.map((h) => {
-    let sum = 0, count = 0;
-    cells.forEach((d) => {
-      if (!d) return;
-      const s = normalize(h, state.entries[formatKey(d)]?.[h.id]);
-      if (s !== null) { sum += s; count++; }
-    });
-    return { habit: h, avg: count ? sum / count : null, count };
-  });
+  const monthStats = computeHabitStats(visibleHabits, cellKeys);
 
   return `
     <div class="day-nav">
@@ -782,19 +806,72 @@ function renderMonth() {
       ${WEEKDAYS.map((w) => `<div class="month-weekday">${w}</div>`).join('')}
       ${cells.map((d) => {
         if (!d) return `<div class="month-cell month-cell--empty"></div>`;
-        const s = overallScore(d);
+        const s = dayOverallScore(d);
         return `<div class="month-cell" style="background:${scoreColor(s)}"><span class="month-cell-num">${d.getDate()}</span></div>`;
       }).join('')}
     </div>
-    <div class="month-stats">
-      ${monthStats.map(({ habit, avg, count }) => `
-        <div class="month-stat-row">
-          <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ' <span class="manage-meta">(archiviert)</span>' : ''}</span>
-          <span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : scoreColor(avg)}">${avg !== null ? Math.round(avg * 100) + '%' : '–'} <span class="month-stat-count">(${count}×)</span></span>
-        </div>
-      `).join('')}
-    </div>
+    <div class="month-stats">${renderStatsRows(monthStats)}</div>
   `;
+}
+
+// --- Rendering: Year ---------------------------------------------------------
+function renderYear() {
+  const year = state.yearAnchor;
+  const monthsGrid = MONTHS.map((name, mIdx) => {
+    const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
+    const cells = Array.from({ length: daysInMonth }, (_, i) => new Date(year, mIdx, i + 1));
+    return `
+      <div class="year-month">
+        <div class="year-month-label">${name.slice(0, 3)}</div>
+        <div class="year-month-grid">
+          ${cells.map((d) => `<div class="year-day-cell" style="background:${scoreColor(dayOverallScore(d))}"></div>`).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const yearKeys = Object.keys(state.entries).filter((k) => k.startsWith(`${year}-`));
+  // Archivierte Felder bleiben sichtbar, solange sie in diesem Jahr Daten haben.
+  const visibleHabits = state.habits.filter(
+    (h) => !h.archivedAt || yearKeys.some((k) => state.entries[k]?.[h.id] !== undefined)
+  );
+  const yearStats = computeHabitStats(visibleHabits, yearKeys);
+
+  return `
+    <div class="day-nav">
+      <button type="button" class="nav-btn" data-action="nav-year" data-dir="-1" aria-label="Vorheriges Jahr">‹</button>
+      <div class="day-label"><span class="day-date">${year}</span></div>
+      <button type="button" class="nav-btn" data-action="nav-year" data-dir="1" aria-label="Nächstes Jahr">›</button>
+    </div>
+    <div class="year-grid">${monthsGrid}</div>
+    <div class="month-stats">${renderStatsRows(yearStats)}</div>
+  `;
+}
+
+// --- Rendering: Gesamt (alle Einträge seit Beginn) ---------------------------
+function renderGlobal() {
+  const dateKeys = Object.keys(state.entries).sort();
+  const stats = computeHabitStats(state.habits, dateKeys);
+  const rangeNote = dateKeys.length
+    ? `Seit ${dateKeys[0].split('-').reverse().join('.')} · ${dateKeys.length} Tage mit Eintrag`
+    : 'Noch keine Einträge.';
+
+  return `
+    <div class="day-nav">
+      <div class="day-label"><span class="day-date">Gesamt</span></div>
+    </div>
+    <p class="manage-meta" style="margin: -8px 0 14px;">${esc(rangeNote)}</p>
+    <div class="month-stats">${renderStatsRows(stats)}</div>
+  `;
+}
+
+function renderStatsRows(stats) {
+  return stats.map(({ habit, avg, count }) => `
+    <div class="month-stat-row">
+      <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ' <span class="manage-meta">(archiviert)</span>' : ''}</span>
+      <span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : scoreColor(avg)}">${avg !== null ? Math.round(avg * 100) + '%' : '–'} <span class="month-stat-count">(${count}×)</span></span>
+    </div>
+  `).join('');
 }
 
 // --- Rendering: Felder-Verwaltung -------------------------------------------
@@ -904,7 +981,9 @@ function renderApp() {
   const body = state.loading ? `<div class="loading">Lädt …</div>` :
     state.view === 'today' ? renderToday() :
     state.view === 'week' ? renderWeek() :
-    state.view === 'month' ? renderMonth() : renderManage();
+    state.view === 'month' ? renderMonth() :
+    state.view === 'year' ? renderYear() :
+    state.view === 'global' ? renderGlobal() : renderManage();
 
   app.innerHTML = `
     <div class="header">
@@ -916,6 +995,8 @@ function renderApp() {
       <button type="button" class="tab${state.view === 'today' ? ' tab--active' : ''}" data-action="set-view" data-view="today">Heute</button>
       <button type="button" class="tab${state.view === 'week' ? ' tab--active' : ''}" data-action="set-view" data-view="week">Woche</button>
       <button type="button" class="tab${state.view === 'month' ? ' tab--active' : ''}" data-action="set-view" data-view="month">Monat</button>
+      <button type="button" class="tab${state.view === 'year' ? ' tab--active' : ''}" data-action="set-view" data-view="year">Jahr</button>
+      <button type="button" class="tab${state.view === 'global' ? ' tab--active' : ''}" data-action="set-view" data-view="global">Gesamt</button>
       <button type="button" class="tab${state.view === 'manage' ? ' tab--active' : ''}" data-action="set-view" data-view="manage">Felder</button>
     </div>
     ${noticeHtml}
@@ -956,6 +1037,9 @@ app.addEventListener('click', async (e) => {
     const d = new Date(state.monthAnchor);
     d.setMonth(d.getMonth() + Number(el.dataset.dir));
     state.monthAnchor = d;
+    render();
+  } else if (action === 'nav-year') {
+    state.yearAnchor += Number(el.dataset.dir);
     render();
   } else if (action === 'select') {
     const dateKey = formatKey(state.currentDate);
@@ -1024,7 +1108,10 @@ let touchStartY = null;
 const SWIPE_THRESHOLD = 50;
 
 app.addEventListener('touchstart', (e) => {
-  if (state.view !== 'today' || e.touches.length !== 1) return;
+  // Ein Wisch, der innerhalb einer eigenen horizontal scrollbaren Zeile beginnt (z.B. die
+  // Feld-Buttons, wenn deren Bezeichnungen den Platz sprengen), soll dort scrollen statt
+  // den Tag zu wechseln.
+  if (state.view !== 'today' || e.touches.length !== 1 || e.target.closest('.habit-options, .tabs')) return;
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
 }, { passive: true });
