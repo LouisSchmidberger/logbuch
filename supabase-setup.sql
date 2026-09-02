@@ -82,7 +82,8 @@ select cron.schedule(
         'Content-type', 'application/json',
         'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key')
       ),
-      body := '{}'::jsonb
+      body := '{}'::jsonb,
+      timeout_milliseconds := 20000
   ) as request_id;
   $$
 );
@@ -97,7 +98,8 @@ select cron.schedule(
         'Content-type', 'application/json',
         'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key')
       ),
-      body := '{}'::jsonb
+      body := '{}'::jsonb,
+      timeout_milliseconds := 20000
   ) as request_id;
   $$
 );
@@ -112,7 +114,8 @@ select cron.schedule(
         'Content-type', 'application/json',
         'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key')
       ),
-      body := '{}'::jsonb
+      body := '{}'::jsonb,
+      timeout_milliseconds := 20000
   ) as request_id;
   $$
 );
@@ -127,7 +130,8 @@ select cron.schedule(
         'Content-type', 'application/json',
         'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key')
       ),
-      body := '{}'::jsonb
+      body := '{}'::jsonb,
+      timeout_milliseconds := 20000
   ) as request_id;
   $$
 );
