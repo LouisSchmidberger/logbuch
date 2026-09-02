@@ -18,14 +18,6 @@ webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-// Muss zur HABITS-Liste in logbuch.html passen (nur die IDs, für den "irgendwas heute
-// eingetragen?"-Check bei der 22-Uhr-Erinnerung — Gewicht zählt hier bewusst nicht mit,
-// dafür gibt es die eigene 8-Uhr-Prüfung).
-const HABIT_IDS = [
-  'morgenroutine', 'zaehne', 'ernaehrung', 'getrunken', 'kraftsport', 'ausdauersport',
-  'gelernt', 'gekifft', 'gevaped', 'sex', 'gefuehlslage', 'guterTag', 'bettzeit',
-];
-
 function formatKey(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -98,6 +90,25 @@ Deno.serve(async () => {
   const entryByUser = new Map<string, Record<string, unknown>>();
   for (const e of todayEntries ?? []) entryByUser.set(e.user_id, e.data ?? {});
 
+  // Aktive (nicht archivierte) Feld-Slugs je Nutzer, für den 22-Uhr-"überhaupt was
+  // eingetragen?"-Check — jeder Nutzer verwaltet seine Felder selbst (siehe
+  // habit_definitions), Gewicht zählt hier bewusst nicht mit (eigene 8-Uhr-Prüfung).
+  const habitIdsByUser = new Map<string, string[]>();
+  if (berlin.hour === 22) {
+    const { data: defs, error: defErr } = await supabase
+      .from('habit_definitions')
+      .select('user_id, slug')
+      .is('archived_at', null);
+    if (defErr) {
+      return new Response(JSON.stringify({ error: defErr.message }), { status: 500 });
+    }
+    for (const d of defs ?? []) {
+      const list = habitIdsByUser.get(d.user_id) ?? [];
+      list.push(d.slug);
+      habitIdsByUser.set(d.user_id, list);
+    }
+  }
+
   const results: Array<{ user_id: string; ok: boolean; detail: string }> = [];
 
   for (const sub of subs ?? []) {
@@ -119,7 +130,8 @@ Deno.serve(async () => {
     }
 
     if (berlin.hour === 22) {
-      const hasHabitEntry = HABIT_IDS.some((id) => dayData[id] !== undefined);
+      const habitIds = habitIdsByUser.get(sub.user_id) ?? [];
+      const hasHabitEntry = habitIds.some((id) => dayData[id] !== undefined);
       if (!hasHabitEntry) {
         messages.push({
           title: 'Logbuch',

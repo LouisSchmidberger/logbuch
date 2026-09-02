@@ -149,6 +149,52 @@
     background: var(--ink); color: var(--paper); border: none; border-radius: 3px; cursor: pointer;
   }
   .auth-toggle { display: block; margin: 14px auto 0; background: none; border: none; color: var(--moss); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; text-align: center; width: 100%; }
+
+  .manage-list { display: flex; flex-direction: column; margin-bottom: 18px; }
+  .manage-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 11px 0; border-bottom: 1px solid var(--line);
+  }
+  .manage-row:first-child { border-top: 1px solid var(--line); }
+  .manage-row--archived { opacity: 0.55; }
+  .manage-info { display: flex; flex-direction: column; gap: 2px; }
+  .manage-name { font-size: 13px; }
+  .manage-meta { font-size: 11px; color: var(--sand); }
+  .manage-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .manage-btn {
+    font-family: inherit; font-size: 11px; padding: 5px 9px; border-radius: 12px;
+    border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
+  }
+  .manage-btn--danger { color: var(--rust); border-color: rgba(162, 80, 58, 0.4); }
+  .manage-new-btn {
+    display: block; width: 100%; margin-top: 4px; padding: 10px; font-family: inherit; font-size: 13px;
+    border: 1px dashed var(--line); border-radius: 4px; background: transparent; color: var(--moss); cursor: pointer;
+  }
+
+  .habit-form { border: 1px solid var(--line); border-radius: 4px; padding: 14px; margin-bottom: 18px; }
+  .habit-form h2 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 12px; }
+  .habit-form .auth-field { margin-bottom: 10px; }
+  .habit-form-lock-note { font-size: 11px; color: var(--sand); margin: -4px 0 12px; }
+  .pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill-toggle {
+    font-family: inherit; font-size: 12px; padding: 7px 12px; border-radius: 14px;
+    border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
+  }
+  .pill-toggle--active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .pill-toggle:disabled { opacity: 0.4; cursor: default; }
+  .habit-form-minmax { display: flex; gap: 10px; }
+  .habit-form-minmax .auth-field { flex: 1; margin-bottom: 0; }
+  .label-inputs { display: flex; flex-direction: column; gap: 6px; }
+  .label-inputs input {
+    font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
+    border-radius: 3px; background: #fff; color: var(--ink);
+  }
+  .habit-form-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .habit-form-actions .auth-submit { margin-top: 0; width: auto; flex: 1; }
+  .habit-form-cancel {
+    flex: 1; font-family: inherit; font-size: 13px; padding: 10px; background: none; border: 1px solid var(--line);
+    border-radius: 3px; color: var(--ink); cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -170,22 +216,27 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }
 
-// --- Habit-Definitionen --------------------------------------------------
-const HABITS = [
-  { id: 'morgenroutine', name: 'Morgenroutine', type: 'scale', min: 1, max: 5, good: 'high' },
-  { id: 'zaehne', name: 'Zähne geputzt', type: 'scale', min: 0, max: 2, good: 'high' },
-  { id: 'ernaehrung', name: 'Gesund ernährt', type: 'scale', min: 1, max: 5, good: 'high' },
-  { id: 'getrunken', name: 'Genug getrunken', type: 'scale', min: 1, max: 5, good: 'high' },
-  { id: 'kraftsport', name: 'Kraftsport gemacht', type: 'bool' },
-  { id: 'ausdauersport', name: 'Ausdauersport gemacht', type: 'bool' },
-  { id: 'gelernt', name: 'Etwas Neues gelernt', type: 'bool' },
-  { id: 'gekifft', name: 'Gekifft', type: 'scale', min: 0, max: 2, good: 'low', labels: ['Nein', 'Ein bisschen', 'Ja'] },
-  { id: 'gevaped', name: 'Gevaped', type: 'scale', min: 0, max: 2, good: 'low', labels: ['Nein', 'Ein bisschen', 'Ja'] },
-  { id: 'sex', name: 'Sex gehabt', type: 'bool' },
-  { id: 'gefuehlslage', name: 'Gefühlslage', type: 'scale', min: 1, max: 5, good: 'high' },
-  { id: 'guterTag', name: 'Guter Tag', type: 'scale', min: 1, max: 5, good: 'high' },
-  { id: 'bettzeit', name: 'Ins Bett zur geplanten Zeit', type: 'bool' },
-];
+// --- Habit-Definitionen ----------------------------------------------------
+// Kommen jetzt aus der Tabelle habit_definitions (pro Nutzer frei verwaltbar, siehe
+// renderManage weiter unten), nicht mehr aus einer festen Konstante hier im Code.
+// `id` bleibt (wie vorher bei der festen Liste) der Schlüssel in habit_entries.data
+// (= slug in der DB); `defId` ist die UUID der Definitions-Zeile, nur für Verwaltungs-
+// Aktionen (bearbeiten/archivieren/löschen) gebraucht.
+// - labels === null  → Zahlenwerte (0, 1, 2, ...)
+// - labels === [...] → eigene Bezeichnungen, Länge muss max-min+1 entsprechen
+function habitFromRow(row) {
+  return {
+    id: row.slug,
+    defId: row.id,
+    name: row.name,
+    min: row.min,
+    max: row.max,
+    labels: row.labels,
+    good: row.good,
+    sortOrder: row.sort_order,
+    archivedAt: row.archived_at,
+  };
+}
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const WEEKDAYS_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
@@ -205,7 +256,6 @@ function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n)
 // 0 = schlechtester, 1 = bester Wert
 function normalize(habit, value) {
   if (value === undefined || value === null) return null;
-  if (habit.type === 'bool') return value ? 1 : 0;
   const raw = (value - habit.min) / (habit.max - habit.min);
   return habit.good === 'low' ? 1 - raw : raw;
 }
@@ -231,7 +281,32 @@ const state = {
   authMode: 'signin', // 'signin' | 'signup'
   authError: null,
   pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy'
+  habits: [],         // alle Felder des Nutzers (aktiv + archiviert), sort_order-sortiert
+  habitForm: null,    // { defId, locked, name, mode: 'numeric'|'labels', min, max, steps, labels, good }
 };
+
+function activeHabits() {
+  return state.habits.filter((h) => !h.archivedAt);
+}
+
+function habitHasData(habitId) {
+  return Object.values(state.entries).some((day) => day[habitId] !== undefined);
+}
+
+function slugify(name) {
+  const base = String(name).toLowerCase().replace(/ß/g, 'ss')
+    .normalize('NFD')
+    .replace(/[^a-z0-9]/g, '');
+  return base || 'feld';
+}
+
+function uniqueSlug(base) {
+  const existing = new Set(state.habits.map((h) => h.id));
+  if (!existing.has(base)) return base;
+  let i = 2;
+  while (existing.has(base + i)) i++;
+  return base + i;
+}
 
 const app = document.getElementById('app');
 
@@ -249,6 +324,154 @@ async function loadEntries() {
   const map = {};
   for (const row of data) map[row.entry_date] = row.data || {};
   state.entries = map;
+}
+
+async function loadHabits() {
+  const { data, error } = await supabase.from('habit_definitions').select('*').order('sort_order');
+  if (error) {
+    state.notice = { type: 'error', text: 'Felder konnten nicht geladen werden: ' + error.message };
+    return;
+  }
+  state.habits = data.map(habitFromRow);
+}
+
+// --- Felder-Verwaltung -----------------------------------------------------
+function defaultHabitForm() {
+  return { defId: null, locked: false, name: '', mode: 'numeric', min: 1, max: 5, steps: 3, labels: ['', '', ''], good: 'high' };
+}
+
+function habitToForm(h) {
+  const labeled = !!h.labels;
+  return {
+    defId: h.defId,
+    locked: habitHasData(h.id),
+    name: h.name,
+    mode: labeled ? 'labels' : 'numeric',
+    min: h.min,
+    max: h.max,
+    steps: labeled ? h.labels.length : (h.max - h.min + 1),
+    labels: labeled ? [...h.labels] : Array.from({ length: h.max - h.min + 1 }, () => ''),
+    good: h.good,
+  };
+}
+
+function formatScale(h) {
+  return h.labels ? h.labels.join(' / ') : `${h.min} – ${h.max}`;
+}
+
+// Liest die gerade sichtbaren Formularfelder (Name + je nach Modus Min/Max oder
+// Bezeichnungen) ins State-Objekt, bevor ein Struktur-Wechsel (Modus/Stufenzahl) das
+// Formular neu aufbaut — sonst gingen bereits eingegebene Werte beim Re-Render verloren.
+function syncHabitFormFromDom() {
+  const f = state.habitForm;
+  if (!f) return;
+  const nameEl = document.getElementById('habit-form-name');
+  if (nameEl) f.name = nameEl.value;
+  if (f.mode === 'numeric') {
+    const minEl = document.getElementById('habit-form-min');
+    const maxEl = document.getElementById('habit-form-max');
+    if (minEl) f.min = Number(minEl.value);
+    if (maxEl) f.max = Number(maxEl.value);
+  } else {
+    document.querySelectorAll('[data-label-index]').forEach((el) => {
+      f.labels[Number(el.dataset.labelIndex)] = el.value;
+    });
+  }
+}
+
+async function handleHabitSave() {
+  const f = state.habitForm;
+  const name = (document.getElementById('habit-form-name')?.value || '').trim();
+  if (!name) {
+    state.notice = { type: 'error', text: 'Bitte einen Namen eingeben.' };
+    render();
+    return;
+  }
+
+  let min, max, labels;
+  if (f.locked) {
+    const original = state.habits.find((h) => h.defId === f.defId);
+    min = original.min; max = original.max; labels = original.labels;
+  } else if (f.mode === 'numeric') {
+    min = Number(document.getElementById('habit-form-min').value);
+    max = Number(document.getElementById('habit-form-max').value);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
+      state.notice = { type: 'error', text: '„Bis" muss größer als „Von" sein.' };
+      render();
+      return;
+    }
+    if (max - min + 1 > 12) {
+      state.notice = { type: 'error', text: 'Bitte maximal 12 Stufen.' };
+      render();
+      return;
+    }
+    labels = null;
+  } else {
+    const labelEls = [...document.querySelectorAll('[data-label-index]')]
+      .sort((a, b) => Number(a.dataset.labelIndex) - Number(b.dataset.labelIndex));
+    labels = labelEls.map((el) => el.value.trim());
+    if (labels.some((l) => !l)) {
+      state.notice = { type: 'error', text: 'Bitte alle Bezeichnungen ausfüllen.' };
+      render();
+      return;
+    }
+    min = 0;
+    max = labels.length - 1;
+  }
+
+  const good = f.good;
+
+  if (f.defId) {
+    const patch = f.locked ? { name, good } : { name, min, max, labels, good };
+    const { error } = await supabase.from('habit_definitions').update(patch).eq('id', f.defId);
+    if (error) {
+      state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + error.message };
+      render();
+      return;
+    }
+    const idx = state.habits.findIndex((h) => h.defId === f.defId);
+    state.habits[idx] = { ...state.habits[idx], name, ...(f.locked ? {} : { min, max, labels }), good };
+  } else {
+    const slug = uniqueSlug(slugify(name));
+    const sortOrder = state.habits.length ? Math.max(...state.habits.map((h) => h.sortOrder)) + 1 : 1;
+    const { data, error } = await supabase.from('habit_definitions')
+      .insert({ user_id: state.session.user.id, slug, name, min, max, labels, good, sort_order: sortOrder })
+      .select().single();
+    if (error) {
+      state.notice = { type: 'error', text: 'Anlegen fehlgeschlagen: ' + error.message };
+      render();
+      return;
+    }
+    state.habits = [...state.habits, habitFromRow(data)];
+  }
+
+  state.habitForm = null;
+  render();
+}
+
+async function handleHabitArchive(defId, archive) {
+  const { error } = await supabase.from('habit_definitions')
+    .update({ archived_at: archive ? new Date().toISOString() : null })
+    .eq('id', defId);
+  if (error) {
+    state.notice = { type: 'error', text: 'Aktion fehlgeschlagen: ' + error.message };
+    render();
+    return;
+  }
+  const idx = state.habits.findIndex((h) => h.defId === defId);
+  if (idx !== -1) state.habits[idx] = { ...state.habits[idx], archivedAt: archive ? new Date().toISOString() : null };
+  render();
+}
+
+async function handleHabitDelete(defId) {
+  const { error } = await supabase.from('habit_definitions').delete().eq('id', defId);
+  if (error) {
+    state.notice = { type: 'error', text: 'Löschen fehlgeschlagen: ' + error.message };
+    render();
+    return;
+  }
+  state.habits = state.habits.filter((h) => h.defId !== defId);
+  render();
 }
 
 async function saveDay(dateKey, dayData) {
@@ -422,10 +645,8 @@ function renderAuth() {
 
 // --- Rendering: Habit-Row ---------------------------------------------
 function renderHabitOptions(habit, value) {
-  const options = habit.type === 'bool'
-    ? [[false, 'Nein'], [true, 'Ja']]
-    : Array.from({ length: habit.max - habit.min + 1 }, (_, i) => habit.min + i)
-        .map((n, i) => [n, habit.labels ? habit.labels[i] : String(n)]);
+  const options = Array.from({ length: habit.max - habit.min + 1 }, (_, i) => habit.min + i)
+    .map((n, i) => [n, habit.labels ? habit.labels[i] : String(n)]);
 
   return options.map(([v, label]) => {
     const selected = value === v;
@@ -465,12 +686,13 @@ function renderToday() {
       <button type="button" class="weight-save" data-action="save-weight">Speichern</button>
     </div>
     <div class="habit-list">
-      ${HABITS.map((h) => `
+      ${activeHabits().map((h) => `
         <div class="habit-row">
           <span class="habit-name">${esc(h.name)}</span>
           <div class="habit-options">${renderHabitOptions(h, dayEntry[h.id])}</div>
         </div>
       `).join('')}
+      ${!activeHabits().length ? `<p class="manage-meta">Noch keine Felder angelegt – siehe Tab „Felder".</p>` : ''}
     </div>
     <button type="button" class="reset-btn" data-action="reset-day">Tag zurücksetzen</button>
   `;
@@ -479,13 +701,18 @@ function renderToday() {
 // --- Rendering: Week -----------------------------------------------------
 function renderWeek() {
   const days = Array.from({ length: 7 }, (_, i) => addDays(state.weekAnchor, i));
-  const rows = HABITS.map((h) => {
+  // Archivierte Felder bleiben sichtbar, solange sie in diesem Zeitraum Daten haben –
+  // sonst wuerde die Historie beim Archivieren aus der Auswertung verschwinden.
+  const visibleHabits = state.habits.filter(
+    (h) => !h.archivedAt || days.some((d) => state.entries[formatKey(d)]?.[h.id] !== undefined)
+  );
+  const rows = visibleHabits.map((h) => {
     const scores = days.map((d) => normalize(h, state.entries[formatKey(d)]?.[h.id]));
     const valid = scores.filter((s) => s !== null);
     const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
     return `
       <div class="grid-row">
-        <div class="grid-label">${esc(h.name)}</div>
+        <div class="grid-label">${esc(h.name)}${h.archivedAt ? ' <span class="manage-meta">(archiviert)</span>' : ''}</div>
         ${scores.map((s) => `<div class="grid-cell" style="background:${scoreColor(s)}"></div>`).join('')}
         <div class="grid-cell grid-cell--avg" style="background:${scoreColor(avg)}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
@@ -526,12 +753,16 @@ function renderMonth() {
   function overallScore(date) {
     const day = state.entries[formatKey(date)];
     if (!day) return null;
-    const scores = HABITS.map((h) => normalize(h, day[h.id])).filter((s) => s !== null);
+    const scores = state.habits.map((h) => normalize(h, day[h.id])).filter((s) => s !== null);
     if (!scores.length) return null;
     return scores.reduce((a, b) => a + b, 0) / scores.length;
   }
 
-  const monthStats = HABITS.map((h) => {
+  // Archivierte Felder bleiben sichtbar, solange sie in diesem Monat Daten haben.
+  const visibleHabits = state.habits.filter(
+    (h) => !h.archivedAt || cells.some((d) => d && state.entries[formatKey(d)]?.[h.id] !== undefined)
+  );
+  const monthStats = visibleHabits.map((h) => {
     let sum = 0, count = 0;
     cells.forEach((d) => {
       if (!d) return;
@@ -558,11 +789,99 @@ function renderMonth() {
     <div class="month-stats">
       ${monthStats.map(({ habit, avg, count }) => `
         <div class="month-stat-row">
-          <span class="habit-name">${esc(habit.name)}</span>
+          <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ' <span class="manage-meta">(archiviert)</span>' : ''}</span>
           <span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : scoreColor(avg)}">${avg !== null ? Math.round(avg * 100) + '%' : '–'} <span class="month-stat-count">(${count}×)</span></span>
         </div>
       `).join('')}
     </div>
+  `;
+}
+
+// --- Rendering: Felder-Verwaltung -------------------------------------------
+function renderHabitForm() {
+  const f = state.habitForm;
+  return `
+    <div class="habit-form">
+      <h2>${f.defId ? 'Feld bearbeiten' : 'Neues Feld'}</h2>
+      ${f.locked ? `<p class="habit-form-lock-note">Für dieses Feld gibt es bereits Einträge – Skala/Bezeichnungen sind gesperrt. Für eine andere Skala: archivieren und neu anlegen.</p>` : ''}
+      <div class="auth-field">
+        <label for="habit-form-name">Name</label>
+        <input type="text" id="habit-form-name" value="${esc(f.name)}" maxlength="40" />
+      </div>
+      <div class="auth-field">
+        <label>Art der Werte</label>
+        <div class="pill-group">
+          <button type="button" class="pill-toggle${f.mode === 'numeric' ? ' pill-toggle--active' : ''}" data-action="habit-mode" data-mode="numeric" ${f.locked ? 'disabled' : ''}>Zahlenwerte</button>
+          <button type="button" class="pill-toggle${f.mode === 'labels' ? ' pill-toggle--active' : ''}" data-action="habit-mode" data-mode="labels" ${f.locked ? 'disabled' : ''}>Eigene Bezeichnungen</button>
+        </div>
+      </div>
+      ${f.mode === 'numeric' ? `
+        <div class="habit-form-minmax">
+          <div class="auth-field">
+            <label for="habit-form-min">Von</label>
+            <input type="number" id="habit-form-min" value="${f.min}" ${f.locked ? 'disabled' : ''} />
+          </div>
+          <div class="auth-field">
+            <label for="habit-form-max">Bis</label>
+            <input type="number" id="habit-form-max" value="${f.max}" ${f.locked ? 'disabled' : ''} />
+          </div>
+        </div>
+      ` : `
+        <div class="auth-field">
+          <label for="habit-form-steps">Anzahl Stufen</label>
+          <input type="number" id="habit-form-steps" data-action="habit-steps" min="2" max="8" value="${f.steps}" ${f.locked ? 'disabled' : ''} />
+        </div>
+        <div class="auth-field">
+          <label>Bezeichnungen der Reihe nach (Wert 0 zuerst, z. B. „Nein“, „Ein bisschen“, „Ja“)</label>
+          <div class="label-inputs">
+            ${f.labels.map((l, i) => `<input type="text" data-label-index="${i}" value="${esc(l)}" maxlength="20" ${f.locked ? 'disabled' : ''} />`).join('')}
+          </div>
+        </div>
+      `}
+      <div class="auth-field">
+        <label>Zielrichtung</label>
+        <div class="pill-group">
+          <button type="button" class="pill-toggle${f.good === 'high' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="high">Hohe Werte erstrebenswert</button>
+          <button type="button" class="pill-toggle${f.good === 'low' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="low">Niedrige Werte erstrebenswert</button>
+        </div>
+      </div>
+      <div class="habit-form-actions">
+        <button type="button" class="auth-submit" data-action="habit-save">Speichern</button>
+        <button type="button" class="habit-form-cancel" data-action="habit-cancel">Abbrechen</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderManage() {
+  const active = state.habits.filter((h) => !h.archivedAt);
+  const archived = state.habits.filter((h) => h.archivedAt);
+
+  const row = (h) => `
+    <div class="manage-row${h.archivedAt ? ' manage-row--archived' : ''}">
+      <div class="manage-info">
+        <span class="manage-name">${esc(h.name)}</span>
+        <span class="manage-meta">${esc(formatScale(h))} · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}</span>
+      </div>
+      <div class="manage-actions">
+        ${!h.archivedAt ? `
+          <button type="button" class="manage-btn" data-action="habit-edit" data-id="${h.defId}">Bearbeiten</button>
+          <button type="button" class="manage-btn" data-action="habit-archive" data-id="${h.defId}">Archivieren</button>
+        ` : `
+          <button type="button" class="manage-btn" data-action="habit-reactivate" data-id="${h.defId}">Reaktivieren</button>
+          ${!habitHasData(h.id) ? `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete" data-id="${h.defId}">Löschen</button>` : ''}
+        `}
+      </div>
+    </div>
+  `;
+
+  return `
+    ${state.habitForm ? renderHabitForm() : `<button type="button" class="manage-new-btn" data-action="habit-new">+ Neues Feld</button>`}
+    <div class="manage-list">${active.map(row).join('')}</div>
+    ${archived.length ? `
+      <p class="habit-form-lock-note">Archiviert</p>
+      <div class="manage-list">${archived.map(row).join('')}</div>
+    ` : ''}
   `;
 }
 
@@ -584,7 +903,8 @@ function renderApp() {
   const noticeHtml = state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : '';
   const body = state.loading ? `<div class="loading">Lädt …</div>` :
     state.view === 'today' ? renderToday() :
-    state.view === 'week' ? renderWeek() : renderMonth();
+    state.view === 'week' ? renderWeek() :
+    state.view === 'month' ? renderMonth() : renderManage();
 
   app.innerHTML = `
     <div class="header">
@@ -596,6 +916,7 @@ function renderApp() {
       <button type="button" class="tab${state.view === 'today' ? ' tab--active' : ''}" data-action="set-view" data-view="today">Heute</button>
       <button type="button" class="tab${state.view === 'week' ? ' tab--active' : ''}" data-action="set-view" data-view="week">Woche</button>
       <button type="button" class="tab${state.view === 'month' ? ' tab--active' : ''}" data-action="set-view" data-view="month">Monat</button>
+      <button type="button" class="tab${state.view === 'manage' ? ' tab--active' : ''}" data-action="set-view" data-view="manage">Felder</button>
     </div>
     ${noticeHtml}
     ${body}
@@ -649,7 +970,45 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'save-weight') {
     const input = document.getElementById('weight-input');
     handleSaveWeight(formatKey(state.currentDate), input.value);
+  } else if (action === 'habit-new') {
+    state.habitForm = defaultHabitForm();
+    render();
+  } else if (action === 'habit-edit') {
+    const h = state.habits.find((x) => x.defId === el.dataset.id);
+    if (h) { state.habitForm = habitToForm(h); render(); }
+  } else if (action === 'habit-cancel') {
+    state.habitForm = null;
+    render();
+  } else if (action === 'habit-mode') {
+    syncHabitFormFromDom();
+    state.habitForm.mode = el.dataset.mode;
+    render();
+  } else if (action === 'habit-good') {
+    syncHabitFormFromDom();
+    state.habitForm.good = el.dataset.good;
+    render();
+  } else if (action === 'habit-save') {
+    await handleHabitSave();
+  } else if (action === 'habit-archive') {
+    await handleHabitArchive(el.dataset.id, true);
+  } else if (action === 'habit-reactivate') {
+    await handleHabitArchive(el.dataset.id, false);
+  } else if (action === 'habit-delete') {
+    await handleHabitDelete(el.dataset.id);
   }
+});
+
+app.addEventListener('change', (e) => {
+  const el = e.target.closest('[data-action="habit-steps"]');
+  if (!el || !state.habitForm) return;
+  syncHabitFormFromDom();
+  let n = Math.round(Number(el.value));
+  if (!Number.isFinite(n)) n = state.habitForm.steps;
+  n = Math.max(2, Math.min(8, n));
+  state.habitForm.steps = n;
+  const labels = state.habitForm.labels;
+  state.habitForm.labels = Array.from({ length: n }, (_, i) => labels[i] || '');
+  render();
 });
 
 app.addEventListener('keydown', (e) => {
@@ -691,10 +1050,11 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
   if (session) {
     state.loading = true;
     render();
-    await loadEntries();
+    await Promise.all([loadEntries(), loadHabits()]);
     state.loading = false;
   } else {
     state.entries = {};
+    state.habits = [];
   }
   render();
 });
@@ -702,7 +1062,7 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
 const { data: { session } } = await supabase.auth.getSession();
 state.session = session;
 if (session) {
-  await loadEntries();
+  await Promise.all([loadEntries(), loadHabits()]);
   checkPushStatus().then(render);
 }
 state.loading = false;
