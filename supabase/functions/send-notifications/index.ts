@@ -156,7 +156,12 @@ Deno.serve(async () => {
         results.push({ user_id: sub.user_id, ok: true, detail: msg.body });
       } catch (err) {
         const statusCode = (err as { statusCode?: number })?.statusCode;
-        results.push({ user_id: sub.user_id, ok: false, detail: String(err) });
+        const body = (err as { body?: string })?.body;
+        results.push({
+          user_id: sub.user_id,
+          ok: false,
+          detail: `${String(err)} | statusCode=${statusCode} body=${body}`,
+        });
         // Abgelaufene/ungültige Subscription aufräumen
         if (statusCode === 404 || statusCode === 410) {
           await supabase.from('push_subscriptions').delete().eq('id', sub.id);
