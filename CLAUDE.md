@@ -112,8 +112,11 @@ pro Feld, ob dessen eigene Stunde erreicht ist:
   Erinnerungszeit" im Feld-Formular, standardmäßig aus. Aktuell z.B. beim eigenen Account
   auf Gewicht (`reminder_hour = 8`) gesetzt.
 
-Die Nachricht nennt die konkret fehlenden Feldnamen (`Erinnerung: <Namen> noch nicht
-eingetragen.`), gruppiert nach Standardzeit/eigener Stunde.
+Die Sammel-Erinnerung zur Standardzeit ist bewusst generisch ("Noch nicht alle Werte
+für heute eingetragen.", keine Feldnamen – sonst bei vielen Feldern schnell eine sehr
+lange Nachricht). Eine Erinnerung zu einer eigenen Stunde nennt dagegen das konkrete
+Feld (`Erinnerung: <Namen> noch nicht eingetragen.`), da dort meist gezielt ein
+einzelnes Feld hervorgehoben werden soll (z.B. Gewicht).
 
 **DST-sicher ohne manuelles Nachjustieren**: `pg_cron` kennt keine Zeitzonen mit
 Sommerzeit-Umstellung, läuft nur in UTC. Die Function läuft deshalb **jede volle

@@ -145,20 +145,19 @@
   .number-chart-svg { display: block; width: 100%; height: 56px; }
 
   .grid-scroll { overflow-x: auto; }
-  .grid-table { min-width: 440px; }
-  .grid-row { display: grid; grid-template-columns: 108px repeat(7, 1fr) 40px; align-items: center; }
+  .grid-row { display: grid; grid-template-columns: minmax(44px, 66px) repeat(7, 1fr) minmax(20px, 28px); align-items: center; gap: 1px; }
   .grid-row--header { padding-bottom: 6px; }
-  .grid-label { font-size: 11px; padding-right: 6px; line-height: 1.25; }
-  .grid-col-header { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: var(--sand); }
-  .grid-col-date { font-size: 11px; color: var(--ink); }
-  .grid-col-header--avg { font-family: 'Fraunces', serif; font-style: italic; color: var(--ink); }
-  .grid-cell { height: 22px; margin: 2px; border-radius: 2px; border: 1px solid var(--line); }
+  .grid-label { font-size: 10px; padding-right: 3px; line-height: 1.2; }
+  .grid-col-header { display: flex; flex-direction: column; align-items: center; font-size: 9px; color: var(--sand); cursor: pointer; }
+  .grid-col-date { font-size: 10px; color: var(--ink); }
+  .grid-col-header--avg { font-family: 'Fraunces', serif; font-style: italic; color: var(--ink); cursor: default; }
+  .grid-cell { height: 22px; margin: 1px; border-radius: 2px; border: 1px solid var(--line); }
   .grid-cell--avg { display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--paper); font-weight: 600; }
 
   .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 20px; }
   .month-weekday { font-size: 10px; color: var(--sand); text-align: center; padding-bottom: 4px; }
-  .month-cell { aspect-ratio: 1; border-radius: 3px; border: 1px solid var(--line); display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px; }
-  .month-cell--empty { border: none; }
+  .month-cell { aspect-ratio: 1; border-radius: 3px; border: 1px solid var(--line); display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px; cursor: pointer; }
+  .month-cell--empty { border: none; cursor: default; }
   .month-cell-num { font-size: 10px; color: var(--ink); mix-blend-mode: multiply; }
 
   .month-stats { border-top: 1px solid var(--line); padding-top: 8px; }
@@ -170,7 +169,7 @@
   .year-month { display: flex; align-items: center; gap: 6px; }
   .year-month-label { width: 24px; font-size: 9px; color: var(--sand); flex-shrink: 0; }
   .year-month-grid { display: grid; grid-template-columns: repeat(31, 1fr); gap: 2px; flex: 1; }
-  .year-day-cell { aspect-ratio: 1; border-radius: 1px; min-width: 0; }
+  .year-day-cell { aspect-ratio: 1; border-radius: 1px; min-width: 0; cursor: pointer; }
 
   .notice {
     font-size: 12px; padding: 8px 10px; border-radius: 3px; margin-bottom: 14px;
@@ -311,6 +310,12 @@ function formatKey(date) {
   return `${y}-${m}-${d}`;
 }
 function startOfDay(date) { const d = new Date(date); d.setHours(0, 0, 0, 0); return d; }
+// Parst einen 'YYYY-MM-DD'-Key als lokales Datum (nicht new Date(string), das UTC
+// interpretiert und je nach Zeitzone einen Tag daneben liegen kann).
+function parseDateKey(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
 function startOfWeek(date) { const d = startOfDay(date); const off = (d.getDay() + 6) % 7; d.setDate(d.getDate() - off); return d; }
 function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
 
@@ -880,14 +885,12 @@ function renderWeek() {
       <button type="button" class="nav-btn" data-action="nav-week" data-dir="1" aria-label="Nächste Woche">›</button>
     </div>
     <div class="grid-scroll">
-      <div class="grid-table">
-        <div class="grid-row grid-row--header">
-          <div class="grid-label"></div>
-          ${days.map((d) => `<div class="grid-col-header"><span>${WEEKDAYS[(d.getDay() + 6) % 7]}</span><span class="grid-col-date">${d.getDate()}</span></div>`).join('')}
-          <div class="grid-col-header grid-col-header--avg">Ø</div>
-        </div>
-        ${rows}
+      <div class="grid-row grid-row--header">
+        <div class="grid-label"></div>
+        ${days.map((d) => `<div class="grid-col-header" data-action="open-day" data-date="${formatKey(d)}"><span>${WEEKDAYS[(d.getDay() + 6) % 7]}</span><span class="grid-col-date">${d.getDate()}</span></div>`).join('')}
+        <div class="grid-col-header grid-col-header--avg">Ø</div>
       </div>
+      ${rows}
     </div>
     ${renderNumberCharts(visibleHabits, days.map(formatKey))}
   `;
@@ -923,7 +926,7 @@ function renderMonth() {
       ${cells.map((d) => {
         if (!d) return `<div class="month-cell month-cell--empty"></div>`;
         const s = dayOverallScore(d);
-        return `<div class="month-cell" style="background:${scoreColor(s)}"><span class="month-cell-num">${d.getDate()}</span></div>`;
+        return `<div class="month-cell" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(s)}"><span class="month-cell-num">${d.getDate()}</span></div>`;
       }).join('')}
     </div>
     <div class="month-stats">${renderStatsRows(monthStats)}</div>
@@ -941,7 +944,7 @@ function renderYear() {
       <div class="year-month">
         <div class="year-month-label">${name.slice(0, 3)}</div>
         <div class="year-month-grid">
-          ${cells.map((d) => `<div class="year-day-cell" style="background:${scoreColor(dayOverallScore(d))}"></div>`).join('')}
+          ${cells.map((d) => `<div class="year-day-cell" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(dayOverallScore(d))}"></div>`).join('')}
         </div>
       </div>
     `;
@@ -1254,6 +1257,10 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'nav-year') {
     state.yearAnchor += Number(el.dataset.dir);
     render();
+  } else if (action === 'open-day') {
+    state.currentDate = parseDateKey(el.dataset.date);
+    state.view = 'today';
+    render();
   } else if (action === 'select') {
     const dateKey = formatKey(state.currentDate);
     const value = JSON.parse(el.dataset.value);
@@ -1340,31 +1347,43 @@ app.addEventListener('keydown', (e) => {
   }
 });
 
-// --- Swipe-Navigation (Heute-Ansicht: vorheriger/nächster Tag) ------------
+// --- Swipe-Navigation (Heute/Woche/Monat/Jahr: vorheriger/nächster Zeitraum) --------
 let touchStartX = null;
 let touchStartY = null;
 const SWIPE_THRESHOLD = 50;
+const SWIPEABLE_VIEWS = ['today', 'week', 'month', 'year'];
 
 app.addEventListener('touchstart', (e) => {
   // Ein Wisch, der innerhalb einer eigenen horizontal scrollbaren Zeile beginnt (z.B. die
   // Feld-Buttons, wenn deren Bezeichnungen den Platz sprengen), soll dort scrollen statt
-  // den Tag zu wechseln.
-  if (state.view !== 'today' || e.touches.length !== 1 || e.target.closest('.habit-options, .tabs')) return;
+  // die Ansicht zu wechseln.
+  if (!SWIPEABLE_VIEWS.includes(state.view) || e.touches.length !== 1 || e.target.closest('.habit-options, .tabs, .grid-scroll')) return;
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
 }, { passive: true });
 
 app.addEventListener('touchend', (e) => {
-  if (touchStartX === null || state.view !== 'today') return;
+  if (touchStartX === null || !SWIPEABLE_VIEWS.includes(state.view)) return;
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = e.changedTouches[0].clientY - touchStartY;
   touchStartX = null;
   touchStartY = null;
   if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy) * 1.5) return;
   const dir = dx < 0 ? 1 : -1;
-  const isToday = formatKey(state.currentDate) === formatKey(new Date());
-  if (dir === 1 && isToday) return; // nicht in die Zukunft
-  state.currentDate = addDays(state.currentDate, dir);
+
+  if (state.view === 'today') {
+    const isToday = formatKey(state.currentDate) === formatKey(new Date());
+    if (dir === 1 && isToday) return; // nicht in die Zukunft
+    state.currentDate = addDays(state.currentDate, dir);
+  } else if (state.view === 'week') {
+    state.weekAnchor = addDays(state.weekAnchor, dir * 7);
+  } else if (state.view === 'month') {
+    const d = new Date(state.monthAnchor);
+    d.setMonth(d.getMonth() + dir);
+    state.monthAnchor = d;
+  } else if (state.view === 'year') {
+    state.yearAnchor += dir;
+  }
   render();
 }, { passive: true });
 

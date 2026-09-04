@@ -131,22 +131,29 @@ Deno.serve(async () => {
     const defaultHour = defaultHourByUser.get(sub.user_id) ?? 22;
     const messages: PushMessage[] = [];
 
-    const groups: HabitDef[][] = [];
+    // Sammel-Erinnerung zur Standardzeit: bewusst generisch (nicht jedes fehlende Feld
+    // einzeln benannt) — das wäre bei vielen Feldern schnell eine sehr lange Nachricht.
     if (berlin.hour === defaultHour) {
-      groups.push(defsForUser.filter((d) => d.reminder_hour === null));
-    }
-    groups.push(defsForUser.filter((d) => d.reminder_hour === berlin.hour));
-
-    for (const group of groups) {
-      if (!group.length) continue;
-      const missing = missingNames(group, dayData);
-      if (missing.length) {
+      const defaultGroup = defsForUser.filter((d) => d.reminder_hour === null);
+      if (missingNames(defaultGroup, dayData).length) {
         messages.push({
           title: 'Logbuch',
-          body: `Erinnerung: ${missing.join(', ')} noch nicht eingetragen.`,
+          body: 'Erinnerung: Noch nicht alle Werte für heute eingetragen.',
           url: './logbuch.html',
         });
       }
+    }
+
+    // Eigene Stunde je Feld: hier macht die konkrete Nennung Sinn, meist nur ein
+    // einzelnes bewusst herausgehobenes Feld (z.B. Gewicht morgens).
+    const customGroup = defsForUser.filter((d) => d.reminder_hour === berlin.hour);
+    const missingCustom = missingNames(customGroup, dayData);
+    if (missingCustom.length) {
+      messages.push({
+        title: 'Logbuch',
+        body: `Erinnerung: ${missingCustom.join(', ')} noch nicht eingetragen.`,
+        url: './logbuch.html',
+      });
     }
 
     if (berlin.hour === defaultHour) {
