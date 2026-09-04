@@ -60,6 +60,12 @@ create table public.habit_definitions (
   good text check (good in ('high', 'low')),
   unit text,                          -- nur bei kind='number', z.B. 'kg'
   reminder_hour smallint check (reminder_hour between 0 and 23), -- null = Standardzeit (siehe send-notifications)
+  -- Nur bei kind='scale': ab welcher normalisierten Quote (0-1) ein Wert farblich als
+  -- "voll erreicht" gilt (null = 1 = Standard 100%). Verschiebt NUR die Farbskala
+  -- (scoreColor), nie die angezeigten Prozentzahlen selbst, und wirkt sich nicht auf die
+  -- "Heute"-Ansicht aus (siehe applyGoal in logbuch.html) — für Felder wie "Kraftsport
+  -- gemacht", bei denen eine 100%-Quote unrealistisch/nicht das eigentliche Ziel ist.
+  goal_threshold real check (goal_threshold is null or (goal_threshold > 0 and goal_threshold <= 1)),
   sort_order int not null default 0,
   archived_at timestamptz,
   created_at timestamptz not null default now(),
@@ -68,7 +74,7 @@ create table public.habit_definitions (
   check (
     (kind = 'scale'  and min is not null and max is not null and good is not null)
     or
-    (kind = 'number' and min is null and max is null and labels is null and good is null)
+    (kind = 'number' and min is null and max is null and labels is null and good is null and goal_threshold is null)
   )
 );
 

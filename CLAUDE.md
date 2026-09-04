@@ -83,6 +83,17 @@ Auswertungs-Tabs einen Verlaufs-Graphen (`renderNumberChart`), statt in die Scor
 Heatmap-Logik einzufließen. Es gibt keinen separaten Bool-Typ mehr – ein Ja/Nein-Feld ist
 einfach eine `scale` mit `min:0, max:1, labels:['Nein','Ja']`.
 
+**Ziel-Quote (`goal_threshold`, nur `kind='scale'`)**: bei manchen Feldern ist eine
+100%-Quote unrealistisch/gar nicht das eigentliche Ziel (z.B. "Kraftsport gemacht" jeden
+Tag). Pro Feld einstellbar (Formular "Ziel für volle Bewertung (%)", Standard 100 =
+`goal_threshold: null`), ab welcher normalisierten Quote (0–1) ein Wert farblich als voll
+erreicht gilt. `applyGoal(habit, score)` staucht dafür den Score auf
+`min(1, score/threshold)`, bei Standard (1) unverändert (exakter Durchreicher). Wird NUR
+auf die Farbgebung angewendet (`dayOverallScore`, Wochen-Grid-Zellen inkl. Ø,
+`renderStatsRows` in Monat/Jahr/Gesamt) — nie auf angezeigte Prozentzahlen, und bewusst
+NICHT in `renderHabitOptions` ("Heute"-Tab bleibt unverändert, dort zählt der rohe Wert
+des Tages, keine Quote).
+
 ## Design
 
 Ledger/Logbuch-Ästhetik: Parchment-Hintergrund (`--paper`), warmes Schwarz (`--ink`),

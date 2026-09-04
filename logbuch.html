@@ -291,6 +291,7 @@ function habitFromRow(row) {
     labels: row.labels,
     good: row.good,
     reminderHour: row.reminder_hour, // 0-23 oder null (= Standardzeit je nach kind)
+    goalThreshold: row.goal_threshold, // nur bei kind === 'scale', 0-1 oder null (= 1 = 100%)
     sortOrder: row.sort_order,
     archivedAt: row.archived_at,
   };
@@ -334,12 +335,27 @@ function scoreColor(score) {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
 
+// Verschiebt einen normalisierten Score (0-1) anhand der pro Feld einstellbaren
+// Ziel-Quote (goalThreshold, Standard 1 = 100%) für die FARBGEBUNG — z.B. bei
+// "Kraftsport gemacht" kann eine 50%-Quote schon als voll erreicht (Score 1) gelten.
+// Ändert NIE angezeigte Prozentzahlen, nur die Farbe, und wird bewusst NICHT in der
+// "Heute"-Ansicht verwendet (siehe renderHabitOptions). Bei Standard-Ziel (1) exakter
+// Durchreicher, keine Änderung ggü. vorher.
+function applyGoal(habit, score) {
+  if (score === null || score === undefined) return null;
+  const threshold = habit.goalThreshold ?? 1;
+  if (threshold >= 1) return score;
+  return Math.min(1, score / threshold);
+}
+
 // Gesamt-Score eines Tages über alle Skala-Felder gemittelt (für Monats-/Jahres-Heatmap).
 // Zahlenwert-Felder (kind='number') fließen bewusst nicht ein — kein Gut/Schlecht dort.
 function dayOverallScore(date) {
   const day = state.entries[formatKey(date)];
   if (!day) return null;
-  const scores = state.habits.filter((h) => h.kind === 'scale').map((h) => normalize(h, day[h.id])).filter((s) => s !== null);
+  const scores = state.habits.filter((h) => h.kind === 'scale')
+    .map((h) => applyGoal(h, normalize(h, day[h.id])))
+    .filter((s) => s !== null);
   if (!scores.length) return null;
   return scores.reduce((a, b) => a + b, 0) / scores.length;
 }
@@ -467,6 +483,7 @@ function defaultHabitForm() {
   return {
     defId: null, locked: false, kind: 'scale',
     name: '', mode: 'numeric', min: 1, max: 5, steps: 3, labels: ['', '', ''], good: 'high',
+    goalPercent: 100,
     unit: '', reminderEnabled: false, reminderHour: state.userSettings.defaultReminderHour,
   };
 }
@@ -486,6 +503,7 @@ function habitToForm(h) {
     steps: labeled ? h.labels.length : (max - min + 1),
     labels: labeled ? [...h.labels] : Array.from({ length: max - min + 1 }, () => ''),
     good: h.good || 'high',
+    goalPercent: Math.round((h.goalThreshold ?? 1) * 100),
     unit: h.unit || '',
     reminderEnabled: h.reminderHour !== null && h.reminderHour !== undefined,
     reminderHour: h.reminderHour ?? state.userSettings.defaultReminderHour,
@@ -494,7 +512,9 @@ function habitToForm(h) {
 
 function formatScale(h) {
   if (h.kind === 'number') return h.unit ? `Zahlenwert (${h.unit})` : 'Zahlenwert';
-  return h.labels ? h.labels.join(' / ') : `${h.min} – ${h.max}`;
+  const scale = h.labels ? h.labels.join(' / ') : `${h.min} – ${h.max}`;
+  const goalPercent = Math.round((h.goalThreshold ?? 1) * 100);
+  return goalPercent < 100 ? `${scale} · Ziel ${goalPercent}%` : scale;
 }
 
 // Liest die gerade sichtbaren Formularfelder (Name + je nach Modus Min/Max oder
@@ -516,6 +536,8 @@ function syncHabitFormFromDom() {
         f.labels[Number(el.dataset.labelIndex)] = el.value;
       });
     }
+    const goalEl = document.getElementById('habit-form-goal');
+    if (goalEl) f.goalPercent = Number(goalEl.value);
   } else {
     const unitEl = document.getElementById('habit-form-unit');
     if (unitEl) f.unit = unitEl.value;
@@ -539,13 +561,19 @@ async function handleHabitSave() {
   const reminderHourEl = document.getElementById('habit-form-reminder-hour');
   const reminderHour = reminderEnabled ? Number(reminderHourEl ? reminderHourEl.value : f.reminderHour) : null;
 
-  let fields; // { kind, min, max, labels, good, unit }
+  const goalEl = document.getElementById('habit-form-goal');
+  const goalPercent = goalEl ? Number(goalEl.value) : f.goalPercent;
+  const goalThreshold = f.kind === 'scale' && Number.isFinite(goalPercent) && goalPercent > 0 && goalPercent < 100
+    ? goalPercent / 100
+    : null;
+
+  let fields; // { kind, min, max, labels, good, unit, goal_threshold }
   if (f.kind === 'number') {
     const unit = (document.getElementById('habit-form-unit')?.value || '').trim();
-    fields = { kind: 'number', min: null, max: null, labels: null, good: null, unit: unit || null };
+    fields = { kind: 'number', min: null, max: null, labels: null, good: null, unit: unit || null, goal_threshold: null };
   } else if (f.locked) {
     const original = state.habits.find((h) => h.defId === f.defId);
-    fields = { kind: 'scale', min: original.min, max: original.max, labels: original.labels, good: f.good, unit: null };
+    fields = { kind: 'scale', min: original.min, max: original.max, labels: original.labels, good: f.good, unit: null, goal_threshold: goalThreshold };
   } else if (f.mode === 'numeric') {
     const min = Number(document.getElementById('habit-form-min').value);
     const max = Number(document.getElementById('habit-form-max').value);
@@ -559,7 +587,7 @@ async function handleHabitSave() {
       render();
       return;
     }
-    fields = { kind: 'scale', min, max, labels: null, good: f.good, unit: null };
+    fields = { kind: 'scale', min, max, labels: null, good: f.good, unit: null, goal_threshold: goalThreshold };
   } else {
     const labelEls = [...document.querySelectorAll('[data-label-index]')]
       .sort((a, b) => Number(a.dataset.labelIndex) - Number(b.dataset.labelIndex));
@@ -569,12 +597,12 @@ async function handleHabitSave() {
       render();
       return;
     }
-    fields = { kind: 'scale', min: 0, max: labels.length - 1, labels, good: f.good, unit: null };
+    fields = { kind: 'scale', min: 0, max: labels.length - 1, labels, good: f.good, unit: null, goal_threshold: goalThreshold };
   }
 
   if (f.defId) {
     const patch = f.locked
-      ? { name, ...(f.kind === 'scale' ? { good: f.good } : { unit: fields.unit }), reminder_hour: reminderHour }
+      ? { name, ...(f.kind === 'scale' ? { good: f.good, goal_threshold: goalThreshold } : { unit: fields.unit }), reminder_hour: reminderHour }
       : { name, ...fields, reminder_hour: reminderHour };
     const { data, error } = await supabase.from('habit_definitions').update(patch).eq('id', f.defId).select().single();
     if (error) {
@@ -872,8 +900,8 @@ function renderWeek() {
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ' <span class="manage-meta">(archiviert)</span>' : ''}</div>
-        ${scores.map((s, i) => `<div class="grid-cell" data-action="open-day" data-date="${formatKey(days[i])}" style="background:${scoreColor(s)}"></div>`).join('')}
-        <div class="grid-cell grid-cell--avg" style="background:${scoreColor(avg)}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
+        ${scores.map((s, i) => `<div class="grid-cell" data-action="open-day" data-date="${formatKey(days[i])}" style="background:${scoreColor(applyGoal(h, s))}"></div>`).join('')}
+        <div class="grid-cell grid-cell--avg" style="background:${scoreColor(applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
     `;
   }).join('');
@@ -991,7 +1019,7 @@ function renderStatsRows(stats) {
   return stats.map(({ habit, avg, count }) => `
     <div class="month-stat-row">
       <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ' <span class="manage-meta">(archiviert)</span>' : ''}</span>
-      <span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : scoreColor(avg)}">${avg !== null ? Math.round(avg * 100) + '%' : '–'} <span class="month-stat-count">(${count}×)</span></span>
+      <span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : scoreColor(applyGoal(habit, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'} <span class="month-stat-count">(${count}×)</span></span>
     </div>
   `).join('');
 }
@@ -1095,6 +1123,11 @@ function renderHabitForm() {
             <button type="button" class="pill-toggle${f.good === 'high' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="high">Hohe Werte erstrebenswert</button>
             <button type="button" class="pill-toggle${f.good === 'low' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="low">Niedrige Werte erstrebenswert</button>
           </div>
+        </div>
+        <div class="auth-field">
+          <label for="habit-form-goal">Ziel für volle Bewertung (%)</label>
+          <input type="number" id="habit-form-goal" min="1" max="100" step="1" value="${f.goalPercent}" />
+          <p class="habit-form-lock-note">Bei unter 100%: schon eine niedrigere Quote/Wert zählt farblich als voll erreicht (grün). Ändert nur die Farbe, nie die angezeigte Prozentzahl. Wirkt sich nicht auf „Heute" aus.</p>
         </div>
       ` : `
         <div class="auth-field">
