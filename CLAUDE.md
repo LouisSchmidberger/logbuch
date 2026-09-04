@@ -23,9 +23,9 @@ kein Wachstum auf breite Öffentlichkeit vorgesehen.
 ## Datenmodell
 
 Tabelle `habit_definitions`: eine Zeile pro Nutzer und Feld – **ersetzt die frühere feste
-`HABITS`-Konstante**. Jeder Nutzer verwaltet seine Felder selbst über den Tab "Felder" in
-der App (anlegen, umbenennen, archivieren, reaktivieren; siehe `renderManage` in
-`logbuch.html`).
+`HABITS`-Konstante**. Jeder Nutzer verwaltet seine Felder selbst über "Felder verwalten"
+im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
+`renderManage` in `logbuch.html` – kein eigener Tab mehr, siehe Abschnitt "Design").
 - `slug` (text, Key in `habit_entries.data`), `name`, `kind` (`'scale'` oder `'number'`,
   siehe Skalen-/Farblogik unten), `min`/`max` (int, nur bei `kind='scale'`), `labels`
   (jsonb, nur bei `kind='scale'`; `null` = Zahlenwerte, sonst Array von Strings der Länge
@@ -56,6 +56,12 @@ Tabelle `habit_entries`: eine Zeile pro Nutzer und Kalendertag.
 Tabelle `push_subscriptions`: eine Zeile pro Browser/Gerät mit aktivierten Erinnerungen
 (Web-Push-Endpoint + Schlüssel). RLS wie oben.
 
+Tabelle `user_settings`: eine Zeile pro Nutzer, aktuell nur `default_reminder_hour`
+(0–23, Default 22) – die Standard-Erinnerungsstunde für alle Felder ohne eigene
+`reminder_hour` (siehe Erinnerungen). Wird bei Registrierung automatisch angelegt
+(Trigger `on_auth_user_created_seed_settings`), im Burger-Menü der App änderbar. RLS
+wie oben.
+
 **Der Reminder-Check** in der Edge Function fragt dafür live die aktiven (nicht
 archivierten) `habit_definitions` je Nutzer ab – keine hartkodierte Liste mehr, kein
 manuelles Synchronhalten nötig. Erinnert wird, sobald mindestens ein zur jeweiligen
@@ -84,23 +90,30 @@ Fraunces (Serif, kursiv für Überschriften) + IBM Plex Sans. Farb-Tokens als CS
 im `<style>`-Block von `logbuch.html`. Bei Erweiterungen an diesem Stil festhalten,
 nicht auf generische Tailwind-/Card-Optik wechseln.
 
+Tab-Leiste zeigt nur noch die Auswertungs-Ansichten (Heute/Woche/Monat/Jahr/Gesamt).
+Alles Konfigurative sitzt im **Burger-Menü** (☰-Button oben rechts, `renderMenu` in
+`logbuch.html`): Push aktiv/inaktiv, Standard-Erinnerungszeit, "Felder verwalten"
+(öffnet `renderManage`, kein eigener Tab mehr) und Abmelden.
+
 ## Erinnerungen (Web Push)
 
 Eine einzige Edge Function `send-notifications` läuft **stündlich** (statt fester
-Zeitpunkte) und prüft pro Nutzer und Feld, ob gerade dessen Erinnerungsstunde ist:
-- **8 Uhr Berliner Zeit (Standard)**: alle aktiven `kind='number'`-Felder ohne eigene
-  `reminder_hour` (z.B. Gewicht), die heute noch nicht eingetragen sind.
-- **22 Uhr Berliner Zeit (Standard)**: alle aktiven `kind='scale'`-Felder ohne eigene
-  `reminder_hour`, die heute noch nicht eingetragen sind (nicht erst wenn der ganze Tag
-  leer ist). Zusätzlich sonntags "Wochenübersicht ist da", am Monatsletzten
-  "Monatsübersicht ist da".
-- **Eigene Stunde je Feld**: jedes Feld kann über `reminder_hour` (0–23) eine eigene
-  Erinnerungszeit bekommen, unabhängig von `kind` und den beiden Standardzeiten – z.B.
-  ein Zahlenwert-Feld, das mittags statt morgens erinnert werden soll. In der App per
-  Checkbox "Eigene Erinnerungszeit" im Feld-Formular, standardmäßig aus.
+Zeitpunkte) und prüft pro Nutzer, ob gerade dessen Standard-Erinnerungsstunde ist bzw.
+pro Feld, ob dessen eigene Stunde erreicht ist:
+- **Standard-Erinnerungszeit (`user_settings.default_reminder_hour`, Default 22 Uhr
+  Berliner Zeit, im Menü änderbar)**: alle aktiven Felder OHNE eigene `reminder_hour` –
+  unabhängig von `kind` (Skala oder Zahlenwert) – werden gemeinsam geprüft. Fehlt an
+  diesem Tag noch mindestens eines davon, gibt es EINE Sammel-Nachricht (nicht eine pro
+  Feld). Zusätzlich zu dieser Stunde: sonntags "Wochenübersicht ist da", am
+  Monatsletzten "Monatsübersicht ist da".
+- **Eigene Stunde je Feld**: jedes Feld kann über `reminder_hour` (0–23) unabhängig von
+  der Standardzeit eine eigene Erinnerungsstunde bekommen – z.B. Gewicht typischerweise
+  morgens statt zur (abendlichen) Standardzeit. In der App per Checkbox "Eigene
+  Erinnerungszeit" im Feld-Formular, standardmäßig aus. Aktuell z.B. beim eigenen Account
+  auf Gewicht (`reminder_hour = 8`) gesetzt.
 
 Die Nachricht nennt die konkret fehlenden Feldnamen (`Erinnerung: <Namen> noch nicht
-eingetragen.`), gruppiert nach Standard-8-Uhr/Standard-22-Uhr/eigener Stunde.
+eingetragen.`), gruppiert nach Standardzeit/eigener Stunde.
 
 **DST-sicher ohne manuelles Nachjustieren**: `pg_cron` kennt keine Zeitzonen mit
 Sommerzeit-Umstellung, läuft nur in UTC. Die Function läuft deshalb **jede volle

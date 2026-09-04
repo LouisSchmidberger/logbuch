@@ -37,9 +37,31 @@
     padding: 20px 18px 40px;
   }
 
-  .header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
   .header h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 22px; margin: 0; }
-  .logout-btn { background: none; border: none; color: var(--sand); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
+
+  .header-menu-wrap { position: relative; }
+  .menu-btn {
+    background: none; border: 1px solid var(--line); border-radius: 50%; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center; color: var(--ink); cursor: pointer; font-size: 15px;
+  }
+  .menu-panel {
+    position: absolute; top: 38px; right: 0; z-index: 10; width: 230px;
+    display: flex; flex-direction: column; gap: 10px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 12px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  }
+  .menu-panel .push-row { margin-bottom: 0; }
+  .menu-row { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--sand); }
+  .menu-row select {
+    font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
+    border-radius: 3px; background: #fff; color: var(--ink);
+  }
+  .menu-item-btn {
+    font-family: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 3px; background: transparent; color: var(--ink); cursor: pointer; text-align: left;
+  }
+  .menu-item-btn--danger { color: var(--rust); border-color: rgba(162, 80, 58, 0.4); }
 
   .push-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink); background: rgba(75,107,79,0.08); border: 1px solid var(--line); border-radius: 3px; padding: 7px 10px; margin-bottom: 16px; }
   .push-row--muted { color: var(--sand); background: transparent; }
@@ -362,6 +384,8 @@ const state = {
   pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy'
   habits: [],         // alle Felder des Nutzers (aktiv + archiviert), sort_order-sortiert
   habitForm: null,    // { defId, locked, name, mode: 'numeric'|'labels', min, max, steps, labels, good }
+  menuOpen: false,
+  userSettings: { defaultReminderHour: 22 }, // Standard-Erinnerungszeit für Felder ohne eigene reminder_hour
 };
 
 function activeHabits() {
@@ -414,12 +438,31 @@ async function loadHabits() {
   state.habits = data.map(habitFromRow);
 }
 
+async function loadUserSettings() {
+  const { data, error } = await supabase.from('user_settings').select('default_reminder_hour').maybeSingle();
+  if (error) {
+    state.notice = { type: 'error', text: 'Einstellungen konnten nicht geladen werden: ' + error.message };
+    return;
+  }
+  state.userSettings = { defaultReminderHour: data ? data.default_reminder_hour : 22 };
+}
+
+async function saveDefaultReminderHour(hour) {
+  state.userSettings = { defaultReminderHour: hour };
+  const { error } = await supabase.from('user_settings')
+    .upsert({ user_id: state.session.user.id, default_reminder_hour: hour }, { onConflict: 'user_id' });
+  if (error) {
+    state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + error.message };
+    render();
+  }
+}
+
 // --- Felder-Verwaltung -----------------------------------------------------
 function defaultHabitForm() {
   return {
     defId: null, locked: false, kind: 'scale',
     name: '', mode: 'numeric', min: 1, max: 5, steps: 3, labels: ['', '', ''], good: 'high',
-    unit: '', reminderEnabled: false, reminderHour: 22,
+    unit: '', reminderEnabled: false, reminderHour: state.userSettings.defaultReminderHour,
   };
 }
 
@@ -440,7 +483,7 @@ function habitToForm(h) {
     good: h.good || 'high',
     unit: h.unit || '',
     reminderEnabled: h.reminderHour !== null && h.reminderHour !== undefined,
-    reminderHour: h.reminderHour ?? 22,
+    reminderHour: h.reminderHour ?? state.userSettings.defaultReminderHour,
   };
 }
 
@@ -996,7 +1039,7 @@ function renderNumberCharts(visibleHabits, dateKeys) {
 // --- Rendering: Felder-Verwaltung -------------------------------------------
 function renderHabitForm() {
   const f = state.habitForm;
-  const defaultReminderHour = 22;
+  const defaultReminderHour = state.userSettings.defaultReminderHour;
   return `
     <div class="habit-form">
       <h2>${f.defId ? 'Feld bearbeiten' : 'Neues Feld'}</h2>
@@ -1065,7 +1108,7 @@ function renderHabitForm() {
           <select id="habit-form-reminder-hour">
             ${Array.from({ length: 24 }, (_, hr) => `<option value="${hr}" ${hr === (f.reminderHour ?? defaultReminderHour) ? 'selected' : ''}>${String(hr).padStart(2, '0')}:00</option>`).join('')}
           </select>
-        ` : `<p class="habit-form-lock-note">Ohne eigene Zeit: Erinnerung ${f.kind === 'number' ? 'morgens um 8 Uhr' : 'abends um 22 Uhr'} (Standard).</p>`}
+        ` : `<p class="habit-form-lock-note">Ohne eigene Zeit gilt die Standard-Erinnerungszeit (aktuell ${String(defaultReminderHour).padStart(2, '0')}:00, änderbar im Menü).</p>`}
       </div>
       <div class="habit-form-actions">
         <button type="button" class="auth-submit" data-action="habit-save">Speichern</button>
@@ -1122,6 +1165,22 @@ function renderPushRow() {
   return `<div class="push-row">🔕 Keine Erinnerungen <button type="button" class="push-toggle" data-action="enable-push">aktivieren</button></div>`;
 }
 
+function renderMenu() {
+  return `
+    <div class="menu-panel">
+      ${renderPushRow()}
+      <div class="menu-row">
+        <label for="menu-default-hour">Standard-Erinnerungszeit</label>
+        <select id="menu-default-hour" data-action="menu-default-hour">
+          ${Array.from({ length: 24 }, (_, hr) => `<option value="${hr}" ${hr === state.userSettings.defaultReminderHour ? 'selected' : ''}>${String(hr).padStart(2, '0')}:00</option>`).join('')}
+        </select>
+      </div>
+      <button type="button" class="menu-item-btn" data-action="open-manage">Felder verwalten</button>
+      <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="logout">Abmelden</button>
+    </div>
+  `;
+}
+
 function renderApp() {
   const noticeHtml = state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : '';
   const body = state.loading ? `<div class="loading">Lädt …</div>` :
@@ -1134,16 +1193,17 @@ function renderApp() {
   app.innerHTML = `
     <div class="header">
       <h1>Logbuch</h1>
-      <button type="button" class="logout-btn" data-action="logout">Abmelden</button>
+      <div class="header-menu-wrap">
+        <button type="button" class="menu-btn" data-action="toggle-menu" aria-label="Menü">☰</button>
+        ${state.menuOpen ? renderMenu() : ''}
+      </div>
     </div>
-    ${renderPushRow()}
     <div class="tabs">
       <button type="button" class="tab${state.view === 'today' ? ' tab--active' : ''}" data-action="set-view" data-view="today">Heute</button>
       <button type="button" class="tab${state.view === 'week' ? ' tab--active' : ''}" data-action="set-view" data-view="week">Woche</button>
       <button type="button" class="tab${state.view === 'month' ? ' tab--active' : ''}" data-action="set-view" data-view="month">Monat</button>
       <button type="button" class="tab${state.view === 'year' ? ' tab--active' : ''}" data-action="set-view" data-view="year">Jahr</button>
       <button type="button" class="tab${state.view === 'global' ? ' tab--active' : ''}" data-action="set-view" data-view="global">Gesamt</button>
-      <button type="button" class="tab${state.view === 'manage' ? ' tab--active' : ''}" data-action="set-view" data-view="manage">Felder</button>
     </div>
     ${noticeHtml}
     ${body}
@@ -1167,6 +1227,13 @@ app.addEventListener('click', async (e) => {
     render();
   } else if (action === 'logout') {
     await supabase.auth.signOut();
+  } else if (action === 'toggle-menu') {
+    state.menuOpen = !state.menuOpen;
+    render();
+  } else if (action === 'open-manage') {
+    state.view = 'manage';
+    state.menuOpen = false;
+    render();
   } else if (action === 'set-view') {
     state.view = el.dataset.view;
     render();
@@ -1250,7 +1317,20 @@ app.addEventListener('change', (e) => {
     syncHabitFormFromDom();
     state.habitForm.reminderEnabled = reminderToggle.checked;
     render();
+    return;
   }
+  const defaultHourEl = e.target.closest('[data-action="menu-default-hour"]');
+  if (defaultHourEl) {
+    saveDefaultReminderHour(Number(defaultHourEl.value));
+  }
+});
+
+// Menü schließen, wenn außerhalb davon geklickt wird.
+document.addEventListener('click', (e) => {
+  if (!state.menuOpen) return;
+  if (e.target.closest('.menu-panel, .menu-btn')) return;
+  state.menuOpen = false;
+  render();
 });
 
 app.addEventListener('keydown', (e) => {
@@ -1366,7 +1446,7 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
   if (session) {
     state.loading = true;
     render();
-    await Promise.all([loadEntries(), loadHabits()]);
+    await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
     state.loading = false;
   } else {
     state.entries = {};
@@ -1378,7 +1458,7 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
 const { data: { session } } = await supabase.auth.getSession();
 state.session = session;
 if (session) {
-  await Promise.all([loadEntries(), loadHabits()]);
+  await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
   checkPushStatus().then(render);
 }
 state.loading = false;

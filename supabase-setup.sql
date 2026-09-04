@@ -119,6 +119,41 @@ create trigger on_auth_user_created_seed_habits
   after insert on auth.users
   for each row execute function public.seed_default_habits();
 
+-- Nutzer-Einstellungen: aktuell nur die Standard-Erinnerungszeit (Stunde, Berliner
+-- Zeit), die für alle Felder ohne eigene reminder_hour gilt. Änderbar im Menü der App.
+create table public.user_settings (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  default_reminder_hour smallint not null default 22 check (default_reminder_hour between 0 and 23),
+  created_at timestamptz not null default now()
+);
+
+alter table public.user_settings enable row level security;
+
+create policy "select own user_settings" on public.user_settings
+  for select using (auth.uid() = user_id);
+
+create policy "insert own user_settings" on public.user_settings
+  for insert with check (auth.uid() = user_id);
+
+create policy "update own user_settings" on public.user_settings
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create or replace function public.seed_default_user_settings()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.user_settings (user_id) values (new.id);
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created_seed_settings
+  after insert on auth.users
+  for each row execute function public.seed_default_user_settings();
+
 -- Push-Subscriptions: pro Gerät/Browser ein Eintrag
 create table public.push_subscriptions (
   id uuid primary key default gen_random_uuid(),
