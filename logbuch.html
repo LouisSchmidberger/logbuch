@@ -145,14 +145,14 @@
   .number-chart-svg { display: block; width: 100%; height: 56px; }
 
   .grid-scroll { overflow-x: auto; }
-  .grid-row { display: grid; grid-template-columns: minmax(44px, 66px) repeat(7, 1fr) minmax(20px, 28px); align-items: center; gap: 1px; }
+  .grid-row { display: grid; grid-template-columns: minmax(58px, 80px) repeat(7, 1fr) minmax(30px, 38px); align-items: center; gap: 1px; }
   .grid-row--header { padding-bottom: 6px; }
   .grid-label { font-size: 10px; padding-right: 3px; line-height: 1.2; }
   .grid-col-header { display: flex; flex-direction: column; align-items: center; font-size: 9px; color: var(--sand); cursor: pointer; }
   .grid-col-date { font-size: 10px; color: var(--ink); }
   .grid-col-header--avg { font-family: 'Fraunces', serif; font-style: italic; color: var(--ink); cursor: default; }
-  .grid-cell { height: 22px; margin: 1px; border-radius: 2px; border: 1px solid var(--line); }
-  .grid-cell--avg { display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--paper); font-weight: 600; }
+  .grid-cell { height: 22px; margin: 1px; border-radius: 2px; border: 1px solid var(--line); cursor: pointer; }
+  .grid-cell--avg { display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--paper); font-weight: 600; cursor: default; }
 
   .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 20px; }
   .month-weekday { font-size: 10px; color: var(--sand); text-align: center; padding-bottom: 4px; }
@@ -872,7 +872,7 @@ function renderWeek() {
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ' <span class="manage-meta">(archiviert)</span>' : ''}</div>
-        ${scores.map((s) => `<div class="grid-cell" style="background:${scoreColor(s)}"></div>`).join('')}
+        ${scores.map((s, i) => `<div class="grid-cell" data-action="open-day" data-date="${formatKey(days[i])}" style="background:${scoreColor(s)}"></div>`).join('')}
         <div class="grid-cell grid-cell--avg" style="background:${scoreColor(avg)}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
     `;
@@ -1357,7 +1357,7 @@ app.addEventListener('touchstart', (e) => {
   // Ein Wisch, der innerhalb einer eigenen horizontal scrollbaren Zeile beginnt (z.B. die
   // Feld-Buttons, wenn deren Bezeichnungen den Platz sprengen), soll dort scrollen statt
   // die Ansicht zu wechseln.
-  if (!SWIPEABLE_VIEWS.includes(state.view) || e.touches.length !== 1 || e.target.closest('.habit-options, .tabs, .grid-scroll')) return;
+  if (!SWIPEABLE_VIEWS.includes(state.view) || e.touches.length !== 1 || e.target.closest('.habit-options, .tabs')) return;
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
 }, { passive: true });
