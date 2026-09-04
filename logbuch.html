@@ -440,7 +440,7 @@ function habitToForm(h) {
     good: h.good || 'high',
     unit: h.unit || '',
     reminderEnabled: h.reminderHour !== null && h.reminderHour !== undefined,
-    reminderHour: h.reminderHour ?? (h.kind === 'number' ? 8 : 22),
+    reminderHour: h.reminderHour ?? 22,
   };
 }
 
@@ -904,7 +904,7 @@ function renderYear() {
     `;
   }).join('');
 
-  const yearKeys = Object.keys(state.entries).filter((k) => k.startsWith(`${year}-`));
+  const yearKeys = Object.keys(state.entries).filter((k) => k.startsWith(`${year}-`)).sort();
   // Archivierte Felder bleiben sichtbar, solange sie in diesem Jahr Daten haben.
   const visibleHabits = state.habits.filter(
     (h) => !h.archivedAt || yearKeys.some((k) => state.entries[k]?.[h.id] !== undefined)
@@ -996,7 +996,7 @@ function renderNumberCharts(visibleHabits, dateKeys) {
 // --- Rendering: Felder-Verwaltung -------------------------------------------
 function renderHabitForm() {
   const f = state.habitForm;
-  const defaultReminderHour = f.kind === 'number' ? 8 : 22;
+  const defaultReminderHour = 22;
   return `
     <div class="habit-form">
       <h2>${f.defId ? 'Feld bearbeiten' : 'Neues Feld'}</h2>
