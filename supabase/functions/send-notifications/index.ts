@@ -1,10 +1,20 @@
 // Datei nach dem Deployment ablegen unter: supabase/functions/send-notifications/index.ts
 //
-// Läuft einmal täglich (per pg_cron, siehe supabase-setup.sql) und:
-// 1. schickt eine Erinnerung an alle Nutzer, die heute noch nicht ALLE ihre aktiven
-//    Felder ausgefüllt haben (nicht erst, wenn der Tag komplett leer ist)
-// 2. schickt sonntags einen Hinweis, dass die Wochenübersicht bereit ist
-// 3. schickt am letzten Tag des Monats einen Hinweis, dass die Monatsübersicht bereit ist
+// Läuft stündlich (per pg_cron, siehe supabase-setup.sql) und schickt Erinnerungen an
+// Nutzer, deren Felder gerade "fällig" sind:
+// 1. Zahlenwert-Felder (kind='number', z.B. Gewicht) ohne eigene Erinnerungszeit → 8 Uhr
+//    Berliner Zeit, wenn heute noch nicht ausgefüllt.
+// 2. Skala-Felder (kind='scale') ohne eigene Erinnerungszeit → 22 Uhr Berliner Zeit,
+//    wenn heute noch nicht ALLE ausgefüllt sind (nicht erst, wenn der ganze Tag leer ist).
+// 3. Jedes Feld mit eigener `reminder_hour` (unabhängig vom kind) → genau zu dieser
+//    Stunde, wenn heute noch nicht ausgefüllt.
+// Zusätzlich weiterhin um 22 Uhr: sonntags "Wochenübersicht ist da", am Monatsletzten
+// "Monatsübersicht ist da".
+//
+// Läuft deshalb stündlich statt nur 4x täglich: die zuständige Stunde ist jetzt nicht
+// mehr auf 8/22 beschränkt, sondern kann pro Feld frei gewählt sein. Jede der 24
+// stündlichen Ausführungen bestimmt ihre Berliner Stunde frisch per Intl — das deckt
+// Sommer-/Winterzeit weiterhin automatisch ab, ganz ohne feste UTC-Zeitpunkte-Liste.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
@@ -18,13 +28,6 @@ const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:example@example.c
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-
-function formatKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
 
 // Liefert Datum/Uhrzeit korrekt umgerechnet auf Berliner Zeit (inkl. Sommer-/Winterzeit,
 // von der Intl-API automatisch anhand der IANA-Zeitzonendatenbank berücksichtigt).
@@ -55,20 +58,16 @@ interface PushMessage {
   url: string;
 }
 
+interface HabitDef {
+  user_id: string;
+  slug: string;
+  name: string;
+  kind: 'scale' | 'number';
+  reminder_hour: number | null;
+}
+
 Deno.serve(async () => {
   const berlin = getBerlinParts(new Date());
-
-  // Der Cron-Job ruft diese Function viermal täglich auf (6, 7, 20 & 21 Uhr UTC), um die
-  // Sommer-/Winterzeit-Verschiebung für beide Erinnerungszeiten (8 & 22 Uhr Berliner Zeit)
-  // abzudecken. Nur der Durchlauf, der wirklich auf 8 oder 22 Uhr Berliner Zeit trifft,
-  // macht weiter — die anderen brechen sofort ab.
-  if (berlin.hour !== 8 && berlin.hour !== 22) {
-    return new Response(
-      JSON.stringify({ skipped: true, reason: `Berliner Stunde ist ${berlin.hour}, weder 8 noch 22` }),
-      { headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
   const todayKey = berlin.dateKey;
   const isSunday = berlin.weekday === 'Sun';
   const isLastDayOfMonth = new Date(berlin.year, berlin.month, 0).getDate() === berlin.day;
@@ -87,27 +86,27 @@ Deno.serve(async () => {
   if (entryErr) {
     return new Response(JSON.stringify({ error: entryErr.message }), { status: 500 });
   }
-
   const entryByUser = new Map<string, Record<string, unknown>>();
   for (const e of todayEntries ?? []) entryByUser.set(e.user_id, e.data ?? {});
 
-  // Aktive (nicht archivierte) Feld-Slugs je Nutzer, für den 22-Uhr-"überhaupt was
-  // eingetragen?"-Check — jeder Nutzer verwaltet seine Felder selbst (siehe
-  // habit_definitions), Gewicht zählt hier bewusst nicht mit (eigene 8-Uhr-Prüfung).
-  const habitIdsByUser = new Map<string, string[]>();
-  if (berlin.hour === 22) {
-    const { data: defs, error: defErr } = await supabase
-      .from('habit_definitions')
-      .select('user_id, slug')
-      .is('archived_at', null);
-    if (defErr) {
-      return new Response(JSON.stringify({ error: defErr.message }), { status: 500 });
-    }
-    for (const d of defs ?? []) {
-      const list = habitIdsByUser.get(d.user_id) ?? [];
-      list.push(d.slug);
-      habitIdsByUser.set(d.user_id, list);
-    }
+  const { data: defs, error: defErr } = await supabase
+    .from('habit_definitions')
+    .select('user_id, slug, name, kind, reminder_hour')
+    .is('archived_at', null);
+  if (defErr) {
+    return new Response(JSON.stringify({ error: defErr.message }), { status: 500 });
+  }
+  const defsByUser = new Map<string, HabitDef[]>();
+  for (const d of (defs ?? []) as HabitDef[]) {
+    const list = defsByUser.get(d.user_id) ?? [];
+    list.push(d);
+    defsByUser.set(d.user_id, list);
+  }
+
+  // Für einen Nutzer die Namen der heute noch fehlenden Felder aus `group`, oder null,
+  // wenn nichts fehlt (bzw. die Gruppe leer ist).
+  function missingNames(group: HabitDef[], dayData: Record<string, unknown>): string[] {
+    return group.filter((d) => dayData[d.slug] === undefined).map((d) => d.name);
   }
 
   const results: Array<{ user_id: string; ok: boolean; detail: string }> = [];
@@ -118,30 +117,31 @@ Deno.serve(async () => {
       keys: { p256dh: sub.p256dh, auth: sub.auth_key },
     };
     const dayData = entryByUser.get(sub.user_id) ?? {};
+    const defsForUser = defsByUser.get(sub.user_id) ?? [];
     const messages: PushMessage[] = [];
 
+    const groups: HabitDef[][] = [];
     if (berlin.hour === 8) {
-      if (dayData.weight === undefined || dayData.weight === null) {
+      groups.push(defsForUser.filter((d) => d.kind === 'number' && d.reminder_hour === null));
+    }
+    if (berlin.hour === 22) {
+      groups.push(defsForUser.filter((d) => d.kind === 'scale' && d.reminder_hour === null));
+    }
+    groups.push(defsForUser.filter((d) => d.reminder_hour === berlin.hour));
+
+    for (const group of groups) {
+      if (!group.length) continue;
+      const missing = missingNames(group, dayData);
+      if (missing.length) {
         messages.push({
           title: 'Logbuch',
-          body: 'Erinnerung: Trag heute noch dein Gewicht ein.',
+          body: `Erinnerung: ${missing.join(', ')} noch nicht eingetragen.`,
           url: './logbuch.html',
         });
       }
     }
 
     if (berlin.hour === 22) {
-      const habitIds = habitIdsByUser.get(sub.user_id) ?? [];
-      // Erinnerung, sobald mindestens EIN aktives Feld heute noch fehlt — nicht erst,
-      // wenn der ganze Tag leer ist. Ohne aktive Felder gibt es nichts zu erinnern.
-      const allFilled = habitIds.length === 0 || habitIds.every((id) => dayData[id] !== undefined);
-      if (!allFilled) {
-        messages.push({
-          title: 'Logbuch',
-          body: 'Erinnerung: Trage heute noch deine Habits ein.',
-          url: './logbuch.html',
-        });
-      }
       if (isSunday) {
         messages.push({ title: 'Logbuch', body: 'Deine Wochenübersicht ist da.', url: './logbuch.html' });
       }

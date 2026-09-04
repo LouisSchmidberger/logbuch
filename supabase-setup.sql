@@ -42,20 +42,34 @@ create trigger habit_entries_set_updated_at
 -- Skala (min/max/labels) ist bewusst nur änderbar, solange noch keine Daten zu diesem
 -- Feld existieren (siehe App-seitige Sperre) — sonst würden alte Werte plötzlich etwas
 -- anderes bedeuten (siehe die manuellen Migrationen für zaehne/gekifft/gevaped davor).
+--
+-- Zwei Feld-Typen (kind): 'scale' (Stufen, farblich bewertet via good high/low — die
+-- ursprüngliche und weiterhin häufigste Art) und 'number' (freier Zahlenwert wie
+-- Gewicht, bewusst OHNE Gut/Schlecht-Bewertung/Farbe, dafür mit optionaler Einheit).
+-- min/max/good sind daher nur bei kind='scale' gesetzt, labels/unit sind je nach kind
+-- exklusiv (siehe Check unten).
 create table public.habit_definitions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   slug text not null,                 -- Key in habit_entries.data, z.B. 'morgenroutine'
   name text not null,
-  min int not null,
-  max int not null,
+  kind text not null default 'scale' check (kind in ('scale', 'number')),
+  min int,
+  max int,
   labels jsonb,                       -- null = Zahlenwerte, sonst Array von Strings (Länge = max-min+1)
-  good text not null check (good in ('high', 'low')),
+  good text check (good in ('high', 'low')),
+  unit text,                          -- nur bei kind='number', z.B. 'kg'
+  reminder_hour smallint check (reminder_hour between 0 and 23), -- null = Standardzeit (siehe send-notifications)
   sort_order int not null default 0,
   archived_at timestamptz,
   created_at timestamptz not null default now(),
   unique (user_id, slug),
-  check (max > min)
+  check (max > min),
+  check (
+    (kind = 'scale'  and min is not null and max is not null and good is not null)
+    or
+    (kind = 'number' and min is null and max is null and labels is null and good is null)
+  )
 );
 
 alter table public.habit_definitions enable row level security;
@@ -73,7 +87,8 @@ create policy "delete own habit_definitions" on public.habit_definitions
   for delete using (auth.uid() = user_id);
 
 -- Neue Nutzer bekommen automatisch die bisherigen Standardfelder vorbelegt (weiterhin
--- frei archivierbar/umbenennbar danach — das ist nur der Startzustand).
+-- frei archivierbar/umbenennbar danach — das ist nur der Startzustand). Gewicht ist
+-- dabei ein ganz normales kind='number'-Feld wie jedes andere auch.
 create or replace function public.seed_default_habits()
 returns trigger
 language plpgsql
@@ -81,20 +96,21 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.habit_definitions (user_id, slug, name, min, max, labels, good, sort_order) values
-    (new.id, 'morgenroutine',  'Morgenroutine',              1, 5, null,                                    'high', 1),
-    (new.id, 'zaehne',         'Zähne geputzt',              0, 2, null,                                    'high', 2),
-    (new.id, 'ernaehrung',     'Gesund ernährt',             1, 5, null,                                    'high', 3),
-    (new.id, 'getrunken',      'Genug getrunken',            1, 5, null,                                    'high', 4),
-    (new.id, 'kraftsport',     'Kraftsport gemacht',         0, 1, '["Nein","Ja"]'::jsonb,                   'high', 5),
-    (new.id, 'ausdauersport',  'Ausdauersport gemacht',      0, 1, '["Nein","Ja"]'::jsonb,                   'high', 6),
-    (new.id, 'gelernt',        'Etwas Neues gelernt',        0, 1, '["Nein","Ja"]'::jsonb,                   'high', 7),
-    (new.id, 'gekifft',        'Gekifft',                    0, 2, '["Nein","Ein bisschen","Ja"]'::jsonb,    'low',  8),
-    (new.id, 'gevaped',        'Gevaped',                    0, 2, '["Nein","Ein bisschen","Ja"]'::jsonb,    'low',  9),
-    (new.id, 'sex',            'Sex gehabt',                 0, 1, '["Nein","Ja"]'::jsonb,                   'high', 10),
-    (new.id, 'gefuehlslage',   'Gefühlslage',                1, 5, null,                                    'high', 11),
-    (new.id, 'guterTag',       'Guter Tag',                  1, 5, null,                                    'high', 12),
-    (new.id, 'bettzeit',       'Ins Bett zur geplanten Zeit', 0, 1, '["Nein","Ja"]'::jsonb,                  'high', 13);
+  insert into public.habit_definitions (user_id, slug, name, kind, unit, min, max, labels, good, sort_order) values
+    (new.id, 'weight',         'Gewicht',                    'number', 'kg', null, null, null,                                  null,   0),
+    (new.id, 'morgenroutine',  'Morgenroutine',              'scale',  null, 1, 5, null,                                    'high', 1),
+    (new.id, 'zaehne',         'Zähne geputzt',              'scale',  null, 0, 2, null,                                    'high', 2),
+    (new.id, 'ernaehrung',     'Gesund ernährt',             'scale',  null, 1, 5, null,                                    'high', 3),
+    (new.id, 'getrunken',      'Genug getrunken',            'scale',  null, 1, 5, null,                                    'high', 4),
+    (new.id, 'kraftsport',     'Kraftsport gemacht',         'scale',  null, 0, 1, '["Nein","Ja"]'::jsonb,                   'high', 5),
+    (new.id, 'ausdauersport',  'Ausdauersport gemacht',      'scale',  null, 0, 1, '["Nein","Ja"]'::jsonb,                   'high', 6),
+    (new.id, 'gelernt',        'Etwas Neues gelernt',        'scale',  null, 0, 1, '["Nein","Ja"]'::jsonb,                   'high', 7),
+    (new.id, 'gekifft',        'Gekifft',                    'scale',  null, 0, 2, '["Nein","Ein bisschen","Ja"]'::jsonb,    'low',  8),
+    (new.id, 'gevaped',        'Gevaped',                    'scale',  null, 0, 2, '["Nein","Ein bisschen","Ja"]'::jsonb,    'low',  9),
+    (new.id, 'sex',            'Sex gehabt',                 'scale',  null, 0, 1, '["Nein","Ja"]'::jsonb,                   'high', 10),
+    (new.id, 'gefuehlslage',   'Gefühlslage',                'scale',  null, 1, 5, null,                                    'high', 11),
+    (new.id, 'guterTag',       'Guter Tag',                  'scale',  null, 1, 5, null,                                    'high', 12),
+    (new.id, 'bettzeit',       'Ins Bett zur geplanten Zeit', 'scale', null, 0, 1, '["Nein","Ja"]'::jsonb,                  'high', 13);
   return new;
 end;
 $$;
@@ -131,65 +147,18 @@ create policy "delete own subscriptions" on public.push_subscriptions
 select vault.create_secret('https://qdadoqcnqmrauhshvcts.supabase.co', 'project_url');
 select vault.create_secret('sb_publishable_c8VJ-dqy-WD_y01aQy1Dzw_LJE-Ornr', 'publishable_key');
 
--- Vier tägliche Aufrufe der Edge Function "send-notifications":
---   6 & 7 Uhr UTC  → Kandidaten für die 8-Uhr-Gewichtserinnerung (Berliner Zeit)
---   20 & 21 Uhr UTC → Kandidaten für die 22-Uhr-Habit-/Zusammenfassungs-Erinnerung
--- Die Function selbst prüft die Berliner Zeit inkl. Sommer-/Winterzeit und macht nur beim
--- jeweils passenden Durchlauf weiter — kein manuelles Nachjustieren bei der Zeitumstellung.
+-- Stündlicher Aufruf der Edge Function "send-notifications": die Function bestimmt sich
+-- selbst per Intl die aktuelle Berliner Stunde (inkl. Sommer-/Winterzeit) und prüft dann
+-- pro Nutzer und Feld, ob gerade dessen Erinnerungszeit ist — Standard 8 Uhr für
+-- Zahlenwert-Felder / 22 Uhr für Skala-Felder, oder eine je Feld frei wählbare eigene
+-- Stunde (habit_definitions.reminder_hour). Stündlich statt fester UTC-Zeitpunkte, weil
+-- sich die zuständige Stunde jetzt nicht mehr auf zwei feste Zeiten (8/22) beschränkt.
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
 select cron.schedule(
-  'send-notifications-06utc',
-  '0 6 * * *',
-  $$
-  select net.http_post(
-      url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/send-notifications',
-      headers := jsonb_build_object(
-        'Content-type', 'application/json',
-        'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key')
-      ),
-      body := '{}'::jsonb,
-      timeout_milliseconds := 20000
-  ) as request_id;
-  $$
-);
-
-select cron.schedule(
-  'send-notifications-07utc',
-  '0 7 * * *',
-  $$
-  select net.http_post(
-      url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/send-notifications',
-      headers := jsonb_build_object(
-        'Content-type', 'application/json',
-        'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key')
-      ),
-      body := '{}'::jsonb,
-      timeout_milliseconds := 20000
-  ) as request_id;
-  $$
-);
-
-select cron.schedule(
-  'send-notifications-20utc',
-  '0 20 * * *',
-  $$
-  select net.http_post(
-      url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/send-notifications',
-      headers := jsonb_build_object(
-        'Content-type', 'application/json',
-        'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key')
-      ),
-      body := '{}'::jsonb,
-      timeout_milliseconds := 20000
-  ) as request_id;
-  $$
-);
-
-select cron.schedule(
-  'send-notifications-21utc',
-  '0 21 * * *',
+  'send-notifications-hourly',
+  '0 * * * *',
   $$
   select net.http_post(
       url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/send-notifications',

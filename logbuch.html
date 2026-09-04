@@ -102,20 +102,25 @@
     font-family: inherit; font-size: 12px; cursor: pointer; text-decoration: underline;
   }
 
-  .weight-box {
+  .number-box {
     border: 1px solid var(--line); border-radius: 4px; padding: 12px; margin-bottom: 16px;
     display: flex; align-items: center; gap: 10px;
   }
-  .weight-box label { font-size: 13px; flex: 1; }
-  .weight-box .weight-last { display: block; font-size: 11px; color: var(--sand); margin-top: 2px; }
-  .weight-input {
+  .number-box label { font-size: 13px; flex: 1; }
+  .number-box .number-last { display: block; font-size: 11px; color: var(--sand); margin-top: 2px; }
+  .number-input {
     width: 72px; font-family: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--line);
     border-radius: 3px; background: #fff; color: var(--ink);
   }
-  .weight-save {
+  .number-save {
     font-family: inherit; font-size: 12px; padding: 7px 10px; border: 1px solid var(--ink);
     border-radius: 3px; background: var(--ink); color: var(--paper); cursor: pointer;
   }
+
+  .number-chart-box { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .number-chart-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  .number-chart-meta { font-size: 11px; color: var(--sand); flex-shrink: 0; white-space: nowrap; }
+  .number-chart-svg { display: block; width: 100%; height: 56px; }
 
   .grid-scroll { overflow-x: auto; }
   .grid-table { min-width: 440px; }
@@ -212,6 +217,12 @@
     font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
     border-radius: 3px; background: #fff; color: var(--ink);
   }
+  .habit-form select {
+    font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
+    border-radius: 3px; background: #fff; color: var(--ink);
+  }
+  .checkbox-field { display: flex; align-items: center; gap: 7px; font-size: 13px; margin-bottom: 4px; }
+  .checkbox-field input { margin: 0; }
   .habit-form-actions { display: flex; gap: 8px; margin-top: 14px; }
   .habit-form-actions .auth-submit { margin-top: 0; width: auto; flex: 1; }
   .habit-form-cancel {
@@ -252,14 +263,19 @@ function habitFromRow(row) {
     id: row.slug,
     defId: row.id,
     name: row.name,
+    kind: row.kind,          // 'scale' | 'number'
+    unit: row.unit,          // nur bei kind === 'number', z.B. 'kg'
     min: row.min,
     max: row.max,
     labels: row.labels,
     good: row.good,
+    reminderHour: row.reminder_hour, // 0-23 oder null (= Standardzeit je nach kind)
     sortOrder: row.sort_order,
     archivedAt: row.archived_at,
   };
 }
+
+function isNumberKind(h) { return h.kind === 'number'; }
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const WEEKDAYS_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
@@ -291,16 +307,17 @@ function scoreColor(score) {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
 
-// Gesamt-Score eines Tages über alle Felder gemittelt (für Monats-/Jahres-Heatmap).
+// Gesamt-Score eines Tages über alle Skala-Felder gemittelt (für Monats-/Jahres-Heatmap).
+// Zahlenwert-Felder (kind='number') fließen bewusst nicht ein — kein Gut/Schlecht dort.
 function dayOverallScore(date) {
   const day = state.entries[formatKey(date)];
   if (!day) return null;
-  const scores = state.habits.map((h) => normalize(h, day[h.id])).filter((s) => s !== null);
+  const scores = state.habits.filter((h) => h.kind === 'scale').map((h) => normalize(h, day[h.id])).filter((s) => s !== null);
   if (!scores.length) return null;
   return scores.reduce((a, b) => a + b, 0) / scores.length;
 }
 
-// Durchschnitt + Anzahl je Feld über eine Menge von Datums-Keys ('YYYY-MM-DD').
+// Durchschnitt + Anzahl je Skala-Feld über eine Menge von Datums-Keys ('YYYY-MM-DD').
 function computeHabitStats(habits, dateKeys) {
   return habits.map((h) => {
     let sum = 0, count = 0;
@@ -310,6 +327,23 @@ function computeHabitStats(habits, dateKeys) {
     }
     return { habit: h, avg: count ? sum / count : null, count };
   });
+}
+
+// Werte-Reihe + Kennzahlen eines Zahlenwert-Felds über eine Menge von Datums-Keys.
+function numberFieldStats(habitId, dateKeys) {
+  const series = dateKeys
+    .map((k) => ({ key: k, value: state.entries[k]?.[habitId] }))
+    .filter((p) => p.value !== undefined && p.value !== null);
+  if (!series.length) return null;
+  const values = series.map((p) => p.value);
+  return {
+    series,
+    count: series.length,
+    min: Math.min(...values),
+    max: Math.max(...values),
+    avg: values.reduce((a, b) => a + b, 0) / values.length,
+    last: series[series.length - 1].value,
+  };
 }
 
 // --- App-State ---------------------------------------------------------
@@ -382,25 +416,36 @@ async function loadHabits() {
 
 // --- Felder-Verwaltung -----------------------------------------------------
 function defaultHabitForm() {
-  return { defId: null, locked: false, name: '', mode: 'numeric', min: 1, max: 5, steps: 3, labels: ['', '', ''], good: 'high' };
+  return {
+    defId: null, locked: false, kind: 'scale',
+    name: '', mode: 'numeric', min: 1, max: 5, steps: 3, labels: ['', '', ''], good: 'high',
+    unit: '', reminderEnabled: false, reminderHour: 22,
+  };
 }
 
 function habitToForm(h) {
   const labeled = !!h.labels;
+  const min = h.min ?? 1;
+  const max = h.max ?? 5;
   return {
     defId: h.defId,
     locked: habitHasData(h.id),
+    kind: h.kind,
     name: h.name,
     mode: labeled ? 'labels' : 'numeric',
-    min: h.min,
-    max: h.max,
-    steps: labeled ? h.labels.length : (h.max - h.min + 1),
-    labels: labeled ? [...h.labels] : Array.from({ length: h.max - h.min + 1 }, () => ''),
-    good: h.good,
+    min,
+    max,
+    steps: labeled ? h.labels.length : (max - min + 1),
+    labels: labeled ? [...h.labels] : Array.from({ length: max - min + 1 }, () => ''),
+    good: h.good || 'high',
+    unit: h.unit || '',
+    reminderEnabled: h.reminderHour !== null && h.reminderHour !== undefined,
+    reminderHour: h.reminderHour ?? (h.kind === 'number' ? 8 : 22),
   };
 }
 
 function formatScale(h) {
+  if (h.kind === 'number') return h.unit ? `Zahlenwert (${h.unit})` : 'Zahlenwert';
   return h.labels ? h.labels.join(' / ') : `${h.min} – ${h.max}`;
 }
 
@@ -412,16 +457,25 @@ function syncHabitFormFromDom() {
   if (!f) return;
   const nameEl = document.getElementById('habit-form-name');
   if (nameEl) f.name = nameEl.value;
-  if (f.mode === 'numeric') {
-    const minEl = document.getElementById('habit-form-min');
-    const maxEl = document.getElementById('habit-form-max');
-    if (minEl) f.min = Number(minEl.value);
-    if (maxEl) f.max = Number(maxEl.value);
+  if (f.kind === 'scale') {
+    if (f.mode === 'numeric') {
+      const minEl = document.getElementById('habit-form-min');
+      const maxEl = document.getElementById('habit-form-max');
+      if (minEl) f.min = Number(minEl.value);
+      if (maxEl) f.max = Number(maxEl.value);
+    } else {
+      document.querySelectorAll('[data-label-index]').forEach((el) => {
+        f.labels[Number(el.dataset.labelIndex)] = el.value;
+      });
+    }
   } else {
-    document.querySelectorAll('[data-label-index]').forEach((el) => {
-      f.labels[Number(el.dataset.labelIndex)] = el.value;
-    });
+    const unitEl = document.getElementById('habit-form-unit');
+    if (unitEl) f.unit = unitEl.value;
   }
+  const reminderEnabledEl = document.getElementById('habit-form-reminder-enabled');
+  if (reminderEnabledEl) f.reminderEnabled = reminderEnabledEl.checked;
+  const reminderHourEl = document.getElementById('habit-form-reminder-hour');
+  if (reminderHourEl) f.reminderHour = Number(reminderHourEl.value);
 }
 
 async function handleHabitSave() {
@@ -433,13 +487,20 @@ async function handleHabitSave() {
     return;
   }
 
-  let min, max, labels;
-  if (f.locked) {
+  const reminderEnabled = document.getElementById('habit-form-reminder-enabled')?.checked ?? f.reminderEnabled;
+  const reminderHourEl = document.getElementById('habit-form-reminder-hour');
+  const reminderHour = reminderEnabled ? Number(reminderHourEl ? reminderHourEl.value : f.reminderHour) : null;
+
+  let fields; // { kind, min, max, labels, good, unit }
+  if (f.kind === 'number') {
+    const unit = (document.getElementById('habit-form-unit')?.value || '').trim();
+    fields = { kind: 'number', min: null, max: null, labels: null, good: null, unit: unit || null };
+  } else if (f.locked) {
     const original = state.habits.find((h) => h.defId === f.defId);
-    min = original.min; max = original.max; labels = original.labels;
+    fields = { kind: 'scale', min: original.min, max: original.max, labels: original.labels, good: f.good, unit: null };
   } else if (f.mode === 'numeric') {
-    min = Number(document.getElementById('habit-form-min').value);
-    max = Number(document.getElementById('habit-form-max').value);
+    const min = Number(document.getElementById('habit-form-min').value);
+    const max = Number(document.getElementById('habit-form-max').value);
     if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
       state.notice = { type: 'error', text: '„Bis" muss größer als „Von" sein.' };
       render();
@@ -450,37 +511,36 @@ async function handleHabitSave() {
       render();
       return;
     }
-    labels = null;
+    fields = { kind: 'scale', min, max, labels: null, good: f.good, unit: null };
   } else {
     const labelEls = [...document.querySelectorAll('[data-label-index]')]
       .sort((a, b) => Number(a.dataset.labelIndex) - Number(b.dataset.labelIndex));
-    labels = labelEls.map((el) => el.value.trim());
+    const labels = labelEls.map((el) => el.value.trim());
     if (labels.some((l) => !l)) {
       state.notice = { type: 'error', text: 'Bitte alle Bezeichnungen ausfüllen.' };
       render();
       return;
     }
-    min = 0;
-    max = labels.length - 1;
+    fields = { kind: 'scale', min: 0, max: labels.length - 1, labels, good: f.good, unit: null };
   }
 
-  const good = f.good;
-
   if (f.defId) {
-    const patch = f.locked ? { name, good } : { name, min, max, labels, good };
-    const { error } = await supabase.from('habit_definitions').update(patch).eq('id', f.defId);
+    const patch = f.locked
+      ? { name, ...(f.kind === 'scale' ? { good: f.good } : { unit: fields.unit }), reminder_hour: reminderHour }
+      : { name, ...fields, reminder_hour: reminderHour };
+    const { data, error } = await supabase.from('habit_definitions').update(patch).eq('id', f.defId).select().single();
     if (error) {
       state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + error.message };
       render();
       return;
     }
     const idx = state.habits.findIndex((h) => h.defId === f.defId);
-    state.habits[idx] = { ...state.habits[idx], name, ...(f.locked ? {} : { min, max, labels }), good };
+    state.habits[idx] = habitFromRow(data);
   } else {
     const slug = uniqueSlug(slugify(name));
     const sortOrder = state.habits.length ? Math.max(...state.habits.map((h) => h.sortOrder)) + 1 : 1;
     const { data, error } = await supabase.from('habit_definitions')
-      .insert({ user_id: state.session.user.id, slug, name, min, max, labels, good, sort_order: sortOrder })
+      .insert({ user_id: state.session.user.id, slug, name, ...fields, reminder_hour: reminderHour, sort_order: sortOrder })
       .select().single();
     if (error) {
       state.notice = { type: 'error', text: 'Anlegen fehlgeschlagen: ' + error.message };
@@ -544,32 +604,32 @@ function handleReset(dateKey) {
   saveDay(dateKey, {});
 }
 
-function handleSaveWeight(dateKey, rawValue) {
+function handleSaveNumber(dateKey, habitId, rawValue) {
   const day = { ...(state.entries[dateKey] || {}) };
   const trimmed = String(rawValue).trim().replace(',', '.');
   if (trimmed === '') {
-    delete day.weight;
+    delete day[habitId];
   } else {
     const num = parseFloat(trimmed);
     if (Number.isNaN(num)) {
-      state.notice = { type: 'error', text: 'Das ist keine gültige Zahl für das Gewicht.' };
+      state.notice = { type: 'error', text: 'Das ist keine gültige Zahl.' };
       render();
       return;
     }
-    day.weight = num;
+    day[habitId] = num;
   }
   state.entries = { ...state.entries, [dateKey]: day };
   render();
   saveDay(dateKey, day);
 }
 
-function findLastWeight(beforeOrOnDateKey) {
+function findLastValue(habitId, beforeOrOnDateKey) {
   const keys = Object.keys(state.entries)
-    .filter((k) => k <= beforeOrOnDateKey && state.entries[k]?.weight !== undefined)
+    .filter((k) => k <= beforeOrOnDateKey && state.entries[k]?.[habitId] !== undefined)
     .sort();
   if (!keys.length) return null;
   const lastKey = keys[keys.length - 1];
-  return { dateKey: lastKey, value: state.entries[lastKey].weight };
+  return { dateKey: lastKey, value: state.entries[lastKey][habitId] };
 }
 
 // --- Push-Benachrichtigungen ------------------------------------------
@@ -704,16 +764,27 @@ function renderHabitOptions(habit, value) {
 }
 
 // --- Rendering: Today ----------------------------------------------------
+function renderNumberBox(h, dateKey, dayEntry) {
+  const currentValue = dayEntry[h.id] !== undefined ? dayEntry[h.id] : '';
+  const last = findLastValue(h.id, dateKey);
+  const unitSuffix = h.unit ? ` ${h.unit}` : '';
+  const lastNote =
+    last && last.dateKey !== dateKey
+      ? `zuletzt: ${last.value}${unitSuffix} (${last.dateKey.split('-').reverse().join('.')})`
+      : '';
+  return `
+    <div class="number-box">
+      <label for="number-input-${h.id}">${esc(h.name)}${h.unit ? ` (${esc(h.unit)})` : ''}${lastNote ? `<span class="number-last">${esc(lastNote)}</span>` : ''}</label>
+      <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-habit="${h.id}" value="${esc(currentValue)}" />
+      <button type="button" class="number-save" data-action="save-number" data-habit="${h.id}">Speichern</button>
+    </div>
+  `;
+}
+
 function renderToday() {
   const dateKey = formatKey(state.currentDate);
   const isToday = dateKey === formatKey(new Date());
   const dayEntry = state.entries[dateKey] || {};
-  const currentWeight = dayEntry.weight !== undefined ? dayEntry.weight : '';
-  const lastWeight = findLastWeight(dateKey);
-  const lastWeightNote =
-    lastWeight && lastWeight.dateKey !== dateKey
-      ? `zuletzt: ${lastWeight.value} kg (${lastWeight.dateKey.split('-').reverse().join('.')})`
-      : '';
 
   return `
     <div class="day-nav">
@@ -725,13 +796,8 @@ function renderToday() {
       <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" ${isToday ? 'disabled' : ''} aria-label="Nächster Tag">›</button>
     </div>
     ${!isToday ? `<button type="button" class="today-jump" data-action="jump-today">Zu heute springen</button>` : ''}
-    <div class="weight-box">
-      <label for="weight-input">Gewicht (kg)${lastWeightNote ? `<span class="weight-last">${esc(lastWeightNote)}</span>` : ''}</label>
-      <input type="number" inputmode="decimal" step="0.1" min="20" max="300" id="weight-input" class="weight-input" value="${esc(currentWeight)}" />
-      <button type="button" class="weight-save" data-action="save-weight">Speichern</button>
-    </div>
     <div class="habit-list">
-      ${activeHabits().map((h) => `
+      ${activeHabits().map((h) => isNumberKind(h) ? renderNumberBox(h, dateKey, dayEntry) : `
         <div class="habit-row">
           <span class="habit-name">${esc(h.name)}</span>
           <div class="habit-options">${renderHabitOptions(h, dayEntry[h.id])}</div>
@@ -751,7 +817,7 @@ function renderWeek() {
   const visibleHabits = state.habits.filter(
     (h) => !h.archivedAt || days.some((d) => state.entries[formatKey(d)]?.[h.id] !== undefined)
   );
-  const rows = visibleHabits.map((h) => {
+  const rows = visibleHabits.filter((h) => h.kind === 'scale').map((h) => {
     const scores = days.map((d) => normalize(h, state.entries[formatKey(d)]?.[h.id]));
     const valid = scores.filter((s) => s !== null);
     const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
@@ -780,6 +846,7 @@ function renderWeek() {
         ${rows}
       </div>
     </div>
+    ${renderNumberCharts(visibleHabits, days.map(formatKey))}
   `;
 }
 
@@ -800,7 +867,7 @@ function renderMonth() {
   const visibleHabits = state.habits.filter(
     (h) => !h.archivedAt || cellKeys.some((k) => state.entries[k]?.[h.id] !== undefined)
   );
-  const monthStats = computeHabitStats(visibleHabits, cellKeys);
+  const monthStats = computeHabitStats(visibleHabits.filter((h) => h.kind === 'scale'), cellKeys);
 
   return `
     <div class="day-nav">
@@ -817,6 +884,7 @@ function renderMonth() {
       }).join('')}
     </div>
     <div class="month-stats">${renderStatsRows(monthStats)}</div>
+    ${renderNumberCharts(visibleHabits, cellKeys)}
   `;
 }
 
@@ -841,7 +909,7 @@ function renderYear() {
   const visibleHabits = state.habits.filter(
     (h) => !h.archivedAt || yearKeys.some((k) => state.entries[k]?.[h.id] !== undefined)
   );
-  const yearStats = computeHabitStats(visibleHabits, yearKeys);
+  const yearStats = computeHabitStats(visibleHabits.filter((h) => h.kind === 'scale'), yearKeys);
 
   return `
     <div class="day-nav">
@@ -851,13 +919,14 @@ function renderYear() {
     </div>
     <div class="year-grid">${monthsGrid}</div>
     <div class="month-stats">${renderStatsRows(yearStats)}</div>
+    ${renderNumberCharts(visibleHabits, yearKeys)}
   `;
 }
 
 // --- Rendering: Gesamt (alle Einträge seit Beginn) ---------------------------
 function renderGlobal() {
   const dateKeys = Object.keys(state.entries).sort();
-  const stats = computeHabitStats(state.habits, dateKeys);
+  const stats = computeHabitStats(state.habits.filter((h) => h.kind === 'scale'), dateKeys);
   const rangeNote = dateKeys.length
     ? `Seit ${dateKeys[0].split('-').reverse().join('.')} · ${dateKeys.length} Tage mit Eintrag`
     : 'Noch keine Einträge.';
@@ -868,6 +937,7 @@ function renderGlobal() {
     </div>
     <p class="manage-meta" style="margin: -8px 0 14px;">${esc(rangeNote)}</p>
     <div class="month-stats">${renderStatsRows(stats)}</div>
+    ${renderNumberCharts(state.habits, dateKeys)}
   `;
 }
 
@@ -880,53 +950,122 @@ function renderStatsRows(stats) {
   `).join('');
 }
 
+// Handgezeichneter Inline-SVG-Linienverlauf für ein Zahlenwert-Feld über eine Menge von
+// Datums-Keys — bewusst ohne Chart-Library, passend zum Build-Step-freien Ansatz.
+function round1(n) { return Math.round(n * 10) / 10; }
+
+function renderNumberChart(habit, dateKeys) {
+  const stats = numberFieldStats(habit.id, dateKeys);
+  const unitSuffix = habit.unit ? ` ${esc(habit.unit)}` : '';
+  const head = `
+    <div class="number-chart-head">
+      <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ' <span class="manage-meta">(archiviert)</span>' : ''}</span>
+      ${stats ? `<span class="number-chart-meta">${stats.last}${unitSuffix} zuletzt · Ø ${round1(stats.avg)}${unitSuffix} · ${stats.count}×</span>` : ''}
+    </div>
+  `;
+  if (!stats || stats.series.length < 2) {
+    return `<div class="number-chart-box">${head}<p class="manage-meta">${stats ? 'Noch zu wenige Werte für einen Verlauf.' : 'Noch keine Werte.'}</p></div>`;
+  }
+  const w = 280, h = 56, pad = 4;
+  const n = stats.series.length;
+  const range = stats.max - stats.min || 1;
+  const points = stats.series.map((p, i) => {
+    const x = pad + (i / (n - 1)) * (w - 2 * pad);
+    const y = h - pad - ((p.value - stats.min) / range) * (h - 2 * pad);
+    return [x, y];
+  });
+  const pointsAttr = points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const dots = points.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.6" style="fill:var(--ink)" />`).join('');
+  return `
+    <div class="number-chart-box">
+      ${head}
+      <svg viewBox="0 0 ${w} ${h}" class="number-chart-svg" preserveAspectRatio="none">
+        <polyline points="${pointsAttr}" fill="none" style="stroke:var(--moss);stroke-width:1.5" />
+        ${dots}
+      </svg>
+    </div>
+  `;
+}
+
+function renderNumberCharts(visibleHabits, dateKeys) {
+  const numberHabits = visibleHabits.filter(isNumberKind);
+  if (!numberHabits.length) return '';
+  return `<div class="month-stats">${numberHabits.map((h) => renderNumberChart(h, dateKeys)).join('')}</div>`;
+}
+
 // --- Rendering: Felder-Verwaltung -------------------------------------------
 function renderHabitForm() {
   const f = state.habitForm;
+  const defaultReminderHour = f.kind === 'number' ? 8 : 22;
   return `
     <div class="habit-form">
       <h2>${f.defId ? 'Feld bearbeiten' : 'Neues Feld'}</h2>
-      ${f.locked ? `<p class="habit-form-lock-note">Für dieses Feld gibt es bereits Einträge – Skala/Bezeichnungen sind gesperrt. Für eine andere Skala: archivieren und neu anlegen.</p>` : ''}
+      ${f.locked ? `<p class="habit-form-lock-note">Für dieses Feld gibt es bereits Einträge – Feld-Typ/Skala/Bezeichnungen sind gesperrt. Für eine andere Skala: archivieren und neu anlegen.</p>` : ''}
       <div class="auth-field">
         <label for="habit-form-name">Name</label>
         <input type="text" id="habit-form-name" value="${esc(f.name)}" maxlength="40" />
       </div>
       <div class="auth-field">
-        <label>Art der Werte</label>
+        <label>Feld-Typ</label>
         <div class="pill-group">
-          <button type="button" class="pill-toggle${f.mode === 'numeric' ? ' pill-toggle--active' : ''}" data-action="habit-mode" data-mode="numeric" ${f.locked ? 'disabled' : ''}>Zahlenwerte</button>
-          <button type="button" class="pill-toggle${f.mode === 'labels' ? ' pill-toggle--active' : ''}" data-action="habit-mode" data-mode="labels" ${f.locked ? 'disabled' : ''}>Eigene Bezeichnungen</button>
+          <button type="button" class="pill-toggle${f.kind === 'scale' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="scale" ${f.locked ? 'disabled' : ''}>Skala</button>
+          <button type="button" class="pill-toggle${f.kind === 'number' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="number" ${f.locked ? 'disabled' : ''}>Zahlenwert</button>
         </div>
       </div>
-      ${f.mode === 'numeric' ? `
-        <div class="habit-form-minmax">
+      ${f.kind === 'scale' ? `
+        <div class="auth-field">
+          <label>Werte-Art</label>
+          <div class="pill-group">
+            <button type="button" class="pill-toggle${f.mode === 'numeric' ? ' pill-toggle--active' : ''}" data-action="habit-mode" data-mode="numeric" ${f.locked ? 'disabled' : ''}>Zahlenwerte</button>
+            <button type="button" class="pill-toggle${f.mode === 'labels' ? ' pill-toggle--active' : ''}" data-action="habit-mode" data-mode="labels" ${f.locked ? 'disabled' : ''}>Eigene Bezeichnungen</button>
+          </div>
+        </div>
+        ${f.mode === 'numeric' ? `
+          <div class="habit-form-minmax">
+            <div class="auth-field">
+              <label for="habit-form-min">Von</label>
+              <input type="number" id="habit-form-min" value="${f.min}" ${f.locked ? 'disabled' : ''} />
+            </div>
+            <div class="auth-field">
+              <label for="habit-form-max">Bis</label>
+              <input type="number" id="habit-form-max" value="${f.max}" ${f.locked ? 'disabled' : ''} />
+            </div>
+          </div>
+        ` : `
           <div class="auth-field">
-            <label for="habit-form-min">Von</label>
-            <input type="number" id="habit-form-min" value="${f.min}" ${f.locked ? 'disabled' : ''} />
+            <label for="habit-form-steps">Anzahl Stufen</label>
+            <input type="number" id="habit-form-steps" data-action="habit-steps" min="2" max="8" value="${f.steps}" ${f.locked ? 'disabled' : ''} />
           </div>
           <div class="auth-field">
-            <label for="habit-form-max">Bis</label>
-            <input type="number" id="habit-form-max" value="${f.max}" ${f.locked ? 'disabled' : ''} />
+            <label>Bezeichnungen der Reihe nach (Wert 0 zuerst, z. B. „Nein“, „Ein bisschen“, „Ja“)</label>
+            <div class="label-inputs">
+              ${f.labels.map((l, i) => `<input type="text" data-label-index="${i}" value="${esc(l)}" maxlength="20" ${f.locked ? 'disabled' : ''} />`).join('')}
+            </div>
+          </div>
+        `}
+        <div class="auth-field">
+          <label>Zielrichtung</label>
+          <div class="pill-group">
+            <button type="button" class="pill-toggle${f.good === 'high' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="high">Hohe Werte erstrebenswert</button>
+            <button type="button" class="pill-toggle${f.good === 'low' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="low">Niedrige Werte erstrebenswert</button>
           </div>
         </div>
       ` : `
         <div class="auth-field">
-          <label for="habit-form-steps">Anzahl Stufen</label>
-          <input type="number" id="habit-form-steps" data-action="habit-steps" min="2" max="8" value="${f.steps}" ${f.locked ? 'disabled' : ''} />
-        </div>
-        <div class="auth-field">
-          <label>Bezeichnungen der Reihe nach (Wert 0 zuerst, z. B. „Nein“, „Ein bisschen“, „Ja“)</label>
-          <div class="label-inputs">
-            ${f.labels.map((l, i) => `<input type="text" data-label-index="${i}" value="${esc(l)}" maxlength="20" ${f.locked ? 'disabled' : ''} />`).join('')}
-          </div>
+          <label for="habit-form-unit">Einheit (optional)</label>
+          <input type="text" id="habit-form-unit" value="${esc(f.unit)}" maxlength="10" placeholder="z. B. kg" />
         </div>
       `}
       <div class="auth-field">
-        <label>Zielrichtung</label>
-        <div class="pill-group">
-          <button type="button" class="pill-toggle${f.good === 'high' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="high">Hohe Werte erstrebenswert</button>
-          <button type="button" class="pill-toggle${f.good === 'low' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="low">Niedrige Werte erstrebenswert</button>
-        </div>
+        <label class="checkbox-field">
+          <input type="checkbox" id="habit-form-reminder-enabled" data-action="habit-reminder-toggle" ${f.reminderEnabled ? 'checked' : ''} />
+          Eigene Erinnerungszeit
+        </label>
+        ${f.reminderEnabled ? `
+          <select id="habit-form-reminder-hour">
+            ${Array.from({ length: 24 }, (_, hr) => `<option value="${hr}" ${hr === (f.reminderHour ?? defaultReminderHour) ? 'selected' : ''}>${String(hr).padStart(2, '0')}:00</option>`).join('')}
+          </select>
+        ` : `<p class="habit-form-lock-note">Ohne eigene Zeit: Erinnerung ${f.kind === 'number' ? 'morgens um 8 Uhr' : 'abends um 22 Uhr'} (Standard).</p>`}
       </div>
       <div class="habit-form-actions">
         <button type="button" class="auth-submit" data-action="habit-save">Speichern</button>
@@ -945,7 +1084,7 @@ function renderManage() {
       ${!h.archivedAt ? `<span class="drag-handle" data-action="drag-handle" aria-label="Reihenfolge ändern"><span></span><span></span></span>` : ''}
       <div class="manage-info">
         <span class="manage-name">${esc(h.name)}</span>
-        <span class="manage-meta">${esc(formatScale(h))} · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}</span>
+        <span class="manage-meta">${esc(formatScale(h))}${h.kind === 'scale' ? ` · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}` : ''}${h.reminderHour !== null && h.reminderHour !== undefined ? ` · Erinnerung ${String(h.reminderHour).padStart(2, '0')}:00` : ''}</span>
       </div>
       <div class="manage-actions">
         ${!h.archivedAt ? `
@@ -1058,9 +1197,9 @@ app.addEventListener('click', async (e) => {
     enablePush();
   } else if (action === 'disable-push') {
     disablePush();
-  } else if (action === 'save-weight') {
-    const input = document.getElementById('weight-input');
-    handleSaveWeight(formatKey(state.currentDate), input.value);
+  } else if (action === 'save-number') {
+    const input = document.getElementById('number-input-' + el.dataset.habit);
+    handleSaveNumber(formatKey(state.currentDate), el.dataset.habit, input.value);
   } else if (action === 'habit-new') {
     state.habitForm = defaultHabitForm();
     render();
@@ -1069,6 +1208,10 @@ app.addEventListener('click', async (e) => {
     if (h) { state.habitForm = habitToForm(h); render(); }
   } else if (action === 'habit-cancel') {
     state.habitForm = null;
+    render();
+  } else if (action === 'habit-kind') {
+    syncHabitFormFromDom();
+    state.habitForm.kind = el.dataset.kind;
     render();
   } else if (action === 'habit-mode') {
     syncHabitFormFromDom();
@@ -1090,22 +1233,30 @@ app.addEventListener('click', async (e) => {
 });
 
 app.addEventListener('change', (e) => {
-  const el = e.target.closest('[data-action="habit-steps"]');
-  if (!el || !state.habitForm) return;
-  syncHabitFormFromDom();
-  let n = Math.round(Number(el.value));
-  if (!Number.isFinite(n)) n = state.habitForm.steps;
-  n = Math.max(2, Math.min(8, n));
-  state.habitForm.steps = n;
-  const labels = state.habitForm.labels;
-  state.habitForm.labels = Array.from({ length: n }, (_, i) => labels[i] || '');
-  render();
+  const stepsEl = e.target.closest('[data-action="habit-steps"]');
+  if (stepsEl && state.habitForm) {
+    syncHabitFormFromDom();
+    let n = Math.round(Number(stepsEl.value));
+    if (!Number.isFinite(n)) n = state.habitForm.steps;
+    n = Math.max(2, Math.min(8, n));
+    state.habitForm.steps = n;
+    const labels = state.habitForm.labels;
+    state.habitForm.labels = Array.from({ length: n }, (_, i) => labels[i] || '');
+    render();
+    return;
+  }
+  const reminderToggle = e.target.closest('[data-action="habit-reminder-toggle"]');
+  if (reminderToggle && state.habitForm) {
+    syncHabitFormFromDom();
+    state.habitForm.reminderEnabled = reminderToggle.checked;
+    render();
+  }
 });
 
 app.addEventListener('keydown', (e) => {
-  if (e.target && e.target.id === 'weight-input' && e.key === 'Enter') {
+  if (e.target && e.target.classList?.contains('number-input') && e.key === 'Enter') {
     e.preventDefault();
-    handleSaveWeight(formatKey(state.currentDate), e.target.value);
+    handleSaveNumber(formatKey(state.currentDate), e.target.dataset.habit, e.target.value);
   }
 });
 
