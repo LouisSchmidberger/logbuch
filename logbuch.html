@@ -1040,8 +1040,12 @@ async function handleHabitSave() {
     }
     fields = { kind: 'group', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: groupMembers, goal_threshold: goalThreshold };
   } else if (f.locked) {
+    // Bereich/Bezeichnungen bleiben unangetastet (original.min/max/labels) – die
+    // Darstellung (Buttons/Slider) und die Sichtbarkeit des Werts beim Eintragen sind
+    // reine Anzeige-Einstellungen ohne Auswirkung auf bestehende Daten, deshalb aus dem
+    // aktuellen Formular übernommen statt wie der Rest vom Original beibehalten.
     const original = state.habits.find((h) => h.defId === f.defId);
-    fields = { kind: 'scale', min: original.min, max: original.max, labels: original.labels, good: f.good, unit: null, display_style: original.displayStyle, slider_show_value: original.sliderShowValue, group_members: null, goal_threshold: goalThreshold };
+    fields = { kind: 'scale', min: original.min, max: original.max, labels: original.labels, good: f.good, unit: null, display_style: f.displayStyle, slider_show_value: f.sliderShowValue, group_members: null, goal_threshold: goalThreshold };
   } else if (f.mode === 'numeric' && f.displayStyle === 'slider') {
     const stepsEl = document.getElementById('habit-form-slider-steps');
     const steps = Math.round(Number(stepsEl ? stepsEl.value : f.sliderSteps));
@@ -1962,20 +1966,22 @@ function renderHabitForm() {
     </div>
     ${f.mode === 'numeric' ? `
       <div class="auth-field">
-        <label>Darstellung</label>
+        <label>Darstellung${f.locked ? infoTip('Reine Anzeige-Einstellung, ändert nichts an bestehenden Werten – deshalb hier trotz gesperrtem Bereich änderbar.') : ''}</label>
         <div class="pill-group">
-          <button type="button" class="pill-toggle${f.displayStyle === 'buttons' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="buttons" ${f.locked ? 'disabled' : ''}>Buttons</button>
-          <button type="button" class="pill-toggle${f.displayStyle === 'slider' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="slider" ${f.locked ? 'disabled' : ''}>Schieberegler</button>
+          <button type="button" class="pill-toggle${f.displayStyle === 'buttons' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="buttons">Buttons</button>
+          <button type="button" class="pill-toggle${f.displayStyle === 'slider' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="slider">Schieberegler</button>
         </div>
       </div>
       ${f.displayStyle === 'slider' ? `
         <div class="auth-field">
           <label for="habit-form-slider-steps">Anzahl Stufen${infoTip('Der Regler zeigt nie eine Min/Max-Beschriftung beim Eintragen (nur hier in der Verwaltung).')}</label>
-          ${stepperInput('habit-form-slider-steps', f.sliderSteps, 2, 1000, f.locked)}
+          ${f.locked
+            ? `<p class="habit-form-lock-note">Bereich ${f.min}–${f.max} (durch vorhandene Einträge gesperrt).</p>`
+            : stepperInput('habit-form-slider-steps', f.sliderSteps, 2, 1000, false)}
         </div>
         <div class="auth-field">
           <label class="checkbox-field">
-            <input type="checkbox" id="habit-form-slider-show-value" ${f.sliderShowValue ? 'checked' : ''} ${f.locked ? 'disabled' : ''} />
+            <input type="checkbox" id="habit-form-slider-show-value" ${f.sliderShowValue ? 'checked' : ''} />
             Aktuellen Wert beim Eintragen anzeigen
           </label>
         </div>
