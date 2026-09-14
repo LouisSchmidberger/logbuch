@@ -411,8 +411,9 @@ const state = {
   weekAnchor: startOfWeek(new Date()),
   monthAnchor: (() => { const d = startOfDay(new Date()); d.setDate(1); return d; })(),
   yearAnchor: new Date().getFullYear(),
-  authMode: 'signin', // 'signin' | 'signup'
+  authMode: 'signin', // 'signin' | 'signup' | 'forgot'
   authError: null,
+  passwordRecovery: false, // true zwischen Klick auf den Passwort-Reset-Link und neuem Passwort
   pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy'
   habits: [],         // alle Felder des Nutzers (aktiv + archiviert), sort_order-sortiert
   habitForm: null,    // { defId, locked, name, mode: 'numeric'|'labels', min, max, steps, labels, good }
@@ -860,10 +861,13 @@ async function handleDeleteAccount() {
 // --- Rendering: Auth -------------------------------------------------------
 function renderAuth() {
   const isSignup = state.authMode === 'signup';
+  const isForgot = state.authMode === 'forgot';
+  const title = isForgot ? 'Passwort zurücksetzen' : isSignup ? 'Neuen Account anlegen' : 'Anmelden';
+
   app.innerHTML = `
     <div class="auth-box">
       <h1>Logbuch</h1>
-      <p class="sub">${isSignup ? 'Neuen Account anlegen' : 'Anmelden'}</p>
+      <p class="sub">${title}</p>
       ${state.authError ? `<div class="notice">${esc(state.authError)}</div>` : ''}
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
       <form id="auth-form">
@@ -871,24 +875,42 @@ function renderAuth() {
           <label for="email">E-Mail</label>
           <input type="email" id="email" required autocomplete="email" />
         </div>
-        <div class="auth-field">
-          <label for="password">Passwort</label>
-          <input type="password" id="password" required autocomplete="${isSignup ? 'new-password' : 'current-password'}" minlength="6" />
-        </div>
-        <button type="submit" class="auth-submit">${isSignup ? 'Account erstellen' : 'Anmelden'}</button>
+        ${!isForgot ? `
+          <div class="auth-field">
+            <label for="password">Passwort</label>
+            <input type="password" id="password" required autocomplete="${isSignup ? 'new-password' : 'current-password'}" minlength="6" />
+          </div>
+        ` : ''}
+        <button type="submit" class="auth-submit">${isForgot ? 'Link zum Zurücksetzen senden' : isSignup ? 'Account erstellen' : 'Anmelden'}</button>
       </form>
-      <button type="button" class="auth-toggle" data-action="toggle-auth-mode">
-        ${isSignup ? 'Schon einen Account? Anmelden' : 'Noch keinen Account? Registrieren'}
-      </button>
+      ${!isForgot ? `
+        <button type="button" class="auth-toggle" data-action="toggle-auth-mode">
+          ${isSignup ? 'Schon einen Account? Anmelden' : 'Noch keinen Account? Registrieren'}
+        </button>
+      ` : ''}
+      ${!isSignup ? `
+        <button type="button" class="auth-toggle" data-action="${isForgot ? 'cancel-forgot' : 'start-forgot'}">
+          ${isForgot ? 'Zurück zur Anmeldung' : 'Passwort vergessen?'}
+        </button>
+      ` : ''}
     </div>
   `;
 
   document.getElementById('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
     state.authError = null;
     state.notice = null;
+    if (isForgot) {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname,
+      });
+      if (error) { state.authError = error.message; render(); return; }
+      state.notice = { type: 'ok', text: 'Falls diese E-Mail bei uns registriert ist, haben wir einen Link zum Zurücksetzen geschickt.' };
+      render();
+      return;
+    }
+    const password = document.getElementById('password').value;
     if (isSignup) {
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) { state.authError = error.message; render(); return; }
@@ -902,6 +924,34 @@ function renderAuth() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { state.authError = error.message; render(); return; }
     }
+  });
+}
+
+function renderPasswordRecovery() {
+  app.innerHTML = `
+    <div class="auth-box">
+      <h1>Logbuch</h1>
+      <p class="sub">Neues Passwort setzen</p>
+      ${state.authError ? `<div class="notice">${esc(state.authError)}</div>` : ''}
+      <form id="recovery-form">
+        <div class="auth-field">
+          <label for="new-password">Neues Passwort</label>
+          <input type="password" id="new-password" required autocomplete="new-password" minlength="6" />
+        </div>
+        <button type="submit" class="auth-submit">Passwort speichern</button>
+      </form>
+    </div>
+  `;
+
+  document.getElementById('recovery-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = document.getElementById('new-password').value;
+    state.authError = null;
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) { state.authError = error.message; render(); return; }
+    state.passwordRecovery = false;
+    state.notice = { type: 'ok', text: 'Passwort gespeichert.' };
+    render();
   });
 }
 
@@ -1351,6 +1401,7 @@ function renderApp() {
 }
 
 function render() {
+  if (state.passwordRecovery) { renderPasswordRecovery(); return; }
   if (!state.session) { renderAuth(); return; }
   renderApp();
 }
@@ -1364,6 +1415,16 @@ app.addEventListener('click', async (e) => {
   if (action === 'toggle-auth-mode') {
     state.authMode = state.authMode === 'signup' ? 'signin' : 'signup';
     state.authError = null;
+    render();
+  } else if (action === 'start-forgot') {
+    state.authMode = 'forgot';
+    state.authError = null;
+    state.notice = null;
+    render();
+  } else if (action === 'cancel-forgot') {
+    state.authMode = 'signin';
+    state.authError = null;
+    state.notice = null;
     render();
   } else if (action === 'logout') {
     await supabase.auth.signOut();
@@ -1607,9 +1668,14 @@ app.addEventListener('pointerup', async (e) => {
 });
 
 // --- Auth-Status & Start ---------------------------------------------------
-supabase.auth.onAuthStateChange(async (_event, session) => {
+supabase.auth.onAuthStateChange(async (event, session) => {
   state.session = session;
   state.authError = null;
+  if (event === 'PASSWORD_RECOVERY') {
+    state.passwordRecovery = true;
+    render();
+    return;
+  }
   if (session) {
     state.loading = true;
     render();

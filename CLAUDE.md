@@ -164,9 +164,19 @@ Umgesetzt:
   Rohdaten aus allen vier Tabellen (RLS scoped automatisch auf den eigenen Nutzer) direkt
   im Browser als eine JSON-Datei herunter — kein Server-Roundtrip über eine eigene
   Function nötig.
+- Passwort-Reset-Flow: "Passwort vergessen?" im Anmelden-Formular →
+  `supabase.auth.resetPasswordForEmail(email, { redirectTo: <aktuelle App-URL> })`.
+  Der Rückkehr-Link löst clientseitig das Event `PASSWORD_RECOVERY` aus
+  (`onAuthStateChange`-Listener in `logbuch.html`), das App-Routing zeigt dann
+  `renderPasswordRecovery()` (neues Passwort setzen via `auth.updateUser`) statt der
+  normalen App, unabhängig vom sonstigen Session-Status. **Wichtig bei einer neuen
+  Domain/Hosting-URL**: die jeweilige URL muss unter Supabase Dashboard →
+  Authentication → URL Configuration als Redirect-URL erlaubt sein, sonst greift der
+  Rückkehr-Link ggf. nicht (das ist reine Dashboard-Konfiguration, nicht Teil dieses
+  Repos).
 
-Noch offen (bewusst nach Priorität sortiert, siehe TODOs unten): Passwort-Reset-Flow,
-Signup-Schutz gegen Missbrauch (Captcha).
+Noch offen (bewusst nach Priorität sortiert, siehe TODOs unten): Signup-Schutz gegen
+Missbrauch (Captcha).
 Datenschutzerklärung/AGB/Impressum sind bewusst NICHT Teil dieses Repos — das klärt der
 Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung startet.
 
@@ -207,6 +217,5 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
 
 ## Noch nicht gebaut (bekannte TODOs, kein Zeitdruck)
 
-- Passwort-Reset-Flow ("Passwort vergessen") — fehlt komplett im Frontend.
 - Signup-Schutz gegen Missbrauch (z.B. Captcha/Turnstile bei der Registrierung).
 - SQL-Setup in Supabase-Migrationen überführen statt manuell im Dashboard auszuführen.
