@@ -52,11 +52,17 @@ im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
   Nutzers beeinflussen keinen anderen.
 
 Tabelle `habit_entries`: eine Zeile pro Nutzer und Kalendertag.
-- `entry_date` (date), `data` (jsonb) – alle Werte des Tages in einem Objekt.
-- Keys in `data` entsprechen den `slug`s aus `habit_definitions` des jeweiligen Nutzers
-  (Gewicht ist heute ein ganz normaler `slug='weight'`-Eintrag darin, kein Sonderfall
-  mehr).
-- RLS aktiv: jede Zeile nur für den eigenen `user_id` sicht-/änderbar.
+- `entry_date` (date), `data` (jsonb) – **clientseitig verschlüsselt** (siehe Abschnitt
+  "Verschlüsselung" unten): kein Klartext mehr, sondern `{iv: "<base64>", ciphertext:
+  "<base64>"}`. Im entschlüsselten Zustand enthält das Objekt die Werte des Tages,
+  Keys entsprechen den `slug`s aus `habit_definitions` des jeweiligen Nutzers (Gewicht
+  ist ein ganz normaler `slug='weight'`-Eintrag darin, kein Sonderfall mehr).
+- `filled_slugs` (jsonb, Array von Strings) – bewusst **unverschlüsselt**, nur die
+  Namen der an dem Tag befüllten Felder, keine Werte. Wird ausschließlich von
+  `send-notifications` für die Vollständigkeits-Prüfung gebraucht, da die Function
+  `data` nicht entschlüsseln kann.
+- RLS aktiv: jede Zeile nur für den eigenen `user_id` sicht-/änderbar (schützt Nutzer
+  voreinander, nicht vor dem DB-Owner — dafür ist ja gerade die Verschlüsselung da).
 
 Tabelle `push_subscriptions`: eine Zeile pro Browser/Gerät mit aktivierten Erinnerungen
 (Web-Push-Endpoint + Schlüssel). RLS wie oben.
@@ -66,6 +72,12 @@ Tabelle `user_settings`: eine Zeile pro Nutzer, aktuell nur `default_reminder_ho
 `reminder_hour` (siehe Erinnerungen). Wird bei Registrierung automatisch angelegt
 (Trigger `on_auth_user_created_seed_settings`), im Burger-Menü der App änderbar. RLS
 wie oben.
+
+Tabelle `user_encryption`: eine Zeile pro Nutzer, hält den zweifach "verpackten"
+Data Encryption Key (DEK) — nie den Schlüssel selbst im Klartext. Details siehe
+Abschnitt "Verschlüsselung". **Kein** automatischer Seed-Trigger bei Registrierung
+(anders als `habit_definitions`/`user_settings`) — die Einrichtung passiert bewusst
+erst beim ersten echten Login, da sie das Passwort im Klartext braucht. RLS wie oben.
 
 **Der Reminder-Check** in der Edge Function fragt dafür live die aktiven (nicht
 archivierten) `habit_definitions` je Nutzer ab – keine hartkodierte Liste mehr, kein
@@ -98,6 +110,68 @@ auf die Farbgebung angewendet (`dayOverallScore`, Wochen-Grid-Zellen inkl. Ø,
 `renderStatsRows` in Monat/Jahr/Gesamt) — nie auf angezeigte Prozentzahlen, und bewusst
 NICHT in `renderHabitOptions` ("Heute"-Tab bleibt unverändert, dort zählt der rohe Wert
 des Tages, keine Quote).
+
+## Verschlüsselung (Zero-Access-Architektur)
+
+Seit 2026-09-14: `habit_entries.data` (die eigentlichen Werte — Gewicht, Stimmung,
+Sex, Drogenkonsum etc.) ist clientseitig verschlüsselt. Der Betreiber (auch über
+Supabase-Dashboard/CLI) kann diese Werte grundsätzlich nicht einsehen — RLS schützt
+nur Nutzer voreinander, das hier zusätzlich vor dem DB-Owner selbst. Bewusst **nicht**
+verschlüsselt: `habit_definitions` (Feld-Namen/Labels bleiben lesbar, dadurch bleiben
+personalisierte Push-Erinnerungen möglich) und `habit_entries.filled_slugs` (nur
+Feldnamen ohne Werte, für die Vollständigkeits-Prüfung der Reminder-Function).
+
+**Zweistufiger Schlüssel** (Crypto-Helfer + Lebenszyklus-Funktionen in `logbuch.html`,
+alles native Web Crypto API, keine Library):
+- **DEK** (Data Encryption Key): pro Nutzer ein zufälliger AES-256-GCM-Schlüssel
+  (`generateDek`), verschlüsselt/entschlüsselt `habit_entries.data`
+  (`encryptData`/`decryptData`). Ändert sich nie mehr, nachdem er einmal erzeugt
+  wurde — auch nicht bei einem Passwort-Reset.
+- **KEK** (Key Encryption Key): aus dem Passwort abgeleitet (`deriveKek`, PBKDF2-
+  SHA256, 250.000 Iterationen, individueller Salt), "verpackt" (wrapped) den DEK
+  (`wrapDek`/`unwrapDek`). Nur das verpackte Ergebnis (`wrapped_dek` in
+  `user_encryption`) liegt serverseitig — nutzlos ohne Passwort.
+- **Recovery-Key**: ein zweiter, zufälliger 256-Bit-Schlüssel, der den DEK ein
+  zweites Mal verpackt (`wrapped_dek_recovery`). Wird dem Nutzer **einmalig**
+  angezeigt (`renderRecoveryKeyDisplay`, Kopieren-/Download-Button, muss per
+  Checkbox bestätigt werden) und nirgends serverseitig im Klartext gespeichert. Löst
+  den Zielkonflikt "Passwortverlust soll nicht Datenverlust bedeuten, aber der
+  Server darf trotzdem nie Zugriff haben" — funktioniert nur, solange der Nutzer
+  diesen Code noch besitzt. Verliert er Passwort UND Recovery-Key, sind die Daten
+  tatsächlich unwiederbringlich weg (unumgehbare Konsequenz, kein Bug — jeder auch
+  dann noch funktionierende Mechanismus wäre zwangsläufig ein serverseitiger
+  Zugriffsweg). Im Burger-Menü jederzeit neu erzeugbar (`regenerateRecoveryKey`,
+  macht den alten Code ungültig, braucht kein Passwort, da der DEK ja schon im
+  Speicher liegt).
+
+**Schlüssel-Lebenszyklus** (`currentDek`, Modul-Variable, nie Teil von `state`/
+`render()`):
+- `unlockEncryption(userId, password)`, aufgerufen aus `completeAuthFlow` direkt
+  nach erfolgreichem `signIn`/`signUp` (Passwort ist dort im Klartext verfügbar):
+  prüft zuerst den lokalen IndexedDB-Cache (`loadCachedDek`, schneller Pfad ohne
+  erneute PBKDF2-Ableitung); ohne Treffer wird die `user_encryption`-Zeile geladen —
+  existiert keine (Neu-Signup oder Bestandskonto vor diesem Umbau), richtet
+  `setupEncryption` alles neu ein (DEK, beide Wrappings, `migrateExistingEntries`
+  für schon vorhandene Klartext-Zeilen, Recovery-Key-Anzeige).
+- Bei bestehender Supabase-Session ohne frisches Passwort (Browser-Reload): erst der
+  IndexedDB-Cache, sonst `renderUnlockPrompt()` (Passwort erneut abfragen, unabhängig
+  vom Supabase-Login — falsches Passwort erkennt man daran, dass `unwrapDek`
+  fehlschlägt).
+- `authFlowInFlight`-Flag verhindert, dass `onAuthStateChange` (feuert bei jedem
+  `signIn`/`signUp`/`updateUser` zusätzlich) parallel einen zweiten, redundanten
+  Entsperr-Versuch startet — muss VOR dem jeweiligen Supabase-Auth-Aufruf gesetzt
+  werden, nicht erst danach (Race Condition sonst möglich).
+- Passwort-Reset über den E-Mail-Link (`renderPasswordRecovery`) verlangt zusätzlich
+  den Recovery-Key, um den DEK zu erben und neu (mit dem neuen Passwort) zu
+  verpacken — ohne Bestandsdaten neu zu verschlüsseln. Fallback "Recovery-Key auch
+  verloren" nur mit expliziter zweiter Bestätigung, danach sind alte Einträge weg.
+- Logout: `currentDek = null` (der IndexedDB-Cache bleibt für den nächsten Login auf
+  demselben Gerät). Konto-Löschung räumt den Cache zusätzlich explizit auf.
+
+**Was das für Änderungen an anderer Stelle bedeutet**: `state.entries` hält nach dem
+Laden (`loadEntries`) immer schon entschlüsselte Klartext-Objekte — die gesamte
+übrige App (Scores, Graphen, Statistiken, `saveDay`, Export) arbeitet unverändert
+damit. Nur `loadEntries`/`saveDay`/`handleExportData` fassen `currentDek` direkt an.
 
 ## Design
 
