@@ -848,6 +848,10 @@ function syncHabitFormFromDom() {
 
 async function handleHabitSave() {
   const f = state.habitForm;
+  // Muss VOR jedem möglichen frühen Return (Validierungsfehler) passieren — sonst baut
+  // render() das Formular aus dem noch nicht synchronisierten (veralteten) f neu auf und
+  // wirft dabei unbeteiligte, bereits eingegebene Werte weg (wirkte wie zufälliger Reset).
+  syncHabitFormFromDom();
   const name = (document.getElementById('habit-form-name')?.value || '').trim();
   if (!name) {
     state.notice = { type: 'error', text: 'Bitte einen Namen eingeben.' };
