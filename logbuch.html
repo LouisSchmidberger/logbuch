@@ -2149,14 +2149,15 @@ function renderManage() {
         ${!h.archivedAt ? `<span class="drag-handle" data-action="drag-handle" aria-label="Reihenfolge ändern"><span></span><span></span></span>` : ''}
         <div class="manage-info">
           <span class="manage-name">${esc(h.name)}</span>
-          <span class="manage-meta">${esc(formatScale(h))}${h.kind === 'scale' ? ` · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}` : ''}${h.reminderHour !== null && h.reminderHour !== undefined ? ` · Erinnerung ${String(h.reminderHour).padStart(2, '0')}:00` : ''}</span>
-          ${confirmingDelete ? `<span class="manage-delete-warning">Es gibt historische Einträge – nach dem Löschen in der App nicht mehr nutzbar.</span>` : ''}
+          ${confirmingDelete
+            ? `<span class="manage-delete-warning">Es gibt historische Einträge – nach dem Löschen in der App nicht mehr nutzbar.</span>`
+            : `<span class="manage-meta">${esc(formatScale(h))}${h.kind === 'scale' ? ` · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}` : ''}${h.reminderHour !== null && h.reminderHour !== undefined ? ` · Erinnerung ${String(h.reminderHour).padStart(2, '0')}:00` : ''}</span>`}
         </div>
         <div class="manage-actions">
           ${!h.archivedAt ? `
             <button type="button" class="manage-btn" data-action="habit-edit" data-id="${h.defId}">Bearbeiten</button>
             <button type="button" class="manage-btn" data-action="habit-archive" data-id="${h.defId}">Archivieren</button>
-          ` : `
+          ` : confirmingDelete ? deleteAction : `
             <button type="button" class="manage-btn" data-action="habit-reactivate" data-id="${h.defId}">Reaktivieren</button>
             ${deleteAction}
           `}
