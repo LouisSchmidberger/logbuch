@@ -175,8 +175,18 @@ Umgesetzt:
   Rückkehr-Link ggf. nicht (das ist reine Dashboard-Konfiguration, nicht Teil dieses
   Repos).
 
-Noch offen (bewusst nach Priorität sortiert, siehe TODOs unten): Signup-Schutz gegen
-Missbrauch (Captcha).
+- Signup-/Login-Schutz gegen Missbrauch: Cloudflare Turnstile. Site Key liegt in
+  `logbuch.html` (`TURNSTILE_SITE_KEY`, öffentlich wie `VAPID_PUBLIC_KEY`), Secret Key
+  ausschließlich bei Supabase (Authentication → Attack Protection → CAPTCHA
+  protection). Betrifft alle drei captcha-pflichtigen Auth-Endpunkte (`signUp`,
+  `signInWithPassword`, `resetPasswordForEmail`) — Supabase verlangt bei aktiviertem
+  Schutz einen gültigen `captchaToken` bei allen dreien, nicht nur bei der
+  Registrierung. Widget wird per `?onload=onTurnstileApiLoad&render=explicit`
+  explizit gerendert (nicht Auto-Render), da die App bei jedem Formularwechsel das
+  komplette Auth-DOM neu aufbaut (`renderTurnstileWidget`/`resetTurnstile` in
+  `logbuch.html`). **Bei Domain-Wechsel**: neue Domain muss im Turnstile-Widget bei
+  Cloudflare als Hostname ergänzt werden, sonst schlägt die Verifizierung fehl.
+
 Datenschutzerklärung/AGB/Impressum sind bewusst NICHT Teil dieses Repos — das klärt der
 Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung startet.
 
@@ -217,5 +227,4 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
 
 ## Noch nicht gebaut (bekannte TODOs, kein Zeitdruck)
 
-- Signup-Schutz gegen Missbrauch (z.B. Captcha/Turnstile bei der Registrierung).
 - SQL-Setup in Supabase-Migrationen überführen statt manuell im Dashboard auszuführen.

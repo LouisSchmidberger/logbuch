@@ -261,9 +261,11 @@
     flex: 1; font-family: inherit; font-size: 13px; padding: 10px; background: none; border: 1px solid var(--line);
     border-radius: 3px; color: var(--ink); cursor: pointer;
   }
+  .turnstile-box { margin: 4px 0 10px; }
 </style>
 </head>
 <body>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileApiLoad&render=explicit" async defer></script>
 <div id="app"><div class="loading">Lädt …</div></div>
 
 <script type="module">
@@ -273,6 +275,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = 'https://qdadoqcnqmrauhshvcts.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_c8VJ-dqy-WD_y01aQy1Dzw_LJE-Ornr';
 const VAPID_PUBLIC_KEY = 'BDsrR2NV5vEE4Ati-Dda7tNom6GTtWmKvzytspTc7x1LP6ur1np90oAPphhIAoCtnaw3nGELgBXxYNyiSkLVEEY';
+// Cloudflare Turnstile: Schutz gegen automatisierte Registrierung/Anmeldung-Missbrauch.
+// Site Key ist öffentlich (wie VAPID_PUBLIC_KEY), der Secret Key liegt ausschließlich in
+// Supabase (Authentication -> Attack Protection), nie hier.
+const TURNSTILE_SITE_KEY = '0x4AAAAAAAEz5Bz5IPoODVuWX';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function urlBase64ToUint8Array(base64String) {
@@ -858,6 +864,41 @@ async function handleDeleteAccount() {
   await supabase.auth.signOut();
 }
 
+// --- Turnstile-Captcha (Registrierung/Anmeldung/Passwort-vergessen) --------
+// Eigene, von state entkoppelte Variablen (nicht Teil des Re-Render-Zyklus'): der
+// Token kommt asynchron per Callback vom Turnstile-Widget rein, ein render() würde das
+// Widget-DOM jederzeit neu aufbauen und die laufende Verifizierung unterbrechen.
+let turnstileToken = null;
+let turnstileWidgetId = null;
+let turnstileReady = false;
+
+// Wird von api.js selbst aufgerufen (?onload=...), sobald die Turnstile-API bereit ist —
+// löst zuverlässiger als ein bloßes "ist turnstile schon definiert?"-Timing-Rennen, falls
+// renderAuth() vor Laden des externen Scripts läuft (z.B. gleich beim Seitenaufruf).
+window.onTurnstileApiLoad = () => {
+  turnstileReady = true;
+  renderTurnstileWidget();
+};
+
+function renderTurnstileWidget() {
+  const container = document.getElementById('turnstile-widget');
+  if (!container || !turnstileReady) return;
+  turnstileToken = null;
+  turnstileWidgetId = turnstile.render(container, {
+    sitekey: TURNSTILE_SITE_KEY,
+    callback: (token) => { turnstileToken = token; },
+    'expired-callback': () => { turnstileToken = null; },
+    'error-callback': () => { turnstileToken = null; },
+  });
+}
+
+function resetTurnstile() {
+  turnstileToken = null;
+  if (typeof turnstile !== 'undefined' && turnstileWidgetId !== null) {
+    try { turnstile.reset(turnstileWidgetId); } catch { /* ignorieren */ }
+  }
+}
+
 // --- Rendering: Auth -------------------------------------------------------
 function renderAuth() {
   const isSignup = state.authMode === 'signup';
@@ -881,6 +922,7 @@ function renderAuth() {
             <input type="password" id="password" required autocomplete="${isSignup ? 'new-password' : 'current-password'}" minlength="6" />
           </div>
         ` : ''}
+        <div id="turnstile-widget" class="turnstile-box"></div>
         <button type="submit" class="auth-submit">${isForgot ? 'Link zum Zurücksetzen senden' : isSignup ? 'Account erstellen' : 'Anmelden'}</button>
       </form>
       ${!isForgot ? `
@@ -896,6 +938,8 @@ function renderAuth() {
     </div>
   `;
 
+  renderTurnstileWidget();
+
   document.getElementById('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('email').value.trim();
@@ -904,7 +948,9 @@ function renderAuth() {
     if (isForgot) {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + window.location.pathname,
+        captchaToken: turnstileToken,
       });
+      resetTurnstile();
       if (error) { state.authError = error.message; render(); return; }
       state.notice = { type: 'ok', text: 'Falls diese E-Mail bei uns registriert ist, haben wir einen Link zum Zurücksetzen geschickt.' };
       render();
@@ -912,7 +958,8 @@ function renderAuth() {
     }
     const password = document.getElementById('password').value;
     if (isSignup) {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({ email, password, options: { captchaToken: turnstileToken } });
+      resetTurnstile();
       if (error) { state.authError = error.message; render(); return; }
       if (!data.session) {
         state.notice = { type: 'ok', text: 'Fast fertig: Bestätige deine E-Mail über den Link, den wir dir geschickt haben, und melde dich dann an.' };
@@ -921,7 +968,8 @@ function renderAuth() {
         return;
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken: turnstileToken } });
+      resetTurnstile();
       if (error) { state.authError = error.message; render(); return; }
     }
   });
