@@ -4,9 +4,14 @@ Habit-/Gewichts-Tracker, standalone gebaut (bewusst unabhängig von Claude.ai, l
 komplett eigenständig). Ursprünglich als reiner Einzelnutzer-Tracker in einem
 Claude.ai-Chat konzipiert, seitdem in Claude Code weitergeführt; seit der
 `habit_definitions`-Umstellung (siehe Datenmodell) mehrnutzerfähig – jeder Nutzer
-verwaltet seine eigenen Felder. Registrierung ist bewusst offen (kein Invite-System) –
-akzeptierter Trade-off für einen kleinen, informell geteilten Kreis (Freunde/Familie),
-kein Wachstum auf breite Öffentlichkeit vorgesehen.
+verwaltet seine eigenen Felder. Registrierung ist offen (kein Invite-System).
+
+**Zielbild seit 2026-09-14**: langfristig breite Öffentlichkeit + eingeschränkt
+kommerzielle Nutzung (Kurswechsel weg vom ursprünglichen "nur Freundeskreis"-Rahmen).
+Rechtlicher/geschäftlicher Rahmen (Impressum, Datenschutzerklärung, AGB, Gewerbe-/
+Kleinunternehmer-Status) klärt der Nutzer selbst außerhalb dieses Repos — hier laufen
+nur die technischen Vorbereitungen (Sicherheit/Datenschutz zuerst, siehe unten). Bis
+diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Personen.
 
 ## Stack
 
@@ -141,6 +146,25 @@ Berliner Stunde je nach Richtung doppelt oder gar nicht auftreten (entspricht de
 Wanduhr-Verhalten an dem Tag). Für einen kleinen Tracker vernachlässigbar, nicht extra
 behandelt.
 
+## Datenschutz & Sicherheit
+
+Seit dem Kurswechsel Richtung breiter Öffentlichkeit (siehe oben) laufend erweitert.
+Umgesetzt:
+- `send-notifications` ist gegen öffentlichen Aufruf abgesichert (`CRON_SECRET`, siehe
+  Secrets unten).
+- Selbst-Löschung des Kontos (Recht auf Löschung, Art. 17 DSGVO): Edge Function
+  `delete-account` (`supabase/functions/delete-account/index.ts`), aufgerufen über
+  "Konto löschen" im Burger-Menü der App (Bestätigung durch Eintippen von "LÖSCHEN").
+  Löscht per `auth.admin.deleteUser()` ausschließlich den durchs mitgeschickte
+  Access-Token ermittelten Nutzer (nie eine vom Client übergebene ID) — alle anderen
+  Tabellen hängen per `on delete cascade` an `auth.users` und werden automatisch mit
+  gelöscht.
+
+Noch offen (bewusst nach Priorität sortiert, siehe TODOs unten): Datenexport
+(Auskunftsrecht), Passwort-Reset-Flow, Signup-Schutz gegen Missbrauch (Captcha).
+Datenschutzerklärung/AGB/Impressum sind bewusst NICHT Teil dieses Repos — das klärt der
+Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung startet.
+
 ## Secrets
 
 - `VAPID_PUBLIC_KEY` ist im Klartext in `logbuch.html` hinterlegt – das ist beabsichtigt,
@@ -163,8 +187,8 @@ behandelt.
 ## Deployment-Schritte (Referenz, siehe auch Anleitung im Chat-Verlauf)
 
 1. `logbuch.html` + `sw.js` → GitHub Pages (Root-Verzeichnis).
-2. `supabase functions deploy send-notifications` (Code liegt/soll liegen unter
-   `supabase/functions/send-notifications/index.ts`).
+2. `supabase functions deploy send-notifications` und `supabase functions deploy
+   delete-account` (Code liegt/soll liegen unter `supabase/functions/<name>/index.ts`).
 3. `supabase-setup.sql` im Supabase SQL Editor ausführen (Tabellen, RLS, Vault-Secrets,
    ein stündlicher Cron-Job). **Nicht automatisiert über Migrationen** – bislang manuell
    im Dashboard ausgeführt. Wäre ein sinnvoller nächster Schritt, das in
@@ -178,4 +202,7 @@ behandelt.
 
 ## Noch nicht gebaut (bekannte TODOs, kein Zeitdruck)
 
+- Datenexport (eigene Daten als JSON herunterladen, Auskunftsrecht Art. 15/20 DSGVO).
+- Passwort-Reset-Flow ("Passwort vergessen") — fehlt komplett im Frontend.
+- Signup-Schutz gegen Missbrauch (z.B. Captcha/Turnstile bei der Registrierung).
 - SQL-Setup in Supabase-Migrationen überführen statt manuell im Dashboard auszuführen.

@@ -63,6 +63,17 @@
   }
   .menu-item-btn--danger { color: var(--rust); border-color: rgba(162, 80, 58, 0.4); }
 
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(36, 38, 31, 0.45); z-index: 50;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-box {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+    padding: 18px; max-width: 340px; width: 100%;
+  }
+  .modal-box h2 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 17px; margin: 0 0 10px; }
+  .modal-box p { font-size: 13px; line-height: 1.45; margin: 0 0 14px; }
+
   .push-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink); background: rgba(75,107,79,0.08); border: 1px solid var(--line); border-radius: 3px; padding: 7px 10px; margin-bottom: 16px; }
   .push-row--muted { color: var(--sand); background: transparent; }
   .push-toggle { background: none; border: none; color: var(--moss); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
@@ -407,6 +418,7 @@ const state = {
   habitForm: null,    // { defId, locked, name, mode: 'numeric'|'labels', min, max, steps, labels, good }
   menuOpen: false,
   userSettings: { defaultReminderHour: 22 }, // Standard-Erinnerungszeit für Felder ohne eigene reminder_hour
+  deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
 };
 
 function activeHabits() {
@@ -774,6 +786,37 @@ async function disablePush() {
     state.notice = { type: 'error', text: 'Deaktivieren fehlgeschlagen: ' + (err.message || err) };
   }
   render();
+}
+
+// --- Konto löschen (Recht auf Löschung) -------------------------------------
+async function handleDeleteAccount() {
+  const input = (document.getElementById('delete-confirm-input')?.value || '').trim();
+  if (input !== 'LÖSCHEN') {
+    state.notice = { type: 'error', text: 'Bitte tippe genau „LÖSCHEN" zur Bestätigung.' };
+    render();
+    return;
+  }
+  state.deleteConfirm.busy = true;
+  render();
+
+  const { data, error } = await supabase.functions.invoke('delete-account');
+  if (error || data?.error) {
+    state.deleteConfirm.busy = false;
+    state.notice = { type: 'error', text: 'Löschen fehlgeschlagen: ' + (error?.message || data?.error) };
+    render();
+    return;
+  }
+
+  // Best effort: lokale Push-Subscription im Browser aufräumen (die DB-Zeile ist durch
+  // die Kontolöschung ohnehin schon weg). Darf das eigentliche Löschen nicht blockieren.
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) await sub.unsubscribe();
+  } catch { /* ignorieren */ }
+
+  state.deleteConfirm = null;
+  await supabase.auth.signOut();
 }
 
 // --- Rendering: Auth -------------------------------------------------------
@@ -1212,7 +1255,28 @@ function renderMenu() {
         </select>
       </div>
       <button type="button" class="menu-item-btn" data-action="open-manage">Felder verwalten</button>
+      <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="open-delete-confirm">Konto löschen</button>
       <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="logout">Abmelden</button>
+    </div>
+  `;
+}
+
+function renderDeleteConfirm() {
+  const busy = state.deleteConfirm.busy;
+  return `
+    <div class="modal-overlay">
+      <div class="modal-box">
+        <h2>Konto endgültig löschen</h2>
+        <p>Alle deine Einträge, Felder und Einstellungen werden unwiderruflich gelöscht. Das kann nicht rückgängig gemacht werden.</p>
+        <div class="auth-field">
+          <label for="delete-confirm-input">Tippe LÖSCHEN zur Bestätigung</label>
+          <input type="text" id="delete-confirm-input" autocomplete="off" ${busy ? 'disabled' : ''} />
+        </div>
+        <div class="habit-form-actions">
+          <button type="button" class="manage-btn manage-btn--danger" data-action="delete-confirm-submit" ${busy ? 'disabled' : ''}>${busy ? 'Wird gelöscht …' : 'Endgültig löschen'}</button>
+          <button type="button" class="habit-form-cancel" data-action="delete-confirm-cancel" ${busy ? 'disabled' : ''}>Abbrechen</button>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -1243,6 +1307,7 @@ function renderApp() {
     </div>
     ${noticeHtml}
     ${body}
+    ${state.deleteConfirm ? renderDeleteConfirm() : ''}
   `;
 }
 
@@ -1270,6 +1335,15 @@ app.addEventListener('click', async (e) => {
     state.view = 'manage';
     state.menuOpen = false;
     render();
+  } else if (action === 'open-delete-confirm') {
+    state.deleteConfirm = { busy: false };
+    state.menuOpen = false;
+    render();
+  } else if (action === 'delete-confirm-cancel') {
+    state.deleteConfirm = null;
+    render();
+  } else if (action === 'delete-confirm-submit') {
+    await handleDeleteAccount();
   } else if (action === 'set-view') {
     state.view = el.dataset.view;
     render();
