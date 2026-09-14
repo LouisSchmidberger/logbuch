@@ -262,6 +262,11 @@
     border-radius: 3px; color: var(--ink); cursor: pointer;
   }
   .turnstile-box { margin: 4px 0 10px; }
+  .recovery-key-code {
+    font-family: monospace; font-size: 13px; line-height: 1.6; word-break: break-all;
+    background: #fff; border: 1px solid var(--line); border-radius: 3px; padding: 10px;
+    margin: 4px 0 14px;
+  }
 </style>
 </head>
 <body>
@@ -286,6 +291,136 @@ function urlBase64ToUint8Array(base64String) {
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = atob(base64);
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+}
+
+// --- Verschlüsselung (Zero-Access: der Server sieht nur Chiffretext) --------
+// Zweistufiger Schlüssel: ein zufälliger DEK (Data Encryption Key) verschlüsselt die
+// eigentlichen Werte in habit_entries.data. Der DEK selbst wird zweifach "verpackt"
+// (wrapped) serverseitig abgelegt — einmal mit einem aus dem Passwort abgeleiteten KEK
+// (Key Encryption Key), einmal mit einem zufälligen Recovery-Key, den nur der Nutzer
+// kennt (einmalig angezeigt, siehe renderRecoveryKeyDisplay). Der DEK selbst ändert
+// sich dadurch nie — ein Passwort-Reset mit Recovery-Key "vererbt" ihn einfach ins neu
+// verpackte Feld weiter, ohne dass irgendwelche Bestandsdaten neu verschlüsselt werden
+// müssten. Alles über die native Web Crypto API, keine externe Library nötig.
+
+function bufToBase64(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+}
+function base64ToBuf(b64) {
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
+}
+function bufToHex(buf) {
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+function hexToBuf(hex) {
+  const clean = hex.replace(/[^0-9a-fA-F]/g, '');
+  const bytes = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(clean.substr(i * 2, 2), 16);
+  return bytes.buffer;
+}
+// Recovery-Key fürs Anzeigen in Fünferblöcken gruppieren, z.B. "a1b2c-d3e4f-...".
+function formatRecoveryKey(hex) {
+  return hex.match(/.{1,5}/g).join('-');
+}
+
+const PBKDF2_ITERATIONS = 250000;
+
+async function deriveKek(password, saltBuf, iterations) {
+  const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: saltBuf, iterations, hash: 'SHA-256' },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['wrapKey', 'unwrapKey']
+  );
+}
+
+async function generateDek() {
+  return crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+}
+
+function generateRecoveryKeyBytes() {
+  return crypto.getRandomValues(new Uint8Array(32));
+}
+
+async function importRecoveryKeyAsCryptoKey(bytesBuf) {
+  return crypto.subtle.importKey('raw', bytesBuf, 'AES-GCM', false, ['wrapKey', 'unwrapKey']);
+}
+
+async function wrapDek(dek, wrappingKey) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const wrapped = await crypto.subtle.wrapKey('raw', dek, wrappingKey, { name: 'AES-GCM', iv });
+  return { iv: bufToBase64(iv), wrapped: bufToBase64(wrapped) };
+}
+
+async function unwrapDek(wrappedB64, ivB64, wrappingKey) {
+  return crypto.subtle.unwrapKey(
+    'raw',
+    base64ToBuf(wrappedB64),
+    wrappingKey,
+    { name: 'AES-GCM', iv: new Uint8Array(base64ToBuf(ivB64)) },
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptData(dek, obj) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, dek, new TextEncoder().encode(JSON.stringify(obj)));
+  return { iv: bufToBase64(iv), ciphertext: bufToBase64(ciphertext) };
+}
+
+async function decryptData(dek, enc) {
+  const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(base64ToBuf(enc.iv)) }, dek, base64ToBuf(enc.ciphertext));
+  return JSON.parse(new TextDecoder().decode(plainBuf));
+}
+
+// --- Lokaler DEK-Cache (IndexedDB) -------------------------------------------
+// Rohbytes des entpackten DEK, ausschließlich auf diesem Gerät — geht nie an den
+// Server. Erspart bei jedem App-Start auf demselben Gerät die erneute Passworteingabe
+// (und die PBKDF2-Ableitung). Vergleichbares Sicherheitsniveau wie die ohnehin schon
+// lokal gespeicherte Supabase-Session.
+function openKeyDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('logbuch-keys', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('deks');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function cacheDek(userId, dek) {
+  const raw = await crypto.subtle.exportKey('raw', dek);
+  const db = await openKeyDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction('deks', 'readwrite');
+    tx.objectStore('deks').put(bufToBase64(raw), userId);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function loadCachedDek(userId) {
+  const db = await openKeyDb();
+  const rawB64 = await new Promise((resolve, reject) => {
+    const tx = db.transaction('deks', 'readonly');
+    const req = tx.objectStore('deks').get(userId);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+  if (!rawB64) return null;
+  return crypto.subtle.importKey('raw', base64ToBuf(rawB64), { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']);
+}
+async function clearCachedDek(userId) {
+  try {
+    const db = await openKeyDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('deks', 'readwrite');
+      tx.objectStore('deks').delete(userId);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch { /* IndexedDB evtl. nicht verfügbar (privater Modus etc.) - egal, nur Cache */ }
 }
 
 // --- Habit-Definitionen ----------------------------------------------------
@@ -426,7 +561,18 @@ const state = {
   menuOpen: false,
   userSettings: { defaultReminderHour: 22 }, // Standard-Erinnerungszeit für Felder ohne eigene reminder_hour
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
+  encryptionSetupInProgress: false, // true während setupEncryption()/Migration läuft
+  recoveryKeyToShow: null, // { hex, confirmed } - einmalige Anzeige nach Erzeugung
+  unlockError: null, // Fehlertext im renderUnlockPrompt-Screen
+  unlockBusy: false,
+  recoveryFallbackConfirm: false, // "Recovery-Key auch verloren?" im Passwort-Reset aufgeklappt
+  recoveryBusy: false,
 };
+
+// currentDek (Modul-Variable statt state, analog zu turnstileToken/turnstileWidgetId):
+// der lebende Entschlüsselungs-Schlüssel darf nie über render()/innerHTML laufen und
+// soll auch nicht versehentlich durch generische State-Handhabung angefasst werden.
+let currentDek = null;
 
 function activeHabits() {
   return state.habits.filter((h) => !h.archivedAt);
@@ -465,7 +611,15 @@ async function loadEntries() {
     return;
   }
   const map = {};
-  for (const row of data) map[row.entry_date] = row.data || {};
+  for (const row of data) {
+    try {
+      map[row.entry_date] = row.data ? await decryptData(currentDek, row.data) : {};
+    } catch {
+      // Sollte nach der einmaligen Migration nicht mehr vorkommen; defensiv statt
+      // die ganze App an einer kaputten/fremden Zeile scheitern zu lassen.
+      map[row.entry_date] = {};
+    }
+  }
   state.entries = map;
 }
 
@@ -495,6 +649,117 @@ async function saveDefaultReminderHour(hour) {
     state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + error.message };
     render();
   }
+}
+
+// --- Verschlüsselungs-Lebenszyklus -------------------------------------------
+async function fetchEncryptionRow(userId) {
+  const { data, error } = await supabase.from('user_encryption').select('*').eq('user_id', userId).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function unwrapDekWithPassword(row, password) {
+  const kek = await deriveKek(password, base64ToBuf(row.salt), row.kdf_iterations);
+  return unwrapDek(row.wrapped_dek, row.wrap_iv, kek);
+}
+
+async function unwrapDekWithRecoveryKey(row, recoveryKeyHex) {
+  const wrappingKey = await importRecoveryKeyAsCryptoKey(hexToBuf(recoveryKeyHex));
+  return unwrapDek(row.wrapped_dek_recovery, row.recovery_wrap_iv, wrappingKey);
+}
+
+// Verschlüsselt alle noch im alten Klartext-Format vorliegenden habit_entries dieses
+// Nutzers (einmalig, beim allerersten Setup). Bereits verschlüsselte Zeilen (erkennbar
+// am {iv, ciphertext}-Format) werden übersprungen - macht die Funktion sicher erneut
+// aufrufbar, falls sie mal unterbrochen wird.
+async function migrateExistingEntries(userId, dek) {
+  const { data: rows, error } = await supabase.from('habit_entries').select('id, data').eq('user_id', userId);
+  if (error) throw error;
+  for (const row of rows ?? []) {
+    const isAlreadyEncrypted = row.data && typeof row.data === 'object' && 'iv' in row.data && 'ciphertext' in row.data;
+    if (isAlreadyEncrypted) continue;
+    const plain = row.data && typeof row.data === 'object' ? row.data : {};
+    const enc = await encryptData(dek, plain);
+    const { error: updErr } = await supabase.from('habit_entries')
+      .update({ data: enc, filled_slugs: Object.keys(plain) })
+      .eq('id', row.id);
+    if (updErr) throw updErr;
+  }
+}
+
+// Erzeugt DEK + Passwort-Wrapping + Recovery-Key-Wrapping neu, migriert bestehende
+// Klartext-Einträge und hinterlegt den frischen Recovery-Key zur einmaligen Anzeige
+// (state.recoveryKeyToShow). Genutzt sowohl beim allerersten Setup (Neu-Signup oder
+// Bestandskonto vor diesem Umbau) als auch beim "Recovery-Key auch verloren"-Fallback
+// im Passwort-Reset (dort verliert der Nutzer bewusst seine alten Einträge).
+async function setupEncryption(userId, password) {
+  const dek = await generateDek();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const kek = await deriveKek(password, salt, PBKDF2_ITERATIONS);
+  const { iv: wrapIv, wrapped: wrappedDek } = await wrapDek(dek, kek);
+
+  const recoveryBytes = generateRecoveryKeyBytes();
+  const recoveryKey = await importRecoveryKeyAsCryptoKey(recoveryBytes);
+  const { iv: recoveryWrapIv, wrapped: wrappedDekRecovery } = await wrapDek(dek, recoveryKey);
+
+  const { error } = await supabase.from('user_encryption').upsert({
+    user_id: userId,
+    salt: bufToBase64(salt),
+    kdf_iterations: PBKDF2_ITERATIONS,
+    wrap_iv: wrapIv,
+    wrapped_dek: wrappedDek,
+    recovery_wrap_iv: recoveryWrapIv,
+    wrapped_dek_recovery: wrappedDekRecovery,
+  }, { onConflict: 'user_id' });
+  if (error) throw error;
+
+  await migrateExistingEntries(userId, dek);
+
+  currentDek = dek;
+  await cacheDek(userId, dek);
+  state.recoveryKeyToShow = { hex: bufToHex(recoveryBytes), confirmed: false };
+}
+
+// Haupteinstieg nach erfolgreichem signIn/signUp (Passwort ist zu diesem Zeitpunkt im
+// Klartext verfügbar). Schneller Pfad über den lokalen Cache, sonst Passwort-Ableitung;
+// erstmaliger Aufruf für ein Konto legt die Verschlüsselung überhaupt erst an.
+async function unlockEncryption(userId, password) {
+  const cached = await loadCachedDek(userId).catch(() => null);
+  if (cached) { currentDek = cached; return; }
+
+  const row = await fetchEncryptionRow(userId);
+  if (!row) {
+    state.encryptionSetupInProgress = true;
+    render();
+    try {
+      await setupEncryption(userId, password);
+    } finally {
+      state.encryptionSetupInProgress = false;
+    }
+    return;
+  }
+  currentDek = await unwrapDekWithPassword(row, password);
+  await cacheDek(userId, currentDek);
+}
+
+// Für den "Recovery-Key neu erzeugen"-Menüpunkt: nutzt den bereits im Speicher
+// gehaltenen DEK direkt (kein Passwort nötig), macht den bisherigen Code ungültig.
+async function regenerateRecoveryKey() {
+  if (!currentDek || !state.session) return;
+  const recoveryBytes = generateRecoveryKeyBytes();
+  const recoveryKey = await importRecoveryKeyAsCryptoKey(recoveryBytes);
+  const { iv: recoveryWrapIv, wrapped: wrappedDekRecovery } = await wrapDek(currentDek, recoveryKey);
+  const { error } = await supabase.from('user_encryption')
+    .update({ recovery_wrap_iv: recoveryWrapIv, wrapped_dek_recovery: wrappedDekRecovery })
+    .eq('user_id', state.session.user.id);
+  if (error) {
+    state.notice = { type: 'error', text: 'Neuer Recovery-Key konnte nicht gespeichert werden: ' + error.message };
+    render();
+    return;
+  }
+  state.menuOpen = false;
+  state.recoveryKeyToShow = { hex: bufToHex(recoveryBytes), confirmed: false };
+  render();
 }
 
 // --- Felder-Verwaltung -----------------------------------------------------
@@ -675,9 +940,13 @@ async function handleHabitDelete(defId) {
 }
 
 async function saveDay(dateKey, dayData) {
+  const encrypted = await encryptData(currentDek, dayData);
   const { error } = await supabase
     .from('habit_entries')
-    .upsert({ user_id: state.session.user.id, entry_date: dateKey, data: dayData }, { onConflict: 'user_id,entry_date' });
+    .upsert(
+      { user_id: state.session.user.id, entry_date: dateKey, data: encrypted, filled_slugs: Object.keys(dayData) },
+      { onConflict: 'user_id,entry_date' }
+    );
   if (error) {
     state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + error.message };
     render();
@@ -813,10 +1082,23 @@ async function handleExportData() {
     render();
     return;
   }
+  // habit_entries.data liegt in der DB nur noch als Chiffretext vor - für einen
+  // nutzbaren Export (Art. 15/20 DSGVO: die eigenen, lesbaren Daten) hier mit dem
+  // bereits im Speicher gehaltenen DEK entschlüsseln.
+  const decryptedEntries = await Promise.all(
+    entriesRes.data.map(async (row) => {
+      try {
+        return { ...row, data: row.data ? await decryptData(currentDek, row.data) : {} };
+      } catch {
+        return { ...row, data: null, decrypt_error: true };
+      }
+    })
+  );
+
   const exportObj = {
     exported_at: new Date().toISOString(),
     habit_definitions: defsRes.data,
-    habit_entries: entriesRes.data,
+    habit_entries: decryptedEntries,
     user_settings: settingsRes.data,
     push_subscriptions: subsRes.data,
   };
@@ -844,6 +1126,7 @@ async function handleDeleteAccount() {
   state.deleteConfirm.busy = true;
   render();
 
+  const userId = state.session?.user?.id;
   const { data, error } = await supabase.functions.invoke('delete-account');
   if (error || data?.error) {
     state.deleteConfirm.busy = false;
@@ -852,13 +1135,16 @@ async function handleDeleteAccount() {
     return;
   }
 
-  // Best effort: lokale Push-Subscription im Browser aufräumen (die DB-Zeile ist durch
-  // die Kontolöschung ohnehin schon weg). Darf das eigentliche Löschen nicht blockieren.
+  // Best effort: lokale Push-Subscription und gecachten Verschlüsselungs-Schlüssel im
+  // Browser aufräumen (die DB-Zeilen sind durch die Kontolöschung ohnehin schon weg).
+  // Darf das eigentliche Löschen nicht blockieren.
   try {
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
     if (sub) await sub.unsubscribe();
   } catch { /* ignorieren */ }
+  if (userId) await clearCachedDek(userId);
+  currentDek = null;
 
   state.deleteConfirm = null;
   await supabase.auth.signOut();
@@ -911,6 +1197,7 @@ function renderAuth() {
       <p class="sub">${title}</p>
       ${state.authError ? `<div class="notice">${esc(state.authError)}</div>` : ''}
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+      ${isForgot ? `<p class="habit-form-lock-note">Zum eigentlichen Zurücksetzen brauchst du im nächsten Schritt deinen Recovery-Key (den du bei der Einrichtung einmalig angezeigt bekommen hast), um deine bisherigen Einträge zu behalten.</p>` : ''}
       <form id="auth-form">
         <div class="auth-field">
           <label for="email">E-Mail</label>
@@ -957,25 +1244,38 @@ function renderAuth() {
       return;
     }
     const password = document.getElementById('password').value;
-    if (isSignup) {
-      const { data, error } = await supabase.auth.signUp({ email, password, options: { captchaToken: turnstileToken } });
-      resetTurnstile();
-      if (error) { state.authError = error.message; render(); return; }
-      if (!data.session) {
-        state.notice = { type: 'ok', text: 'Fast fertig: Bestätige deine E-Mail über den Link, den wir dir geschickt haben, und melde dich dann an.' };
-        state.authMode = 'signin';
-        render();
-        return;
+    // Muss VOR dem signUp/signInWithPassword-Aufruf gesetzt werden, nicht erst danach:
+    // onAuthStateChange kann schon in der Lücke dazwischen feuern (siehe Kommentar bei
+    // authFlowInFlight weiter unten im Skript).
+    authFlowInFlight = true;
+    try {
+      if (isSignup) {
+        const { data, error } = await supabase.auth.signUp({ email, password, options: { captchaToken: turnstileToken } });
+        resetTurnstile();
+        if (error) { state.authError = error.message; render(); return; }
+        if (!data.session) {
+          state.notice = { type: 'ok', text: 'Fast fertig: Bestätige deine E-Mail über den Link, den wir dir geschickt haben, und melde dich dann an.' };
+          state.authMode = 'signin';
+          render();
+          return;
+        }
+        // E-Mail-Bestätigung war nicht nötig (sofortige Session) - Verschlüsselung kann
+        // gleich eingerichtet werden.
+        await completeAuthFlow(data.user.id, password);
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken: turnstileToken } });
+        resetTurnstile();
+        if (error) { state.authError = error.message; render(); return; }
+        await completeAuthFlow(data.user.id, password);
       }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken: turnstileToken } });
-      resetTurnstile();
-      if (error) { state.authError = error.message; render(); return; }
+    } finally {
+      authFlowInFlight = false;
     }
   });
 }
 
 function renderPasswordRecovery() {
+  const fallback = state.recoveryFallbackConfirm;
   app.innerHTML = `
     <div class="auth-box">
       <h1>Logbuch</h1>
@@ -984,9 +1284,20 @@ function renderPasswordRecovery() {
       <form id="recovery-form">
         <div class="auth-field">
           <label for="new-password">Neues Passwort</label>
-          <input type="password" id="new-password" required autocomplete="new-password" minlength="6" />
+          <input type="password" id="new-password" required autocomplete="new-password" minlength="6" ${state.recoveryBusy ? 'disabled' : ''} />
         </div>
-        <button type="submit" class="auth-submit">Passwort speichern</button>
+        ${!fallback ? `
+          <div class="auth-field">
+            <label for="recovery-key-input">Recovery-Key</label>
+            <input type="text" id="recovery-key-input" placeholder="von der einmaligen Anzeige bei der Einrichtung" autocomplete="off" ${state.recoveryBusy ? 'disabled' : ''} />
+          </div>
+          <button type="submit" class="auth-submit" ${state.recoveryBusy ? 'disabled' : ''}>${state.recoveryBusy ? 'Wird gespeichert …' : 'Passwort speichern'}</button>
+          <button type="button" class="auth-toggle" data-action="toggle-recovery-fallback">Recovery-Key auch verloren?</button>
+        ` : `
+          <div class="notice">Ohne Recovery-Key können deine bisherigen verschlüsselten Einträge nicht mehr entschlüsselt werden — sie sind dann unwiederbringlich verloren. Das betrifft nur die alten Einträge, dein Konto selbst bleibt nutzbar.</div>
+          <button type="submit" class="auth-submit" ${state.recoveryBusy ? 'disabled' : ''}>${state.recoveryBusy ? 'Wird gespeichert …' : 'Verstanden, Passwort trotzdem setzen (alte Daten verloren)'}</button>
+          <button type="button" class="auth-toggle" data-action="toggle-recovery-fallback">Doch abbrechen, ich habe den Code noch</button>
+        `}
       </form>
     </div>
   `;
@@ -995,11 +1306,119 @@ function renderPasswordRecovery() {
     e.preventDefault();
     const password = document.getElementById('new-password').value;
     state.authError = null;
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) { state.authError = error.message; render(); return; }
-    state.passwordRecovery = false;
-    state.notice = { type: 'ok', text: 'Passwort gespeichert.' };
+    state.recoveryBusy = true;
+    authFlowInFlight = true; // siehe Kommentar bei der Deklaration weiter unten im Skript
     render();
+    try {
+      const userId = state.session.user.id;
+      if (fallback) {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        await setupEncryption(userId, password);
+      } else {
+        const recoveryKeyHex = document.getElementById('recovery-key-input').value;
+        let dek;
+        try {
+          const row = await fetchEncryptionRow(userId);
+          if (!row) throw new Error('Keine Verschlüsselungs-Konfiguration gefunden.');
+          dek = await unwrapDekWithRecoveryKey(row, recoveryKeyHex);
+        } catch {
+          throw new Error('Recovery-Key ist falsch oder unvollständig. Nichts wurde verändert.');
+        }
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const kek = await deriveKek(password, salt, PBKDF2_ITERATIONS);
+        const { iv: wrapIv, wrapped: wrappedDek } = await wrapDek(dek, kek);
+        const { error: updErr } = await supabase.from('user_encryption')
+          .update({ salt: bufToBase64(salt), kdf_iterations: PBKDF2_ITERATIONS, wrap_iv: wrapIv, wrapped_dek: wrappedDek })
+          .eq('user_id', userId);
+        if (updErr) throw updErr;
+        currentDek = dek;
+        await cacheDek(userId, dek);
+      }
+      state.recoveryBusy = false;
+      state.passwordRecovery = false;
+      state.recoveryFallbackConfirm = false;
+      state.notice = { type: 'ok', text: 'Passwort gespeichert.' };
+      state.loading = true;
+      render();
+      await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
+      state.loading = false;
+      render();
+    } catch (err) {
+      state.recoveryBusy = false;
+      state.authError = err.message || String(err);
+      render();
+    } finally {
+      authFlowInFlight = false;
+    }
+  });
+}
+
+function renderRecoveryKeyDisplay() {
+  const { hex } = state.recoveryKeyToShow;
+  const formatted = formatRecoveryKey(hex);
+  app.innerHTML = `
+    <div class="auth-box">
+      <h1>Logbuch</h1>
+      <p class="sub">Dein Recovery-Key</p>
+      <div class="notice">Dieser Code wird nur einmal angezeigt. Ohne ihn UND dein Passwort sind deine Daten für immer verloren — auch wir können sie dann nicht wiederherstellen. Speichere ihn jetzt sicher (Passwort-Manager, ausgedruckt o.ä.).</div>
+      <p class="recovery-key-code">${esc(formatted)}</p>
+      <div class="habit-form-actions">
+        <button type="button" class="manage-btn" data-action="copy-recovery-key">Kopieren</button>
+        <button type="button" class="manage-btn" data-action="download-recovery-key">Als Datei herunterladen</button>
+      </div>
+      <label class="checkbox-field" style="margin-top:14px;">
+        <input type="checkbox" id="recovery-key-confirm" />
+        Ich habe den Code sicher gespeichert.
+      </label>
+      <button type="button" class="auth-submit" data-action="confirm-recovery-key">Weiter</button>
+    </div>
+  `;
+}
+
+function renderUnlockPrompt() {
+  app.innerHTML = `
+    <div class="auth-box">
+      <h1>Logbuch</h1>
+      <p class="sub">Entsperren</p>
+      <p class="habit-form-lock-note">Neues Gerät oder Browserdaten gelöscht — bitte dein Passwort erneut eingeben, um deine Einträge zu entschlüsseln.</p>
+      ${state.unlockError ? `<div class="notice">${esc(state.unlockError)}</div>` : ''}
+      <form id="unlock-form">
+        <div class="auth-field">
+          <label for="unlock-password">Passwort</label>
+          <input type="password" id="unlock-password" required autocomplete="current-password" ${state.unlockBusy ? 'disabled' : ''} />
+        </div>
+        <button type="submit" class="auth-submit" ${state.unlockBusy ? 'disabled' : ''}>${state.unlockBusy ? 'Wird entsperrt …' : 'Entsperren'}</button>
+      </form>
+      <button type="button" class="auth-toggle" data-action="logout">Abmelden</button>
+    </div>
+  `;
+
+  document.getElementById('unlock-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = document.getElementById('unlock-password').value;
+    state.unlockBusy = true;
+    state.unlockError = null;
+    render();
+    try {
+      const row = await fetchEncryptionRow(state.session.user.id);
+      if (!row) throw new Error('Keine Verschlüsselungs-Konfiguration gefunden.');
+      currentDek = await unwrapDekWithPassword(row, password);
+      await cacheDek(state.session.user.id, currentDek);
+      state.unlockBusy = false;
+      state.loading = true;
+      render();
+      await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
+      state.loading = false;
+      checkPushStatus().then(render);
+      render();
+    } catch {
+      state.unlockBusy = false;
+      state.unlockError = 'Falsches Passwort.';
+      render();
+    }
   });
 }
 
@@ -1392,6 +1811,7 @@ function renderMenu() {
       </div>
       <button type="button" class="menu-item-btn" data-action="open-manage">Felder verwalten</button>
       <button type="button" class="menu-item-btn" data-action="export-data">Meine Daten exportieren</button>
+      <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key">Recovery-Key neu erzeugen</button>
       <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="open-delete-confirm">Konto löschen</button>
       <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="logout">Abmelden</button>
     </div>
@@ -1451,6 +1871,9 @@ function renderApp() {
 function render() {
   if (state.passwordRecovery) { renderPasswordRecovery(); return; }
   if (!state.session) { renderAuth(); return; }
+  if (state.recoveryKeyToShow) { renderRecoveryKeyDisplay(); return; }
+  if (state.encryptionSetupInProgress) { app.innerHTML = `<div class="loading">Deine Daten werden verschlüsselt …</div>`; return; }
+  if (!currentDek) { renderUnlockPrompt(); return; }
   renderApp();
 }
 
@@ -1474,7 +1897,44 @@ app.addEventListener('click', async (e) => {
     state.authError = null;
     state.notice = null;
     render();
+  } else if (action === 'toggle-recovery-fallback') {
+    state.recoveryFallbackConfirm = !state.recoveryFallbackConfirm;
+    state.authError = null;
+    render();
+  } else if (action === 'copy-recovery-key') {
+    try {
+      await navigator.clipboard.writeText(formatRecoveryKey(state.recoveryKeyToShow.hex));
+      state.notice = { type: 'ok', text: 'In die Zwischenablage kopiert.' };
+    } catch {
+      state.notice = { type: 'error', text: 'Kopieren nicht möglich - bitte den Code manuell abschreiben.' };
+    }
+    render();
+  } else if (action === 'download-recovery-key') {
+    const blob = new Blob(
+      [`Logbuch Recovery-Key\n${formatRecoveryKey(state.recoveryKeyToShow.hex)}\n\nSicher aufbewahren - ohne diesen Code UND dein Passwort sind deine Daten unwiederbringlich verloren.\n`],
+      { type: 'text/plain' }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'logbuch-recovery-key.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } else if (action === 'confirm-recovery-key') {
+    if (!document.getElementById('recovery-key-confirm')?.checked) {
+      state.notice = { type: 'error', text: 'Bitte bestätige, dass du den Code sicher gespeichert hast.' };
+      render();
+      return;
+    }
+    state.recoveryKeyToShow = null;
+    state.notice = null;
+    render();
+  } else if (action === 'regenerate-recovery-key') {
+    await regenerateRecoveryKey();
   } else if (action === 'logout') {
+    currentDek = null;
     await supabase.auth.signOut();
   } else if (action === 'toggle-menu') {
     state.menuOpen = !state.menuOpen;
@@ -1716,6 +2176,26 @@ app.addEventListener('pointerup', async (e) => {
 });
 
 // --- Auth-Status & Start ---------------------------------------------------
+// authFlowInFlight: von den Login/Signup-Submit-Handlern VOR dem signUp/
+// signInWithPassword-Aufruf gesetzt (nicht erst danach — onAuthStateChange kann schon
+// in der Lücke dazwischen feuern) und erst nach completeAuthFlow() wieder gelöscht.
+// Solange gesetzt, überlässt onAuthStateChange dem Submit-Handler komplett das
+// Entsperren + Laden (dort ist das Passwort im Klartext verfügbar) — sonst würde
+// onAuthStateChange parallel einen zweiten, redundanten Cache-Entsperr-Versuch
+// starten und dabei ggf. kurz den Passwort-Abfrage-Screen aufblitzen lassen, obwohl
+// das Passwort gerade eben schon eingegeben wurde.
+let authFlowInFlight = false;
+
+async function completeAuthFlow(userId, password) {
+  await unlockEncryption(userId, password);
+  state.loading = true;
+  render();
+  await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
+  state.loading = false;
+  checkPushStatus().then(render);
+  render();
+}
+
 supabase.auth.onAuthStateChange(async (event, session) => {
   state.session = session;
   state.authError = null;
@@ -1724,24 +2204,30 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     render();
     return;
   }
+  if (authFlowInFlight) { render(); return; }
   if (session) {
+    if (currentDek) { render(); return; }
+    // Kein Passwort verfügbar (Session-Wiederherstellung, z.B. Browser-Reload) - nur
+    // der lokale Cache kann hier helfen, sonst muss renderUnlockPrompt() greifen.
     state.loading = true;
     render();
-    await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
+    const cached = await loadCachedDek(session.user.id).catch(() => null);
+    if (cached) {
+      currentDek = cached;
+      await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
+      checkPushStatus().then(render);
+    }
     state.loading = false;
   } else {
     state.entries = {};
     state.habits = [];
+    currentDek = null;
   }
   render();
 });
 
 const { data: { session } } = await supabase.auth.getSession();
 state.session = session;
-if (session) {
-  await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
-  checkPushStatus().then(render);
-}
 state.loading = false;
 render();
 </script>

@@ -1,9 +1,16 @@
--- Tabelle: ein Datensatz pro Nutzer und Tag, alle Habit-Werte in einem JSON-Feld
+-- Tabelle: ein Datensatz pro Nutzer und Tag, alle Habit-Werte in einem JSON-Feld.
+-- `data` ist clientseitig verschlüsselt (Zero-Access-Architektur, siehe
+-- user_encryption weiter unten und die Kommentare in logbuch.html) — kein Klartext
+-- mehr, sondern {iv: "<base64>", ciphertext: "<base64>"}. `filled_slugs` ist bewusst
+-- unverschlüsselt (nur die Namen der befüllten Felder, keine Werte) und wird
+-- ausschließlich für die Vollständigkeits-Prüfung der Edge Function
+-- send-notifications gebraucht, die "data" nicht lesen kann.
 create table public.habit_entries (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   entry_date date not null,
   data jsonb not null default '{}'::jsonb,
+  filled_slugs jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now(),
   unique (user_id, entry_date)
 );
@@ -159,6 +166,37 @@ $$;
 create trigger on_auth_user_created_seed_settings
   after insert on auth.users
   for each row execute function public.seed_default_user_settings();
+
+-- Verschlüsselung (Zero-Access-Architektur, siehe Kommentare in logbuch.html): pro
+-- Nutzer ein zufälliger Data Encryption Key (DEK), der clientseitig alle Werte in
+-- habit_entries.data ver-/entschlüsselt. Der DEK selbst liegt NIE hier — nur zwei
+-- "verpackte" (wrapped) Varianten davon: einmal mit einem aus dem Passwort
+-- abgeleiteten Schlüssel, einmal mit einem zufälligen Recovery-Key, den ausschließlich
+-- der Nutzer kennt (einmalig angezeigt, nie serverseitig gespeichert). Anders als bei
+-- den übrigen Tabellen KEIN automatischer Seed-Trigger bei Registrierung — die
+-- Einrichtung passiert bewusst erst beim ersten echten Login (braucht das Passwort im
+-- Klartext, das ist serverseitig nie verfügbar).
+create table public.user_encryption (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  salt text not null,                   -- base64, PBKDF2-Salt (Passwort-Pfad)
+  kdf_iterations int not null default 250000,
+  wrap_iv text not null,                -- base64, AES-GCM-IV (Passwort-Pfad)
+  wrapped_dek text not null,            -- base64, DEK verpackt mit dem Passwort-Schlüssel
+  recovery_wrap_iv text not null,       -- base64, AES-GCM-IV (Recovery-Key-Pfad)
+  wrapped_dek_recovery text not null,   -- base64, DEK verpackt mit dem Recovery-Key
+  created_at timestamptz not null default now()
+);
+
+alter table public.user_encryption enable row level security;
+
+create policy "select own user_encryption" on public.user_encryption
+  for select using (auth.uid() = user_id);
+
+create policy "insert own user_encryption" on public.user_encryption
+  for insert with check (auth.uid() = user_id);
+
+create policy "update own user_encryption" on public.user_encryption
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- Push-Subscriptions: pro Gerät/Browser ein Eintrag
 create table public.push_subscriptions (

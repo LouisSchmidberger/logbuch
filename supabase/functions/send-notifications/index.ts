@@ -17,6 +17,11 @@
 // pro Nutzer (Standardzeit) und pro Feld (eigene Zeit) frei gewählt sein kann. Jede der
 // 24 stündlichen Ausführungen bestimmt ihre Berliner Stunde frisch per Intl — das deckt
 // Sommer-/Winterzeit weiterhin automatisch ab, ganz ohne feste UTC-Zeitpunkte-Liste.
+//
+// habit_entries.data ist seit der clientseitigen Verschlüsselung nur noch Chiffretext
+// ({iv, ciphertext}) — diese Function kann sie nicht lesen. Für die
+// Vollständigkeits-Prüfung dient stattdessen die unverschlüsselte Klartext-Spalte
+// habit_entries.filled_slugs (nur die Slugs der befüllten Felder, keine Werte).
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
@@ -91,15 +96,19 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: subErr.message }), { status: 500 });
   }
 
+  // `data` ist seit der clientseitigen Verschlüsselung nur noch Chiffretext
+  // ({iv, ciphertext}) — die Function kann und darf sie nicht lesen. Für die
+  // Vollständigkeits-Prüfung reicht die unverschlüsselte Klartext-Liste der an dem
+  // Tag befüllten Slugs (nur Vorhandensein, keine Werte).
   const { data: todayEntries, error: entryErr } = await supabase
     .from('habit_entries')
-    .select('user_id, data')
+    .select('user_id, filled_slugs')
     .eq('entry_date', todayKey);
   if (entryErr) {
     return new Response(JSON.stringify({ error: entryErr.message }), { status: 500 });
   }
-  const entryByUser = new Map<string, Record<string, unknown>>();
-  for (const e of todayEntries ?? []) entryByUser.set(e.user_id, e.data ?? {});
+  const filledSlugsByUser = new Map<string, string[]>();
+  for (const e of todayEntries ?? []) filledSlugsByUser.set(e.user_id, e.filled_slugs ?? []);
 
   const { data: defs, error: defErr } = await supabase
     .from('habit_definitions')
@@ -126,8 +135,8 @@ Deno.serve(async (req) => {
 
   // Für einen Nutzer die Namen der heute noch fehlenden Felder aus `group`, oder null,
   // wenn nichts fehlt (bzw. die Gruppe leer ist).
-  function missingNames(group: HabitDef[], dayData: Record<string, unknown>): string[] {
-    return group.filter((d) => dayData[d.slug] === undefined).map((d) => d.name);
+  function missingNames(group: HabitDef[], filledSlugs: string[]): string[] {
+    return group.filter((d) => !filledSlugs.includes(d.slug)).map((d) => d.name);
   }
 
   const results: Array<{ user_id: string; ok: boolean; detail: string }> = [];
@@ -137,7 +146,7 @@ Deno.serve(async (req) => {
       endpoint: sub.endpoint,
       keys: { p256dh: sub.p256dh, auth: sub.auth_key },
     };
-    const dayData = entryByUser.get(sub.user_id) ?? {};
+    const filledSlugs = filledSlugsByUser.get(sub.user_id) ?? [];
     const defsForUser = defsByUser.get(sub.user_id) ?? [];
     const defaultHour = defaultHourByUser.get(sub.user_id) ?? 22;
     const messages: PushMessage[] = [];
@@ -146,7 +155,7 @@ Deno.serve(async (req) => {
     // einzeln benannt) — das wäre bei vielen Feldern schnell eine sehr lange Nachricht.
     if (berlin.hour === defaultHour) {
       const defaultGroup = defsForUser.filter((d) => d.reminder_hour === null);
-      if (missingNames(defaultGroup, dayData).length) {
+      if (missingNames(defaultGroup, filledSlugs).length) {
         messages.push({
           title: 'Logbuch',
           body: 'Erinnerung: Noch nicht alle Werte für heute eingetragen.',
@@ -158,7 +167,7 @@ Deno.serve(async (req) => {
     // Eigene Stunde je Feld: hier macht die konkrete Nennung Sinn, meist nur ein
     // einzelnes bewusst herausgehobenes Feld (z.B. Gewicht morgens).
     const customGroup = defsForUser.filter((d) => d.reminder_hour === berlin.hour);
-    const missingCustom = missingNames(customGroup, dayData);
+    const missingCustom = missingNames(customGroup, filledSlugs);
     if (missingCustom.length) {
       messages.push({
         title: 'Logbuch',
