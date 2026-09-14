@@ -1085,7 +1085,13 @@ async function handleHabitSave() {
 
   if (f.defId) {
     const patch = f.locked
-      ? { name, ...(f.kind === 'scale' ? { good: f.good, goal_threshold: goalThreshold } : { unit: fields.unit }), reminder_hour: reminderHour }
+      ? {
+          name,
+          ...(f.kind === 'scale'
+            ? { good: f.good, goal_threshold: goalThreshold, display_style: fields.display_style, slider_show_value: fields.slider_show_value }
+            : { unit: fields.unit }),
+          reminder_hour: reminderHour,
+        }
       : { name, ...fields, reminder_hour: reminderHour };
     const { data, error } = await supabase.from('habit_definitions').update(patch).eq('id', f.defId).select().single();
     if (error) {
