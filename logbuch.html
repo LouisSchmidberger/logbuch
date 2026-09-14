@@ -202,6 +202,7 @@
     width: 100%; padding: 10px; margin-top: 8px; font-family: inherit; font-size: 14px; font-weight: 600;
     background: var(--ink); color: var(--paper); border: none; border-radius: 3px; cursor: pointer;
   }
+  .auth-submit:disabled { background: var(--sand); cursor: default; }
   .auth-toggle { display: block; margin: 14px auto 0; background: none; border: none; color: var(--moss); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; text-align: center; width: 100%; }
 
   .manage-list { display: flex; flex-direction: column; margin-bottom: 18px; }
@@ -255,6 +256,11 @@
   }
   .checkbox-field { display: flex; align-items: center; gap: 7px; font-size: 13px; margin-bottom: 4px; }
   .checkbox-field input { margin: 0; }
+  .recovery-key-confirm-row {
+    border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; margin: 12px 0 14px;
+    background: rgba(75, 107, 79, 0.06);
+  }
+  .recovery-key-confirm-row input[type="checkbox"] { width: 17px; height: 17px; flex-shrink: 0; accent-color: var(--moss); }
   .habit-form-actions { display: flex; gap: 8px; margin-top: 14px; }
   .habit-form-actions .auth-submit { margin-top: 0; width: auto; flex: 1; }
   .habit-form-cancel {
@@ -1351,18 +1357,23 @@ function renderRecoveryKeyDisplay() {
       <h1>Logbuch</h1>
       <p class="sub">Dein Recovery-Key</p>
       <div class="notice">Dieser Code wird nur einmal angezeigt. Ohne ihn UND dein Passwort sind deine Daten für immer verloren — auch wir können sie dann nicht wiederherstellen. Speichere ihn jetzt sicher (Passwort-Manager, ausgedruckt o.ä.).</div>
+      ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
       <p class="recovery-key-code">${esc(formatted)}</p>
       <div class="habit-form-actions">
         <button type="button" class="manage-btn" data-action="copy-recovery-key">Kopieren</button>
         <button type="button" class="manage-btn" data-action="download-recovery-key">Als Datei herunterladen</button>
       </div>
-      <label class="checkbox-field" style="margin-top:14px;">
+      <label class="checkbox-field recovery-key-confirm-row">
         <input type="checkbox" id="recovery-key-confirm" />
         Ich habe den Code sicher gespeichert.
       </label>
-      <button type="button" class="auth-submit" data-action="confirm-recovery-key">Weiter</button>
+      <button type="button" class="auth-submit" data-action="confirm-recovery-key" id="recovery-key-continue" disabled>Weiter</button>
     </div>
   `;
+
+  document.getElementById('recovery-key-confirm').addEventListener('change', (e) => {
+    document.getElementById('recovery-key-continue').disabled = !e.target.checked;
+  });
 }
 
 function renderUnlockPrompt() {
@@ -1909,12 +1920,10 @@ app.addEventListener('click', async (e) => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    state.notice = { type: 'ok', text: 'Datei wird heruntergeladen.' };
+    render();
   } else if (action === 'confirm-recovery-key') {
-    if (!document.getElementById('recovery-key-confirm')?.checked) {
-      state.notice = { type: 'error', text: 'Bitte bestätige, dass du den Code sicher gespeichert hast.' };
-      render();
-      return;
-    }
+    if (!document.getElementById('recovery-key-confirm')?.checked) return; // Button ist sonst disabled
     state.recoveryKeyToShow = null;
     state.notice = null;
     render();
