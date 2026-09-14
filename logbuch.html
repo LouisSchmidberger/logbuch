@@ -1358,6 +1358,7 @@ function renderRecoveryKeyDisplay() {
       <p class="sub">Dein Recovery-Key</p>
       <div class="notice">Dieser Code wird nur einmal angezeigt. Ohne ihn UND dein Passwort sind deine Daten für immer verloren — auch wir können sie dann nicht wiederherstellen. Speichere ihn jetzt sicher (Passwort-Manager, ausgedruckt o.ä.).</div>
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+      <p class="habit-form-lock-note">Kein Stress, falls du gerade keine Zeit hast: du kannst dir jederzeit über "Recovery-Key neu erzeugen" im Menü einen neuen Code anzeigen lassen (der alte wird dann ungültig).</p>
       <p class="recovery-key-code">${esc(formatted)}</p>
       <div class="habit-form-actions">
         <button type="button" class="manage-btn" data-action="copy-recovery-key">Kopieren</button>
