@@ -161,10 +161,35 @@
     border-radius: 3px; background: var(--ink); color: var(--paper); cursor: pointer;
   }
 
-  .slider-row { display: flex; align-items: center; gap: 8px; min-width: 140px; max-width: 60%; }
-  .value-slider { flex: 1; accent-color: var(--moss); }
-  .value-slider--unset { opacity: 0.5; }
+  .habit-row--slider { flex-direction: column; align-items: stretch; gap: 6px; }
+  .slider-row { display: flex; align-items: center; gap: 10px; width: 100%; }
   .slider-value { font-size: 12px; color: var(--sand); min-width: 2em; text-align: right; flex-shrink: 0; }
+
+  /* Eigens gestylter Regler statt native OS-Optik (wirkte "klobig") — die farbige
+     Füllung kommt über einen Gradient auf dem Track, gesteuert durch --slider-color/
+     --slider-pct (siehe renderHabitSlider/input-Listener in logbuch.html). Bewusst
+     NICHT über accent-color, das bei jedem Live-Update in manchen Browsern kurz
+     glitchte, statt sauber mitzuziehen. */
+  .value-slider {
+    flex: 1; -webkit-appearance: none; appearance: none; background: transparent;
+    height: 22px; cursor: pointer; --slider-color: var(--moss); --slider-pct: 50%;
+  }
+  .value-slider--unset { --slider-color: var(--sand); }
+  .value-slider::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 2px;
+    background: linear-gradient(to right, var(--slider-color) 0%, var(--slider-color) var(--slider-pct), var(--line) var(--slider-pct), var(--line) 100%);
+  }
+  .value-slider::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line); }
+  .value-slider::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--slider-color); }
+  .value-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; margin-top: -6px;
+    width: 16px; height: 16px; border-radius: 50%; background: var(--slider-color);
+    border: 2px solid var(--paper); box-shadow: 0 0 0 1px var(--line);
+  }
+  .value-slider::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%; background: var(--slider-color);
+    border: 2px solid var(--paper); box-shadow: 0 0 0 1px var(--line);
+  }
 
   .habit-row--group .group-readout {
     font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 12px; color: var(--paper);
@@ -256,6 +281,8 @@
     display: block; width: 100%; margin-top: 4px; padding: 10px; font-family: inherit; font-size: 13px;
     border: 1px dashed var(--line); border-radius: 4px; background: transparent; color: var(--moss); cursor: pointer;
   }
+  .manage-section-divider { border-top: 1px solid var(--line); margin: 22px 0 14px; }
+  .manage-section-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 15px; margin: 0 0 4px; }
 
   .habit-form { border: 1px solid var(--line); border-radius: 4px; padding: 14px; margin-bottom: 18px; }
   .habit-form h2 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 12px; }
@@ -268,6 +295,28 @@
   }
   .pill-toggle--active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
   .pill-toggle:disabled { opacity: 0.4; cursor: default; }
+
+  .stepper-row { display: flex; align-items: center; gap: 8px; }
+  .stepper-row input[type="number"] {
+    width: 60px; text-align: center; font-family: inherit; font-size: 14px; padding: 6px 4px;
+    border: 1px solid var(--line); border-radius: 3px; background: #fff; color: var(--ink);
+  }
+  .stepper-btn {
+    width: 30px; height: 30px; flex-shrink: 0; font-family: inherit; font-size: 16px; line-height: 1;
+    border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer;
+  }
+  .stepper-btn:disabled { opacity: 0.4; cursor: default; }
+
+  .info-tip { display: inline-block; margin-left: 4px; vertical-align: middle; }
+  .info-tip summary {
+    display: inline-flex; align-items: center; justify-content: center; list-style: none; user-select: none;
+    width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--sand); color: var(--sand);
+    font-size: 10px; cursor: pointer;
+  }
+  .info-tip summary::-webkit-details-marker { display: none; }
+  .info-tip[open] summary { color: var(--ink); border-color: var(--ink); }
+  .info-tip p { font-size: 11px; color: var(--sand); margin: 6px 0 10px; }
+
   .habit-form-minmax { display: flex; gap: 10px; }
   .habit-form-minmax .auth-field { flex: 1; margin-bottom: 0; }
   .label-inputs { display: flex; flex-direction: column; gap: 6px; }
@@ -666,6 +715,28 @@ const app = document.getElementById('app');
 
 function esc(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Kleine "?"-Box mit Erklärungstext, per Tap auf-/zuklappbar (natives <details>, kein
+// JS nötig) — für Erklärungen, die nicht direkt sichtbar sein sollen (zu viel auf
+// einmal), aber bei Bedarf griffbereit sind.
+function infoTip(text) {
+  return `<details class="info-tip"><summary aria-label="Erklärung anzeigen">?</summary><p>${esc(text)}</p></details>`;
+}
+
+// Zahlen-Eingabe mit +/- Buttons daneben, für kurze/eingeschränkte Wertebereiche
+// (z.B. Anzahl Stufen) — spart das Eintippen. Ändert direkt das Input-Element und
+// feuert ein 'change'-Event (siehe stepper-inc/-dec im Klick-Handler), damit ein
+// evtl. daran hängender bestehender Change-Listener (z.B. für die Label-Stufenzahl)
+// weiterhin greift.
+function stepperInput(id, value, min, max, disabled, extraAttrs = '') {
+  return `
+    <div class="stepper-row">
+      <button type="button" class="stepper-btn" data-action="stepper-dec" data-target="${id}" ${disabled ? 'disabled' : ''} aria-label="Verringern">−</button>
+      <input type="number" id="${id}" min="${min}" max="${max}" value="${value}" ${extraAttrs} ${disabled ? 'disabled' : ''} />
+      <button type="button" class="stepper-btn" data-action="stepper-inc" data-target="${id}" ${disabled ? 'disabled' : ''} aria-label="Erhöhen">+</button>
+    </div>
+  `;
 }
 
 // --- Datenzugriff --------------------------------------------------------
@@ -1590,11 +1661,18 @@ function renderHabitOptions(habit, value) {
 function renderHabitSlider(habit, value) {
   const hasValue = value !== undefined;
   const v = hasValue ? value : Math.round((habit.min + habit.max) / 2);
-  const color = hasValue ? scoreColor(normalize(habit, v)) : 'var(--line)';
+  const color = hasValue ? scoreColor(normalize(habit, v)) : 'var(--sand)';
+  const pct = ((v - habit.min) / (habit.max - habit.min)) * 100;
+  // Eigene --slider-color/--slider-pct-Variablen statt der nativen accent-color: die
+  // ließ sich in manchen Browsern bei jedem 'input'-Event nicht glitch-frei neu
+  // einfärben (kurzer Flackerer/Farbsprung). Die Füllung wird stattdessen über einen
+  // CSS-Gradient auf dem Track selbst gezeichnet (siehe .value-slider-CSS), der bei
+  // jedem 'input' einfach per Custom Property aktualisiert wird.
   return `
     <div class="slider-row">
       <input type="range" class="value-slider${hasValue ? '' : ' value-slider--unset'}" data-action="value-slider"
-        data-habit="${habit.id}" min="${habit.min}" max="${habit.max}" step="1" value="${v}" style="accent-color:${color}" />
+        data-habit="${habit.id}" min="${habit.min}" max="${habit.max}" step="1" value="${v}"
+        style="--slider-color:${color};--slider-pct:${pct}%;" />
       ${habit.sliderShowValue ? `<span class="slider-value" id="slider-value-${habit.id}">${hasValue ? v : '–'}</span>` : ''}
     </div>
   `;
@@ -1657,10 +1735,16 @@ function renderToday() {
             ${renderGroupInfo(h, dateKey)}
           </div>
         `;
+        if (h.displayStyle === 'slider') return `
+          <div class="habit-row habit-row--slider">
+            <span class="habit-name">${esc(h.name)}</span>
+            ${renderHabitSlider(h, dayEntry[h.id])}
+          </div>
+        `;
         return `
           <div class="habit-row">
             <span class="habit-name">${esc(h.name)}</span>
-            <div class="habit-options">${h.displayStyle === 'slider' ? renderHabitSlider(h, dayEntry[h.id]) : renderHabitOptions(h, dayEntry[h.id])}</div>
+            <div class="habit-options">${renderHabitOptions(h, dayEntry[h.id])}</div>
           </div>
         `;
       }).join('')}
@@ -1860,9 +1944,8 @@ function renderHabitForm() {
 
   const goalField = `
     <div class="auth-field">
-      <label for="habit-form-goal">Ziel für volle Bewertung (%)</label>
+      <label for="habit-form-goal">Ziel für volle Bewertung (%)${infoTip('Bei unter 100%: schon eine niedrigere Quote/Wert zählt farblich als voll erreicht (grün). Ändert nur die Farbe, nie die angezeigte Prozentzahl. Wirkt sich nicht auf „Heute" aus.')}</label>
       <input type="number" id="habit-form-goal" min="1" max="100" step="1" value="${f.goalPercent}" />
-      <p class="habit-form-lock-note">Bei unter 100%: schon eine niedrigere Quote/Wert zählt farblich als voll erreicht (grün). Ändert nur die Farbe, nie die angezeigte Prozentzahl. Wirkt sich nicht auf „Heute" aus.</p>
     </div>
   `;
 
@@ -1884,9 +1967,8 @@ function renderHabitForm() {
       </div>
       ${f.displayStyle === 'slider' ? `
         <div class="auth-field">
-          <label for="habit-form-slider-steps">Anzahl Stufen</label>
-          <input type="number" id="habit-form-slider-steps" min="2" max="1000" value="${f.sliderSteps}" ${f.locked ? 'disabled' : ''} />
-          <p class="habit-form-lock-note">Der Regler zeigt nie eine Min/Max-Beschriftung (nur hier in der Verwaltung).</p>
+          <label for="habit-form-slider-steps">Anzahl Stufen${infoTip('Der Regler zeigt nie eine Min/Max-Beschriftung beim Eintragen (nur hier in der Verwaltung).')}</label>
+          ${stepperInput('habit-form-slider-steps', f.sliderSteps, 2, 1000, f.locked)}
         </div>
         <div class="auth-field">
           <label class="checkbox-field">
@@ -1909,7 +1991,7 @@ function renderHabitForm() {
     ` : `
       <div class="auth-field">
         <label for="habit-form-steps">Anzahl Stufen</label>
-        <input type="number" id="habit-form-steps" data-action="habit-steps" min="2" max="8" value="${f.steps}" ${f.locked ? 'disabled' : ''} />
+        ${stepperInput('habit-form-steps', f.steps, 2, 8, f.locked, 'data-action="habit-steps"')}
       </div>
       <div class="auth-field">
         <label>Bezeichnungen der Reihe nach (Wert 0 zuerst, z. B. „Nein“, „Ein bisschen“, „Ja“)</label>
@@ -1919,7 +2001,7 @@ function renderHabitForm() {
       </div>
     `}
     <div class="auth-field">
-      <label>Zielrichtung</label>
+      <label>Zielrichtung${infoTip('Legt fest, was als "gut" gilt und entsprechend grün eingefärbt wird. Meist "hohe Werte" (z. B. Sport, gesunde Ernährung). "Niedrige Werte" eignet sich für Dinge, von denen weniger besser ist (z. B. Konsum von etwas, das man reduzieren möchte).')}</label>
       <div class="pill-group">
         <button type="button" class="pill-toggle${f.good === 'high' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="high">Hohe Werte erstrebenswert</button>
         <button type="button" class="pill-toggle${f.good === 'low' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="low">Niedrige Werte erstrebenswert</button>
@@ -1972,24 +2054,26 @@ function renderHabitForm() {
     </div>
   `;
 
+  const isGroup = f.kind === 'group';
   return `
     <div class="habit-form">
-      <h2>${f.defId ? 'Feld bearbeiten' : 'Neues Feld'}</h2>
+      <h2>${isGroup ? (f.defId ? 'Gruppe bearbeiten' : 'Neue Gruppe') : (f.defId ? 'Feld bearbeiten' : 'Neues Feld')}</h2>
       ${f.locked ? `<p class="habit-form-lock-note">Für dieses Feld gibt es bereits Einträge – Feld-Typ/Skala/Bezeichnungen sind gesperrt. Für eine andere Skala: archivieren und neu anlegen.</p>` : ''}
       <div class="auth-field">
         <label for="habit-form-name">Name</label>
         <input type="text" id="habit-form-name" value="${esc(f.name)}" maxlength="40" />
       </div>
-      <div class="auth-field">
-        <label>Feld-Typ</label>
-        <div class="pill-group">
-          <button type="button" class="pill-toggle${f.kind === 'scale' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="scale" ${f.locked ? 'disabled' : ''}>Skala</button>
-          <button type="button" class="pill-toggle${f.kind === 'number' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="number" ${f.locked ? 'disabled' : ''}>Freier Zahlenwert</button>
-          <button type="button" class="pill-toggle${f.kind === 'group' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="group" ${f.locked ? 'disabled' : ''}>Gruppiert</button>
+      ${!isGroup ? `
+        <div class="auth-field">
+          <label>Feld-Typ</label>
+          <div class="pill-group">
+            <button type="button" class="pill-toggle${f.kind === 'scale' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="scale" ${f.locked ? 'disabled' : ''}>Skala</button>
+            <button type="button" class="pill-toggle${f.kind === 'number' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="number" ${f.locked ? 'disabled' : ''}>Freier Zahlenwert</button>
+          </div>
         </div>
-      </div>
-      ${f.kind === 'scale' ? scaleBody : f.kind === 'group' ? groupBody : numberBody}
-      ${f.kind !== 'group' ? reminderBody : ''}
+      ` : ''}
+      ${isGroup ? groupBody : f.kind === 'scale' ? scaleBody : numberBody}
+      ${!isGroup ? reminderBody : ''}
       <div class="habit-form-actions">
         <button type="button" class="auth-submit" data-action="habit-save">Speichern</button>
         <button type="button" class="habit-form-cancel" data-action="habit-cancel">Abbrechen</button>
@@ -1999,8 +2083,10 @@ function renderHabitForm() {
 }
 
 function renderManage() {
-  const active = state.habits.filter((h) => !h.archivedAt);
-  const archived = state.habits.filter((h) => h.archivedAt);
+  const active = state.habits.filter((h) => !h.archivedAt && h.kind !== 'group');
+  const archived = state.habits.filter((h) => h.archivedAt && h.kind !== 'group');
+  const activeGroups = state.habits.filter((h) => !h.archivedAt && h.kind === 'group');
+  const archivedGroups = state.habits.filter((h) => h.archivedAt && h.kind === 'group');
 
   const row = (h) => `
     <div class="manage-row${h.archivedAt ? ' manage-row--archived' : ''}" data-def-id="${h.defId}">
@@ -2021,12 +2107,25 @@ function renderManage() {
     </div>
   `;
 
+  const showFieldForm = state.habitForm && state.habitForm.kind !== 'group';
+  const showGroupForm = state.habitForm && state.habitForm.kind === 'group';
+
   return `
-    ${state.habitForm ? renderHabitForm() : `<button type="button" class="manage-new-btn" data-action="habit-new">+ Neues Feld</button>`}
+    ${showFieldForm ? renderHabitForm() : !state.habitForm ? `<button type="button" class="manage-new-btn" data-action="habit-new">+ Neues Feld</button>` : ''}
     <div class="manage-list">${active.map(row).join('')}</div>
     ${archived.length ? `
       <p class="habit-form-lock-note">Archiviert</p>
       <div class="manage-list">${archived.map(row).join('')}</div>
+    ` : ''}
+
+    <div class="manage-section-divider"></div>
+    <h3 class="manage-section-title">Gruppen</h3>
+    <p class="manage-meta">Fassen mehrere Skala-Felder zu einem live berechneten Durchschnittswert zusammen – z. B. „Sport gemacht" aus „Ausdauersport" + „Kraftsport".</p>
+    ${showGroupForm ? renderHabitForm() : !state.habitForm ? `<button type="button" class="manage-new-btn" data-action="group-new">+ Neue Gruppe</button>` : ''}
+    <div class="manage-list">${activeGroups.map(row).join('')}</div>
+    ${archivedGroups.length ? `
+      <p class="habit-form-lock-note">Archiviert</p>
+      <div class="manage-list">${archivedGroups.map(row).join('')}</div>
     ` : ''}
   `;
 }
@@ -2242,6 +2341,9 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'habit-new') {
     state.habitForm = defaultHabitForm();
     render();
+  } else if (action === 'group-new') {
+    state.habitForm = { ...defaultHabitForm(), kind: 'group' };
+    render();
   } else if (action === 'habit-edit') {
     const h = state.habits.find((x) => x.defId === el.dataset.id);
     if (h) { state.habitForm = habitToForm(h); render(); }
@@ -2264,6 +2366,15 @@ app.addEventListener('click', async (e) => {
     syncHabitFormFromDom();
     state.habitForm.displayStyle = el.dataset.style;
     render();
+  } else if (action === 'stepper-inc' || action === 'stepper-dec') {
+    const target = document.getElementById(el.dataset.target);
+    if (!target) return;
+    const min = target.min !== '' ? Number(target.min) : -Infinity;
+    const max = target.max !== '' ? Number(target.max) : Infinity;
+    let n = Math.round(Number(target.value)) + (action === 'stepper-inc' ? 1 : -1);
+    n = Math.max(min, Math.min(max, n));
+    target.value = n;
+    target.dispatchEvent(new Event('change', { bubbles: true }));
   } else if (action === 'habit-save') {
     await handleHabitSave();
   } else if (action === 'habit-archive') {
@@ -2316,8 +2427,10 @@ app.addEventListener('input', (e) => {
   const habit = state.habits.find((h) => h.id === slider.dataset.habit);
   if (!habit) return;
   const v = Number(slider.value);
+  const pct = ((v - habit.min) / (habit.max - habit.min)) * 100;
   slider.classList.remove('value-slider--unset');
-  slider.style.accentColor = scoreColor(normalize(habit, v));
+  slider.style.setProperty('--slider-color', scoreColor(normalize(habit, v)));
+  slider.style.setProperty('--slider-pct', pct + '%');
   const valueEl = document.getElementById('slider-value-' + habit.id);
   if (valueEl) valueEl.textContent = String(v);
 });
