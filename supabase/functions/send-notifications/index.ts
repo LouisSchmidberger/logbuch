@@ -76,6 +76,7 @@ interface HabitDef {
   user_id: string;
   slug: string;
   name: string;
+  kind: string;
   reminder_hour: number | null;
 }
 
@@ -112,13 +113,17 @@ Deno.serve(async (req) => {
 
   const { data: defs, error: defErr } = await supabase
     .from('habit_definitions')
-    .select('user_id, slug, name, reminder_hour')
+    .select('user_id, slug, name, kind, reminder_hour')
     .is('archived_at', null);
   if (defErr) {
     return new Response(JSON.stringify({ error: defErr.message }), { status: 500 });
   }
   const defsByUser = new Map<string, HabitDef[]>();
+  // Gruppierte Felder (kind='group') sind nie direkt befüllbar und tauchen deshalb
+  // nie in filled_slugs auf — ohne diesen Ausschluss würden sie die Sammel-Erinnerung
+  // dauerhaft fälschlich als "fehlend" auslösen.
   for (const d of (defs ?? []) as HabitDef[]) {
+    if (d.kind === 'group') continue;
     const list = defsByUser.get(d.user_id) ?? [];
     list.push(d);
     defsByUser.set(d.user_id, list);

@@ -50,25 +50,34 @@ create trigger habit_entries_set_updated_at
 -- Feld existieren (siehe App-seitige Sperre) — sonst würden alte Werte plötzlich etwas
 -- anderes bedeuten (siehe die manuellen Migrationen für zaehne/gekifft/gevaped davor).
 --
--- Zwei Feld-Typen (kind): 'scale' (Stufen, farblich bewertet via good high/low — die
--- ursprüngliche und weiterhin häufigste Art) und 'number' (freier Zahlenwert wie
--- Gewicht, bewusst OHNE Gut/Schlecht-Bewertung/Farbe, dafür mit optionaler Einheit).
--- min/max/good sind daher nur bei kind='scale' gesetzt, labels/unit sind je nach kind
--- exklusiv (siehe Check unten).
+-- Drei Feld-Typen (kind): 'scale' (Stufen, farblich bewertet via good high/low — die
+-- ursprüngliche und weiterhin häufigste Art), 'number' (freier Zahlenwert wie Gewicht,
+-- bewusst OHNE Gut/Schlecht-Bewertung/Farbe, dafür mit optionaler Einheit) und 'group'
+-- (nicht direkt befüllbar, zeigt den live berechneten Durchschnitt seiner in
+-- group_members referenzierten Skala-Felder — siehe habitScore in logbuch.html).
+-- min/max/good sind daher nur bei kind='scale' gesetzt, labels/unit/group_members sind
+-- je nach kind exklusiv (siehe Check unten).
 create table public.habit_definitions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   slug text not null,                 -- Key in habit_entries.data, z.B. 'morgenroutine'
   name text not null,
-  kind text not null default 'scale' check (kind in ('scale', 'number')),
+  kind text not null default 'scale' check (kind in ('scale', 'number', 'group')),
   min int,
   max int,
   labels jsonb,                       -- null = Zahlenwerte, sonst Array von Strings (Länge = max-min+1)
   good text check (good in ('high', 'low')),
   unit text,                          -- nur bei kind='number', z.B. 'kg'
+  -- Nur bei kind='scale' mit labels=null relevant: 'buttons' (Standard, Auswahl-
+  -- Buttons wie bisher) oder 'slider' (Schieberegler, min/max dann fix 0/<Stufenzahl>,
+  -- nie mit Min/Max-Beschriftung im Eingabe-UI — nur slider_show_value steuert, ob der
+  -- aktuelle Wert während der Eingabe sichtbar ist).
+  display_style text not null default 'buttons' check (display_style in ('buttons', 'slider')),
+  slider_show_value boolean not null default true,
+  group_members jsonb,                -- nur bei kind='group': Array von Slugs anderer Skala-Felder
   reminder_hour smallint check (reminder_hour between 0 and 23), -- null = Standardzeit (siehe send-notifications)
-  -- Nur bei kind='scale': ab welcher normalisierten Quote (0-1) ein Wert farblich als
-  -- "voll erreicht" gilt (null = 1 = Standard 100%). Verschiebt NUR die Farbskala
+  -- Bei kind='scale'/'group': ab welcher normalisierten Quote (0-1) ein Wert farblich
+  -- als "voll erreicht" gilt (null = 1 = Standard 100%). Verschiebt NUR die Farbskala
   -- (scoreColor), nie die angezeigten Prozentzahlen selbst, und wirkt sich nicht auf die
   -- "Heute"-Ansicht aus (siehe applyGoal in logbuch.html) — für Felder wie "Kraftsport
   -- gemacht", bei denen eine 100%-Quote unrealistisch/nicht das eigentliche Ziel ist.
@@ -79,9 +88,11 @@ create table public.habit_definitions (
   unique (user_id, slug),
   check (max > min),
   check (
-    (kind = 'scale'  and min is not null and max is not null and good is not null)
+    (kind = 'scale'  and min is not null and max is not null and good is not null and group_members is null)
     or
-    (kind = 'number' and min is null and max is null and labels is null and good is null and goal_threshold is null)
+    (kind = 'number' and min is null and max is null and labels is null and good is null and goal_threshold is null and group_members is null)
+    or
+    (kind = 'group'  and min is null and max is null and labels is null and good is null and unit is null and group_members is not null)
   )
 );
 

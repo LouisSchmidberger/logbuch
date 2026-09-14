@@ -38,19 +38,32 @@ Tabelle `habit_definitions`: eine Zeile pro Nutzer und Feld – **ersetzt die fr
 `HABITS`-Konstante**. Jeder Nutzer verwaltet seine Felder selbst über "Felder verwalten"
 im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
 `renderManage` in `logbuch.html` – kein eigener Tab mehr, siehe Abschnitt "Design").
-- `slug` (text, Key in `habit_entries.data`), `name`, `kind` (`'scale'` oder `'number'`,
-  siehe Skalen-/Farblogik unten), `min`/`max` (int, nur bei `kind='scale'`), `labels`
-  (jsonb, nur bei `kind='scale'`; `null` = Zahlenwerte, sonst Array von Strings der Länge
+- `slug` (text, Key in `habit_entries.data`), `name`, `kind` (`'scale'`, `'number'` oder
+  `'group'`, siehe Skalen-/Farblogik unten), `min`/`max` (int, nur bei `kind='scale'`;
+  bei `display_style='slider'` fix `0`/`<Stufenzahl>`), `labels` (jsonb, nur bei
+  `kind='scale'`; `null` = nummerierte Stufen, sonst Array von Strings der Länge
   `max-min+1`), `good` (`'high'`/`'low'`, nur bei `kind='scale'`), `unit` (text, nur bei
-  `kind='number'`, z.B. `'kg'`), `reminder_hour` (0–23 oder `null` = Standardzeit, siehe
-  Erinnerungen), `sort_order`, `archived_at` (Soft-Delete – archivierte Felder
+  `kind='number'`, z.B. `'kg'`), `display_style` (`'buttons'`/`'slider'`, nur bei
+  `kind='scale'` mit `labels=null` relevant), `slider_show_value` (bool, nur bei
+  `display_style='slider'` relevant – steuert nur die Sichtbarkeit des aktuellen Werts
+  während der Eingabe, der Regler zeigt **nie** eine Min/Max-Beschriftung),
+  `group_members` (jsonb, nur bei `kind='group'`: Array von Slugs anderer
+  `kind='scale'`-Felder dieses Nutzers), `reminder_hour` (0–23 oder `null` =
+  Standardzeit, siehe Erinnerungen – bei `kind='group'` immer `null`, eine Gruppe kann
+  nie "fehlen"), `sort_order`, `archived_at` (Soft-Delete – archivierte Felder
   verschwinden aus der Tageseingabe, bleiben aber in Wochen-/Monatsansicht sichtbar,
   solange sie dort Daten haben, und lassen sich reaktivieren).
 - **Feld-Typ (`kind`) und Skala (`min`/`max`/`labels`) sind nur änderbar, solange das
   Feld noch keine Daten hat** (App-seitig gesperrt, siehe `habitHasData`/`f.locked`) –
   sonst würden alte Werte plötzlich etwas anderes bedeuten. Für eine neue Skala: altes
   Feld archivieren, neues anlegen. `name`, `unit` und `reminder_hour` bleiben davon
-  unberührt, da sie keine historischen Werte umdeuten.
+  unberührt, da sie keine historischen Werte umdeuten. Gilt **nicht** für `kind='group'`:
+  eine Gruppe hält nie einen eigenen Eintrag in `habit_entries.data` (ihr Slug taucht
+  dort nie als Key auf), ist deshalb nie "locked" – die Mitgliederliste (`group_members`)
+  lässt sich jederzeit ändern, auch mit bestehender Historie. Das wirkt sich rückwirkend
+  auf die gesamte bisherige Auswertung aus (der Durchschnitt wird bei jedem Rendern live
+  aus den aktuellen Mitgliedern neu berechnet, nie gespeichert) – beabsichtigtes
+  Verhalten, kein Bug.
 - Neue Nutzer bekommen die bisherigen 13 Standardfelder plus "Gewicht" (`kind='number'`,
   `unit='kg'`) automatisch vorbelegt (Trigger `on_auth_user_created_seed_habits` in
   `supabase-setup.sql`) – ab da aber genauso frei verwaltbar/löschbar wie jedes selbst
@@ -88,15 +101,18 @@ erst beim ersten echten Login, da sie das Passwort im Klartext braucht. RLS wie 
 
 **Der Reminder-Check** in der Edge Function fragt dafür live die aktiven (nicht
 archivierten) `habit_definitions` je Nutzer ab – keine hartkodierte Liste mehr, kein
-manuelles Synchronhalten nötig. Erinnert wird, sobald mindestens ein zur jeweiligen
-Stunde fälliges aktives Feld an dem Tag noch fehlt, nicht erst wenn alles leer ist
-(Details siehe Abschnitt "Erinnerungen").
+manuelles Synchronhalten nötig. `kind='group'`-Felder werden dabei ausgeschlossen
+(Gruppen sind nie direkt befüllbar, tauchen nie in `filled_slugs` auf – ohne den
+Ausschluss würden sie die Sammel-Erinnerung dauerhaft fälschlich als "fehlend" auslösen).
+Erinnert wird, sobald mindestens ein zur jeweiligen Stunde fälliges aktives Feld an dem
+Tag noch fehlt, nicht erst wenn alles leer ist (Details siehe Abschnitt "Erinnerungen").
 
 ## Skalen-/Farblogik
 
-Zwei Feld-Typen: `kind='scale'` (Stufen mit Gut/Schlecht-Bewertung – der Normalfall) und
+Drei Feld-Typen: `kind='scale'` (Stufen mit Gut/Schlecht-Bewertung – der Normalfall),
 `kind='number'` (freier Zahlenwert wie Gewicht, bewusst **ohne** Gut/Schlecht-Bewertung,
-dafür mit optionaler Einheit).
+dafür mit optionaler Einheit) und `kind='group'` (nicht direkt befüllbar, zeigt den live
+berechneten Durchschnitt seiner Mitglieder-Felder – siehe `habitScore` unten).
 
 `normalize(habit, value)` bildet den Wert eines `scale`-Felds auf 0 (schlecht) bis 1 (gut)
 ab, unabhängig von der Richtung (`good: 'high'` vs. `good: 'low'`, z.B. bei
@@ -107,16 +123,42 @@ Auswertungs-Tabs einen Verlaufs-Graphen (`renderNumberChart`), statt in die Scor
 Heatmap-Logik einzufließen. Es gibt keinen separaten Bool-Typ mehr – ein Ja/Nein-Feld ist
 einfach eine `scale` mit `min:0, max:1, labels:['Nein','Ja']`.
 
-**Ziel-Quote (`goal_threshold`, nur `kind='scale'`)**: bei manchen Feldern ist eine
-100%-Quote unrealistisch/gar nicht das eigentliche Ziel (z.B. "Kraftsport gemacht" jeden
-Tag). Pro Feld einstellbar (Formular "Ziel für volle Bewertung (%)", Standard 100 =
+**Darstellung von `scale`-Feldern mit nummerierten Stufen (`labels=null`)**:
+`display_style='buttons'` (Standard) zeigt Auswahl-Buttons wie bisher, gedeckelt auf 12
+Stufen (mehr wäre unbedienbar). `display_style='slider'` zeigt stattdessen einen
+Schieberegler (`renderHabitSlider`) – dafür wird beim Anlegen keine freie Von/Bis-Spanne
+eingegeben, sondern nur eine Stufenzahl (Standard 100, wirkt wie Prozent; Ganzzahl,
+2–1000), intern als `min=0`/`max=<Stufenzahl>` gespeichert. Der Regler zeigt **nie** eine
+Min/Max-Beschriftung im Eingabe-UI (nur in der Verwaltungs-Zusammenfassung,
+`formatScale`) – `slider_show_value` steuert nur, ob der aktuell gewählte Wert während
+der Eingabe sichtbar ist. Live-Vorschau (Wert + Farbe) läuft beim Ziehen rein über einen
+`input`-Listener ohne Re-Render; gespeichert wird erst bei `change` (Loslassen), über
+denselben `handleSelect`-Pfad wie bei den Buttons.
+
+**Gruppierte Felder (`kind='group'`)**: fassen mehrere `kind='scale'`-Felder (`slugs` in
+`group_members`) zu einem Durchschnittswert zusammen (z.B. "Sport gemacht" = Ø aus
+"Ausdauersport" + "Kraftsport"). Nie selbst direkt befüllbar – kein Eintrag in
+`habit_entries.data`, kein eigener `good`, keine Erinnerungszeit. Der zentrale Helfer
+`habitScore(h, dateKey)` liefert für `kind='group'` den Durchschnitt aus
+`normalize(member, ...)` über alle Mitglieder mit Wert an dem Tag (null, wenn keins
+befüllt ist) und ersetzt damit an allen relevanten Stellen (`dayOverallScore`,
+`renderWeek`, `computeHabitStats` → Monat/Jahr/Gesamt) die direkten `normalize`-Aufrufe;
+für normale `scale`-Felder ist er ein reiner Durchreicher zu `normalize`. In "Heute"
+erscheint eine Gruppe als nicht-editierbare Info-Zeile (`renderGroupInfo`) mit dem
+Tages-Mittelwert. `habitVisibleInRange(h, dateKeys)` ersetzt entsprechend die
+Sichtbarkeits-Prüfung archivierter Felder in den Auswertungs-Ansichten, da eine Gruppe
+nie einen eigenen Entry-Key hat.
+
+**Ziel-Quote (`goal_threshold`, `kind='scale'`/`kind='group'`)**: bei manchen Feldern ist
+eine 100%-Quote unrealistisch/gar nicht das eigentliche Ziel (z.B. "Kraftsport gemacht"
+jeden Tag). Pro Feld einstellbar (Formular "Ziel für volle Bewertung (%)", Standard 100 =
 `goal_threshold: null`), ab welcher normalisierten Quote (0–1) ein Wert farblich als voll
 erreicht gilt. `applyGoal(habit, score)` staucht dafür den Score auf
 `min(1, score/threshold)`, bei Standard (1) unverändert (exakter Durchreicher). Wird NUR
 auf die Farbgebung angewendet (`dayOverallScore`, Wochen-Grid-Zellen inkl. Ø,
 `renderStatsRows` in Monat/Jahr/Gesamt) — nie auf angezeigte Prozentzahlen, und bewusst
-NICHT in `renderHabitOptions` ("Heute"-Tab bleibt unverändert, dort zählt der rohe Wert
-des Tages, keine Quote).
+NICHT in `renderHabitOptions`/`renderHabitSlider` ("Heute"-Tab bleibt unverändert, dort
+zählt der rohe Wert des Tages, keine Quote).
 
 ## Verschlüsselung (Zero-Access-Architektur)
 
