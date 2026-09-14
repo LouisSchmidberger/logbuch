@@ -249,17 +249,27 @@ Umgesetzt:
   Rückkehr-Link ggf. nicht (das ist reine Dashboard-Konfiguration, nicht Teil dieses
   Repos).
 
-- Signup-/Login-Schutz gegen Missbrauch: Cloudflare Turnstile. Site Key liegt in
-  `logbuch.html` (`TURNSTILE_SITE_KEY`, öffentlich wie `VAPID_PUBLIC_KEY`), Secret Key
-  ausschließlich bei Supabase (Authentication → Attack Protection → CAPTCHA
-  protection). Betrifft alle drei captcha-pflichtigen Auth-Endpunkte (`signUp`,
-  `signInWithPassword`, `resetPasswordForEmail`) — Supabase verlangt bei aktiviertem
-  Schutz einen gültigen `captchaToken` bei allen dreien, nicht nur bei der
-  Registrierung. Widget wird per `?onload=onTurnstileApiLoad&render=explicit`
-  explizit gerendert (nicht Auto-Render), da die App bei jedem Formularwechsel das
-  komplette Auth-DOM neu aufbaut (`renderTurnstileWidget`/`resetTurnstile` in
-  `logbuch.html`). **Bei Domain-Wechsel**: neue Domain muss im Turnstile-Widget bei
-  Cloudflare als Hostname ergänzt werden, sonst schlägt die Verifizierung fehl.
+- Signup-Schutz gegen Missbrauch: Cloudflare Turnstile, aber **nur beim Registrieren**
+  (nicht Login/Passwort-Reset). Grund: Supabase's eingebauter Captcha-Schutz
+  (Authentication → Attack Protection) ist ein Alles-oder-nichts-Schalter für
+  `signUp`, `signInWithPassword` UND `resetPasswordForEmail` gleichzeitig — Adblocker/
+  Tracking-Schutz (z.B. Operas eingebauter Blocker, uBlock Origin, Brave Shields)
+  blockieren `challenges.cloudflare.com` häufig, was dann auch ganz normale Logins
+  verhindert hätte, nicht nur Registrierungs-Missbrauch. Deshalb: Supabase's Captcha-
+  Schutz ist **deaktiviert**, stattdessen prüft die eigene Edge Function
+  `verify-captcha` (`supabase/functions/verify-captcha/index.ts`) den Turnstile-Token
+  serverseitig gegen Cloudflares `siteverify`-API, bevor `signUp` aufgerufen wird
+  (`renderAuth` in `logbuch.html`, nur im Signup-Zweig). Schwächer als Supabase's
+  eingebauter Schutz (wer den öffentlichen Signup-Endpunkt direkt statt übers Frontend
+  aufruft, umgeht diese Function), reicht aber gegen naive automatisierte Massen-
+  Registrierung. Site Key liegt in `logbuch.html` (`TURNSTILE_SITE_KEY`, öffentlich wie
+  `VAPID_PUBLIC_KEY`), Secret Key ausschließlich als Function Secret
+  (`TURNSTILE_SECRET_KEY`), nie im Repo. Widget wird per
+  `?onload=onTurnstileApiLoad&render=explicit` explizit gerendert (nicht Auto-Render),
+  da die App bei jedem Formularwechsel das komplette Auth-DOM neu aufbaut
+  (`renderTurnstileWidget`/`resetTurnstile` in `logbuch.html`). **Bei Domain-Wechsel**:
+  neue Domain muss im Turnstile-Widget bei Cloudflare als Hostname ergänzt werden,
+  sonst schlägt die Verifizierung fehl.
 
 Datenschutzerklärung/AGB/Impressum sind bewusst NICHT Teil dieses Repos — das klärt der
 Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung startet.

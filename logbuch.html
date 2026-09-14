@@ -1209,7 +1209,7 @@ function renderAuth() {
             <input type="password" id="password" required autocomplete="${isSignup ? 'new-password' : 'current-password'}" minlength="6" />
           </div>
         ` : ''}
-        <div id="turnstile-widget" class="turnstile-box"></div>
+        ${isSignup ? `<div id="turnstile-widget" class="turnstile-box"></div>` : ''}
         <button type="submit" class="auth-submit">${isForgot ? 'Link zum Zurücksetzen senden' : isSignup ? 'Account erstellen' : 'Anmelden'}</button>
       </form>
       ${!isForgot ? `
@@ -1225,7 +1225,11 @@ function renderAuth() {
     </div>
   `;
 
-  renderTurnstileWidget();
+  // Nur beim Registrieren nötig (siehe verify-captcha Edge Function) - Login/Passwort-
+  // Reset laufen bewusst ohne Captcha, damit Adblocker/Tracking-Schutz sie nicht
+  // blockieren können (Supabase's eingebauter Captcha-Schutz hätte alle drei
+  // gleichzeitig verlangt, siehe supabase/functions/verify-captcha/index.ts).
+  if (isSignup) renderTurnstileWidget();
 
   document.getElementById('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1235,9 +1239,7 @@ function renderAuth() {
     if (isForgot) {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + window.location.pathname,
-        captchaToken: turnstileToken,
       });
-      resetTurnstile();
       if (error) { state.authError = error.message; render(); return; }
       state.notice = { type: 'ok', text: 'Falls diese E-Mail bei uns registriert ist, haben wir einen Link zum Zurücksetzen geschickt.' };
       render();
@@ -1250,8 +1252,14 @@ function renderAuth() {
     authFlowInFlight = true;
     try {
       if (isSignup) {
-        const { data, error } = await supabase.auth.signUp({ email, password, options: { captchaToken: turnstileToken } });
+        const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-captcha', { body: { token: turnstileToken } });
         resetTurnstile();
+        if (verifyError || !verifyData?.success) {
+          state.authError = 'Sicherheitsprüfung fehlgeschlagen. Bitte versuche es erneut.';
+          render();
+          return;
+        }
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) { state.authError = error.message; render(); return; }
         if (!data.session) {
           state.notice = { type: 'ok', text: 'Fast fertig: Bestätige deine E-Mail über den Link, den wir dir geschickt haben, und melde dich dann an.' };
@@ -1263,8 +1271,7 @@ function renderAuth() {
         // gleich eingerichtet werden.
         await completeAuthFlow(data.user.id, password);
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken: turnstileToken } });
-        resetTurnstile();
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) { state.authError = error.message; render(); return; }
         await completeAuthFlow(data.user.id, password);
       }
