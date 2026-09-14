@@ -24,6 +24,13 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
   Auth (E-Mail/Passwort), Edge Function für Push-Versand.
 - **Hosting**: GitHub Pages, statisch. `logbuch.html` und `sw.js` müssen im selben
   Wurzelverzeichnis des gehosteten Pfads liegen.
+- **PWA-Installationshinweis** (`renderInstallHint` in `logbuch.html`): erscheint direkt
+  im App-Bereich (nicht auf den Auth-Screens), solange die Seite nicht als PWA läuft
+  (`display-mode: standalone` bzw. `navigator.standalone`) und nicht per
+  `localStorage`-Flag dauerhaft weggeklickt wurde. Auf iOS ist "zum Home-Bildschirm
+  hinzufügen" keine reine Komfortsache, sondern **Voraussetzung** dafür, dass
+  Web-Push überhaupt funktioniert (Safari liefert Push sonst gar nicht aus, seit
+  iOS 16.4) — Hinweistext ist deshalb iOS-spezifisch dringlicher formuliert.
 
 ## Datenmodell
 
@@ -247,7 +254,11 @@ Umgesetzt:
   Domain/Hosting-URL**: die jeweilige URL muss unter Supabase Dashboard →
   Authentication → URL Configuration als Redirect-URL erlaubt sein, sonst greift der
   Rückkehr-Link ggf. nicht (das ist reine Dashboard-Konfiguration, nicht Teil dieses
-  Repos).
+  Repos). Aus demselben Grund bekommt auch `signUp()` explizit `options: {
+  emailRedirectTo: <aktuelle App-URL> }` mit — ohne das würde der
+  Bestätigungslink in der Registrierungs-Mail auf die in Supabase konfigurierte
+  "Site URL" zeigen, die nicht zwingend auf den richtigen Pfad passt (führte zu
+  einer 404-Seite beim Bestätigen).
 
 - Signup-Schutz gegen Missbrauch: **kein sichtbares Drittanbieter-Captcha** (bewusste
   Entscheidung, siehe unten), sondern zwei dependency-freie Filter im Signup-Formular

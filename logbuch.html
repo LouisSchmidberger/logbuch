@@ -78,6 +78,17 @@
   .push-row--muted { color: var(--sand); background: transparent; }
   .push-toggle { background: none; border: none; color: var(--moss); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
 
+  .install-hint {
+    display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.4; color: var(--ink);
+    background: rgba(162, 80, 58, 0.08); border: 1px solid rgba(162, 80, 58, 0.3); border-radius: 3px;
+    padding: 8px 10px; margin-bottom: 16px;
+  }
+  .install-hint span { flex: 1; }
+  .install-hint-close {
+    background: none; border: none; color: var(--sand); font-size: 16px; line-height: 1; cursor: pointer;
+    padding: 0 2px; flex-shrink: 0;
+  }
+
   .tabs {
     display: flex; gap: 14px; border-bottom: 1px solid var(--line); margin-bottom: 20px;
     overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
@@ -999,6 +1010,32 @@ function findLastValue(habitId, beforeOrOnDateKey) {
   return { dateKey: lastKey, value: state.entries[lastKey][habitId] };
 }
 
+// --- "Zum Homescreen hinzufügen"-Hinweis --------------------------------
+// Auf iOS funktioniert Web-Push NUR, wenn die Seite zum Home-Bildschirm hinzugefügt
+// wurde (harte Plattform-Einschränkung seit iOS 16.4, kein normaler Safari-Tab-Push
+// möglich) - auf Android/Desktop ist das "nice to have", kein Muss. Deshalb früh und
+// deutlich darauf hinweisen, mit iOS-spezifischer Anleitung.
+function isStandaloneDisplay() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function isIOSDevice() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+function renderInstallHint() {
+  let dismissed = false;
+  try { dismissed = localStorage.getItem('installHintDismissed') === 'true'; } catch { /* z.B. privater Modus */ }
+  if (isStandaloneDisplay() || dismissed) return '';
+  const text = isIOSDevice()
+    ? 'Für Erinnerungen per Push: Tippe unten auf „Teilen" und dann „Zum Home-Bildschirm". Auf dem iPhone funktionieren Benachrichtigungen sonst leider gar nicht.'
+    : 'Für die beste Erfahrung (u.a. zuverlässigere Erinnerungen): füge Logbuch über das Browser-Menü zum Home-Bildschirm hinzu.';
+  return `
+    <div class="install-hint">
+      <span>${esc(text)}</span>
+      <button type="button" class="install-hint-close" data-action="dismiss-install-hint" aria-label="Hinweis schließen">×</button>
+    </div>
+  `;
+}
+
 // --- Push-Benachrichtigungen ------------------------------------------
 async function checkPushStatus() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -1245,7 +1282,10 @@ function renderAuth() {
           render();
           return;
         }
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({
+          email, password,
+          options: { emailRedirectTo: window.location.origin + window.location.pathname },
+        });
         if (error) { state.authError = error.message; render(); return; }
         if (!data.session) {
           state.notice = { type: 'ok', text: 'Fast fertig: Bestätige deine E-Mail über den Link, den wir dir geschickt haben, und melde dich dann an.' };
@@ -1854,6 +1894,7 @@ function renderApp() {
         ${state.menuOpen ? renderMenu() : ''}
       </div>
     </div>
+    ${renderInstallHint()}
     <div class="tabs">
       <button type="button" class="tab${state.view === 'today' ? ' tab--active' : ''}" data-action="set-view" data-view="today">Heute</button>
       <button type="button" class="tab${state.view === 'week' ? ' tab--active' : ''}" data-action="set-view" data-view="week">Woche</button>
@@ -1933,6 +1974,9 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'logout') {
     currentDek = null;
     await supabase.auth.signOut();
+  } else if (action === 'dismiss-install-hint') {
+    try { localStorage.setItem('installHintDismissed', 'true'); } catch { /* egal, blendet dann halt nicht dauerhaft aus */ }
+    render();
   } else if (action === 'toggle-menu') {
     state.menuOpen = !state.menuOpen;
     render();
