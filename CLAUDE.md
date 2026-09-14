@@ -52,7 +52,14 @@ im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
   Standardzeit, siehe Erinnerungen – bei `kind='group'` immer `null`, eine Gruppe kann
   nie "fehlen"), `sort_order`, `archived_at` (Soft-Delete – archivierte Felder
   verschwinden aus der Tageseingabe, bleiben aber in Wochen-/Monatsansicht sichtbar,
-  solange sie dort Daten haben, und lassen sich reaktivieren).
+  solange sie dort Daten haben, und lassen sich reaktivieren). Ein archiviertes Feld
+  **endgültig löschen** (`habit-delete`) geht auch mit vorhandenen historischen
+  Einträgen – dann aber erst nach explizitem zweiten Bestätigungsklick in der App
+  (`state.habitDeleteConfirm`), da die Rohwerte danach nicht mehr auswertbar sind:
+  das Löschen entfernt nur die `habit_definitions`-Zeile, die zugehörigen Werte
+  bleiben als verwaister Key im `data`-JSON der jeweiligen `habit_entries`-Zeilen
+  liegen (kein Cascade auf einzelne Slugs) – ohne Feld-Definition aber faktisch
+  nicht mehr nutzbar/sichtbar in der App.
 - **Feld-Typ (`kind`) und Skala (`min`/`max`/`labels`) sind nur änderbar, solange das
   Feld noch keine Daten hat** (App-seitig gesperrt, siehe `habitHasData`/`f.locked`) –
   sonst würden alte Werte plötzlich etwas anderes bedeuten. Für eine neue Skala: altes

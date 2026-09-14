@@ -267,6 +267,8 @@
   .manage-name { font-size: 13px; }
   .manage-meta { font-size: 11px; color: var(--sand); }
   .manage-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .manage-actions--confirm { flex-wrap: wrap; justify-content: flex-end; max-width: 100%; }
+  .manage-delete-warning { flex-basis: 100%; text-align: right; color: var(--rust); }
   .drag-handle {
     display: flex; flex-direction: column; justify-content: center; gap: 3px; width: 20px; height: 28px;
     flex-shrink: 0; cursor: grab; touch-action: none;
@@ -675,6 +677,7 @@ const state = {
   menuOpen: false,
   userSettings: { defaultReminderHour: 22 }, // Standard-Erinnerungszeit für Felder ohne eigene reminder_hour
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
+  habitDeleteConfirm: null, // defId eines archivierten Feldes mit Daten, dessen Löschen gerade bestätigt wird
   encryptionSetupInProgress: false, // true während setupEncryption()/Migration läuft
   recoveryKeyToShow: null, // { hex, confirmed } - einmalige Anzeige nach Erzeugung
   unlockError: null, // Fehlertext im renderUnlockPrompt-Screen
@@ -1944,7 +1947,7 @@ function renderHabitForm() {
 
   const goalField = `
     <div class="auth-field">
-      <label for="habit-form-goal">Ziel für volle Bewertung (%)${infoTip('Bei unter 100%: schon eine niedrigere Quote/Wert zählt farblich als voll erreicht (grün). Ändert nur die Farbe, nie die angezeigte Prozentzahl. Wirkt sich nicht auf „Heute" aus.')}</label>
+      <label for="habit-form-goal">Ab wann als voll erreicht gilt (%)${infoTip('Bei unter 100%: schon eine niedrigere Quote/Wert zählt farblich als voll erreicht (grün) – z. B. bei "Kraftsport gemacht" reichen vielleicht schon 3 von 7 Tagen die Woche als Ziel. Ändert nur die Farbe, nie die angezeigte Prozentzahl. Wirkt sich nicht auf „Heute" aus. Standard 100% = nur der Maximalwert zählt als voll erreicht.')}</label>
       <input type="number" id="habit-form-goal" min="1" max="100" step="1" value="${f.goalPercent}" />
     </div>
   `;
@@ -2088,24 +2091,41 @@ function renderManage() {
   const activeGroups = state.habits.filter((h) => !h.archivedAt && h.kind === 'group');
   const archivedGroups = state.habits.filter((h) => h.archivedAt && h.kind === 'group');
 
-  const row = (h) => `
-    <div class="manage-row${h.archivedAt ? ' manage-row--archived' : ''}" data-def-id="${h.defId}">
-      ${!h.archivedAt ? `<span class="drag-handle" data-action="drag-handle" aria-label="Reihenfolge ändern"><span></span><span></span></span>` : ''}
-      <div class="manage-info">
-        <span class="manage-name">${esc(h.name)}</span>
-        <span class="manage-meta">${esc(formatScale(h))}${h.kind === 'scale' ? ` · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}` : ''}${h.reminderHour !== null && h.reminderHour !== undefined ? ` · Erinnerung ${String(h.reminderHour).padStart(2, '0')}:00` : ''}</span>
+  const row = (h) => {
+    const hasData = habitHasData(h.id);
+    const confirmingDelete = state.habitDeleteConfirm === h.defId;
+    // Löschen mit vorhandenen historischen Einträgen bleibt möglich, aber erst nach
+    // explizitem zweiten Bestätigungsklick — die Rohdaten bleiben zwar als verwaistes
+    // JSON in habit_entries.data liegen (kein Cascade auf einzelne Slugs), sind ohne
+    // die Feld-Definition in der App aber nicht mehr nutzbar/auswertbar.
+    const deleteAction = !hasData
+      ? `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete" data-id="${h.defId}">Löschen</button>`
+      : confirmingDelete
+        ? `
+          <span class="manage-meta manage-delete-warning">Es gibt historische Einträge – danach in der App nicht mehr nutzbar.</span>
+          <button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete" data-id="${h.defId}">Ja, endgültig löschen</button>
+          <button type="button" class="manage-btn" data-action="habit-delete-cancel">Abbrechen</button>
+        `
+        : `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete-arm" data-id="${h.defId}">Löschen</button>`;
+    return `
+      <div class="manage-row${h.archivedAt ? ' manage-row--archived' : ''}" data-def-id="${h.defId}">
+        ${!h.archivedAt ? `<span class="drag-handle" data-action="drag-handle" aria-label="Reihenfolge ändern"><span></span><span></span></span>` : ''}
+        <div class="manage-info">
+          <span class="manage-name">${esc(h.name)}</span>
+          <span class="manage-meta">${esc(formatScale(h))}${h.kind === 'scale' ? ` · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}` : ''}${h.reminderHour !== null && h.reminderHour !== undefined ? ` · Erinnerung ${String(h.reminderHour).padStart(2, '0')}:00` : ''}</span>
+        </div>
+        <div class="manage-actions${confirmingDelete ? ' manage-actions--confirm' : ''}">
+          ${!h.archivedAt ? `
+            <button type="button" class="manage-btn" data-action="habit-edit" data-id="${h.defId}">Bearbeiten</button>
+            <button type="button" class="manage-btn" data-action="habit-archive" data-id="${h.defId}">Archivieren</button>
+          ` : `
+            <button type="button" class="manage-btn" data-action="habit-reactivate" data-id="${h.defId}">Reaktivieren</button>
+            ${deleteAction}
+          `}
+        </div>
       </div>
-      <div class="manage-actions">
-        ${!h.archivedAt ? `
-          <button type="button" class="manage-btn" data-action="habit-edit" data-id="${h.defId}">Bearbeiten</button>
-          <button type="button" class="manage-btn" data-action="habit-archive" data-id="${h.defId}">Archivieren</button>
-        ` : `
-          <button type="button" class="manage-btn" data-action="habit-reactivate" data-id="${h.defId}">Reaktivieren</button>
-          ${!habitHasData(h.id) ? `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete" data-id="${h.defId}">Löschen</button>` : ''}
-        `}
-      </div>
-    </div>
-  `;
+    `;
+  };
 
   const showFieldForm = state.habitForm && state.habitForm.kind !== 'group';
   const showGroupForm = state.habitForm && state.habitForm.kind === 'group';
@@ -2381,7 +2401,14 @@ app.addEventListener('click', async (e) => {
     await handleHabitArchive(el.dataset.id, true);
   } else if (action === 'habit-reactivate') {
     await handleHabitArchive(el.dataset.id, false);
+  } else if (action === 'habit-delete-arm') {
+    state.habitDeleteConfirm = el.dataset.id;
+    render();
+  } else if (action === 'habit-delete-cancel') {
+    state.habitDeleteConfirm = null;
+    render();
   } else if (action === 'habit-delete') {
+    state.habitDeleteConfirm = null;
     await handleHabitDelete(el.dataset.id);
   }
 });
@@ -2458,9 +2485,10 @@ const SWIPEABLE_VIEWS = ['today', 'week', 'month', 'year'];
 
 app.addEventListener('touchstart', (e) => {
   // Ein Wisch, der innerhalb einer eigenen horizontal scrollbaren Zeile beginnt (z.B. die
-  // Feld-Buttons, wenn deren Bezeichnungen den Platz sprengen), soll dort scrollen statt
-  // die Ansicht zu wechseln.
-  if (!SWIPEABLE_VIEWS.includes(state.view) || e.touches.length !== 1 || e.target.closest('.habit-options, .tabs')) return;
+  // Feld-Buttons, wenn deren Bezeichnungen den Platz sprengen) oder auf dem Schieberegler
+  // selbst beginnt (der Drag muss den Wert setzen, nicht den Tag wechseln), soll dort
+  // wirken statt die Ansicht zu wechseln.
+  if (!SWIPEABLE_VIEWS.includes(state.view) || e.touches.length !== 1 || e.target.closest('.habit-options, .tabs, .slider-row')) return;
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
 }, { passive: true });
