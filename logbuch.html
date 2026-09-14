@@ -266,13 +266,13 @@
   }
   .manage-row:first-child { border-top: 1px solid var(--line); }
   .manage-row--archived { opacity: 0.55; }
+  .manage-row--confirm-delete { opacity: 1; flex-wrap: wrap; }
   .manage-row--dragging { position: relative; z-index: 5; background: var(--paper); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
   .manage-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
   .manage-name { font-size: 13px; }
   .manage-meta { font-size: 11px; color: var(--sand); }
-  .manage-actions { display: flex; gap: 6px; flex-shrink: 0; }
-  .manage-actions--confirm { flex-wrap: wrap; justify-content: flex-end; max-width: 100%; }
-  .manage-delete-warning { flex-basis: 100%; text-align: right; color: var(--rust); }
+  .manage-delete-warning { font-size: 11px; color: var(--rust); }
+  .manage-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
   .drag-handle {
     display: flex; flex-direction: column; justify-content: center; gap: 3px; width: 20px; height: 28px;
     flex-shrink: 0; cursor: grab; touch-action: none;
@@ -2140,19 +2140,19 @@ function renderManage() {
       ? `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete" data-id="${h.defId}">Löschen</button>`
       : confirmingDelete
         ? `
-          <span class="manage-meta manage-delete-warning">Es gibt historische Einträge – danach in der App nicht mehr nutzbar.</span>
           <button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete" data-id="${h.defId}">Ja, endgültig löschen</button>
           <button type="button" class="manage-btn" data-action="habit-delete-cancel">Abbrechen</button>
         `
         : `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete-arm" data-id="${h.defId}">Löschen</button>`;
     return `
-      <div class="manage-row${h.archivedAt ? ' manage-row--archived' : ''}" data-def-id="${h.defId}">
+      <div class="manage-row${h.archivedAt ? ' manage-row--archived' : ''}${confirmingDelete ? ' manage-row--confirm-delete' : ''}" data-def-id="${h.defId}">
         ${!h.archivedAt ? `<span class="drag-handle" data-action="drag-handle" aria-label="Reihenfolge ändern"><span></span><span></span></span>` : ''}
         <div class="manage-info">
           <span class="manage-name">${esc(h.name)}</span>
           <span class="manage-meta">${esc(formatScale(h))}${h.kind === 'scale' ? ` · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}` : ''}${h.reminderHour !== null && h.reminderHour !== undefined ? ` · Erinnerung ${String(h.reminderHour).padStart(2, '0')}:00` : ''}</span>
+          ${confirmingDelete ? `<span class="manage-delete-warning">Es gibt historische Einträge – nach dem Löschen in der App nicht mehr nutzbar.</span>` : ''}
         </div>
-        <div class="manage-actions${confirmingDelete ? ' manage-actions--confirm' : ''}">
+        <div class="manage-actions">
           ${!h.archivedAt ? `
             <button type="button" class="manage-btn" data-action="habit-edit" data-id="${h.defId}">Bearbeiten</button>
             <button type="button" class="manage-btn" data-action="habit-archive" data-id="${h.defId}">Archivieren</button>
