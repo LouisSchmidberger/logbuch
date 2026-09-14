@@ -788,6 +788,44 @@ async function disablePush() {
   render();
 }
 
+// --- Datenexport (Auskunftsrecht/Datenportabilität) -------------------------
+// Exportiert die eigenen Rohdaten (nicht das App-interne, transformierte Modell) direkt
+// aus dem Browser — RLS scoped die Abfragen automatisch auf den eigenen user_id, kein
+// Server-Roundtrip über eine eigene Function nötig.
+async function handleExportData() {
+  state.menuOpen = false;
+  const [defsRes, entriesRes, settingsRes, subsRes] = await Promise.all([
+    supabase.from('habit_definitions').select('*'),
+    supabase.from('habit_entries').select('*'),
+    supabase.from('user_settings').select('*'),
+    supabase.from('push_subscriptions').select('*'),
+  ]);
+  const err = defsRes.error || entriesRes.error || settingsRes.error || subsRes.error;
+  if (err) {
+    state.notice = { type: 'error', text: 'Export fehlgeschlagen: ' + err.message };
+    render();
+    return;
+  }
+  const exportObj = {
+    exported_at: new Date().toISOString(),
+    habit_definitions: defsRes.data,
+    habit_entries: entriesRes.data,
+    user_settings: settingsRes.data,
+    push_subscriptions: subsRes.data,
+  };
+  const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `logbuch-export-${formatKey(new Date())}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  state.notice = { type: 'ok', text: 'Export heruntergeladen.' };
+  render();
+}
+
 // --- Konto löschen (Recht auf Löschung) -------------------------------------
 async function handleDeleteAccount() {
   const input = (document.getElementById('delete-confirm-input')?.value || '').trim();
@@ -1255,6 +1293,7 @@ function renderMenu() {
         </select>
       </div>
       <button type="button" class="menu-item-btn" data-action="open-manage">Felder verwalten</button>
+      <button type="button" class="menu-item-btn" data-action="export-data">Meine Daten exportieren</button>
       <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="open-delete-confirm">Konto löschen</button>
       <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="logout">Abmelden</button>
     </div>
@@ -1335,6 +1374,8 @@ app.addEventListener('click', async (e) => {
     state.view = 'manage';
     state.menuOpen = false;
     render();
+  } else if (action === 'export-data') {
+    await handleExportData();
   } else if (action === 'open-delete-confirm') {
     state.deleteConfirm = { busy: false };
     state.menuOpen = false;

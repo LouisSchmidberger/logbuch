@@ -159,9 +159,14 @@ Umgesetzt:
   Access-Token ermittelten Nutzer (nie eine vom Client übergebene ID) — alle anderen
   Tabellen hängen per `on delete cascade` an `auth.users` und werden automatisch mit
   gelöscht.
+- Datenexport (Auskunftsrecht/Datenportabilität, Art. 15/20 DSGVO): "Meine Daten
+  exportieren" im Burger-Menü (`handleExportData` in `logbuch.html`) lädt die eigenen
+  Rohdaten aus allen vier Tabellen (RLS scoped automatisch auf den eigenen Nutzer) direkt
+  im Browser als eine JSON-Datei herunter — kein Server-Roundtrip über eine eigene
+  Function nötig.
 
-Noch offen (bewusst nach Priorität sortiert, siehe TODOs unten): Datenexport
-(Auskunftsrecht), Passwort-Reset-Flow, Signup-Schutz gegen Missbrauch (Captcha).
+Noch offen (bewusst nach Priorität sortiert, siehe TODOs unten): Passwort-Reset-Flow,
+Signup-Schutz gegen Missbrauch (Captcha).
 Datenschutzerklärung/AGB/Impressum sind bewusst NICHT Teil dieses Repos — das klärt der
 Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung startet.
 
@@ -202,7 +207,6 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
 
 ## Noch nicht gebaut (bekannte TODOs, kein Zeitdruck)
 
-- Datenexport (eigene Daten als JSON herunterladen, Auskunftsrecht Art. 15/20 DSGVO).
 - Passwort-Reset-Flow ("Passwort vergessen") — fehlt komplett im Frontend.
 - Signup-Schutz gegen Missbrauch (z.B. Captcha/Turnstile bei der Registrierung).
 - SQL-Setup in Supabase-Migrationen überführen statt manuell im Dashboard auszuführen.
