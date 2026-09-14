@@ -164,6 +164,10 @@
   .habit-row--slider { flex-direction: column; align-items: stretch; gap: 6px; }
   .slider-row { display: flex; align-items: center; gap: 10px; width: 100%; }
   .slider-value { font-size: 12px; color: var(--sand); min-width: 2em; text-align: right; flex-shrink: 0; }
+  .slider-clear {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line);
+    background: transparent; color: var(--sand); font-size: 13px; line-height: 1; cursor: pointer;
+  }
 
   /* Eigens gestylter Regler statt native OS-Optik (wirkte "klobig") — die farbige
      Füllung kommt über einen Gradient auf dem Track, gesteuert durch --slider-color/
@@ -1173,6 +1177,17 @@ function handleReset(dateKey) {
   saveDay(dateKey, {});
 }
 
+// Einzelnen Eintrag löschen (nicht den ganzen Tag) — für den Slider gebraucht, der
+// anders als Buttons (nochmal klicken) oder Zahlenfeld (leeren) sonst keine
+// Möglichkeit hat, einen Wert wieder auszutragen.
+function handleClearValue(dateKey, habitId) {
+  const day = { ...(state.entries[dateKey] || {}) };
+  delete day[habitId];
+  state.entries = { ...state.entries, [dateKey]: day };
+  render();
+  saveDay(dateKey, day);
+}
+
 function handleSaveNumber(dateKey, habitId, rawValue) {
   const day = { ...(state.entries[dateKey] || {}) };
   const trimmed = String(rawValue).trim().replace(',', '.');
@@ -1687,6 +1702,7 @@ function renderHabitSlider(habit, value) {
         data-habit="${habit.id}" min="${habit.min}" max="${habit.max}" step="1" value="${v}"
         style="--slider-color:${color};--slider-pct:${pct}%;" />
       ${habit.sliderShowValue ? `<span class="slider-value" id="slider-value-${habit.id}">${hasValue ? v : '–'}</span>` : ''}
+      ${hasValue ? `<button type="button" class="slider-clear" data-action="clear-value" data-habit="${habit.id}" aria-label="Eintrag löschen">×</button>` : ''}
     </div>
   `;
 }
@@ -1951,6 +1967,16 @@ function renderNumberCharts(visibleHabits, dateKeys) {
 }
 
 // --- Rendering: Felder-Verwaltung -------------------------------------------
+// Springt zum gerade geöffneten Feld-/Gruppen-Formular — bei einer langen Liste war
+// sonst nach "Bearbeiten" nicht sichtbar, dass sich oben etwas geöffnet hat, wenn man
+// weiter unten in der Liste stand. requestAnimationFrame, da render() das DOM erst
+// gerade neu aufgebaut hat.
+function scrollToHabitForm() {
+  requestAnimationFrame(() => {
+    document.getElementById('habit-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
 function renderHabitForm() {
   const f = state.habitForm;
   const defaultReminderHour = state.userSettings.defaultReminderHour;
@@ -2071,7 +2097,7 @@ function renderHabitForm() {
 
   const isGroup = f.kind === 'group';
   return `
-    <div class="habit-form">
+    <div class="habit-form" id="habit-form">
       <h2>${isGroup ? (f.defId ? 'Gruppe bearbeiten' : 'Neue Gruppe') : (f.defId ? 'Feld bearbeiten' : 'Neues Feld')}</h2>
       ${f.locked ? `<p class="habit-form-lock-note">Für dieses Feld gibt es bereits Einträge – Feld-Typ/Skala/Bezeichnungen sind gesperrt. Für eine andere Skala: archivieren und neu anlegen.</p>` : ''}
       <div class="auth-field">
@@ -2363,6 +2389,8 @@ app.addEventListener('click', async (e) => {
     handleSelect(dateKey, el.dataset.habit, value);
   } else if (action === 'reset-day') {
     handleReset(formatKey(state.currentDate));
+  } else if (action === 'clear-value') {
+    handleClearValue(formatKey(state.currentDate), el.dataset.habit);
   } else if (action === 'enable-push') {
     enablePush();
   } else if (action === 'disable-push') {
@@ -2373,12 +2401,14 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'habit-new') {
     state.habitForm = defaultHabitForm();
     render();
+    scrollToHabitForm();
   } else if (action === 'group-new') {
     state.habitForm = { ...defaultHabitForm(), kind: 'group' };
     render();
+    scrollToHabitForm();
   } else if (action === 'habit-edit') {
     const h = state.habits.find((x) => x.defId === el.dataset.id);
-    if (h) { state.habitForm = habitToForm(h); render(); }
+    if (h) { state.habitForm = habitToForm(h); render(); scrollToHabitForm(); }
   } else if (action === 'habit-cancel') {
     state.habitForm = null;
     render();
