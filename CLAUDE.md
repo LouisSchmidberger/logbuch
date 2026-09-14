@@ -151,6 +151,14 @@ behandelt.
   Nutzer neu abgleichen (alte Subscriptions werden mit neuem Key ungültig).
 - `SUPABASE_ANON_KEY` (publishable) ist ebenfalls unkritisch öffentlich, liegt in
   `logbuch.html` und im Vault (`publishable_key`, für den Cron-Aufruf der Edge Function).
+- `CRON_SECRET` (Function Secret) + Vault-Secret `cron_secret` (gleicher Wert): schützt
+  `send-notifications` davor, von außen aufgerufen zu werden. Der `publishable_key`
+  allein reicht der Supabase-Gateway-Prüfung (`verify_jwt`), um die Function
+  aufzurufen — er steht aber öffentlich im Frontend, wäre also ohne dieses Secret ein
+  Weg für jede*n, die Function beliebig oft zu triggern (sie verarbeitet dabei *immer
+  alle* Nutzer). Die Function vergleicht den Header `x-cron-secret` mit `CRON_SECRET`
+  und lehnt sonst mit 401 ab; nur der Cron-Job kennt den Wert (liest ihn aus dem Vault,
+  siehe `supabase-setup.sql`). Niemals im Repo, wie die anderen privaten Secrets.
 
 ## Deployment-Schritte (Referenz, siehe auch Anleitung im Chat-Verlauf)
 

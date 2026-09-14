@@ -187,13 +187,21 @@ create policy "delete own subscriptions" on public.push_subscriptions
 -- Zugangsdaten sicher im Vault ablegen (statt im Klartext im Cron-Job)
 select vault.create_secret('https://qdadoqcnqmrauhshvcts.supabase.co', 'project_url');
 select vault.create_secret('sb_publishable_c8VJ-dqy-WD_y01aQy1Dzw_LJE-Ornr', 'publishable_key');
+-- Eigenes Secret NUR für den Cron-Aufruf der Function (siehe unten) — verhindert, dass
+-- irgendwer mit dem (im Frontend öffentlich sichtbaren) publishable_key die Function
+-- selbst aufruft. ERSETZEN durch einen frisch generierten Zufallswert (z.B.
+-- `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`) und
+-- DENSELBEN Wert zusätzlich als Function Secret setzen: `supabase secrets set
+-- CRON_SECRET=<wert>`. Niemals den Wert aus diesem Kommentar wiederverwenden.
+select vault.create_secret('REPLACE_ME_WITH_FRESH_RANDOM_SECRET', 'cron_secret');
 
 -- Stündlicher Aufruf der Edge Function "send-notifications": die Function bestimmt sich
 -- selbst per Intl die aktuelle Berliner Stunde (inkl. Sommer-/Winterzeit) und prüft dann
--- pro Nutzer und Feld, ob gerade dessen Erinnerungszeit ist — Standard 8 Uhr für
--- Zahlenwert-Felder / 22 Uhr für Skala-Felder, oder eine je Feld frei wählbare eigene
--- Stunde (habit_definitions.reminder_hour). Stündlich statt fester UTC-Zeitpunkte, weil
--- sich die zuständige Stunde jetzt nicht mehr auf zwei feste Zeiten (8/22) beschränkt.
+-- pro Nutzer, ob gerade dessen Standard-Erinnerungsstunde ist (user_settings.
+-- default_reminder_hour, Default 22 Uhr) bzw. pro Feld, ob dessen eigene
+-- reminder_hour erreicht ist. Stündlich statt fester UTC-Zeitpunkte, weil sich die
+-- zuständige Stunde nicht mehr auf feste Zeiten beschränkt. Der x-cron-secret-Header
+-- authentifiziert den Aufruf gegenüber der Function (siehe oben).
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
@@ -205,7 +213,8 @@ select cron.schedule(
       url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/send-notifications',
       headers := jsonb_build_object(
         'Content-type', 'application/json',
-        'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key')
+        'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key'),
+        'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
       ),
       body := '{}'::jsonb,
       timeout_milliseconds := 20000

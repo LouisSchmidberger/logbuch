@@ -26,6 +26,13 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY')!;
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!;
 const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:example@example.com';
+// Schützt die Function davor, von außen aufgerufen zu werden: der Anon-Key im Frontend
+// reicht der Supabase-Gateway-JWT-Prüfung (verify_jwt) allein schon, um die Function
+// aufzurufen — ohne diesen zusätzlichen Header könnte jede*r sie beliebig oft triggern
+// und würde dabei JEDES MAL alle Nutzer verarbeiten (Spam-Push-Risiko, unnötige Last).
+// Nur der Cron-Job kennt das zugehörige Vault-Secret 'cron_secret' (siehe
+// supabase-setup.sql).
+const CRON_SECRET = Deno.env.get('CRON_SECRET')!;
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
@@ -67,7 +74,11 @@ interface HabitDef {
   reminder_hour: number | null;
 }
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  if (req.headers.get('x-cron-secret') !== CRON_SECRET) {
+    return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 });
+  }
+
   const berlin = getBerlinParts(new Date());
   const todayKey = berlin.dateKey;
   const isSunday = berlin.weekday === 'Sun';
