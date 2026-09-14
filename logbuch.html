@@ -261,16 +261,17 @@
     flex: 1; font-family: inherit; font-size: 13px; padding: 10px; background: none; border: 1px solid var(--line);
     border-radius: 3px; color: var(--ink); cursor: pointer;
   }
-  .turnstile-box { margin: 4px 0 10px; }
   .recovery-key-code {
     font-family: monospace; font-size: 13px; line-height: 1.6; word-break: break-all;
     background: #fff; border: 1px solid var(--line); border-radius: 3px; padding: 10px;
     margin: 4px 0 14px;
   }
+  /* Honeypot: für Menschen unsichtbar (nicht display:none, das erkennen manche Bots),
+     für Screenreader per aria-hidden ausgeblendet. */
+  .honeypot-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 </style>
 </head>
 <body>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileApiLoad&render=explicit" async defer></script>
 <div id="app"><div class="loading">Lädt …</div></div>
 
 <script type="module">
@@ -280,10 +281,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = 'https://qdadoqcnqmrauhshvcts.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_c8VJ-dqy-WD_y01aQy1Dzw_LJE-Ornr';
 const VAPID_PUBLIC_KEY = 'BDsrR2NV5vEE4Ati-Dda7tNom6GTtWmKvzytspTc7x1LP6ur1np90oAPphhIAoCtnaw3nGELgBXxYNyiSkLVEEY';
-// Cloudflare Turnstile: Schutz gegen automatisierte Registrierung/Anmeldung-Missbrauch.
-// Site Key ist öffentlich (wie VAPID_PUBLIC_KEY), der Secret Key liegt ausschließlich in
-// Supabase (Authentication -> Attack Protection), nie hier.
-const TURNSTILE_SITE_KEY = '0x4AAAAAAAEz5Bz5IPoODVuWX';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function urlBase64ToUint8Array(base64String) {
@@ -569,9 +566,9 @@ const state = {
   recoveryBusy: false,
 };
 
-// currentDek (Modul-Variable statt state, analog zu turnstileToken/turnstileWidgetId):
-// der lebende Entschlüsselungs-Schlüssel darf nie über render()/innerHTML laufen und
-// soll auch nicht versehentlich durch generische State-Handhabung angefasst werden.
+// currentDek (Modul-Variable statt state): der lebende Entschlüsselungs-Schlüssel darf
+// nie über render()/innerHTML laufen und soll auch nicht versehentlich durch
+// generische State-Handhabung angefasst werden.
 let currentDek = null;
 
 function activeHabits() {
@@ -1150,40 +1147,19 @@ async function handleDeleteAccount() {
   await supabase.auth.signOut();
 }
 
-// --- Turnstile-Captcha (Registrierung/Anmeldung/Passwort-vergessen) --------
-// Eigene, von state entkoppelte Variablen (nicht Teil des Re-Render-Zyklus'): der
-// Token kommt asynchron per Callback vom Turnstile-Widget rein, ein render() würde das
-// Widget-DOM jederzeit neu aufbauen und die laufende Verifizierung unterbrechen.
-let turnstileToken = null;
-let turnstileWidgetId = null;
-let turnstileReady = false;
-
-// Wird von api.js selbst aufgerufen (?onload=...), sobald die Turnstile-API bereit ist —
-// löst zuverlässiger als ein bloßes "ist turnstile schon definiert?"-Timing-Rennen, falls
-// renderAuth() vor Laden des externen Scripts läuft (z.B. gleich beim Seitenaufruf).
-window.onTurnstileApiLoad = () => {
-  turnstileReady = true;
-  renderTurnstileWidget();
-};
-
-function renderTurnstileWidget() {
-  const container = document.getElementById('turnstile-widget');
-  if (!container || !turnstileReady) return;
-  turnstileToken = null;
-  turnstileWidgetId = turnstile.render(container, {
-    sitekey: TURNSTILE_SITE_KEY,
-    callback: (token) => { turnstileToken = token; },
-    'expired-callback': () => { turnstileToken = null; },
-    'error-callback': () => { turnstileToken = null; },
-  });
-}
-
-function resetTurnstile() {
-  turnstileToken = null;
-  if (typeof turnstile !== 'undefined' && turnstileWidgetId !== null) {
-    try { turnstile.reset(turnstileWidgetId); } catch { /* ignorieren */ }
-  }
-}
+// --- Anti-Bot-Schutz bei der Registrierung (statt Turnstile) ----------------
+// Sichtbares Drittanbieter-Captcha (egal ob Turnstile/hCaptcha/reCAPTCHA) wird von
+// Adblockern/Tracking-Schutz auf vielen Geräten blockiert und verhindert dann echte
+// Registrierungen — struktureller Nachteil der ganzen Kategorie, nicht Turnstile-
+// spezifisch. Stattdessen zwei simple, dependency-freie Filter gegen die typische
+// unsophistizierte Bot-Masse: ein für Menschen unsichtbares Honeypot-Feld (Bots füllen
+// Formularfelder oft blind aus) und eine Mindest-Ausfüllzeit (Bots senden praktisch
+// sofort ab). Kein Ersatz für ein echtes Captcha gegen gezielte Angriffe, aber in
+// Kombination mit der ohnehin verpflichtenden E-Mail-Bestätigung und Supabase's
+// eingebautem Rate-Limiting pro IP für den aktuellen Rahmen ausreichend — und vor
+// allem: reibungslos für echte Nutzer, unabhängig von Adblocker/Netzwerk.
+const SIGNUP_MIN_FILL_MS = 1500;
+let signupFormShownAt = null;
 
 // --- Rendering: Auth -------------------------------------------------------
 function renderAuth() {
@@ -1209,7 +1185,12 @@ function renderAuth() {
             <input type="password" id="password" required autocomplete="${isSignup ? 'new-password' : 'current-password'}" minlength="6" />
           </div>
         ` : ''}
-        ${isSignup ? `<div id="turnstile-widget" class="turnstile-box"></div>` : ''}
+        ${isSignup ? `
+          <div class="auth-field honeypot-field" aria-hidden="true">
+            <label for="website">Website</label>
+            <input type="text" id="website" name="website" tabindex="-1" autocomplete="off" />
+          </div>
+        ` : ''}
         <button type="submit" class="auth-submit">${isForgot ? 'Link zum Zurücksetzen senden' : isSignup ? 'Account erstellen' : 'Anmelden'}</button>
       </form>
       ${!isForgot ? `
@@ -1225,11 +1206,7 @@ function renderAuth() {
     </div>
   `;
 
-  // Nur beim Registrieren nötig (siehe verify-captcha Edge Function) - Login/Passwort-
-  // Reset laufen bewusst ohne Captcha, damit Adblocker/Tracking-Schutz sie nicht
-  // blockieren können (Supabase's eingebauter Captcha-Schutz hätte alle drei
-  // gleichzeitig verlangt, siehe supabase/functions/verify-captcha/index.ts).
-  if (isSignup) renderTurnstileWidget();
+  if (isSignup) signupFormShownAt = Date.now();
 
   document.getElementById('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1252,10 +1229,13 @@ function renderAuth() {
     authFlowInFlight = true;
     try {
       if (isSignup) {
-        const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-captcha', { body: { token: turnstileToken } });
-        resetTurnstile();
-        if (verifyError || !verifyData?.success) {
-          state.authError = 'Sicherheitsprüfung fehlgeschlagen. Bitte versuche es erneut.';
+        const honeypotFilled = document.getElementById('website')?.value;
+        const filledTooFast = signupFormShownAt !== null && Date.now() - signupFormShownAt < SIGNUP_MIN_FILL_MS;
+        if (honeypotFilled || filledTooFast) {
+          // Stillschweigend ablehnen statt konkret zu sagen warum — sonst lässt sich
+          // der Filter durch einen Bot leicht anpassen ("Website"-Feld leer lassen,
+          // langsamer abschicken).
+          state.authError = 'Registrierung fehlgeschlagen. Bitte versuche es erneut.';
           render();
           return;
         }

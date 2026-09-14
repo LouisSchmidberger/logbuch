@@ -249,27 +249,27 @@ Umgesetzt:
   Rückkehr-Link ggf. nicht (das ist reine Dashboard-Konfiguration, nicht Teil dieses
   Repos).
 
-- Signup-Schutz gegen Missbrauch: Cloudflare Turnstile, aber **nur beim Registrieren**
-  (nicht Login/Passwort-Reset). Grund: Supabase's eingebauter Captcha-Schutz
-  (Authentication → Attack Protection) ist ein Alles-oder-nichts-Schalter für
-  `signUp`, `signInWithPassword` UND `resetPasswordForEmail` gleichzeitig — Adblocker/
-  Tracking-Schutz (z.B. Operas eingebauter Blocker, uBlock Origin, Brave Shields)
-  blockieren `challenges.cloudflare.com` häufig, was dann auch ganz normale Logins
-  verhindert hätte, nicht nur Registrierungs-Missbrauch. Deshalb: Supabase's Captcha-
-  Schutz ist **deaktiviert**, stattdessen prüft die eigene Edge Function
-  `verify-captcha` (`supabase/functions/verify-captcha/index.ts`) den Turnstile-Token
-  serverseitig gegen Cloudflares `siteverify`-API, bevor `signUp` aufgerufen wird
-  (`renderAuth` in `logbuch.html`, nur im Signup-Zweig). Schwächer als Supabase's
-  eingebauter Schutz (wer den öffentlichen Signup-Endpunkt direkt statt übers Frontend
-  aufruft, umgeht diese Function), reicht aber gegen naive automatisierte Massen-
-  Registrierung. Site Key liegt in `logbuch.html` (`TURNSTILE_SITE_KEY`, öffentlich wie
-  `VAPID_PUBLIC_KEY`), Secret Key ausschließlich als Function Secret
-  (`TURNSTILE_SECRET_KEY`), nie im Repo. Widget wird per
-  `?onload=onTurnstileApiLoad&render=explicit` explizit gerendert (nicht Auto-Render),
-  da die App bei jedem Formularwechsel das komplette Auth-DOM neu aufbaut
-  (`renderTurnstileWidget`/`resetTurnstile` in `logbuch.html`). **Bei Domain-Wechsel**:
-  neue Domain muss im Turnstile-Widget bei Cloudflare als Hostname ergänzt werden,
-  sonst schlägt die Verifizierung fehl.
+- Signup-Schutz gegen Missbrauch: **kein sichtbares Drittanbieter-Captcha** (bewusste
+  Entscheidung, siehe unten), sondern zwei dependency-freie Filter im Signup-Formular
+  (`renderAuth` in `logbuch.html`): ein für Menschen unsichtbares Honeypot-Feld
+  (`.honeypot-field`, off-screen statt `display:none`, da manche Bots das erkennen)
+  und eine Mindest-Ausfüllzeit (`SIGNUP_MIN_FILL_MS`, aktuell 1500ms). Beides wird nur
+  clientseitig geprüft und bewusst mit einer generischen Fehlermeldung abgelehnt
+  (kein Hinweis, welcher Filter zuschlug). Ergänzt durch die ohnehin verpflichtende
+  E-Mail-Bestätigung und Supabase's eingebautes Rate-Limiting pro IP.
+  - **Vorgeschichte**: zuerst mit Cloudflare Turnstile umgesetzt (Supabase Attack
+    Protection, `verify-captcha` Edge Function). Turnstile lud aber eine
+    Drittanbieter-Ressource (`challenges.cloudflare.com`), die von Adblockern/
+    Tracking-Schutz (u.a. Operas eingebauter Blocker) häufig blockiert wird —
+    strukturelles Problem der ganzen Kategorie (Turnstile/hCaptcha/reCAPTCHA
+    gleichermaßen betroffen), nicht Cloudflare-spezifisch. Deaktivieren des
+    Adblockers hat es im Test nicht zuverlässig behoben (vermutlich Blockierung auf
+    einer anderen Ebene, z.B. Private DNS). Turnstile-Widget, `verify-captcha`
+    Function und `TURNSTILE_SECRET_KEY` deshalb wieder vollständig entfernt.
+  - Schwächer als ein echtes Captcha gegen gezielte Bot-Angriffe, aber reibungslos für
+    echte Nutzer unabhängig von Adblocker/Netzwerk — passender Kompromiss für den
+    aktuellen Rahmen (kleiner, wachsender Nutzerkreis, kein Hauptziel für organisierte
+    Spam-Angriffe).
 
 Datenschutzerklärung/AGB/Impressum sind bewusst NICHT Teil dieses Repos — das klärt der
 Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung startet.
