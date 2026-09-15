@@ -1317,12 +1317,12 @@ function installHintText() {
 // bleibt bewusst kürzer für den dauerhaften, unaufdringlichen Hinweis in der App.
 function installStepsText() {
   if (isIOSDevice()) {
-    return 'iPhone/iPad (Safari): Tippe unten in der Leiste auf das Teilen-Symbol (Quadrat mit Pfeil nach oben) und wähle „Zum Home-Bildschirm".';
+    return 'iPhone/iPad (Safari): Tippe unten in der Leiste auf das Teilen-Symbol (Quadrat mit Pfeil nach oben) und wähle „Zum Home-Bildschirm" (oder so ähnlich, je nach iOS-Version kann der genaue Wortlaut/Ort leicht abweichen).';
   }
   if (/Android/.test(navigator.userAgent)) {
-    return 'Android (Chrome): Tippe oben rechts auf die drei Punkte und wähle „App installieren" bzw. „Zum Startbildschirm hinzufügen".';
+    return 'Android (Chrome): Tippe oben rechts auf die drei Punkte und wähle „App installieren" bzw. „Zum Startbildschirm hinzufügen" (oder so ähnlich, je nach Android-/Chrome-Version kann der genaue Wortlaut/Ort leicht abweichen).';
   }
-  return 'Am Computer (Chrome/Edge): Klicke in der Adressleiste auf das Installations-Symbol, oder öffne das Browser-Menü und wähle „App installieren".';
+  return 'Am Computer (Chrome/Edge): Klicke in der Adressleiste auf das Installations-Symbol, oder öffne das Browser-Menü und wähle „App installieren" (oder so ähnlich, je nach Browser/Version kann der genaue Wortlaut/Ort leicht abweichen).';
 }
 function renderInstallHint() {
   if (isStandaloneDisplay() || isInstallHintDismissed()) return '';
@@ -1651,6 +1651,7 @@ function renderPasswordRecovery() {
     e.preventDefault();
     const password = document.getElementById('new-password').value;
     state.authError = null;
+    state.notice = null;
     state.recoveryBusy = true;
     authFlowInFlight = true; // siehe Kommentar bei der Deklaration weiter unten im Skript
     render();
@@ -1752,6 +1753,7 @@ function renderUnlockPrompt() {
     const password = document.getElementById('unlock-password').value;
     state.unlockBusy = true;
     state.unlockError = null;
+    state.notice = null;
     render();
     try {
       // unlockEncryption deckt beide Fälle ab: bestehende Verschlüsselung entsperren
@@ -2500,6 +2502,11 @@ app.addEventListener('click', async (e) => {
   const el = e.target.closest('[data-action]');
   if (!el) return;
   const action = el.dataset.action;
+  // Jede neue Aktion räumt eine noch angezeigte Meldung von einer früheren Aktion weg
+  // (z.B. einen Validierungsfehler, der sonst nach erfolgreicher Korrektur einfach
+  // stehen bliebe, bis man aktiv neu lädt) – die aktuelle Aktion setzt bei Bedarf
+  // gleich danach ihre eigene, aktuelle Meldung.
+  state.notice = null;
 
   if (action === 'toggle-auth-mode') {
     state.authMode = state.authMode === 'signup' ? 'signin' : 'signup';
@@ -2508,12 +2515,10 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'start-forgot') {
     state.authMode = 'forgot';
     state.authError = null;
-    state.notice = null;
     render();
   } else if (action === 'cancel-forgot') {
     state.authMode = 'signin';
     state.authError = null;
-    state.notice = null;
     render();
   } else if (action === 'toggle-recovery-fallback') {
     state.recoveryFallbackConfirm = !state.recoveryFallbackConfirm;
@@ -2545,7 +2550,6 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'confirm-recovery-key') {
     if (!document.getElementById('recovery-key-confirm')?.checked) return; // Button ist sonst disabled
     state.recoveryKeyToShow = null;
-    state.notice = null;
     render();
   } else if (action === 'regenerate-recovery-key') {
     await regenerateRecoveryKey();
@@ -2707,6 +2711,7 @@ app.addEventListener('click', async (e) => {
 });
 
 app.addEventListener('change', (e) => {
+  state.notice = null; // siehe Kommentar beim 'click'-Listener oben
   const stepsEl = e.target.closest('[data-action="habit-steps"]');
   if (stepsEl && state.habitForm) {
     syncHabitFormFromDom();
