@@ -160,10 +160,6 @@
     width: 72px; font-family: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--line);
     border-radius: 3px; background: #fff; color: var(--ink);
   }
-  .number-save {
-    font-family: inherit; font-size: 12px; padding: 7px 10px; border: 1px solid var(--ink);
-    border-radius: 3px; background: var(--ink); color: var(--paper); cursor: pointer;
-  }
 
   .habit-row--slider { flex-direction: column; align-items: stretch; gap: 6px; }
   .slider-row { display: flex; align-items: center; gap: 10px; width: 100%; }
@@ -1890,8 +1886,7 @@ function renderNumberBox(h, dateKey, dayEntry) {
   return `
     <div class="number-box">
       <label for="number-input-${h.id}">${esc(h.name)}${h.unit ? ` (${esc(h.unit)})` : ''}${lastNote ? `<span class="number-last">${esc(lastNote)}</span>` : ''}</label>
-      <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-habit="${h.id}" value="${esc(currentValue)}" />
-      <button type="button" class="number-save" data-action="save-number" data-habit="${h.id}">Speichern</button>
+      <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-action="number-input" data-habit="${h.id}" value="${esc(currentValue)}" />
     </div>
   `;
 }
@@ -2682,9 +2677,6 @@ app.addEventListener('click', async (e) => {
     enablePush();
   } else if (action === 'disable-push') {
     disablePush();
-  } else if (action === 'save-number') {
-    const input = document.getElementById('number-input-' + el.dataset.habit);
-    handleSaveNumber(formatKey(state.currentDate), el.dataset.habit, input.value);
   } else if (action === 'habit-new') {
     state.habitForm = defaultHabitForm();
     render();
@@ -2778,6 +2770,14 @@ app.addEventListener('click', async (e) => {
 
 app.addEventListener('change', (e) => {
   state.notice = null; // siehe Kommentar beim 'click'-Listener oben
+  const numberInput = e.target.closest('[data-action="number-input"]');
+  if (numberInput) {
+    // Speichert beim Verlassen des Feldes (Blur/Tab-Wechsel) statt über einen
+    // separaten Button — zuverlässiger als Debounce-nach-Tippen (kein Timer, der bei
+    // abruptem Verlassen noch nicht abgelaufen sein könnte).
+    handleSaveNumber(formatKey(state.currentDate), numberInput.dataset.habit, numberInput.value);
+    return;
+  }
   const stepsEl = e.target.closest('[data-action="habit-steps"]');
   if (stepsEl && state.habitForm) {
     syncHabitFormFromDom();
