@@ -585,8 +585,8 @@ function timeStrToMinutes(str) {
   const total = Math.round((h * 60 + m) / 15) * 15; // Absicherung: auf 15-Minuten-Raster runden
   return Math.max(0, Math.min(1439, total));
 }
-function reminderTimeInputHtml(id, minutes, dataAction) {
-  return `<input type="time" id="${id}" step="900" value="${minutesToTimeStr(minutes)}" ${dataAction ? `data-action="${dataAction}"` : ''} />`;
+function reminderTimeInputHtml(id, minutes, dataAction, disabled) {
+  return `<input type="time" id="${id}" step="900" value="${minutesToTimeStr(minutes)}" ${dataAction ? `data-action="${dataAction}"` : ''} ${disabled ? 'disabled' : ''} />`;
 }
 
 // 0 = schlechtester, 1 = bester Wert
@@ -883,6 +883,10 @@ async function loadUserSettings() {
 
 async function saveDefaultReminderMinute(minutes) {
   state.userSettings = { ...state.userSettings, defaultReminderMinute: minutes };
+  // Re-rendert das Zeit-Feld sofort mit dem tatsächlich gespeicherten (ggf. auf
+  // 15-Minuten-Schritte gerundeten) Wert – sonst zeigte das Eingabefeld weiter den
+  // ungerundeten, eingetippten Wert an, obwohl im Hintergrund längst gerundet wurde.
+  render();
   const { error } = await supabase.from('user_settings')
     .upsert({ user_id: state.session.user.id, default_reminder_minute: minutes }, { onConflict: 'user_id' });
   if (error) {
@@ -2226,7 +2230,7 @@ function renderHabitForm() {
         Eigene Erinnerungszeit
       </label>
       ${f.reminderEnabled
-        ? reminderTimeInputHtml('habit-form-reminder-time', f.reminderMinute ?? defaultReminderMinute)
+        ? reminderTimeInputHtml('habit-form-reminder-time', f.reminderMinute ?? defaultReminderMinute, 'habit-reminder-time-changed')
         : `<p class="habit-form-lock-note">Ohne eigene Zeit gilt die Standard-Erinnerungszeit (aktuell ${minutesToTimeStr(defaultReminderMinute)}, änderbar im Menü).</p>`}
     </div>
   `;
@@ -2378,8 +2382,8 @@ function renderTutorialStep1() {
       <p class="tutorial-text">Logbuch lebt davon, dass du täglich ein paar Werte einträgst – je regelmäßiger, desto aussagekräftiger die Auswertung. Push-Erinnerungen helfen dir, das nicht zu vergessen – tippe dafür unten auf „Erinnerungen aktivieren" (nicht einfach nur „Weiter"):</p>
       ${renderPushRow(true)}
       <div class="auth-field">
-        <label for="tutorial-default-time">Standard-Erinnerungszeit</label>
-        ${reminderTimeInputHtml('tutorial-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time')}
+        <label for="tutorial-default-time">Standard-Erinnerungszeit${state.pushStatus !== 'on' ? ' (erst wählbar, sobald Erinnerungen aktiv sind)' : ''}</label>
+        ${reminderTimeInputHtml('tutorial-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', state.pushStatus !== 'on')}
       </div>
       <button type="button" class="auth-submit" data-action="tutorial-next">Weiter</button>
       <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">Tutorial überspringen</button>
@@ -2782,6 +2786,14 @@ app.addEventListener('change', (e) => {
   const defaultTimeEl = e.target.closest('[data-action="menu-default-time"]');
   if (defaultTimeEl) {
     saveDefaultReminderMinute(timeStrToMinutes(defaultTimeEl.value));
+    return;
+  }
+  const habitReminderTimeEl = e.target.closest('[data-action="habit-reminder-time-changed"]');
+  if (habitReminderTimeEl && state.habitForm) {
+    // Re-rendert sofort mit dem gerundeten Wert (siehe syncHabitFormFromDom) - sonst
+    // zeigte das Feld weiter die eingetippte, ungerundete Uhrzeit an.
+    syncHabitFormFromDom();
+    render();
     return;
   }
   const slider = e.target.closest('[data-action="value-slider"]');
