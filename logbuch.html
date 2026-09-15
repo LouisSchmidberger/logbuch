@@ -252,7 +252,15 @@
   .auth-field label { font-size: 12px; color: var(--sand); }
   .auth-field input {
     font-family: inherit; font-size: 14px; padding: 9px 10px; border: 1px solid var(--line);
-    border-radius: 3px; background: #fff; color: var(--ink);
+    border-radius: 3px; background: #fff; color: var(--ink); width: 100%;
+  }
+  .auth-field-label-row { display: flex; align-items: center; justify-content: space-between; }
+  .input-clear-wrap { position: relative; }
+  .input-clear-wrap input { padding-right: 30px; }
+  .input-clear-btn {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--sand); font-size: 17px; line-height: 1;
+    cursor: pointer; padding: 6px;
   }
   .auth-submit {
     width: 100%; padding: 10px; margin-top: 8px; font-family: inherit; font-size: 14px; font-weight: 600;
@@ -693,6 +701,9 @@ const state = {
   yearAnchor: new Date().getFullYear(),
   authMode: 'signin', // 'signin' | 'signup' | 'forgot'
   authError: null,
+  authEmail: '', // bleibt über einen Re-Render (z.B. nach Fehler) hinweg erhalten,
+  authPassword: '', // damit ein Tippfehler nicht das ganze Formular leert (siehe input-Listener).
+  authPasswordVisible: false,
   passwordRecovery: false, // true zwischen Klick auf den Passwort-Reset-Link und neuem Passwort
   pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy'
   habits: [],         // alle Felder des Nutzers (aktiv + archiviert), sort_order-sortiert
@@ -746,6 +757,36 @@ const app = document.getElementById('app');
 
 function esc(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Supabase liefert Auth-Fehlermeldungen nur auf Englisch. "Invalid login credentials"
+// bleibt bewusst unspezifisch (verrät nicht, ob die E-Mail existiert oder nur das
+// Passwort falsch ist — sonst ließe sich der Nutzerbestand durchscannen), wird aber
+// zumindest ins Deutsche übersetzt. Unbekannte Meldungen kommen unverändert durch.
+const AUTH_ERROR_TRANSLATIONS = {
+  'Invalid login credentials': 'E-Mail oder Passwort falsch.',
+  'User already registered': 'Für diese E-Mail existiert bereits ein Account.',
+  'Email not confirmed': 'Bitte bestätige zuerst deine E-Mail-Adresse über den Link, den wir dir geschickt haben.',
+  'Password should be at least 6 characters': 'Das Passwort muss mindestens 6 Zeichen lang sein.',
+};
+function translateAuthError(message) {
+  return AUTH_ERROR_TRANSLATIONS[message] || message;
+}
+
+// Text-/Passwort-Eingabe mit optionalem "×"-Button zum Leeren (nur wenn nicht leer)
+// und optionalem Sichtbar/Verbergen-Umschalter fürs Passwort — beides eigene kleine
+// Buttons statt nativer Browser-Mechanismen, damit es plattformübergreifend gleich
+// aussieht/funktioniert.
+function clearableInputHtml(id, type, value, opts = {}) {
+  const { autocomplete = '', required = true, minlength, showVisibilityToggle = false, visible = false } = opts;
+  const inputType = showVisibilityToggle ? (visible ? 'text' : 'password') : type;
+  return `
+    <div class="input-clear-wrap">
+      <input type="${inputType}" id="${id}" value="${esc(value)}" ${required ? 'required' : ''}
+        ${autocomplete ? `autocomplete="${autocomplete}"` : ''} ${minlength ? `minlength="${minlength}"` : ''} />
+      ${value ? `<button type="button" class="input-clear-btn" data-action="clear-input" data-target="${id}" tabindex="-1" aria-label="Eingabe löschen">×</button>` : ''}
+    </div>
+  `;
 }
 
 // Kleine "?"-Box mit Erklärungstext, per Tap auf-/zuklappbar (natives <details>, kein
@@ -1460,12 +1501,20 @@ function renderAuth() {
       <form id="auth-form">
         <div class="auth-field">
           <label for="email">E-Mail</label>
-          <input type="email" id="email" required autocomplete="email" />
+          ${clearableInputHtml('email', 'email', state.authEmail, { autocomplete: 'email' })}
         </div>
         ${!isForgot ? `
           <div class="auth-field">
-            <label for="password">Passwort</label>
-            <input type="password" id="password" required autocomplete="${isSignup ? 'new-password' : 'current-password'}" minlength="6" />
+            <div class="auth-field-label-row">
+              <label for="password">Passwort</label>
+              <button type="button" class="push-toggle" data-action="toggle-password-visibility">${state.authPasswordVisible ? 'Verbergen' : 'Anzeigen'}</button>
+            </div>
+            ${clearableInputHtml('password', 'password', state.authPassword, {
+              autocomplete: isSignup ? 'new-password' : 'current-password',
+              minlength: 6,
+              showVisibilityToggle: true,
+              visible: state.authPasswordVisible,
+            })}
           </div>
         ` : ''}
         ${isSignup ? `
@@ -1500,7 +1549,7 @@ function renderAuth() {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + window.location.pathname,
       });
-      if (error) { state.authError = error.message; render(); return; }
+      if (error) { state.authError = translateAuthError(error.message); render(); return; }
       state.notice = { type: 'ok', text: 'Falls diese E-Mail bei uns registriert ist, haben wir einen Link zum Zurücksetzen geschickt.' };
       render();
       return;
@@ -1526,7 +1575,7 @@ function renderAuth() {
           email, password,
           options: { emailRedirectTo: window.location.origin + window.location.pathname },
         });
-        if (error) { state.authError = error.message; render(); return; }
+        if (error) { state.authError = translateAuthError(error.message); render(); return; }
         if (!data.session) {
           state.notice = { type: 'ok', text: 'Fast fertig: Bestätige deine E-Mail über den Link, den wir dir geschickt haben, und melde dich dann an.' };
           state.authMode = 'signin';
@@ -1538,7 +1587,7 @@ function renderAuth() {
         await completeAuthFlow(data.user.id, password);
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) { state.authError = error.message; render(); return; }
+        if (error) { state.authError = translateAuthError(error.message); render(); return; }
         await completeAuthFlow(data.user.id, password);
       }
     } finally {
@@ -2465,6 +2514,9 @@ app.addEventListener('click', async (e) => {
     await regenerateRecoveryKey();
   } else if (action === 'logout') {
     currentDek = null;
+    state.authEmail = '';
+    state.authPassword = '';
+    state.authPasswordVisible = false;
     await supabase.auth.signOut();
   } else if (action === 'dismiss-install-hint') {
     try { localStorage.setItem('installHintDismissed', 'true'); } catch { /* egal, blendet dann halt nicht dauerhaft aus */ }
@@ -2600,6 +2652,17 @@ app.addEventListener('click', async (e) => {
     render();
   } else if (action === 'tutorial-skip-confirm') {
     await saveOnboardingCompleted();
+  } else if (action === 'clear-input') {
+    const id = el.dataset.target;
+    if (id === 'email') state.authEmail = '';
+    if (id === 'password') state.authPassword = '';
+    render();
+    document.getElementById(id)?.focus();
+  } else if (action === 'toggle-password-visibility') {
+    state.authPasswordVisible = !state.authPasswordVisible;
+    render();
+    const input = document.getElementById('password');
+    if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
   }
 });
 
@@ -2634,6 +2697,13 @@ app.addEventListener('change', (e) => {
     // bei den Buttons), nicht bei jedem Zwischenwert während des Ziehens.
     handleSelect(formatKey(state.currentDate), slider.dataset.habit, Number(slider.value));
   }
+});
+
+// Hält E-Mail/Passwort im Anmelde-Formular auch über einen Re-Render (z.B. nach
+// einem Fehler) hinweg – sonst wäre bei jedem Fehlversuch das ganze Formular leer.
+app.addEventListener('input', (e) => {
+  if (e.target.id === 'email' && !state.session) { state.authEmail = e.target.value; return; }
+  if (e.target.id === 'password' && !state.session) { state.authPassword = e.target.value; return; }
 });
 
 // Live-Vorschau während des Ziehens am Schieberegler — nur DOM-Update, kein
