@@ -2332,7 +2332,7 @@ function renderManage() {
         <div class="manage-info">
           <span class="manage-name">${esc(h.name)}</span>
           ${confirmingDelete
-            ? `<span class="manage-delete-warning">Es gibt historische Einträge – die werden inklusive aller Werte unwiderruflich mitgelöscht.</span>`
+            ? `<span class="manage-delete-warning">Es gibt historische Einträge – nach dem Löschen in der App nicht mehr nutzbar.</span>`
             : `<span class="manage-meta">${esc(formatScale(h))}${h.kind === 'scale' ? ` · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}` : ''}${h.reminderMinute !== null && h.reminderMinute !== undefined ? ` · Erinnerung ${minutesToTimeStr(h.reminderMinute)}` : ''}</span>`}
         </div>
         <div class="manage-actions">
