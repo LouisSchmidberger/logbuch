@@ -370,6 +370,21 @@ Umgesetzt:
 Datenschutzerklärung/AGB/Impressum sind bewusst NICHT Teil dieses Repos — das klärt der
 Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung startet.
 
+- **E-Mail-Versand (Registrierung/Passwort-Reset) über Custom SMTP** (seit 2026-09-15):
+  Supabase's eingebauter Standard-E-Mail-Versand ist hart auf 2 Mails/Stunde
+  limitiert (nur für eigenes Testen gedacht, nicht für echte Nutzer) — blockierte
+  bei mehreren Test-Registrierungen kurz hintereinander. Jetzt über
+  [Resend](https://resend.com) als Custom SMTP (Supabase Dashboard →
+  Authentication → Emails → SMTP Settings), Rate-Limit auf 50/Stunde angehoben
+  (Authentication → Rate Limits). Versand-Domain `mail.louis-schmidberger.de`
+  (Subdomain der privaten Website-Domain des Nutzers, bei IONOS verwaltet, DNS-
+  Records für Resend dort eingetragen) — bewusste Interims-Lösung, unabhängig von
+  einer möglichen künftigen eigenen Projekt-Domain (die beiden Themen sind
+  entkoppelt: eine spätere Domain bräuchte nur eine neue Resend-Domain-Verifizierung,
+  nichts an der App selbst). `RESEND_API_KEY` liegt **ausschließlich** im Supabase-
+  Dashboard-Formular, nie im Repo. `supabase/config.toml` dokumentiert die
+  SMTP-Konfiguration (ohne den Key selbst, per `env(RESEND_API_KEY)`-Platzhalter).
+
 ## Secrets
 
 - `VAPID_PUBLIC_KEY` ist im Klartext in `logbuch.html` hinterlegt – das ist beabsichtigt,
@@ -398,6 +413,11 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
    ein Cron-Job alle 15 Minuten). **Nicht automatisiert über Migrationen** – bislang manuell
    im Dashboard ausgeführt. Wäre ein sinnvoller nächster Schritt, das in
    `supabase/migrations/` zu überführen, falls das Projekt wächst.
+4. `supabase/config.toml` (seit 2026-09-15 im Repo, via `supabase config pull`) spiegelt
+   Auth-/API-/DB-Projekteinstellungen (u.a. das Custom-SMTP-Setup, siehe oben) – rein
+   dokumentarisch, kein automatisierter `config push` im normalen Ablauf. Bei
+   Dashboard-Änderungen an diesen Einstellungen gerne erneut `supabase config pull
+   --force` laufen lassen, damit die Datei aktuell bleibt.
 
 ## Präferenzen für die Zusammenarbeit
 
