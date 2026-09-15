@@ -77,6 +77,10 @@
   .push-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink); background: rgba(75,107,79,0.08); border: 1px solid var(--line); border-radius: 3px; padding: 7px 10px; margin-bottom: 16px; }
   .push-row--muted { color: var(--sand); background: transparent; }
   .push-toggle { background: none; border: none; color: var(--moss); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
+  .push-toggle--prominent {
+    background: var(--ink); color: var(--paper); text-decoration: none; font-weight: 600;
+    padding: 7px 12px; border-radius: 3px;
+  }
 
   .install-hint {
     display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.4; color: var(--ink);
@@ -708,6 +712,7 @@ const state = {
   pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy'
   habits: [],         // alle Felder des Nutzers (aktiv + archiviert), sort_order-sortiert
   habitForm: null,    // { defId, locked, name, mode: 'numeric'|'labels', min, max, steps, labels, good }
+  habitFormSaving: false, // true während handleHabitSave() läuft, verhindert Doppel-Submits
   menuOpen: false,
   // Standard-Erinnerungszeit (Minuten seit Mitternacht) für Felder ohne eigene reminder_minute.
   // onboardingCompleted default true, bis loadUserSettings() den echten Wert lädt – verhindert,
@@ -775,6 +780,27 @@ function translateAuthError(message) {
   return AUTH_ERROR_TRANSLATIONS[message] || message;
 }
 
+// Übersetzt/vereinfacht technische Postgres-/Netzwerk-Fehlermeldungen (z.B. aus
+// Datenbank-Operationen wie Feld anlegen/speichern) für Laien – die rohen
+// Postgres-Meldungen (Constraint-Namen, Fachjargon) sind für Nicht-Techniker kaum
+// verständlich. Unbekannte Meldungen kommen unverändert durch (wie
+// translateAuthError), damit trotzdem etwas Nützliches angezeigt wird statt nichts.
+function translateDbError(message) {
+  if (/duplicate key value violates unique constraint "habit_definitions_user_id_slug_key"/.test(message)) {
+    return 'Ein Feld mit einem sehr ähnlichen Namen existiert schon – bitte einen anderen Namen wählen.';
+  }
+  if (/duplicate key value violates unique constraint/.test(message)) {
+    return 'Das gibt es in dieser Form schon.';
+  }
+  if (/Failed to fetch|NetworkError|network error/i.test(message)) {
+    return 'Keine Verbindung zum Server – prüfe deine Internetverbindung und versuch es nochmal.';
+  }
+  if (/JWT expired|invalid JWT|refresh_token_not_found/i.test(message)) {
+    return 'Deine Sitzung ist abgelaufen – bitte lade die Seite neu und melde dich erneut an.';
+  }
+  return message;
+}
+
 // Text-/Passwort-Eingabe mit optionalem "×"-Button zum Leeren (nur wenn nicht leer)
 // und optionalem Sichtbar/Verbergen-Umschalter fürs Passwort — beides eigene kleine
 // Buttons statt nativer Browser-Mechanismen, damit es plattformübergreifend gleich
@@ -817,7 +843,7 @@ function stepperInput(id, value, min, max, disabled, extraAttrs = '') {
 async function loadEntries() {
   const { data, error } = await supabase.from('habit_entries').select('entry_date, data');
   if (error) {
-    state.notice = { type: 'error', text: 'Einträge konnten nicht geladen werden: ' + error.message };
+    state.notice = { type: 'error', text: 'Einträge konnten nicht geladen werden: ' + translateDbError(error.message) };
     return;
   }
   const map = {};
@@ -836,7 +862,7 @@ async function loadEntries() {
 async function loadHabits() {
   const { data, error } = await supabase.from('habit_definitions').select('*').order('sort_order');
   if (error) {
-    state.notice = { type: 'error', text: 'Felder konnten nicht geladen werden: ' + error.message };
+    state.notice = { type: 'error', text: 'Felder konnten nicht geladen werden: ' + translateDbError(error.message) };
     return;
   }
   state.habits = data.map(habitFromRow);
@@ -846,7 +872,7 @@ async function loadUserSettings() {
   const { data, error } = await supabase.from('user_settings')
     .select('default_reminder_minute, onboarding_completed').maybeSingle();
   if (error) {
-    state.notice = { type: 'error', text: 'Einstellungen konnten nicht geladen werden: ' + error.message };
+    state.notice = { type: 'error', text: 'Einstellungen konnten nicht geladen werden: ' + translateDbError(error.message) };
     return;
   }
   state.userSettings = {
@@ -860,7 +886,7 @@ async function saveDefaultReminderMinute(minutes) {
   const { error } = await supabase.from('user_settings')
     .upsert({ user_id: state.session.user.id, default_reminder_minute: minutes }, { onConflict: 'user_id' });
   if (error) {
-    state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + error.message };
+    state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + translateDbError(error.message) };
     render();
   }
 }
@@ -967,7 +993,7 @@ async function regenerateRecoveryKey() {
     .update({ recovery_wrap_iv: recoveryWrapIv, wrapped_dek_recovery: wrappedDekRecovery })
     .eq('user_id', state.session.user.id);
   if (error) {
-    state.notice = { type: 'error', text: 'Neuer Recovery-Key konnte nicht gespeichert werden: ' + error.message };
+    state.notice = { type: 'error', text: 'Neuer Recovery-Key konnte nicht gespeichert werden: ' + translateDbError(error.message) };
     render();
     return;
   }
@@ -1080,6 +1106,22 @@ function syncHabitFormFromDom() {
 }
 
 async function handleHabitSave() {
+  // Verhindert Doppel-Submits (z.B. mehrfaches schnelles Klicken auf "Speichern",
+  // während der erste Request noch läuft, etwa bei einer langsamen Verbindung) - ohne
+  // diese Sperre konnten zwei parallele Inserts mit demselben Namen/Slug entstehen,
+  // von denen der zweite mit einem kryptischen "duplicate key"-Fehler fehlschlug.
+  if (state.habitFormSaving) return;
+  state.habitFormSaving = true;
+  render();
+  try {
+    await handleHabitSaveInner();
+  } finally {
+    state.habitFormSaving = false;
+    render();
+  }
+}
+
+async function handleHabitSaveInner() {
   const f = state.habitForm;
   // Muss VOR jedem möglichen frühen Return (Validierungsfehler) passieren — sonst baut
   // render() das Formular aus dem noch nicht synchronisierten (veralteten) f neu auf und
@@ -1088,7 +1130,6 @@ async function handleHabitSave() {
   const name = (document.getElementById('habit-form-name')?.value || '').trim();
   if (!name) {
     state.notice = { type: 'error', text: 'Bitte einen Namen eingeben.' };
-    render();
     return;
   }
 
@@ -1113,7 +1154,6 @@ async function handleHabitSave() {
     const groupMembers = [...document.querySelectorAll('[data-group-member]:checked')].map((el) => el.dataset.groupMember);
     if (groupMembers.length < 2) {
       state.notice = { type: 'error', text: 'Bitte mindestens 2 Felder zum Gruppieren auswählen.' };
-      render();
       return;
     }
     fields = { kind: 'group', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: groupMembers, goal_threshold: goalThreshold };
@@ -1129,7 +1169,6 @@ async function handleHabitSave() {
     const steps = Math.round(Number(stepsEl ? stepsEl.value : f.sliderSteps));
     if (!Number.isFinite(steps) || steps < 2 || steps > 1000) {
       state.notice = { type: 'error', text: 'Anzahl Stufen muss zwischen 2 und 1000 liegen.' };
-      render();
       return;
     }
     const showValueEl = document.getElementById('habit-form-slider-show-value');
@@ -1140,12 +1179,10 @@ async function handleHabitSave() {
     const max = Number(document.getElementById('habit-form-max').value);
     if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
       state.notice = { type: 'error', text: '„Bis" muss größer als „Von" sein.' };
-      render();
       return;
     }
     if (max - min + 1 > 12) {
       state.notice = { type: 'error', text: 'Bitte maximal 12 Stufen.' };
-      render();
       return;
     }
     fields = { kind: 'scale', min, max, labels: null, good: f.good, unit: null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: goalThreshold };
@@ -1155,7 +1192,6 @@ async function handleHabitSave() {
     const labels = labelEls.map((el) => el.value.trim());
     if (labels.some((l) => !l)) {
       state.notice = { type: 'error', text: 'Bitte alle Bezeichnungen ausfüllen.' };
-      render();
       return;
     }
     fields = { kind: 'scale', min: 0, max: labels.length - 1, labels, good: f.good, unit: null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: goalThreshold };
@@ -1173,8 +1209,7 @@ async function handleHabitSave() {
       : { name, ...fields, reminder_minute: reminderMinute };
     const { data, error } = await supabase.from('habit_definitions').update(patch).eq('id', f.defId).select().single();
     if (error) {
-      state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + error.message };
-      render();
+      state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + translateDbError(error.message) };
       return;
     }
     const idx = state.habits.findIndex((h) => h.defId === f.defId);
@@ -1186,8 +1221,7 @@ async function handleHabitSave() {
       .insert({ user_id: state.session.user.id, slug, name, ...fields, reminder_minute: reminderMinute, sort_order: sortOrder })
       .select().single();
     if (error) {
-      state.notice = { type: 'error', text: 'Anlegen fehlgeschlagen: ' + error.message };
-      render();
+      state.notice = { type: 'error', text: 'Anlegen fehlgeschlagen: ' + translateDbError(error.message) };
       return;
     }
     state.habits = [...state.habits, habitFromRow(data)];
@@ -1197,7 +1231,6 @@ async function handleHabitSave() {
   // Im Tutorial (Schritt 2) gilt das erste erfolgreich angelegte Feld als Abschluss
   // des Schritts – automatischer Sprung zu Schritt 3, kein zusätzlicher Klick nötig.
   if (isInsert && state.tutorialStep === 2) state.tutorialStep = 3;
-  render();
 }
 
 async function handleHabitArchive(defId, archive) {
@@ -1205,7 +1238,7 @@ async function handleHabitArchive(defId, archive) {
     .update({ archived_at: archive ? new Date().toISOString() : null })
     .eq('id', defId);
   if (error) {
-    state.notice = { type: 'error', text: 'Aktion fehlgeschlagen: ' + error.message };
+    state.notice = { type: 'error', text: 'Aktion fehlgeschlagen: ' + translateDbError(error.message) };
     render();
     return;
   }
@@ -1217,7 +1250,7 @@ async function handleHabitArchive(defId, archive) {
 async function handleHabitDelete(defId) {
   const { error } = await supabase.from('habit_definitions').delete().eq('id', defId);
   if (error) {
-    state.notice = { type: 'error', text: 'Löschen fehlgeschlagen: ' + error.message };
+    state.notice = { type: 'error', text: 'Löschen fehlgeschlagen: ' + translateDbError(error.message) };
     render();
     return;
   }
@@ -1234,7 +1267,7 @@ async function saveDay(dateKey, dayData) {
       { onConflict: 'user_id,entry_date' }
     );
   if (error) {
-    state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + error.message };
+    state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + translateDbError(error.message) };
     render();
   }
 }
@@ -1309,7 +1342,7 @@ function isInstallHintDismissed() {
 }
 function installHintText() {
   return isIOSDevice()
-    ? 'Für Erinnerungen per Push: Tippe unten auf „Teilen" und dann „Zum Home-Bildschirm". Auf dem iPhone funktionieren Benachrichtigungen sonst leider gar nicht.'
+    ? 'Für Erinnerungen per Push: Tippe auf das Teilen-Symbol (Quadrat mit Pfeil nach oben – je nach Einstellung oben in der Adressleiste oder unten in der Leiste) und dann „Zum Home-Bildschirm". Auf dem iPhone funktionieren Benachrichtigungen sonst leider gar nicht.'
     : 'Für die beste Erfahrung (u.a. zuverlässigere Erinnerungen): füge Logbuch über das Browser-Menü zum Home-Bildschirm hinzu.';
 }
 // Genauere, betriebssystemspezifische Schritt-für-Schritt-Anleitung fürs Tutorial
@@ -1317,7 +1350,7 @@ function installHintText() {
 // bleibt bewusst kürzer für den dauerhaften, unaufdringlichen Hinweis in der App.
 function installStepsText() {
   if (isIOSDevice()) {
-    return 'iPhone/iPad (Safari): Tippe unten in der Leiste auf das Teilen-Symbol (Quadrat mit Pfeil nach oben) und wähle „Zum Home-Bildschirm" (oder so ähnlich, je nach iOS-Version kann der genaue Wortlaut/Ort leicht abweichen).';
+    return 'iPhone/iPad (Safari): Das Teilen-Symbol (Quadrat mit Pfeil nach oben) sitzt je nach Einstellung/iOS-Version OBEN in der Adressleiste oder UNTEN in der Symbolleiste – schau an beiden Stellen. Antippen, dann „Zum Home-Bildschirm" wählen (oder so ähnlich, der genaue Wortlaut kann leicht abweichen).';
   }
   if (/Android/.test(navigator.userAgent)) {
     return 'Android (Chrome): Tippe oben rechts auf die drei Punkte und wähle „App installieren" bzw. „Zum Startbildschirm hinzufügen" (oder so ähnlich, je nach Android-/Chrome-Version kann der genaue Wortlaut/Ort leicht abweichen).';
@@ -2219,8 +2252,8 @@ function renderHabitForm() {
       ${isGroup ? groupBody : f.kind === 'scale' ? scaleBody : numberBody}
       ${!isGroup ? reminderBody : ''}
       <div class="habit-form-actions">
-        <button type="button" class="auth-submit" data-action="habit-save">Speichern</button>
-        <button type="button" class="habit-form-cancel" data-action="habit-cancel">Abbrechen</button>
+        <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? 'Wird gespeichert …' : 'Speichern'}</button>
+        <button type="button" class="habit-form-cancel" data-action="habit-cancel" ${state.habitFormSaving ? 'disabled' : ''}>Abbrechen</button>
       </div>
     </div>
   `;
@@ -2306,7 +2339,7 @@ async function saveOnboardingCompleted() {
   const { error } = await supabase.from('user_settings')
     .upsert({ user_id: state.session.user.id, onboarding_completed: true }, { onConflict: 'user_id' });
   if (error) {
-    state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + error.message };
+    state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + translateDbError(error.message) };
     render();
   }
 }
@@ -2330,7 +2363,7 @@ function renderTutorialInstallGate() {
   return `
     <div class="auth-box">
       <h1>Bevor es losgeht</h1>
-      <p class="tutorial-text">${esc(installHintText())} Mach das am besten gleich jetzt: installiere Logbuch auf deinem Home-/Startbildschirm und öffne es danach über das neue Symbol – diese Seite hier brauchst du dann nicht mehr, es geht automatisch mit dem Tutorial weiter.${infoTip(installStepsText())}</p>
+      <p class="tutorial-text">${esc(installHintText())} Mach das am besten gleich jetzt: installiere Logbuch auf deinem Home-/Startbildschirm und öffne es danach über das neue Symbol – diese Seite hier brauchst du dann nicht mehr, es geht automatisch mit dem Tutorial weiter. Falls du dich dort nochmal kurz anmelden musst: einfach mit denselben Zugangsdaten wie gerade eben.${infoTip(installStepsText())}</p>
       <button type="button" class="auth-toggle" data-action="tutorial-install-ack">Stattdessen im Browser fortfahren (nicht empfohlen)</button>
     </div>
   `;
@@ -2342,8 +2375,8 @@ function renderTutorialStep1() {
       <h1>Willkommen</h1>
       <p class="sub">Schritt 1 von 3</p>
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
-      <p class="tutorial-text">Logbuch lebt davon, dass du täglich ein paar Werte einträgst – je regelmäßiger, desto aussagekräftiger die Auswertung. Push-Erinnerungen helfen dir, das nicht zu vergessen.</p>
-      ${renderPushRow()}
+      <p class="tutorial-text">Logbuch lebt davon, dass du täglich ein paar Werte einträgst – je regelmäßiger, desto aussagekräftiger die Auswertung. Push-Erinnerungen helfen dir, das nicht zu vergessen – tippe dafür unten auf „Erinnerungen aktivieren" (nicht einfach nur „Weiter"):</p>
+      ${renderPushRow(true)}
       <div class="auth-field">
         <label for="tutorial-default-time">Standard-Erinnerungszeit</label>
         ${reminderTimeInputHtml('tutorial-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time')}
@@ -2412,7 +2445,11 @@ function renderTutorial() {
 }
 
 // --- Rendering: Haupt-App --------------------------------------------------
-function renderPushRow() {
+// `prominent`: im Tutorial (Schritt 1) fällt der sonst unauffällige Text-Link
+// "aktivieren" leicht unter den Tisch – man klickt intuitiv eher gleich auf "Weiter",
+// ohne Push aktiviert zu haben. Dort deshalb als ausgefüllter Button dargestellt statt
+// als schlichter Link (im normalen Burger-Menü bleibt es bewusst unauffälliger).
+function renderPushRow(prominent = false) {
   if (state.pushStatus === 'unsupported') {
     return `<div class="push-row push-row--muted">Erinnerungen werden von diesem Browser nicht unterstützt.</div>`;
   }
@@ -2422,7 +2459,12 @@ function renderPushRow() {
   if (state.pushStatus === 'on') {
     return `<div class="push-row">🔔 Erinnerungen aktiv <button type="button" class="push-toggle" data-action="disable-push">deaktivieren</button></div>`;
   }
-  return `<div class="push-row">🔕 Keine Erinnerungen <button type="button" class="push-toggle" data-action="enable-push">aktivieren</button></div>`;
+  return `
+    <div class="push-row">
+      🔕 Keine Erinnerungen
+      <button type="button" class="${prominent ? 'push-toggle push-toggle--prominent' : 'push-toggle'}" data-action="enable-push">${prominent ? 'Erinnerungen aktivieren' : 'aktivieren'}</button>
+    </div>
+  `;
 }
 
 function renderMenu() {
@@ -2895,7 +2937,7 @@ app.addEventListener('pointerup', async (e) => {
   );
   const failed = results.find((r) => r.error);
   if (failed) {
-    state.notice = { type: 'error', text: 'Reihenfolge konnte nicht gespeichert werden: ' + failed.error.message };
+    state.notice = { type: 'error', text: 'Reihenfolge konnte nicht gespeichert werden: ' + translateDbError(failed.error.message) };
     render();
   }
 });
