@@ -717,6 +717,8 @@ const state = {
   habitDeleteConfirm: null, // defId eines archivierten Feldes mit Daten, dessen Löschen gerade bestätigt wird
   tutorialStep: null, // 1/2/3 während das Onboarding-Tutorial für neue Accounts läuft, sonst null
   tutorialSkipConfirm: false, // Bestätigungsdialog "Tutorial überspringen?" offen
+  tutorialInstallAck: false, // "Weiter" auf dem Installations-Hinweis vor Schritt 1 geklickt (session-lokal,
+  // NICHT dasselbe wie der dauerhafte installHintDismissed-localStorage-Flag)
   encryptionSetupInProgress: false, // true während setupEncryption()/Migration läuft
   recoveryKeyToShow: null, // { hex, confirmed } - einmalige Anzeige nach Erzeugung
   unlockError: null, // Fehlertext im renderUnlockPrompt-Screen
@@ -1302,16 +1304,19 @@ function isStandaloneDisplay() {
 function isIOSDevice() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 }
-function renderInstallHint() {
-  let dismissed = false;
-  try { dismissed = localStorage.getItem('installHintDismissed') === 'true'; } catch { /* z.B. privater Modus */ }
-  if (isStandaloneDisplay() || dismissed) return '';
-  const text = isIOSDevice()
+function isInstallHintDismissed() {
+  try { return localStorage.getItem('installHintDismissed') === 'true'; } catch { return false; /* z.B. privater Modus */ }
+}
+function installHintText() {
+  return isIOSDevice()
     ? 'Für Erinnerungen per Push: Tippe unten auf „Teilen" und dann „Zum Home-Bildschirm". Auf dem iPhone funktionieren Benachrichtigungen sonst leider gar nicht.'
     : 'Für die beste Erfahrung (u.a. zuverlässigere Erinnerungen): füge Logbuch über das Browser-Menü zum Home-Bildschirm hinzu.';
+}
+function renderInstallHint() {
+  if (isStandaloneDisplay() || isInstallHintDismissed()) return '';
   return `
     <div class="install-hint">
-      <span>${esc(text)}</span>
+      <span>${esc(installHintText())}</span>
       <button type="button" class="install-hint-close" data-action="dismiss-install-hint" aria-label="Hinweis schließen">×</button>
     </div>
   `;
@@ -2307,12 +2312,21 @@ function renderTutorialSkipConfirm() {
   `;
 }
 
+function renderTutorialInstallGate() {
+  return `
+    <div class="auth-box">
+      <h1>Bevor es losgeht</h1>
+      <p class="tutorial-text">${esc(installHintText())}</p>
+      <button type="button" class="auth-submit" data-action="tutorial-install-ack">Weiter</button>
+    </div>
+  `;
+}
+
 function renderTutorialStep1() {
   return `
     <div class="auth-box">
       <h1>Willkommen</h1>
       <p class="sub">Schritt 1 von 3</p>
-      ${renderInstallHint()}
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
       <p class="tutorial-text">Logbuch lebt davon, dass du täglich ein paar Werte einträgst – je regelmäßiger, desto aussagekräftiger die Auswertung. Push-Erinnerungen helfen dir, das nicht zu vergessen.</p>
       ${renderPushRow()}
@@ -2334,7 +2348,6 @@ function renderTutorialStep2Intro() {
       <p class="sub">Schritt 2 von 3</p>
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
       <p class="tutorial-text">Überlege dir einen Wert, den du ab jetzt beobachten willst – zum Beispiel eine <strong>Skala</strong> (Stimmung, Schlafqualität) oder ein <strong>freier Zahlenwert</strong> (Gewicht, Schritte). Wenn du unsicher bist: fang einfach mit einem an, du kannst später jederzeit weitere Felder anlegen oder bestehende ändern.</p>
-      <p class="habit-form-lock-note">Ab hier fragt der Browser beim Verlassen/Neuladen der Seite nach: dabei geht nur der aktuell offene Formular-Stand verloren, bereits gespeicherte Felder bleiben erhalten.</p>
       <button type="button" class="auth-submit" data-action="tutorial-ready">Ich hab mir einen Wert überlegt</button>
       <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">Tutorial überspringen</button>
     </div>
@@ -2346,7 +2359,6 @@ function renderTutorialStep2Form() {
   return `
     <p class="tutorial-step-label">Schritt 2 von 3</p>
     ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
-    <p class="habit-form-lock-note">Der Browser fragt beim Verlassen/Neuladen der Seite nach: dabei geht nur dieses offene Formular verloren, bereits gespeicherte Felder bleiben erhalten.</p>
     ${renderHabitForm()}
   `;
 }
@@ -2365,6 +2377,13 @@ function renderTutorialStep3() {
 }
 
 function renderTutorial() {
+  // Installations-Hinweis als eigener, nicht mitgezählter Schritt VOR "Schritt 1 von
+  // 3" – bewusst nicht Teil der Zählung, da rein informativ/optional (kein Zwang,
+  // wird übersprungen sobald als PWA installiert oder einmal per "Weiter" bestätigt).
+  if (!isStandaloneDisplay() && !state.tutorialInstallAck && !isInstallHintDismissed()) {
+    app.innerHTML = renderTutorialInstallGate();
+    return;
+  }
   if (!state.tutorialStep) state.tutorialStep = 1;
   app.innerHTML =
     state.tutorialStep === 1 ? renderTutorialStep1() :
@@ -2638,6 +2657,9 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'habit-delete') {
     state.habitDeleteConfirm = null;
     await handleHabitDelete(el.dataset.id);
+  } else if (action === 'tutorial-install-ack') {
+    state.tutorialInstallAck = true;
+    render();
   } else if (action === 'tutorial-next') {
     state.tutorialStep = 2;
     render();
@@ -2904,6 +2926,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     currentDek = null;
     state.tutorialStep = null;
     state.tutorialSkipConfirm = false;
+    state.tutorialInstallAck = false;
   }
   render();
 });
