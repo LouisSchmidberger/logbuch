@@ -1538,7 +1538,13 @@ function renderAuth() {
     </div>
   `;
 
-  if (isSignup) signupFormShownAt = Date.now();
+  // Nur beim ERSTEN Aufbau des Signup-Formulars starten, nicht bei jedem Re-Render
+  // (z.B. durch den ×-Button, den Passwort-sichtbar-Umschalter oder einen
+  // Validierungsfehler) — sonst würde ein Re-Render kurz vor dem Absenden die
+  // tatsächliche Ausfüllzeit fälschlich auf ~0 zurücksetzen und echte Nutzer träfe
+  // der "zu schnell ausgefüllt"-Bot-Filter.
+  if (isSignup) { if (signupFormShownAt === null) signupFormShownAt = Date.now(); }
+  else signupFormShownAt = null;
 
   document.getElementById('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
