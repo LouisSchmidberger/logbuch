@@ -2937,6 +2937,13 @@ app.addEventListener('touchend', (e) => {
 // direkte Style-Änderungen an den vorhandenen Zeilen. Erst beim Loslassen wird die neue
 // Reihenfolge in state.habits übernommen, gespeichert und einmal sauber neu gerendert.
 let dragState = null;
+// "Scharfschalt"-Phase vor dem eigentlichen Drag: ein schneller Scroll-Wisch, der
+// zufällig über dem schmalen Drag-Handle beginnt, soll NICHT sofort die Reihenfolge
+// durcheinanderbringen. Erst nach kurzem, ruhigem Halten (ohne nennenswerte Bewegung)
+// wird tatsächlich gezogen – ein normaler Scroll-Wisch bricht das vorher ab.
+let dragArm = null;
+const DRAG_ARM_DELAY_MS = 150;
+const DRAG_ARM_MOVE_TOLERANCE = 10;
 
 app.addEventListener('pointerdown', (e) => {
   const handle = e.target.closest('[data-action="drag-handle"]');
@@ -2948,13 +2955,27 @@ app.addEventListener('pointerdown', (e) => {
   const last = rows[rows.length - 1].getBoundingClientRect();
   const rowHeight = rows.length > 1 ? (last.top - first.top) / (rows.length - 1) : first.height;
 
-  dragState = { pointerId: e.pointerId, row, rows, fromIndex, toIndex: fromIndex, startY: e.clientY, rowHeight };
-  row.setPointerCapture(e.pointerId);
-  row.classList.add('manage-row--dragging');
-  e.preventDefault();
+  dragArm = { pointerId: e.pointerId, row, rows, fromIndex, rowHeight, startY: e.clientY, startX: e.clientX };
+  dragArm.timer = setTimeout(() => {
+    if (!dragArm) return;
+    const armed = dragArm;
+    dragArm = null;
+    dragState = { pointerId: armed.pointerId, row: armed.row, rows: armed.rows, fromIndex: armed.fromIndex, toIndex: armed.fromIndex, startY: armed.startY, rowHeight: armed.rowHeight };
+    dragState.row.setPointerCapture(dragState.pointerId);
+    dragState.row.classList.add('manage-row--dragging');
+  }, DRAG_ARM_DELAY_MS);
 });
 
 app.addEventListener('pointermove', (e) => {
+  if (dragArm && e.pointerId === dragArm.pointerId) {
+    const dx = e.clientX - dragArm.startX;
+    const dy = e.clientY - dragArm.startY;
+    if (Math.hypot(dx, dy) > DRAG_ARM_MOVE_TOLERANCE) {
+      clearTimeout(dragArm.timer);
+      dragArm = null;
+    }
+    return;
+  }
   if (!dragState || e.pointerId !== dragState.pointerId) return;
   const deltaY = e.clientY - dragState.startY;
   dragState.row.style.transform = `translateY(${deltaY}px)`;
@@ -2974,6 +2995,11 @@ app.addEventListener('pointermove', (e) => {
 });
 
 app.addEventListener('pointerup', async (e) => {
+  if (dragArm && e.pointerId === dragArm.pointerId) {
+    clearTimeout(dragArm.timer);
+    dragArm = null;
+    return;
+  }
   if (!dragState || e.pointerId !== dragState.pointerId) return;
   const { row, rows, fromIndex, toIndex } = dragState;
   row.releasePointerCapture(e.pointerId);
