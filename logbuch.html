@@ -2393,8 +2393,14 @@ function renderTutorialStep3() {
 function renderTutorial() {
   // Installations-Hinweis als eigener, nicht mitgezählter Schritt VOR "Schritt 1 von
   // 3" – bewusst nicht Teil der Zählung, da rein informativ/optional (kein Zwang,
-  // wird übersprungen sobald als PWA installiert oder einmal per "Weiter" bestätigt).
-  if (!isStandaloneDisplay() && !state.tutorialInstallAck && !isInstallHintDismissed()) {
+  // wird übersprungen sobald als PWA installiert oder per "Stattdessen im Browser
+  // fortfahren" bestätigt). Bewusst NICHT an isInstallHintDismissed() gekoppelt: das
+  // ist ein dauerhaftes, browserweites (nicht account-gebundenes) Flag vom "×" am
+  // normalen In-App-Hinweis – ein früherer Account, der ihn auf diesem Browser/Gerät
+  // mal weggeklickt hat, soll das Tutorial eines komplett neuen Accounts nicht
+  // beeinflussen (das Tutorial läuft pro Account genau einmal, serverseitig über
+  // onboarding_completed getrackt).
+  if (!isStandaloneDisplay() && !state.tutorialInstallAck) {
     app.innerHTML = renderTutorialInstallGate();
     return;
   }
