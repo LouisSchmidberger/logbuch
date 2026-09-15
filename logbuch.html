@@ -250,7 +250,7 @@
   .tutorial-step-label { font-size: 12px; color: var(--sand); text-align: center; margin: 4px 0 14px; }
   .auth-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
   .auth-field label { font-size: 12px; color: var(--sand); }
-  .auth-field input {
+  .auth-field input:not([type="checkbox"]) {
     font-family: inherit; font-size: 14px; padding: 9px 10px; border: 1px solid var(--line);
     border-radius: 3px; background: #fff; color: var(--ink); width: 100%;
   }
