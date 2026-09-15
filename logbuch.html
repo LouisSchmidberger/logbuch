@@ -1351,6 +1351,21 @@ function isStandaloneDisplay() {
 function isIOSDevice() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 }
+
+// iOS übernimmt beim Start einer über "Zum Home-Bildschirm" installierten Web-App
+// manchmal einen alten Zoom-Stand (z.B. von Safari zum Zeitpunkt des Hinzufügens)
+// statt bei initial-scale=1.0 zu starten — wirkt wie "leicht reingezoomt". Fix ohne
+// Zoomen dauerhaft zu sperren: den Viewport kurz auf maximum-scale=1 setzen (zwingt
+// iOS, auf 100% zurückzuspringen), danach die Beschränkung sofort wieder entfernen,
+// damit Pinch-to-Zoom für den Nutzer weiterhin uneingeschränkt funktioniert.
+function resetIOSZoomOnStandaloneStart() {
+  if (!isIOSDevice() || !isStandaloneDisplay()) return;
+  const viewport = document.querySelector('meta[name="viewport"]');
+  if (!viewport) return;
+  const original = viewport.getAttribute('content');
+  viewport.setAttribute('content', original + ', maximum-scale=1.0');
+  setTimeout(() => viewport.setAttribute('content', original), 300);
+}
 function isInstallHintDismissed() {
   try { return localStorage.getItem('installHintDismissed') === 'true'; } catch { return false; /* z.B. privater Modus */ }
 }
@@ -3027,6 +3042,8 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 window.addEventListener('beforeunload', (e) => {
   if (state.tutorialStep === 2) { e.preventDefault(); e.returnValue = ''; }
 });
+
+resetIOSZoomOnStandaloneStart();
 
 const { data: { session } } = await supabase.auth.getSession();
 state.session = session;
