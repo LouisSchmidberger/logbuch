@@ -580,9 +580,14 @@ function minutesToTimeStr(min) {
   const h = Math.floor(min / 60), m = min % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
+// Liefert null bei leerem/ungültigem Wert (z.B. ein <input type="time"> ohne Auswahl,
+// etwa kurz während es von deaktiviert auf aktiviert wechselt) — Aufrufer müssen das
+// abfangen und dürfen null NIE ungeprüft speichern (würde als NULL in eine
+// not-null-Spalte geschrieben und mit einem kryptischen DB-Fehler abgelehnt).
 function timeStrToMinutes(str) {
-  const [h, m] = str.split(':').map(Number);
-  const total = Math.round((h * 60 + m) / 15) * 15; // Absicherung: auf 15-Minuten-Raster runden
+  const match = /^(\d{1,2}):(\d{2})$/.exec(str || '');
+  if (!match) return null;
+  const total = Math.round((Number(match[1]) * 60 + Number(match[2])) / 15) * 15; // auf 15-Minuten-Raster runden
   return Math.max(0, Math.min(1439, total));
 }
 function reminderTimeInputHtml(id, minutes, dataAction, disabled) {
@@ -791,6 +796,15 @@ function translateDbError(message) {
   }
   if (/duplicate key value violates unique constraint/.test(message)) {
     return 'Das gibt es in dieser Form schon.';
+  }
+  if (/violates not-null constraint/.test(message)) {
+    return 'Ein Pflichtfeld fehlt oder enthält gerade keinen gültigen Wert – bitte alle Felder prüfen und nochmal versuchen.';
+  }
+  if (/violates check constraint/.test(message)) {
+    return 'Einer der eingegebenen Werte liegt außerhalb des erlaubten Bereichs.';
+  }
+  if (/violates foreign key constraint/.test(message)) {
+    return 'Ein verknüpfter Eintrag existiert nicht mehr – bitte die Seite neu laden und nochmal versuchen.';
   }
   if (/Failed to fetch|NetworkError|network error/i.test(message)) {
     return 'Keine Verbindung zum Server – prüfe deine Internetverbindung und versuch es nochmal.';
@@ -1090,7 +1104,7 @@ function syncHabitFormFromDom() {
     const reminderEnabledEl = document.getElementById('habit-form-reminder-enabled');
     if (reminderEnabledEl) f.reminderEnabled = reminderEnabledEl.checked;
     const reminderTimeEl = document.getElementById('habit-form-reminder-time');
-    if (reminderTimeEl) f.reminderMinute = timeStrToMinutes(reminderTimeEl.value);
+    if (reminderTimeEl) { const m = timeStrToMinutes(reminderTimeEl.value); if (m !== null) f.reminderMinute = m; }
   } else if (f.kind === 'group') {
     document.querySelectorAll('[data-group-member]').forEach((el) => {
       const slug = el.dataset.groupMember;
@@ -1105,7 +1119,7 @@ function syncHabitFormFromDom() {
     const reminderEnabledEl = document.getElementById('habit-form-reminder-enabled');
     if (reminderEnabledEl) f.reminderEnabled = reminderEnabledEl.checked;
     const reminderTimeEl = document.getElementById('habit-form-reminder-time');
-    if (reminderTimeEl) f.reminderMinute = timeStrToMinutes(reminderTimeEl.value);
+    if (reminderTimeEl) { const m = timeStrToMinutes(reminderTimeEl.value); if (m !== null) f.reminderMinute = m; }
   }
 }
 
@@ -1141,7 +1155,7 @@ async function handleHabitSaveInner() {
   const reminderEnabled = document.getElementById('habit-form-reminder-enabled')?.checked ?? f.reminderEnabled;
   const reminderTimeEl = document.getElementById('habit-form-reminder-time');
   const reminderMinute = reminderEnabled
-    ? timeStrToMinutes(reminderTimeEl ? reminderTimeEl.value : minutesToTimeStr(f.reminderMinute))
+    ? (timeStrToMinutes(reminderTimeEl ? reminderTimeEl.value : minutesToTimeStr(f.reminderMinute)) ?? f.reminderMinute)
     : null;
 
   const goalEl = document.getElementById('habit-form-goal');
@@ -2785,7 +2799,8 @@ app.addEventListener('change', (e) => {
   }
   const defaultTimeEl = e.target.closest('[data-action="menu-default-time"]');
   if (defaultTimeEl) {
-    saveDefaultReminderMinute(timeStrToMinutes(defaultTimeEl.value));
+    const minutes = timeStrToMinutes(defaultTimeEl.value);
+    if (minutes !== null) saveDefaultReminderMinute(minutes);
     return;
   }
   const habitReminderTimeEl = e.target.closest('[data-action="habit-reminder-time-changed"]');
