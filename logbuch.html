@@ -1711,7 +1711,7 @@ function renderUnlockPrompt() {
     <div class="auth-box">
       <h1>Logbuch</h1>
       <p class="sub">Entsperren</p>
-      <p class="habit-form-lock-note">Neues Gerät oder Browserdaten gelöscht — bitte dein Passwort erneut eingeben, um deine Einträge zu entschlüsseln.</p>
+      <p class="habit-form-lock-note">Neues Gerät, Browserdaten gelöscht oder gerade per E-Mail-Bestätigungslink angemeldet — bitte dein Passwort erneut eingeben, um deine Einträge zu entschlüsseln (bzw. bei einem ganz neuen Konto die Verschlüsselung einzurichten).</p>
       ${state.unlockError ? `<div class="notice">${esc(state.unlockError)}</div>` : ''}
       <form id="unlock-form">
         <div class="auth-field">
@@ -1731,17 +1731,14 @@ function renderUnlockPrompt() {
     state.unlockError = null;
     render();
     try {
-      const row = await fetchEncryptionRow(state.session.user.id);
-      if (!row) throw new Error('Keine Verschlüsselungs-Konfiguration gefunden.');
-      currentDek = await unwrapDekWithPassword(row, password);
-      await cacheDek(state.session.user.id, currentDek);
+      // unlockEncryption deckt beide Fälle ab: bestehende Verschlüsselung entsperren
+      // (Passwort falsch -> wirft) UND, falls noch keine user_encryption-Zeile
+      // existiert (z.B. Konto gerade erst per E-Mail-Bestätigungslink angemeldet,
+      // ohne dass je ein Passwort-Formular durchlaufen wurde), sie mit diesem
+      // Passwort neu einrichten — bisher landete dieser Fall in einer Sackgasse
+      // (immer "Falsches Passwort", obwohl gar keine Konfiguration existierte).
+      await completeAuthFlow(state.session.user.id, password);
       state.unlockBusy = false;
-      state.loading = true;
-      render();
-      await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
-      state.loading = false;
-      checkPushStatus().then(render);
-      render();
     } catch {
       state.unlockBusy = false;
       state.unlockError = 'Falsches Passwort.';
@@ -2309,6 +2306,7 @@ function renderTutorialStep1() {
     <div class="auth-box">
       <h1>Willkommen</h1>
       <p class="sub">Schritt 1 von 3</p>
+      ${renderInstallHint()}
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
       <p class="tutorial-text">Logbuch lebt davon, dass du täglich ein paar Werte einträgst – je regelmäßiger, desto aussagekräftiger die Auswertung. Push-Erinnerungen helfen dir, das nicht zu vergessen.</p>
       ${renderPushRow()}
@@ -2330,6 +2328,7 @@ function renderTutorialStep2Intro() {
       <p class="sub">Schritt 2 von 3</p>
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
       <p class="tutorial-text">Überlege dir einen Wert, den du ab jetzt beobachten willst – zum Beispiel eine <strong>Skala</strong> (Stimmung, Schlafqualität) oder ein <strong>freier Zahlenwert</strong> (Gewicht, Schritte). Wenn du unsicher bist: fang einfach mit einem an, du kannst später jederzeit weitere Felder anlegen oder bestehende ändern.</p>
+      <p class="habit-form-lock-note">Ab hier fragt der Browser beim Verlassen/Neuladen der Seite nach: dabei geht nur der aktuell offene Formular-Stand verloren, bereits gespeicherte Felder bleiben erhalten.</p>
       <button type="button" class="auth-submit" data-action="tutorial-ready">Ich hab mir einen Wert überlegt</button>
       <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">Tutorial überspringen</button>
     </div>
@@ -2341,6 +2340,7 @@ function renderTutorialStep2Form() {
   return `
     <p class="tutorial-step-label">Schritt 2 von 3</p>
     ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+    <p class="habit-form-lock-note">Der Browser fragt beim Verlassen/Neuladen der Seite nach: dabei geht nur dieses offene Formular verloren, bereits gespeicherte Felder bleiben erhalten.</p>
     ${renderHabitForm()}
   `;
 }
