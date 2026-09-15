@@ -258,8 +258,10 @@ bzw. pro Feld, ob dessen eigene Zeit erreicht ist:
 - **Eigene Zeit je Feld**: jedes Feld kann über `reminder_minute` unabhängig von der
   Standardzeit eine eigene Erinnerungszeit bekommen – z.B. Gewicht typischerweise
   morgens statt zur (abendlichen) Standardzeit. In der App per Checkbox "Eigene
-  Erinnerungszeit" im Feld-Formular (natives `<input type="time" step="900">`),
-  standardmäßig aus.
+  Erinnerungszeit" im Feld-Formular (`<select>` mit allen 96 15-Minuten-Werten,
+  `reminderTimeInputHtml` in `logbuch.html` – bewusst kein natives `<input
+  type="time">`, dessen `step`-Attribut viele Browser/Betriebssysteme ignorieren,
+  wodurch sich trotzdem jede beliebige Minute auswählen ließe), standardmäßig aus.
 
 Die Sammel-Erinnerung zur Standardzeit ist bewusst generisch ("Noch nicht alle Werte
 für heute eingetragen.", keine Feldnamen – sonst bei vielen Feldern schnell eine sehr

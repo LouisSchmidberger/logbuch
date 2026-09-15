@@ -53,7 +53,7 @@
   }
   .menu-panel .push-row { margin-bottom: 0; }
   .menu-row { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--sand); }
-  .menu-row select, .menu-row input[type="time"] {
+  .menu-row select {
     font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
     border-radius: 3px; background: #fff; color: var(--ink);
   }
@@ -254,7 +254,7 @@
   .tutorial-step-label { font-size: 12px; color: var(--sand); text-align: center; margin: 4px 0 14px; }
   .auth-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
   .auth-field label { font-size: 12px; color: var(--sand); }
-  .auth-field input:not([type="checkbox"]) {
+  .auth-field input:not([type="checkbox"]), .auth-field select {
     font-family: inherit; font-size: 14px; padding: 9px 10px; border: 1px solid var(--line);
     border-radius: 3px; background: #fff; color: var(--ink); width: 100%;
   }
@@ -580,18 +580,18 @@ function minutesToTimeStr(min) {
   const h = Math.floor(min / 60), m = min % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
-// Liefert null bei leerem/ungültigem Wert (z.B. ein <input type="time"> ohne Auswahl,
-// etwa kurz während es von deaktiviert auf aktiviert wechselt) — Aufrufer müssen das
-// abfangen und dürfen null NIE ungeprüft speichern (würde als NULL in eine
-// not-null-Spalte geschrieben und mit einem kryptischen DB-Fehler abgelehnt).
-function timeStrToMinutes(str) {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(str || '');
-  if (!match) return null;
-  const total = Math.round((Number(match[1]) * 60 + Number(match[2])) / 15) * 15; // auf 15-Minuten-Raster runden
-  return Math.max(0, Math.min(1439, total));
-}
+const REMINDER_TIME_STEP = 15; // Minuten — muss zum Cron-Intervall in send-notifications passen
+// Bewusst ein <select> mit ausschließlich gültigen 15-Minuten-Werten statt eines
+// nativen <input type="time" step="900">: das step-Attribut wird von vielen Browsern/
+// Betriebssystemen (v.a. mobil) schlicht ignoriert, sodass sich trotzdem jede beliebige
+// Minute auswählen ließ, obwohl das System ohnehin nur im 15-Minuten-Raster zustellen
+// kann (unnötige Verwirrung: man konnte etwas einstellen, das stillschweigend gerundet
+// wurde). Ein <select> kann von vornherein gar nichts anderes anbieten.
 function reminderTimeInputHtml(id, minutes, dataAction, disabled) {
-  return `<input type="time" id="${id}" step="900" value="${minutesToTimeStr(minutes)}" ${dataAction ? `data-action="${dataAction}"` : ''} ${disabled ? 'disabled' : ''} />`;
+  const options = Array.from({ length: (24 * 60) / REMINDER_TIME_STEP }, (_, i) => i * REMINDER_TIME_STEP)
+    .map((m) => `<option value="${m}" ${m === minutes ? 'selected' : ''}>${minutesToTimeStr(m)}</option>`)
+    .join('');
+  return `<select id="${id}" ${dataAction ? `data-action="${dataAction}"` : ''} ${disabled ? 'disabled' : ''}>${options}</select>`;
 }
 
 // 0 = schlechtester, 1 = bester Wert
@@ -1104,7 +1104,7 @@ function syncHabitFormFromDom() {
     const reminderEnabledEl = document.getElementById('habit-form-reminder-enabled');
     if (reminderEnabledEl) f.reminderEnabled = reminderEnabledEl.checked;
     const reminderTimeEl = document.getElementById('habit-form-reminder-time');
-    if (reminderTimeEl) { const m = timeStrToMinutes(reminderTimeEl.value); if (m !== null) f.reminderMinute = m; }
+    if (reminderTimeEl) f.reminderMinute = Number(reminderTimeEl.value);
   } else if (f.kind === 'group') {
     document.querySelectorAll('[data-group-member]').forEach((el) => {
       const slug = el.dataset.groupMember;
@@ -1119,7 +1119,7 @@ function syncHabitFormFromDom() {
     const reminderEnabledEl = document.getElementById('habit-form-reminder-enabled');
     if (reminderEnabledEl) f.reminderEnabled = reminderEnabledEl.checked;
     const reminderTimeEl = document.getElementById('habit-form-reminder-time');
-    if (reminderTimeEl) { const m = timeStrToMinutes(reminderTimeEl.value); if (m !== null) f.reminderMinute = m; }
+    if (reminderTimeEl) f.reminderMinute = Number(reminderTimeEl.value);
   }
 }
 
@@ -1155,7 +1155,7 @@ async function handleHabitSaveInner() {
   const reminderEnabled = document.getElementById('habit-form-reminder-enabled')?.checked ?? f.reminderEnabled;
   const reminderTimeEl = document.getElementById('habit-form-reminder-time');
   const reminderMinute = reminderEnabled
-    ? (timeStrToMinutes(reminderTimeEl ? reminderTimeEl.value : minutesToTimeStr(f.reminderMinute)) ?? f.reminderMinute)
+    ? (reminderTimeEl ? Number(reminderTimeEl.value) : f.reminderMinute)
     : null;
 
   const goalEl = document.getElementById('habit-form-goal');
@@ -2799,8 +2799,7 @@ app.addEventListener('change', (e) => {
   }
   const defaultTimeEl = e.target.closest('[data-action="menu-default-time"]');
   if (defaultTimeEl) {
-    const minutes = timeStrToMinutes(defaultTimeEl.value);
-    if (minutes !== null) saveDefaultReminderMinute(minutes);
+    saveDefaultReminderMinute(Number(defaultTimeEl.value));
     return;
   }
   const habitReminderTimeEl = e.target.closest('[data-action="habit-reminder-time-changed"]');
