@@ -56,11 +56,14 @@ im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
   solange sie dort Daten haben, und lassen sich reaktivieren). Ein archiviertes Feld
   **endgültig löschen** (`habit-delete`) geht auch mit vorhandenen historischen
   Einträgen – dann aber erst nach explizitem zweiten Bestätigungsklick in der App
-  (`state.habitDeleteConfirm`), da die Rohwerte danach nicht mehr auswertbar sind:
-  das Löschen entfernt nur die `habit_definitions`-Zeile, die zugehörigen Werte
-  bleiben als verwaister Key im `data`-JSON der jeweiligen `habit_entries`-Zeilen
-  liegen (kein Cascade auf einzelne Slugs) – ohne Feld-Definition aber faktisch
-  nicht mehr nutzbar/sichtbar in der App.
+  (`state.habitDeleteConfirm`), da die Rohwerte danach nicht mehr auswertbar sind.
+  Löscht zuerst die `habit_definitions`-Zeile, räumt danach zusätzlich per
+  `purgeHabitFromEntries` (in `logbuch.html`) best effort den zugehörigen Schlüssel
+  aus jedem betroffenen Tages-Eintrag (`habit_entries.data`) weg, statt ihn als
+  verwaisten Key im verschlüsselten JSON liegen zu lassen (passend zur Zero-Access-/
+  Löschrecht-Ausrichtung der App – "Löschen" soll möglichst wenig übrig lassen).
+  Läuft im Hintergrund über die bereits im Speicher gehaltenen, entschlüsselten
+  `state.entries` – kein zusätzlicher Fetch nötig.
 - **Feld-Typ (`kind`) und Skala (`min`/`max`/`labels`) sind nur änderbar, solange das
   Feld noch keine Daten hat** (App-seitig gesperrt, siehe `habitHasData`/`f.locked`) –
   sonst würden alte Werte plötzlich etwas anderes bedeuten. Für eine neue Skala: altes

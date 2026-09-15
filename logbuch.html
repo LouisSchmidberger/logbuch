@@ -1262,6 +1262,7 @@ async function handleHabitArchive(defId, archive) {
 }
 
 async function handleHabitDelete(defId) {
+  const habit = state.habits.find((h) => h.defId === defId);
   const { error } = await supabase.from('habit_definitions').delete().eq('id', defId);
   if (error) {
     state.notice = { type: 'error', text: 'Löschen fehlgeschlagen: ' + translateDbError(error.message) };
@@ -1269,6 +1270,23 @@ async function handleHabitDelete(defId) {
     return;
   }
   state.habits = state.habits.filter((h) => h.defId !== defId);
+  render();
+  // Die Feld-Definition ist gelöscht (das war der eigentliche "Löschen"-Schritt) –
+  // zusätzlich räumen wir best effort die Werte dieses Feldes aus allen Tages-
+  // Einträgen weg, statt sie als verwaisten Schlüssel im verschlüsselten data-JSON
+  // liegen zu lassen. Passt zur Zero-Access-/Löschrecht-Ausrichtung der App: "Löschen"
+  // soll möglichst wenig übrig lassen, nicht nur die Definition unbrauchbar machen.
+  if (habit) purgeHabitFromEntries(habit.id);
+}
+
+async function purgeHabitFromEntries(habitId) {
+  const affectedDates = Object.keys(state.entries).filter((k) => state.entries[k]?.[habitId] !== undefined);
+  await Promise.all(affectedDates.map(async (dateKey) => {
+    const day = { ...state.entries[dateKey] };
+    delete day[habitId];
+    state.entries = { ...state.entries, [dateKey]: day };
+    await saveDay(dateKey, day);
+  }));
   render();
 }
 
@@ -2314,7 +2332,7 @@ function renderManage() {
         <div class="manage-info">
           <span class="manage-name">${esc(h.name)}</span>
           ${confirmingDelete
-            ? `<span class="manage-delete-warning">Es gibt historische Einträge – nach dem Löschen in der App nicht mehr nutzbar.</span>`
+            ? `<span class="manage-delete-warning">Es gibt historische Einträge – die werden inklusive aller Werte unwiderruflich mitgelöscht.</span>`
             : `<span class="manage-meta">${esc(formatScale(h))}${h.kind === 'scale' ? ` · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}` : ''}${h.reminderMinute !== null && h.reminderMinute !== undefined ? ` · Erinnerung ${minutesToTimeStr(h.reminderMinute)}` : ''}</span>`}
         </div>
         <div class="manage-actions">
