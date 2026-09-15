@@ -48,9 +48,10 @@ im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
   `display_style='slider'` relevant – steuert nur die Sichtbarkeit des aktuellen Werts
   während der Eingabe, der Regler zeigt **nie** eine Min/Max-Beschriftung),
   `group_members` (jsonb, nur bei `kind='group'`: Array von Slugs anderer
-  `kind='scale'`-Felder dieses Nutzers), `reminder_hour` (0–23 oder `null` =
-  Standardzeit, siehe Erinnerungen – bei `kind='group'` immer `null`, eine Gruppe kann
-  nie "fehlen"), `sort_order`, `archived_at` (Soft-Delete – archivierte Felder
+  `kind='scale'`-Felder dieses Nutzers), `reminder_minute` (Minuten seit Mitternacht,
+  0–1439, 15-Minuten-Raster, oder `null` = Standardzeit, siehe Erinnerungen – bei
+  `kind='group'` immer `null`, eine Gruppe kann nie "fehlen"), `sort_order`,
+  `archived_at` (Soft-Delete – archivierte Felder
   verschwinden aus der Tageseingabe, bleiben aber in Wochen-/Monatsansicht sichtbar,
   solange sie dort Daten haben, und lassen sich reaktivieren). Ein archiviertes Feld
   **endgültig löschen** (`habit-delete`) geht auch mit vorhandenen historischen
@@ -63,7 +64,7 @@ im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
 - **Feld-Typ (`kind`) und Skala (`min`/`max`/`labels`) sind nur änderbar, solange das
   Feld noch keine Daten hat** (App-seitig gesperrt, siehe `habitHasData`/`f.locked`) –
   sonst würden alte Werte plötzlich etwas anderes bedeuten. Für eine neue Skala: altes
-  Feld archivieren, neues anlegen. `name`, `unit` und `reminder_hour` bleiben davon
+  Feld archivieren, neues anlegen. `name`, `unit` und `reminder_minute` bleiben davon
   unberührt, da sie keine historischen Werte umdeuten. Gilt **nicht** für `kind='group'`:
   eine Gruppe hält nie einen eigenen Eintrag in `habit_entries.data` (ihr Slug taucht
   dort nie als Key auf), ist deshalb nie "locked" – die Mitgliederliste (`group_members`)
@@ -71,10 +72,10 @@ im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
   auf die gesamte bisherige Auswertung aus (der Durchschnitt wird bei jedem Rendern live
   aus den aktuellen Mitgliedern neu berechnet, nie gespeichert) – beabsichtigtes
   Verhalten, kein Bug.
-- Neue Nutzer bekommen die bisherigen 13 Standardfelder plus "Gewicht" (`kind='number'`,
-  `unit='kg'`) automatisch vorbelegt (Trigger `on_auth_user_created_seed_habits` in
-  `supabase-setup.sql`) – ab da aber genauso frei verwaltbar/löschbar wie jedes selbst
-  angelegte Feld.
+- **Kein automatisches Seeding mehr** (bis 2026-09-15: 13 feste Standardfelder +
+  "Gewicht" vorbelegt). Neue Nutzer starten komplett leer und werden stattdessen durch
+  das Onboarding-Tutorial (siehe Abschnitt unten) zu ihren eigenen, selbst gewählten
+  Feldern geführt.
 - RLS aktiv: jede Zeile nur für den eigenen `user_id` sicht-/änderbar – Felder eines
   Nutzers beeinflussen keinen anderen.
 
@@ -94,11 +95,13 @@ Tabelle `habit_entries`: eine Zeile pro Nutzer und Kalendertag.
 Tabelle `push_subscriptions`: eine Zeile pro Browser/Gerät mit aktivierten Erinnerungen
 (Web-Push-Endpoint + Schlüssel). RLS wie oben.
 
-Tabelle `user_settings`: eine Zeile pro Nutzer, aktuell nur `default_reminder_hour`
-(0–23, Default 22) – die Standard-Erinnerungsstunde für alle Felder ohne eigene
-`reminder_hour` (siehe Erinnerungen). Wird bei Registrierung automatisch angelegt
-(Trigger `on_auth_user_created_seed_settings`), im Burger-Menü der App änderbar. RLS
-wie oben.
+Tabelle `user_settings`: eine Zeile pro Nutzer. `default_reminder_minute` (Minuten
+seit Mitternacht, 0–1439, 15-Minuten-Raster, Default 1320 = 22:00) ist die
+Standard-Erinnerungszeit für alle Felder ohne eigene `reminder_minute` (siehe
+Erinnerungen), im Burger-Menü der App änderbar. `onboarding_completed` (bool, Default
+`false`) steuert, ob der Account noch das Onboarding-Tutorial sieht (siehe Abschnitt
+unten) – wird bei Registrierung automatisch angelegt (Trigger
+`on_auth_user_created_seed_settings`). RLS wie oben.
 
 Tabelle `user_encryption`: eine Zeile pro Nutzer, hält den zweifach "verpackten"
 Data Encryption Key (DEK) — nie den Schlüssel selbst im Klartext. Details siehe
@@ -111,7 +114,7 @@ archivierten) `habit_definitions` je Nutzer ab – keine hartkodierte Liste mehr
 manuelles Synchronhalten nötig. `kind='group'`-Felder werden dabei ausgeschlossen
 (Gruppen sind nie direkt befüllbar, tauchen nie in `filled_slugs` auf – ohne den
 Ausschluss würden sie die Sammel-Erinnerung dauerhaft fälschlich als "fehlend" auslösen).
-Erinnert wird, sobald mindestens ein zur jeweiligen Stunde fälliges aktives Feld an dem
+Erinnert wird, sobald mindestens ein zur jeweiligen Zeit fälliges aktives Feld an dem
 Tag noch fehlt, nicht erst wenn alles leer ist (Details siehe Abschnitt "Erinnerungen").
 
 ## Skalen-/Farblogik
@@ -243,38 +246,71 @@ Alles Konfigurative sitzt im **Burger-Menü** (☰-Button oben rechts, `renderMe
 
 ## Erinnerungen (Web Push)
 
-Eine einzige Edge Function `send-notifications` läuft **stündlich** (statt fester
-Zeitpunkte) und prüft pro Nutzer, ob gerade dessen Standard-Erinnerungsstunde ist bzw.
-pro Feld, ob dessen eigene Stunde erreicht ist:
-- **Standard-Erinnerungszeit (`user_settings.default_reminder_hour`, Default 22 Uhr
-  Berliner Zeit, im Menü änderbar)**: alle aktiven Felder OHNE eigene `reminder_hour` –
-  unabhängig von `kind` (Skala oder Zahlenwert) – werden gemeinsam geprüft. Fehlt an
-  diesem Tag noch mindestens eines davon, gibt es EINE Sammel-Nachricht (nicht eine pro
-  Feld). Zusätzlich zu dieser Stunde: sonntags "Wochenübersicht ist da", am
-  Monatsletzten "Monatsübersicht ist da".
-- **Eigene Stunde je Feld**: jedes Feld kann über `reminder_hour` (0–23) unabhängig von
-  der Standardzeit eine eigene Erinnerungsstunde bekommen – z.B. Gewicht typischerweise
+Eine einzige Edge Function `send-notifications` läuft **alle 15 Minuten** (statt
+fester Zeitpunkte) und prüft pro Nutzer, ob gerade dessen Standard-Erinnerungszeit ist
+bzw. pro Feld, ob dessen eigene Zeit erreicht ist:
+- **Standard-Erinnerungszeit (`user_settings.default_reminder_minute`, Default 22:00
+  Berliner Zeit, im Menü in 15-Minuten-Schritten änderbar)**: alle aktiven Felder OHNE
+  eigene `reminder_minute` – unabhängig von `kind` (Skala oder Zahlenwert) – werden
+  gemeinsam geprüft. Fehlt an diesem Tag noch mindestens eines davon, gibt es EINE
+  Sammel-Nachricht (nicht eine pro Feld). Zusätzlich zu dieser Zeit: sonntags
+  "Wochenübersicht ist da", am Monatsletzten "Monatsübersicht ist da".
+- **Eigene Zeit je Feld**: jedes Feld kann über `reminder_minute` unabhängig von der
+  Standardzeit eine eigene Erinnerungszeit bekommen – z.B. Gewicht typischerweise
   morgens statt zur (abendlichen) Standardzeit. In der App per Checkbox "Eigene
-  Erinnerungszeit" im Feld-Formular, standardmäßig aus. Aktuell z.B. beim eigenen Account
-  auf Gewicht (`reminder_hour = 8`) gesetzt.
+  Erinnerungszeit" im Feld-Formular (natives `<input type="time" step="900">`),
+  standardmäßig aus.
 
 Die Sammel-Erinnerung zur Standardzeit ist bewusst generisch ("Noch nicht alle Werte
 für heute eingetragen.", keine Feldnamen – sonst bei vielen Feldern schnell eine sehr
-lange Nachricht). Eine Erinnerung zu einer eigenen Stunde nennt dagegen das konkrete
+lange Nachricht). Eine Erinnerung zu einer eigenen Zeit nennt dagegen das konkrete
 Feld (`Erinnerung: <Namen> noch nicht eingetragen.`), da dort meist gezielt ein
 einzelnes Feld hervorgehoben werden soll (z.B. Gewicht).
 
-**DST-sicher ohne manuelles Nachjustieren**: `pg_cron` kennt keine Zeitzonen mit
-Sommerzeit-Umstellung, läuft nur in UTC. Die Function läuft deshalb **jede volle
-UTC-Stunde** (`0 * * * *`, siehe `supabase-setup.sql`) und bestimmt sich selbst per
-`Intl.DateTimeFormat` mit `timeZone: 'Europe/Berlin'`, welche Berliner Stunde gerade ist
-– das deckt beliebige `reminder_hour`-Werte automatisch ab, ganz ohne feste
-UTC-Zeitpunkte-Liste (Intl-API übernimmt die Sommer-/Winterzeit-Umrechnung automatisch).
+**15-Minuten-Raster, DST-sicher ohne manuelles Nachjustieren**: `pg_cron` kennt keine
+Zeitzonen mit Sommerzeit-Umstellung, läuft nur in UTC. Die Function läuft deshalb
+**alle 15 Minuten** (`*/15 * * * *`, siehe `supabase-setup.sql`) und bestimmt sich
+selbst per `Intl.DateTimeFormat` mit `timeZone: 'Europe/Berlin'`, welche Berliner
+Minute seit Mitternacht gerade ist – das deckt beliebige `reminder_minute`-Werte
+automatisch ab, ganz ohne feste UTC-Zeitpunkte-Liste. Der Berlin-UTC-Offset ist immer
+eine volle Stunde, daher bleibt das 15-Minuten-Raster unabhängig von Sommer-/
+Winterzeit exakt ausgerichtet (Intl-API übernimmt die Umrechnung automatisch).
 
-Bekannte Kleinigkeit: in der einen Nacht der Zeitumstellung selbst kann eine einzelne
-Berliner Stunde je nach Richtung doppelt oder gar nicht auftreten (entspricht dem echten
-Wanduhr-Verhalten an dem Tag). Für einen kleinen Tracker vernachlässigbar, nicht extra
-behandelt.
+Bekannte Kleinigkeit: in der einen Nacht der Zeitumstellung selbst kann ein einzelnes
+15-Minuten-Fenster je nach Richtung doppelt oder gar nicht auftreten (entspricht dem
+echten Wanduhr-Verhalten an dem Tag). Für einen kleinen Tracker vernachlässigbar,
+nicht extra behandelt.
+
+## Onboarding-Tutorial für neue Accounts
+
+Seit 2026-09-15: neue Accounts starten ohne vorbelegte Felder (siehe Datenmodell) und
+werden stattdessen durch ein 3-Schritte-Tutorial geführt (`renderTutorial` in
+`logbuch.html`), gesteuert über `state.userSettings.onboardingCompleted` (aus
+`user_settings.onboarding_completed`, Default `false` bei neuen Accounts) – solange
+`false`, ersetzt `render()` die normale App durch das Tutorial (Prüfung erst NACH dem
+DEK-Unlock, das Tutorial braucht ja schon entschlüsselte Daten). `state.tutorialStep`
+(1/2/3) lebt nur im Speicher, kein Reload-Resume nötig.
+
+- **Schritt 1**: Vollbild-Screen (gleiches Muster wie `renderAuth`, ersetzt `#app`
+  komplett) mit Erklärung zu täglichem Ausfüllen + Push-Wert, eingebetteter
+  Push-Aktivierung (`renderPushRow`) und der Standard-Erinnerungszeit-Auswahl.
+- **Schritt 2**: erst ein Zwischenschritt ("Überleg dir einen Wert") mit Beispielen,
+  danach die **echte** `renderHabitForm()` (kein Duplikat) – gesteuert rein über
+  `state.habitForm`: gesetzt (per `defaultHabitForm()`) zeigt das Formular, `null`
+  (z.B. nach "Abbrechen") fällt zurück auf den Zwischenschritt. Kein Tab-Leiste/
+  Burger-Menü sichtbar (Tutorial-Screens ersetzen `#app` komplett statt in `renderApp`
+  eingebettet zu sein), eine `beforeunload`-Warnung verhindert versehentliches
+  Verlassen, solange `state.tutorialStep === 2`. Nach erfolgreichem Anlegen des ersten
+  Feldes (Insert-Zweig in `handleHabitSave`) automatischer Sprung zu Schritt 3.
+- **Schritt 3**: Vollbild-Screen mit Empfehlung, optional 2–4 weitere Felder
+  anzulegen ("Weiteres Feld anlegen" springt zurück in den Schritt-2-Formular-Zustand,
+  diesmal ohne den Zwischenschritt) oder "Fertig" (`saveOnboardingCompleted()`).
+
+Überspringen (Schritt 1/2) fragt zweistufig nach (`.modal-overlay`/`.modal-box`,
+gleiches Muster wie `renderDeleteConfirm`) und setzt bei Bestätigung sofort
+`onboarding_completed = true` – identisch zu "Fertig" in Schritt 3.
+`saveOnboardingCompleted()` aktualisiert `state` sofort (App erscheint ohne Wartezeit)
+und persistiert danach im Hintergrund.
 
 ## Datenschutz & Sicherheit
 
@@ -359,7 +395,7 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
 2. `supabase functions deploy send-notifications` und `supabase functions deploy
    delete-account` (Code liegt/soll liegen unter `supabase/functions/<name>/index.ts`).
 3. `supabase-setup.sql` im Supabase SQL Editor ausführen (Tabellen, RLS, Vault-Secrets,
-   ein stündlicher Cron-Job). **Nicht automatisiert über Migrationen** – bislang manuell
+   ein Cron-Job alle 15 Minuten). **Nicht automatisiert über Migrationen** – bislang manuell
    im Dashboard ausgeführt. Wäre ein sinnvoller nächster Schritt, das in
    `supabase/migrations/` zu überführen, falls das Projekt wächst.
 

@@ -53,7 +53,7 @@
   }
   .menu-panel .push-row { margin-bottom: 0; }
   .menu-row { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--sand); }
-  .menu-row select {
+  .menu-row select, .menu-row input[type="time"] {
     font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
     border-radius: 3px; background: #fff; color: var(--ink);
   }
@@ -246,6 +246,8 @@
   .auth-box { max-width: 320px; margin: 60px auto; }
   .auth-box h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 24px; margin: 0 0 4px; text-align: center; }
   .auth-box p.sub { font-size: 12px; color: var(--sand); text-align: center; margin: 0 0 24px; }
+  .tutorial-text { font-size: 13px; line-height: 1.5; margin: 0 0 16px; }
+  .tutorial-step-label { font-size: 12px; color: var(--sand); text-align: center; margin: 4px 0 14px; }
   .auth-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
   .auth-field label { font-size: 12px; color: var(--sand); }
   .auth-field input {
@@ -528,7 +530,7 @@ function habitFromRow(row) {
     displayStyle: row.display_style,   // 'buttons' | 'slider', nur bei kind === 'scale' + Zahlenwerte relevant
     sliderShowValue: row.slider_show_value,
     groupMembers: row.group_members,   // nur bei kind === 'group': Array von Slugs
-    reminderHour: row.reminder_hour, // 0-23 oder null (= Standardzeit je nach kind)
+    reminderMinute: row.reminder_minute, // Minuten seit Mitternacht (0-1439) oder null (= Standardzeit)
     goalThreshold: row.goal_threshold, // nur bei kind === 'scale'/'group', 0-1 oder null (= 1 = 100%)
     sortOrder: row.sort_order,
     archivedAt: row.archived_at,
@@ -557,6 +559,23 @@ function parseDateKey(key) {
 }
 function startOfWeek(date) { const d = startOfDay(date); const off = (d.getDay() + 6) % 7; d.setDate(d.getDate() - off); return d; }
 function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
+
+// --- Erinnerungszeit-Helfer (Minuten seit Mitternacht <-> "HH:MM") ---------
+// Erinnerungszeiten werden seit dem Onboarding-Tutorial in 15-Minuten-Schritten
+// statt nur zur vollen Stunde gespeichert (siehe CLAUDE.md), als Minuten seit
+// Mitternacht (0-1439) statt Stunde (0-23).
+function minutesToTimeStr(min) {
+  const h = Math.floor(min / 60), m = min % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+function timeStrToMinutes(str) {
+  const [h, m] = str.split(':').map(Number);
+  const total = Math.round((h * 60 + m) / 15) * 15; // Absicherung: auf 15-Minuten-Raster runden
+  return Math.max(0, Math.min(1439, total));
+}
+function reminderTimeInputHtml(id, minutes, dataAction) {
+  return `<input type="time" id="${id}" step="900" value="${minutesToTimeStr(minutes)}" ${dataAction ? `data-action="${dataAction}"` : ''} />`;
+}
 
 // 0 = schlechtester, 1 = bester Wert
 function normalize(habit, value) {
@@ -679,9 +698,14 @@ const state = {
   habits: [],         // alle Felder des Nutzers (aktiv + archiviert), sort_order-sortiert
   habitForm: null,    // { defId, locked, name, mode: 'numeric'|'labels', min, max, steps, labels, good }
   menuOpen: false,
-  userSettings: { defaultReminderHour: 22 }, // Standard-Erinnerungszeit für Felder ohne eigene reminder_hour
+  // Standard-Erinnerungszeit (Minuten seit Mitternacht) für Felder ohne eigene reminder_minute.
+  // onboardingCompleted default true, bis loadUserSettings() den echten Wert lädt – verhindert,
+  // dass das Tutorial kurz aufblitzt, bevor die tatsächlichen Einstellungen geladen sind.
+  userSettings: { defaultReminderMinute: 1320, onboardingCompleted: true },
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
   habitDeleteConfirm: null, // defId eines archivierten Feldes mit Daten, dessen Löschen gerade bestätigt wird
+  tutorialStep: null, // 1/2/3 während das Onboarding-Tutorial für neue Accounts läuft, sonst null
+  tutorialSkipConfirm: false, // Bestätigungsdialog "Tutorial überspringen?" offen
   encryptionSetupInProgress: false, // true während setupEncryption()/Migration läuft
   recoveryKeyToShow: null, // { hex, confirmed } - einmalige Anzeige nach Erzeugung
   unlockError: null, // Fehlertext im renderUnlockPrompt-Screen
@@ -776,18 +800,22 @@ async function loadHabits() {
 }
 
 async function loadUserSettings() {
-  const { data, error } = await supabase.from('user_settings').select('default_reminder_hour').maybeSingle();
+  const { data, error } = await supabase.from('user_settings')
+    .select('default_reminder_minute, onboarding_completed').maybeSingle();
   if (error) {
     state.notice = { type: 'error', text: 'Einstellungen konnten nicht geladen werden: ' + error.message };
     return;
   }
-  state.userSettings = { defaultReminderHour: data ? data.default_reminder_hour : 22 };
+  state.userSettings = {
+    defaultReminderMinute: data ? data.default_reminder_minute : 1320,
+    onboardingCompleted: data ? data.onboarding_completed : true,
+  };
 }
 
-async function saveDefaultReminderHour(hour) {
-  state.userSettings = { defaultReminderHour: hour };
+async function saveDefaultReminderMinute(minutes) {
+  state.userSettings = { ...state.userSettings, defaultReminderMinute: minutes };
   const { error } = await supabase.from('user_settings')
-    .upsert({ user_id: state.session.user.id, default_reminder_hour: hour }, { onConflict: 'user_id' });
+    .upsert({ user_id: state.session.user.id, default_reminder_minute: minutes }, { onConflict: 'user_id' });
   if (error) {
     state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + error.message };
     render();
@@ -913,7 +941,7 @@ function defaultHabitForm() {
     displayStyle: 'buttons', sliderSteps: 100, sliderShowValue: true,
     groupMembers: [],
     goalPercent: 100,
-    unit: '', reminderEnabled: false, reminderHour: state.userSettings.defaultReminderHour,
+    unit: '', reminderEnabled: false, reminderMinute: state.userSettings.defaultReminderMinute,
   };
 }
 
@@ -939,8 +967,8 @@ function habitToForm(h) {
     groupMembers: h.kind === 'group' ? [...(h.groupMembers || [])] : [],
     goalPercent: Math.round((h.goalThreshold ?? 1) * 100),
     unit: h.unit || '',
-    reminderEnabled: h.reminderHour !== null && h.reminderHour !== undefined,
-    reminderHour: h.reminderHour ?? state.userSettings.defaultReminderHour,
+    reminderEnabled: h.reminderMinute !== null && h.reminderMinute !== undefined,
+    reminderMinute: h.reminderMinute ?? state.userSettings.defaultReminderMinute,
   };
 }
 
@@ -988,8 +1016,8 @@ function syncHabitFormFromDom() {
     if (goalEl) f.goalPercent = Number(goalEl.value);
     const reminderEnabledEl = document.getElementById('habit-form-reminder-enabled');
     if (reminderEnabledEl) f.reminderEnabled = reminderEnabledEl.checked;
-    const reminderHourEl = document.getElementById('habit-form-reminder-hour');
-    if (reminderHourEl) f.reminderHour = Number(reminderHourEl.value);
+    const reminderTimeEl = document.getElementById('habit-form-reminder-time');
+    if (reminderTimeEl) f.reminderMinute = timeStrToMinutes(reminderTimeEl.value);
   } else if (f.kind === 'group') {
     document.querySelectorAll('[data-group-member]').forEach((el) => {
       const slug = el.dataset.groupMember;
@@ -1003,8 +1031,8 @@ function syncHabitFormFromDom() {
     if (unitEl) f.unit = unitEl.value;
     const reminderEnabledEl = document.getElementById('habit-form-reminder-enabled');
     if (reminderEnabledEl) f.reminderEnabled = reminderEnabledEl.checked;
-    const reminderHourEl = document.getElementById('habit-form-reminder-hour');
-    if (reminderHourEl) f.reminderHour = Number(reminderHourEl.value);
+    const reminderTimeEl = document.getElementById('habit-form-reminder-time');
+    if (reminderTimeEl) f.reminderMinute = timeStrToMinutes(reminderTimeEl.value);
   }
 }
 
@@ -1021,9 +1049,12 @@ async function handleHabitSave() {
     return;
   }
 
+  const isInsert = !f.defId;
   const reminderEnabled = document.getElementById('habit-form-reminder-enabled')?.checked ?? f.reminderEnabled;
-  const reminderHourEl = document.getElementById('habit-form-reminder-hour');
-  const reminderHour = reminderEnabled ? Number(reminderHourEl ? reminderHourEl.value : f.reminderHour) : null;
+  const reminderTimeEl = document.getElementById('habit-form-reminder-time');
+  const reminderMinute = reminderEnabled
+    ? timeStrToMinutes(reminderTimeEl ? reminderTimeEl.value : minutesToTimeStr(f.reminderMinute))
+    : null;
 
   const goalEl = document.getElementById('habit-form-goal');
   const goalPercent = goalEl ? Number(goalEl.value) : f.goalPercent;
@@ -1094,9 +1125,9 @@ async function handleHabitSave() {
           ...(f.kind === 'scale'
             ? { good: f.good, goal_threshold: goalThreshold, display_style: fields.display_style, slider_show_value: fields.slider_show_value }
             : { unit: fields.unit }),
-          reminder_hour: reminderHour,
+          reminder_minute: reminderMinute,
         }
-      : { name, ...fields, reminder_hour: reminderHour };
+      : { name, ...fields, reminder_minute: reminderMinute };
     const { data, error } = await supabase.from('habit_definitions').update(patch).eq('id', f.defId).select().single();
     if (error) {
       state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + error.message };
@@ -1109,7 +1140,7 @@ async function handleHabitSave() {
     const slug = uniqueSlug(slugify(name));
     const sortOrder = state.habits.length ? Math.max(...state.habits.map((h) => h.sortOrder)) + 1 : 1;
     const { data, error } = await supabase.from('habit_definitions')
-      .insert({ user_id: state.session.user.id, slug, name, ...fields, reminder_hour: reminderHour, sort_order: sortOrder })
+      .insert({ user_id: state.session.user.id, slug, name, ...fields, reminder_minute: reminderMinute, sort_order: sortOrder })
       .select().single();
     if (error) {
       state.notice = { type: 'error', text: 'Anlegen fehlgeschlagen: ' + error.message };
@@ -1120,6 +1151,9 @@ async function handleHabitSave() {
   }
 
   state.habitForm = null;
+  // Im Tutorial (Schritt 2) gilt das erste erfolgreich angelegte Feld als Abschluss
+  // des Schritts – automatischer Sprung zu Schritt 3, kein zusätzlicher Klick nötig.
+  if (isInsert && state.tutorialStep === 2) state.tutorialStep = 3;
   render();
 }
 
@@ -1979,7 +2013,7 @@ function scrollToHabitForm() {
 
 function renderHabitForm() {
   const f = state.habitForm;
-  const defaultReminderHour = state.userSettings.defaultReminderHour;
+  const defaultReminderMinute = state.userSettings.defaultReminderMinute;
 
   const goalField = `
     <div class="auth-field">
@@ -2087,11 +2121,9 @@ function renderHabitForm() {
         <input type="checkbox" id="habit-form-reminder-enabled" data-action="habit-reminder-toggle" ${f.reminderEnabled ? 'checked' : ''} />
         Eigene Erinnerungszeit
       </label>
-      ${f.reminderEnabled ? `
-        <select id="habit-form-reminder-hour">
-          ${Array.from({ length: 24 }, (_, hr) => `<option value="${hr}" ${hr === (f.reminderHour ?? defaultReminderHour) ? 'selected' : ''}>${String(hr).padStart(2, '0')}:00</option>`).join('')}
-        </select>
-      ` : `<p class="habit-form-lock-note">Ohne eigene Zeit gilt die Standard-Erinnerungszeit (aktuell ${String(defaultReminderHour).padStart(2, '0')}:00, änderbar im Menü).</p>`}
+      ${f.reminderEnabled
+        ? reminderTimeInputHtml('habit-form-reminder-time', f.reminderMinute ?? defaultReminderMinute)
+        : `<p class="habit-form-lock-note">Ohne eigene Zeit gilt die Standard-Erinnerungszeit (aktuell ${minutesToTimeStr(defaultReminderMinute)}, änderbar im Menü).</p>`}
     </div>
   `;
 
@@ -2151,7 +2183,7 @@ function renderManage() {
           <span class="manage-name">${esc(h.name)}</span>
           ${confirmingDelete
             ? `<span class="manage-delete-warning">Es gibt historische Einträge – nach dem Löschen in der App nicht mehr nutzbar.</span>`
-            : `<span class="manage-meta">${esc(formatScale(h))}${h.kind === 'scale' ? ` · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}` : ''}${h.reminderHour !== null && h.reminderHour !== undefined ? ` · Erinnerung ${String(h.reminderHour).padStart(2, '0')}:00` : ''}</span>`}
+            : `<span class="manage-meta">${esc(formatScale(h))}${h.kind === 'scale' ? ` · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}` : ''}${h.reminderMinute !== null && h.reminderMinute !== undefined ? ` · Erinnerung ${minutesToTimeStr(h.reminderMinute)}` : ''}</span>`}
         </div>
         <div class="manage-actions">
           ${!h.archivedAt ? `
@@ -2189,6 +2221,102 @@ function renderManage() {
   `;
 }
 
+// --- Onboarding-Tutorial für neue Accounts ----------------------------------
+// state.userSettings.onboardingCompleted kommt aus der DB (Default false bei neuen
+// Accounts, siehe supabase-setup.sql) und steuert in render(), ob statt der normalen
+// App dieses Tutorial gezeigt wird. state.tutorialStep (1/2/3) lebt nur im Speicher,
+// kein Reload-Resume nötig — dafür verhindert die beforeunload-Warnung in Schritt 2
+// ein versehentliches Verlassen mitten im geführten Feld-Anlegen.
+async function saveOnboardingCompleted() {
+  state.userSettings = { ...state.userSettings, onboardingCompleted: true };
+  state.tutorialStep = null;
+  state.tutorialSkipConfirm = false;
+  render();
+  const { error } = await supabase.from('user_settings')
+    .upsert({ user_id: state.session.user.id, onboarding_completed: true }, { onConflict: 'user_id' });
+  if (error) {
+    state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + error.message };
+    render();
+  }
+}
+
+function renderTutorialSkipConfirm() {
+  return `
+    <div class="modal-overlay">
+      <div class="modal-box">
+        <h2>Tutorial überspringen?</h2>
+        <p>Du kannst jederzeit später eigene Felder über „Felder verwalten" im Menü anlegen.</p>
+        <div class="habit-form-actions">
+          <button type="button" class="manage-btn manage-btn--danger" data-action="tutorial-skip-confirm">Ja, überspringen</button>
+          <button type="button" class="habit-form-cancel" data-action="tutorial-skip-cancel">Abbrechen</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderTutorialStep1() {
+  return `
+    <div class="auth-box">
+      <h1>Willkommen</h1>
+      <p class="sub">Schritt 1 von 3</p>
+      ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+      <p class="tutorial-text">Logbuch lebt davon, dass du täglich ein paar Werte einträgst – je regelmäßiger, desto aussagekräftiger die Auswertung. Push-Erinnerungen helfen dir, das nicht zu vergessen.</p>
+      ${renderPushRow()}
+      <div class="auth-field">
+        <label for="tutorial-default-time">Standard-Erinnerungszeit</label>
+        ${reminderTimeInputHtml('tutorial-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time')}
+      </div>
+      <button type="button" class="auth-submit" data-action="tutorial-next">Weiter</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">Tutorial überspringen</button>
+    </div>
+    ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
+  `;
+}
+
+function renderTutorialStep2Intro() {
+  return `
+    <div class="auth-box">
+      <h1>Dein erstes Feld</h1>
+      <p class="sub">Schritt 2 von 3</p>
+      ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+      <p class="tutorial-text">Überlege dir einen Wert, den du ab jetzt beobachten willst – zum Beispiel eine <strong>Skala</strong> (Stimmung, Schlafqualität) oder ein <strong>freier Zahlenwert</strong> (Gewicht, Schritte). Wenn du unsicher bist: fang einfach mit einem an, du kannst später jederzeit weitere Felder anlegen oder bestehende ändern.</p>
+      <button type="button" class="auth-submit" data-action="tutorial-ready">Ich hab mir einen Wert überlegt</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">Tutorial überspringen</button>
+    </div>
+    ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
+  `;
+}
+
+function renderTutorialStep2Form() {
+  return `
+    <p class="tutorial-step-label">Schritt 2 von 3</p>
+    ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+    ${renderHabitForm()}
+  `;
+}
+
+function renderTutorialStep3() {
+  return `
+    <div class="auth-box">
+      <h1>Gut gemacht!</h1>
+      <p class="sub">Schritt 3 von 3</p>
+      ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+      <p class="tutorial-text">Dein erstes Feld ist angelegt. Du kannst optional noch 2–4 weitere ergänzen – wer sich unsicher fühlt, fängt lieber mit wenigen an und erweitert später jederzeit über „Felder verwalten" im Menü.</p>
+      <button type="button" class="auth-submit" data-action="tutorial-add-more">Weiteres Feld anlegen</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-finish">Fertig</button>
+    </div>
+  `;
+}
+
+function renderTutorial() {
+  if (!state.tutorialStep) state.tutorialStep = 1;
+  app.innerHTML =
+    state.tutorialStep === 1 ? renderTutorialStep1() :
+    state.tutorialStep === 2 ? (state.habitForm ? renderTutorialStep2Form() : renderTutorialStep2Intro()) :
+    renderTutorialStep3();
+}
+
 // --- Rendering: Haupt-App --------------------------------------------------
 function renderPushRow() {
   if (state.pushStatus === 'unsupported') {
@@ -2208,10 +2336,8 @@ function renderMenu() {
     <div class="menu-panel">
       ${renderPushRow()}
       <div class="menu-row">
-        <label for="menu-default-hour">Standard-Erinnerungszeit</label>
-        <select id="menu-default-hour" data-action="menu-default-hour">
-          ${Array.from({ length: 24 }, (_, hr) => `<option value="${hr}" ${hr === state.userSettings.defaultReminderHour ? 'selected' : ''}>${String(hr).padStart(2, '0')}:00</option>`).join('')}
-        </select>
+        <label for="menu-default-time">Standard-Erinnerungszeit</label>
+        ${reminderTimeInputHtml('menu-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time')}
       </div>
       <button type="button" class="menu-item-btn" data-action="open-manage">Felder verwalten</button>
       <button type="button" class="menu-item-btn" data-action="export-data">Meine Daten exportieren</button>
@@ -2279,6 +2405,7 @@ function render() {
   if (state.recoveryKeyToShow) { renderRecoveryKeyDisplay(); return; }
   if (state.encryptionSetupInProgress) { app.innerHTML = `<div class="loading">Deine Daten werden verschlüsselt …</div>`; return; }
   if (!currentDek) { renderUnlockPrompt(); return; }
+  if (!state.loading && !state.userSettings.onboardingCompleted) { renderTutorial(); return; }
   renderApp();
 }
 
@@ -2453,6 +2580,26 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'habit-delete') {
     state.habitDeleteConfirm = null;
     await handleHabitDelete(el.dataset.id);
+  } else if (action === 'tutorial-next') {
+    state.tutorialStep = 2;
+    render();
+  } else if (action === 'tutorial-ready') {
+    state.habitForm = defaultHabitForm();
+    render();
+  } else if (action === 'tutorial-add-more') {
+    state.tutorialStep = 2;
+    state.habitForm = defaultHabitForm();
+    render();
+  } else if (action === 'tutorial-finish') {
+    await saveOnboardingCompleted();
+  } else if (action === 'tutorial-skip-arm') {
+    state.tutorialSkipConfirm = true;
+    render();
+  } else if (action === 'tutorial-skip-cancel') {
+    state.tutorialSkipConfirm = false;
+    render();
+  } else if (action === 'tutorial-skip-confirm') {
+    await saveOnboardingCompleted();
   }
 });
 
@@ -2476,9 +2623,9 @@ app.addEventListener('change', (e) => {
     render();
     return;
   }
-  const defaultHourEl = e.target.closest('[data-action="menu-default-hour"]');
-  if (defaultHourEl) {
-    saveDefaultReminderHour(Number(defaultHourEl.value));
+  const defaultTimeEl = e.target.closest('[data-action="menu-default-time"]');
+  if (defaultTimeEl) {
+    saveDefaultReminderMinute(timeStrToMinutes(defaultTimeEl.value));
     return;
   }
   const slider = e.target.closest('[data-action="value-slider"]');
@@ -2679,8 +2826,16 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     state.entries = {};
     state.habits = [];
     currentDek = null;
+    state.tutorialStep = null;
+    state.tutorialSkipConfirm = false;
   }
   render();
+});
+
+// Verhindert versehentliches Verlassen/Reload mitten im geführten Feld-Anlegen
+// (Tutorial Schritt 2, siehe CLAUDE.md).
+window.addEventListener('beforeunload', (e) => {
+  if (state.tutorialStep === 2) { e.preventDefault(); e.returnValue = ''; }
 });
 
 const { data: { session } } = await supabase.auth.getSession();

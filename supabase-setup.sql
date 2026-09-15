@@ -75,7 +75,7 @@ create table public.habit_definitions (
   display_style text not null default 'buttons' check (display_style in ('buttons', 'slider')),
   slider_show_value boolean not null default true,
   group_members jsonb,                -- nur bei kind='group': Array von Slugs anderer Skala-Felder
-  reminder_hour smallint check (reminder_hour between 0 and 23), -- null = Standardzeit (siehe send-notifications)
+  reminder_minute smallint check (reminder_minute between 0 and 1439), -- Minuten seit Mitternacht, null = Standardzeit (siehe send-notifications)
   -- Bei kind='scale'/'group': ab welcher normalisierten Quote (0-1) ein Wert farblich
   -- als "voll erreicht" gilt (null = 1 = Standard 100%). Verschiebt NUR die Farbskala
   -- (scoreColor), nie die angezeigten Prozentzahlen selbst, und wirkt sich nicht auf die
@@ -110,44 +110,19 @@ create policy "update own habit_definitions" on public.habit_definitions
 create policy "delete own habit_definitions" on public.habit_definitions
   for delete using (auth.uid() = user_id);
 
--- Neue Nutzer bekommen automatisch die bisherigen Standardfelder vorbelegt (weiterhin
--- frei archivierbar/umbenennbar danach — das ist nur der Startzustand). Gewicht ist
--- dabei ein ganz normales kind='number'-Feld wie jedes andere auch.
-create or replace function public.seed_default_habits()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.habit_definitions (user_id, slug, name, kind, unit, min, max, labels, good, sort_order) values
-    (new.id, 'weight',         'Gewicht',                    'number', 'kg', null, null, null,                                  null,   0),
-    (new.id, 'morgenroutine',  'Morgenroutine',              'scale',  null, 1, 5, null,                                    'high', 1),
-    (new.id, 'zaehne',         'Zähne geputzt',              'scale',  null, 0, 2, null,                                    'high', 2),
-    (new.id, 'ernaehrung',     'Gesund ernährt',             'scale',  null, 1, 5, null,                                    'high', 3),
-    (new.id, 'getrunken',      'Genug getrunken',            'scale',  null, 1, 5, null,                                    'high', 4),
-    (new.id, 'kraftsport',     'Kraftsport gemacht',         'scale',  null, 0, 1, '["Nein","Ja"]'::jsonb,                   'high', 5),
-    (new.id, 'ausdauersport',  'Ausdauersport gemacht',      'scale',  null, 0, 1, '["Nein","Ja"]'::jsonb,                   'high', 6),
-    (new.id, 'gelernt',        'Etwas Neues gelernt',        'scale',  null, 0, 1, '["Nein","Ja"]'::jsonb,                   'high', 7),
-    (new.id, 'gekifft',        'Gekifft',                    'scale',  null, 0, 2, '["Nein","Ein bisschen","Ja"]'::jsonb,    'low',  8),
-    (new.id, 'gevaped',        'Gevaped',                    'scale',  null, 0, 2, '["Nein","Ein bisschen","Ja"]'::jsonb,    'low',  9),
-    (new.id, 'sex',            'Sex gehabt',                 'scale',  null, 0, 1, '["Nein","Ja"]'::jsonb,                   'high', 10),
-    (new.id, 'gefuehlslage',   'Gefühlslage',                'scale',  null, 1, 5, null,                                    'high', 11),
-    (new.id, 'guterTag',       'Guter Tag',                  'scale',  null, 1, 5, null,                                    'high', 12),
-    (new.id, 'bettzeit',       'Ins Bett zur geplanten Zeit', 'scale', null, 0, 1, '["Nein","Ja"]'::jsonb,                  'high', 13);
-  return new;
-end;
-$$;
+-- Kein automatisches Feld-Seeding mehr (bis 2026-09-15: 13 feste Standardfelder +
+-- Gewicht). Neue Nutzer starten bewusst leer und werden stattdessen durch das
+-- Onboarding-Tutorial (siehe logbuch.html renderTutorial) zu ihren eigenen, selbst
+-- gewählten Feldern geführt.
 
-create trigger on_auth_user_created_seed_habits
-  after insert on auth.users
-  for each row execute function public.seed_default_habits();
-
--- Nutzer-Einstellungen: aktuell nur die Standard-Erinnerungszeit (Stunde, Berliner
--- Zeit), die für alle Felder ohne eigene reminder_hour gilt. Änderbar im Menü der App.
+-- Nutzer-Einstellungen: Standard-Erinnerungszeit (Minuten seit Mitternacht, Berliner
+-- Zeit, 15-Minuten-Raster) für alle Felder ohne eigene reminder_minute, änderbar im
+-- Menü der App; onboarding_completed steuert, ob ein Account noch das Tutorial sieht
+-- (false bei neuen Accounts, siehe seed_default_user_settings unten).
 create table public.user_settings (
   user_id uuid primary key references auth.users(id) on delete cascade,
-  default_reminder_hour smallint not null default 22 check (default_reminder_hour between 0 and 23),
+  default_reminder_minute smallint not null default 1320 check (default_reminder_minute between 0 and 1439),
+  onboarding_completed boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -244,19 +219,20 @@ select vault.create_secret('sb_publishable_c8VJ-dqy-WD_y01aQy1Dzw_LJE-Ornr', 'pu
 -- CRON_SECRET=<wert>`. Niemals den Wert aus diesem Kommentar wiederverwenden.
 select vault.create_secret('REPLACE_ME_WITH_FRESH_RANDOM_SECRET', 'cron_secret');
 
--- Stündlicher Aufruf der Edge Function "send-notifications": die Function bestimmt sich
--- selbst per Intl die aktuelle Berliner Stunde (inkl. Sommer-/Winterzeit) und prüft dann
--- pro Nutzer, ob gerade dessen Standard-Erinnerungsstunde ist (user_settings.
--- default_reminder_hour, Default 22 Uhr) bzw. pro Feld, ob dessen eigene
--- reminder_hour erreicht ist. Stündlich statt fester UTC-Zeitpunkte, weil sich die
--- zuständige Stunde nicht mehr auf feste Zeiten beschränkt. Der x-cron-secret-Header
--- authentifiziert den Aufruf gegenüber der Function (siehe oben).
+-- Alle 15 Minuten Aufruf der Edge Function "send-notifications": die Function
+-- bestimmt sich selbst per Intl die aktuellen Berliner Minuten seit Mitternacht (inkl.
+-- Sommer-/Winterzeit) und prüft dann pro Nutzer, ob gerade dessen Standard-
+-- Erinnerungszeit ist (user_settings.default_reminder_minute, Default 1320 = 22:00)
+-- bzw. pro Feld, ob dessen eigene reminder_minute erreicht ist. Alle 15 Minuten statt
+-- fester UTC-Zeitpunkte, weil sich die zuständige Zeit nicht mehr auf feste
+-- Zeitpunkte beschränkt (15-Minuten-Raster). Der x-cron-secret-Header authentifiziert
+-- den Aufruf gegenüber der Function (siehe oben).
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
 select cron.schedule(
-  'send-notifications-hourly',
-  '0 * * * *',
+  'send-notifications-15min',
+  '*/15 * * * *',
   $$
   select net.http_post(
       url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/send-notifications',

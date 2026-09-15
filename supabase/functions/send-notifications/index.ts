@@ -1,22 +1,26 @@
 // Datei nach dem Deployment ablegen unter: supabase/functions/send-notifications/index.ts
 //
-// Läuft stündlich (per pg_cron, siehe supabase-setup.sql) und schickt Erinnerungen an
-// Nutzer, deren Felder gerade "fällig" sind:
-// 1. Alle aktiven Felder OHNE eigene `reminder_hour` werden gemeinsam zur
-//    Standard-Erinnerungszeit des Nutzers geprüft (`user_settings.default_reminder_hour`,
-//    Default 22 Uhr Berliner Zeit, im Menü der App änderbar) — EINE Sammel-Nachricht,
-//    wenn heute noch nicht alle davon ausgefüllt sind (nicht erst wenn der ganze Tag
-//    leer ist), egal ob Skala- oder Zahlenwert-Feld.
-// 2. Jedes Feld MIT eigener `reminder_hour` wird unabhängig davon genau zu dieser
-//    Stunde geprüft (z.B. Gewicht typischerweise morgens statt zur Standardzeit).
+// Läuft alle 15 Minuten (per pg_cron, siehe supabase-setup.sql) und schickt
+// Erinnerungen an Nutzer, deren Felder gerade "fällig" sind:
+// 1. Alle aktiven Felder OHNE eigene `reminder_minute` werden gemeinsam zur
+//    Standard-Erinnerungszeit des Nutzers geprüft (`user_settings.default_reminder_minute`,
+//    Minuten seit Mitternacht Berliner Zeit, Default 1320 = 22:00, im Menü der App
+//    in 15-Minuten-Schritten änderbar) — EINE Sammel-Nachricht, wenn heute noch nicht
+//    alle davon ausgefüllt sind (nicht erst wenn der ganze Tag leer ist), egal ob
+//    Skala- oder Zahlenwert-Feld.
+// 2. Jedes Feld MIT eigener `reminder_minute` wird unabhängig davon genau zu dieser
+//    Zeit geprüft (z.B. Gewicht typischerweise morgens statt zur Standardzeit).
 // Zusätzlich zur Standard-Erinnerungszeit: sonntags "Wochenübersicht ist da", am
 // Monatsletzten "Monatsübersicht ist da".
 //
-// Läuft stündlich statt nur zu festen Zeitpunkten, weil die zuständige Stunde jetzt
-// weder auf 8/22 noch auf einen für alle Nutzer gleichen Wert beschränkt ist, sondern
-// pro Nutzer (Standardzeit) und pro Feld (eigene Zeit) frei gewählt sein kann. Jede der
-// 24 stündlichen Ausführungen bestimmt ihre Berliner Stunde frisch per Intl — das deckt
-// Sommer-/Winterzeit weiterhin automatisch ab, ganz ohne feste UTC-Zeitpunkte-Liste.
+// Läuft alle 15 Minuten statt nur zu festen Zeitpunkten, weil die zuständige Zeit
+// jetzt weder auf 8/22 Uhr noch auf einen für alle Nutzer gleichen Wert beschränkt
+// ist, sondern pro Nutzer (Standardzeit) und pro Feld (eigene Zeit) frei in
+// 15-Minuten-Schritten gewählt sein kann. Jede Ausführung bestimmt ihre Berliner
+// Minuten-seit-Mitternacht frisch per Intl — das deckt Sommer-/Winterzeit weiterhin
+// automatisch ab (der Berlin-UTC-Offset ist immer eine volle Stunde, die
+// 15-Minuten-Ausrichtung bleibt also unabhängig von der Umstellung erhalten), ganz
+// ohne feste UTC-Zeitpunkte-Liste.
 //
 // habit_entries.data ist seit der clientseitigen Verschlüsselung nur noch Chiffretext
 // ({iv, ciphertext}) — diese Function kann sie nicht lesen. Für die
@@ -52,6 +56,7 @@ function getBerlinParts(date: Date) {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
+    minute: '2-digit',
     hour12: false,
     weekday: 'short',
   });
@@ -62,6 +67,7 @@ function getBerlinParts(date: Date) {
     month: Number(parts.month),
     day: Number(parts.day),
     hour: Number(parts.hour === '24' ? '0' : parts.hour),
+    minutesSinceMidnight: Number(parts.hour === '24' ? '0' : parts.hour) * 60 + Number(parts.minute),
     weekday: parts.weekday, // 'Sun', 'Mon', ...
   };
 }
@@ -77,7 +83,7 @@ interface HabitDef {
   slug: string;
   name: string;
   kind: string;
-  reminder_hour: number | null;
+  reminder_minute: number | null;
 }
 
 Deno.serve(async (req) => {
@@ -113,7 +119,7 @@ Deno.serve(async (req) => {
 
   const { data: defs, error: defErr } = await supabase
     .from('habit_definitions')
-    .select('user_id, slug, name, kind, reminder_hour')
+    .select('user_id, slug, name, kind, reminder_minute')
     .is('archived_at', null);
   if (defErr) {
     return new Response(JSON.stringify({ error: defErr.message }), { status: 500 });
@@ -131,12 +137,12 @@ Deno.serve(async (req) => {
 
   const { data: settings, error: settingsErr } = await supabase
     .from('user_settings')
-    .select('user_id, default_reminder_hour');
+    .select('user_id, default_reminder_minute');
   if (settingsErr) {
     return new Response(JSON.stringify({ error: settingsErr.message }), { status: 500 });
   }
-  const defaultHourByUser = new Map<string, number>();
-  for (const s of settings ?? []) defaultHourByUser.set(s.user_id, s.default_reminder_hour);
+  const defaultMinuteByUser = new Map<string, number>();
+  for (const s of settings ?? []) defaultMinuteByUser.set(s.user_id, s.default_reminder_minute);
 
   // Für einen Nutzer die Namen der heute noch fehlenden Felder aus `group`, oder null,
   // wenn nichts fehlt (bzw. die Gruppe leer ist).
@@ -153,13 +159,13 @@ Deno.serve(async (req) => {
     };
     const filledSlugs = filledSlugsByUser.get(sub.user_id) ?? [];
     const defsForUser = defsByUser.get(sub.user_id) ?? [];
-    const defaultHour = defaultHourByUser.get(sub.user_id) ?? 22;
+    const defaultMinute = defaultMinuteByUser.get(sub.user_id) ?? 1320;
     const messages: PushMessage[] = [];
 
     // Sammel-Erinnerung zur Standardzeit: bewusst generisch (nicht jedes fehlende Feld
     // einzeln benannt) — das wäre bei vielen Feldern schnell eine sehr lange Nachricht.
-    if (berlin.hour === defaultHour) {
-      const defaultGroup = defsForUser.filter((d) => d.reminder_hour === null);
+    if (berlin.minutesSinceMidnight === defaultMinute) {
+      const defaultGroup = defsForUser.filter((d) => d.reminder_minute === null);
       if (missingNames(defaultGroup, filledSlugs).length) {
         messages.push({
           title: 'Logbuch',
@@ -169,9 +175,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Eigene Stunde je Feld: hier macht die konkrete Nennung Sinn, meist nur ein
+    // Eigene Zeit je Feld: hier macht die konkrete Nennung Sinn, meist nur ein
     // einzelnes bewusst herausgehobenes Feld (z.B. Gewicht morgens).
-    const customGroup = defsForUser.filter((d) => d.reminder_hour === berlin.hour);
+    const customGroup = defsForUser.filter((d) => d.reminder_minute === berlin.minutesSinceMidnight);
     const missingCustom = missingNames(customGroup, filledSlugs);
     if (missingCustom.length) {
       messages.push({
@@ -181,7 +187,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (berlin.hour === defaultHour) {
+    if (berlin.minutesSinceMidnight === defaultMinute) {
       if (isSunday) {
         messages.push({ title: 'Logbuch', body: 'Deine Wochenübersicht ist da.', url: './logbuch.html' });
       }
