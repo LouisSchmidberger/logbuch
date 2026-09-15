@@ -1312,6 +1312,18 @@ function installHintText() {
     ? 'Für Erinnerungen per Push: Tippe unten auf „Teilen" und dann „Zum Home-Bildschirm". Auf dem iPhone funktionieren Benachrichtigungen sonst leider gar nicht.'
     : 'Für die beste Erfahrung (u.a. zuverlässigere Erinnerungen): füge Logbuch über das Browser-Menü zum Home-Bildschirm hinzu.';
 }
+// Genauere, betriebssystemspezifische Schritt-für-Schritt-Anleitung fürs Tutorial
+// (als aufklappbarer Info-Tip, siehe renderTutorialInstallGate) – installHintText()
+// bleibt bewusst kürzer für den dauerhaften, unaufdringlichen Hinweis in der App.
+function installStepsText() {
+  if (isIOSDevice()) {
+    return 'iPhone/iPad (Safari): Tippe unten in der Leiste auf das Teilen-Symbol (Quadrat mit Pfeil nach oben) und wähle „Zum Home-Bildschirm".';
+  }
+  if (/Android/.test(navigator.userAgent)) {
+    return 'Android (Chrome): Tippe oben rechts auf die drei Punkte und wähle „App installieren" bzw. „Zum Startbildschirm hinzufügen".';
+  }
+  return 'Am Computer (Chrome/Edge): Klicke in der Adressleiste auf das Installations-Symbol, oder öffne das Browser-Menü und wähle „App installieren".';
+}
 function renderInstallHint() {
   if (isStandaloneDisplay() || isInstallHintDismissed()) return '';
   return `
@@ -2316,8 +2328,8 @@ function renderTutorialInstallGate() {
   return `
     <div class="auth-box">
       <h1>Bevor es losgeht</h1>
-      <p class="tutorial-text">${esc(installHintText())}</p>
-      <button type="button" class="auth-submit" data-action="tutorial-install-ack">Weiter</button>
+      <p class="tutorial-text">${esc(installHintText())} Mach das am besten gleich jetzt: installiere Logbuch auf deinem Home-/Startbildschirm und öffne es danach über das neue Symbol – diese Seite hier brauchst du dann nicht mehr, es geht automatisch mit dem Tutorial weiter.${infoTip(installStepsText())}</p>
+      <button type="button" class="auth-toggle" data-action="tutorial-install-ack">Stattdessen im Browser fortfahren (nicht empfohlen)</button>
     </div>
   `;
 }
