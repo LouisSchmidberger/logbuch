@@ -703,7 +703,7 @@ function scoreColor(score) {
 // erkennbar unabhängig vom Farbton. coarse=true (Jahres-Ansicht, ~8px Zellen) nutzt
 // nur 3 statt 5 Stufen mit weiter auseinanderliegenden Streifen.
 function scorePatternStyle(score, coarse) {
-  if (score === null || score === undefined) return '';
+  if (score === null || score === undefined || isPatternDisabled()) return '';
   const spacing = coarse ? [6, 4, 2] : [6, 5, 4, 3, 2];
   const opacity = coarse ? [0.15, 0.25, 0.35] : [0, 0.12, 0.2, 0.28, 0.35];
   const buckets = spacing.length;
@@ -1078,6 +1078,8 @@ const STRINGS = {
     'theme.system': 'System',
     'theme.light': 'Hell',
     'theme.dark': 'Dunkel',
+    'pattern.enableLabel': 'Muster zusätzlich zur Farbe anzeigen',
+    'pattern.explain': 'Etwa 1 von 12 Männern und 1 von 200 Frauen hat eine Rot-Grün-Sehschwäche – oft unbemerkt, da sie selten diagnostiziert wird. Damit Bewertungen (rot bis grün) nicht ausschließlich über die Farbe erkennbar sind, zeigt Logbuch standardmäßig zusätzlich ein feines Streifenmuster: je dichter, desto besser der Wert. Rein optisch abschaltbar, falls du es nicht brauchst und nicht magst.',
     'menu.manageFields': 'Felder verwalten',
     'menu.exportData': 'Meine Daten exportieren',
     'menu.regenerateRecoveryKey': 'Recovery-Key neu erzeugen',
@@ -1304,6 +1306,8 @@ const STRINGS = {
     'theme.system': 'System',
     'theme.light': 'Light',
     'theme.dark': 'Dark',
+    'pattern.enableLabel': 'Show pattern in addition to color',
+    'pattern.explain': 'About 1 in 12 men and 1 in 200 women has red-green color vision deficiency – often unnoticed, since it is rarely diagnosed. So that ratings (red to green) are not recognizable through color alone, Logbuch shows a subtle stripe pattern in addition by default: the denser it is, the better the value. Purely a visual choice, switch it off if you do not need or want it.',
     'menu.manageFields': 'Manage fields',
     'menu.exportData': 'Export my data',
     'menu.regenerateRecoveryKey': 'Regenerate recovery key',
@@ -1399,6 +1403,21 @@ function setThemeOverride(value) {
     else localStorage.removeItem('themeOverride');
   } catch { /* z.B. privater Modus — Override wirkt dann nur für die laufende Sitzung */ }
   applyTheme(value);
+}
+
+// Streifenmuster (siehe scorePatternStyle) ist bewusst Standard, nicht opt-in — die
+// meisten Menschen mit Rot-Grün-Farbschwäche wissen selbst nicht genau, dass/wie stark
+// sie betroffen sind, würden ein verstecktes "Barrierefreiheit"-Menü also gar nicht
+// erst aufsuchen. Wer das Muster rein optisch nicht möchte, kann es hier abschalten —
+// geräte-lokal wie der Theme-Override, keine inhaltliche Account-Einstellung.
+function isPatternDisabled() {
+  try { return localStorage.getItem('scorePatternDisabled') === 'true'; } catch { return false; }
+}
+function setPatternDisabled(disabled) {
+  try {
+    if (disabled) localStorage.setItem('scorePatternDisabled', 'true');
+    else localStorage.removeItem('scorePatternDisabled');
+  } catch { /* z.B. privater Modus — wirkt dann nur für die laufende Sitzung */ }
 }
 
 // --- Datum/Zeit: locale-abhängige Formatierung -----------------------------
@@ -3281,6 +3300,13 @@ function renderMenu() {
           <button type="button" class="pill-toggle${getThemeOverride() === 'dark' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="dark" aria-pressed="${getThemeOverride() === 'dark'}">${t('theme.dark')}</button>
         </div>
       </div>
+      <div class="menu-row">
+        <label class="checkbox-field">
+          <input type="checkbox" data-action="pattern-toggle" ${isPatternDisabled() ? '' : 'checked'} />
+          ${t('pattern.enableLabel')}
+        </label>
+        ${infoTip(t('pattern.explain'))}
+      </div>
       <button type="button" class="menu-item-btn" data-action="open-manage">${t('menu.manageFields')}</button>
       <button type="button" class="menu-item-btn" data-action="export-data">${t('menu.exportData')}</button>
       <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key">${t('menu.regenerateRecoveryKey')}</button>
@@ -3623,6 +3649,12 @@ app.addEventListener('change', (e) => {
   if (reminderToggle && state.habitForm) {
     syncHabitFormFromDom();
     state.habitForm.reminderEnabled = reminderToggle.checked;
+    render();
+    return;
+  }
+  const patternToggle = e.target.closest('[data-action="pattern-toggle"]');
+  if (patternToggle) {
+    setPatternDisabled(!patternToggle.checked);
     render();
     return;
   }
