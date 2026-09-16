@@ -244,8 +244,39 @@ nicht auf generische Tailwind-/Card-Optik wechseln.
 
 Tab-Leiste zeigt nur noch die Auswertungs-Ansichten (Heute/Woche/Monat/Jahr/Gesamt).
 Alles Konfigurative sitzt im **Burger-Menü** (☰-Button oben rechts, `renderMenu` in
-`logbuch.html`): Push aktiv/inaktiv, Standard-Erinnerungszeit, Sprache, "Felder
-verwalten" (öffnet `renderManage`, kein eigener Tab mehr) und Abmelden.
+`logbuch.html`): Push aktiv/inaktiv, Standard-Erinnerungszeit, Sprache, Darstellung
+(Dark Mode), "Felder verwalten" (öffnet `renderManage`, kein eigener Tab mehr) und
+Abmelden.
+
+**Dark Mode** (seit 2026-09-16): folgt standardmäßig `prefers-color-scheme`, im
+Burger-Menü überschreibbar (System/Hell/Dunkel als Pill-Toggle, gleiches Muster wie
+`f.kind`/`f.mode`/`f.good` im Habit-Formular). Override liegt in `localStorage`
+(`themeOverride`, Werte `'light'`/`'dark'`/nicht gesetzt = System) — bewusst NICHT in
+`user_settings`, da geräte-lokal statt kontoweit gedacht (anders als die Sprache).
+`applyTheme()`/`getThemeOverride()`/`setThemeOverride()` in `logbuch.html`, direkt
+nach dem i18n-Block. CSS-seitig: `@media (prefers-color-scheme: dark)` UND
+`:root[data-theme="dark"]` setzen dieselben Werte für dieselben Tokens (`--paper`,
+`--ink`, `--line`, `--moss`, `--rust`, `--sand`, plus neu `--surface` für Modal-/Menü-
+Hintergrund, `--input-bg`, `--shadow`, `--scrim`, `--rust-rgb`/`--moss-rgb` für
+`rgba()`-Tönungen, `--on-score` für Text auf `scoreColor()`-Zellen, theme-unabhängig).
+`scoreColor()` selbst bleibt bewusst unverändert (liefert rohe `rgb()`-Werte,
+unabhängig vom Theme). `<meta name="theme-color">` wird per JS synchronisiert
+(`syncThemeColorMeta`), da Meta-Tags keine CSS-Variablen lesen können.
+
+**Accessibility** (seit 2026-09-16): Kalenderzellen (Woche/Monat/Jahr) sind per
+Tastatur erreichbar (`tabindex="0" role="button"`, Enter/Space über einen
+generalisierten `data-action`-Keydown-Dispatch, der einen echten Klick auslöst statt
+Aktionen zu duplizieren) und tragen zusätzlich zur Farbe ein Streifenmuster
+(`scorePatternStyle()`, diskrete Stufen, gröber in der Jahres-Ansicht) für
+Rot-Grün-Farbenblinde. Die beiden Modals (Konto löschen, Tutorial überspringen)
+haben `role="dialog"`/Fokus-Trap/Escape-Schließen/Fokus-Rückgabe (siehe
+`focusModalIfOpen()`/`restoreModalFocus()`/`modalTriggerSelector`). Meldungen laufen
+zentral über `renderNotice()` (Fehler `role="alert"`/assertive, Erfolg
+`role="status"`/polite) statt über 6 duplizierte Inline-Fragmente. Das Feld-Umsortieren
+hat mit Hoch/Runter-Buttons (`commitHabitOrder()`, gemeinsamer Persistenz-Pfad mit dem
+Pointer-Drag) eine Tastatur-Alternative. Der Zahlenwert-Verlaufsgraph hat eine
+`.visually-hidden`-Textzusammenfassung (Anzahl/letzter Wert/Durchschnitt/Spanne/Trend)
+statt eines reinen `aria-label`.
 
 ## Internationalisierung (i18n)
 

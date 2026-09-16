@@ -22,8 +22,54 @@
     --moss: #4b6b4f;
     --rust: #a2503a;
     --sand: #8c8371;
+    --surface: #eae7df;
+    --input-bg: #ffffff;
+    --shadow: rgba(0, 0, 0, 0.15);
+    --scrim: rgba(0, 0, 0, 0.45);
+    --rust-rgb: 162, 80, 58;
+    --moss-rgb: 75, 107, 79;
+    /* scoreColor() liefert theme-unabhängig immer dieselben Mittelton-Farben (siehe
+       JS) – Text darauf braucht deshalb eine feste, helle Farbe statt --ink/--paper,
+       die sich sonst im Dark Mode mitverdunkeln und unlesbar würden. */
+    --on-score: #f5f3ee;
+  }
+  /* Dunkles Farbschema: folgt automatisch prefers-color-scheme, außer ein
+     manueller Override (data-theme) sagt etwas anderes. Beide Regeln setzen
+     exakt dieselben Werte, nur der Auslöser unterscheidet sich. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1e1c17;
+      --ink: #ece7da;
+      --line: #4a453a;
+      --moss: #7fa583;
+      --rust: #d3785d;
+      --sand: #a89f8c;
+      --surface: #29261f;
+      --input-bg: #2c2920;
+      --rust-rgb: 211, 120, 93;
+      --moss-rgb: 127, 165, 131;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1e1c17;
+    --ink: #ece7da;
+    --line: #4a453a;
+    --moss: #7fa583;
+    --rust: #d3785d;
+    --sand: #a89f8c;
+    --surface: #29261f;
+    --input-bg: #2c2920;
+    --rust-rgb: 211, 120, 93;
+    --moss-rgb: 127, 165, 131;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  /* Für Screenreader vorhandener, aber visuell ausgeblendeter Text (z.B. die
+     Graph-Zusammenfassung) — Standard-Clip-Technik statt display:none, damit der
+     Inhalt weiterhin vorgelesen wird. */
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
   body {
     margin: 0;
     font-family: 'IBM Plex Sans', sans-serif;
@@ -48,33 +94,33 @@
   .menu-panel {
     position: absolute; top: 38px; right: 0; z-index: 10; width: 230px;
     display: flex; flex-direction: column; gap: 10px;
-    background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 12px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 12px;
+    box-shadow: 0 4px 14px var(--shadow);
   }
   .menu-panel .push-row { margin-bottom: 0; }
   .menu-row { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--sand); }
   .menu-row select {
     font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
-    border-radius: 3px; background: #fff; color: var(--ink);
+    border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   .menu-item-btn {
     font-family: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid var(--line);
     border-radius: 3px; background: transparent; color: var(--ink); cursor: pointer; text-align: left;
   }
-  .menu-item-btn--danger { color: var(--rust); border-color: rgba(162, 80, 58, 0.4); }
+  .menu-item-btn--danger { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.4); }
 
   .modal-overlay {
-    position: fixed; inset: 0; background: rgba(36, 38, 31, 0.45); z-index: 50;
+    position: fixed; inset: 0; background: var(--scrim); z-index: 50;
     display: flex; align-items: center; justify-content: center; padding: 20px;
   }
   .modal-box {
-    background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
     padding: 18px; max-width: 340px; width: 100%;
   }
   .modal-box h2 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 17px; margin: 0 0 10px; }
   .modal-box p { font-size: 13px; line-height: 1.45; margin: 0 0 14px; }
 
-  .push-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink); background: rgba(75,107,79,0.08); border: 1px solid var(--line); border-radius: 3px; padding: 7px 10px; margin-bottom: 16px; }
+  .push-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink); background: rgba(var(--moss-rgb), 0.08); border: 1px solid var(--line); border-radius: 3px; padding: 7px 10px; margin-bottom: 16px; }
   .push-row--muted { color: var(--sand); background: transparent; }
   .push-toggle { background: none; border: none; color: var(--moss); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
   .push-toggle--prominent {
@@ -84,7 +130,7 @@
 
   .install-hint {
     display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.4; color: var(--ink);
-    background: rgba(162, 80, 58, 0.08); border: 1px solid rgba(162, 80, 58, 0.3); border-radius: 3px;
+    background: rgba(var(--rust-rgb), 0.08); border: 1px solid rgba(var(--rust-rgb), 0.3); border-radius: 3px;
     padding: 8px 10px; margin-bottom: 16px;
   }
   .install-hint span { flex: 1; }
@@ -158,7 +204,7 @@
   .number-box .number-last { display: block; font-size: 11px; color: var(--sand); margin-top: 2px; }
   .number-input {
     width: 72px; font-family: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--line);
-    border-radius: 3px; background: #fff; color: var(--ink);
+    border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
 
   .habit-row--slider { flex-direction: column; align-items: stretch; gap: 6px; }
@@ -217,13 +263,21 @@
   .grid-col-date { font-size: 10px; color: var(--ink); }
   .grid-col-header--avg { font-family: 'Fraunces', serif; font-style: italic; color: var(--ink); cursor: default; }
   .grid-cell { height: 22px; margin: 1px; border-radius: 2px; border: 1px solid var(--line); cursor: pointer; }
-  .grid-cell--avg { display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--paper); font-weight: 600; cursor: default; }
+  .grid-cell--avg { display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--on-score); font-weight: 600; cursor: default; }
 
   .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 20px; }
   .month-weekday { font-size: 10px; color: var(--sand); text-align: center; padding-bottom: 4px; }
   .month-cell { aspect-ratio: 1; border-radius: 3px; border: 1px solid var(--line); display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px; cursor: pointer; }
   .month-cell--empty { border: none; cursor: default; }
+  /* mix-blend-mode:multiply setzt auf einen hellen Seitenhintergrund, damit die
+     Zahl unabhängig vom farbcodierten Zell-Hintergrund lesbar bleibt – funktioniert
+     im Dark Mode nicht mehr (verdunkelt statt abzuheben), dort auf reine Ink-Farbe
+     ohne Blend-Mode zurückfallen. */
   .month-cell-num { font-size: 10px; color: var(--ink); mix-blend-mode: multiply; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .month-cell-num { mix-blend-mode: normal; }
+  }
+  :root[data-theme="dark"] .month-cell-num { mix-blend-mode: normal; }
 
   .month-stats { border-top: 1px solid var(--line); padding-top: 8px; }
   .month-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
@@ -238,9 +292,9 @@
 
   .notice {
     font-size: 12px; padding: 8px 10px; border-radius: 3px; margin-bottom: 14px;
-    background: rgba(162, 80, 58, 0.12); color: var(--rust); border: 1px solid rgba(162, 80, 58, 0.3);
+    background: rgba(var(--rust-rgb), 0.12); color: var(--rust); border: 1px solid rgba(var(--rust-rgb), 0.3);
   }
-  .notice--ok { background: rgba(75, 107, 79, 0.12); color: var(--moss); border-color: rgba(75, 107, 79, 0.3); }
+  .notice--ok { background: rgba(var(--moss-rgb), 0.12); color: var(--moss); border-color: rgba(var(--moss-rgb), 0.3); }
   .loading { font-size: 13px; color: var(--sand); padding: 40px 0; text-align: center; }
 
   .auth-box { max-width: 320px; margin: 60px auto; }
@@ -252,7 +306,7 @@
   .auth-field label { font-size: 12px; color: var(--sand); }
   .auth-field input:not([type="checkbox"]), .auth-field select {
     font-family: inherit; font-size: 14px; padding: 9px 10px; border: 1px solid var(--line);
-    border-radius: 3px; background: #fff; color: var(--ink); width: 100%;
+    border-radius: 3px; background: var(--input-bg); color: var(--ink); width: 100%;
   }
   .auth-field-label-row { display: flex; align-items: center; justify-content: space-between; }
   .input-clear-wrap { position: relative; }
@@ -277,7 +331,7 @@
   .manage-row:first-child { border-top: 1px solid var(--line); }
   .manage-row--archived { opacity: 0.55; }
   .manage-row--confirm-delete { opacity: 1; flex-wrap: wrap; }
-  .manage-row--dragging { position: relative; z-index: 5; background: var(--paper); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+  .manage-row--dragging { position: relative; z-index: 5; background: var(--surface); box-shadow: 0 4px 10px var(--shadow); }
   .manage-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
   .manage-name { font-size: 13px; }
   .manage-meta { font-size: 11px; color: var(--sand); }
@@ -288,11 +342,20 @@
     flex-shrink: 0; cursor: grab; touch-action: none;
   }
   .drag-handle span { display: block; width: 14px; height: 2px; background: var(--sand); border-radius: 1px; }
+  /* Tastatur-Alternative zum Drag-Handle (der rein per Pointer-Events funktioniert) —
+     visuell dezent (kleine Pfeil-Buttons statt eines vollen manage-btn-Paars), damit
+     die Zeile nicht überladen wirkt, aber vollwertig fokussierbar/bedienbar. */
+  .move-buttons { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+  .move-btn {
+    font-family: inherit; font-size: 10px; line-height: 1; width: 20px; height: 16px;
+    border: 1px solid var(--line); border-radius: 3px; background: transparent; color: var(--ink); cursor: pointer;
+  }
+  .move-btn:disabled { opacity: 0.3; cursor: default; }
   .manage-btn {
     font-family: inherit; font-size: 11px; padding: 5px 9px; border-radius: 12px;
     border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
   }
-  .manage-btn--danger { color: var(--rust); border-color: rgba(162, 80, 58, 0.4); }
+  .manage-btn--danger { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.4); }
   .manage-new-btn {
     display: block; width: 100%; margin-top: 4px; padding: 10px; font-family: inherit; font-size: 13px;
     border: 1px dashed var(--line); border-radius: 4px; background: transparent; color: var(--moss); cursor: pointer;
@@ -315,7 +378,7 @@
   .stepper-row { display: flex; align-items: center; gap: 8px; }
   .stepper-row input[type="number"] {
     width: 60px; text-align: center; font-family: inherit; font-size: 14px; padding: 6px 4px;
-    border: 1px solid var(--line); border-radius: 3px; background: #fff; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   .stepper-btn {
     width: 30px; height: 30px; flex-shrink: 0; font-family: inherit; font-size: 16px; line-height: 1;
@@ -338,17 +401,17 @@
   .label-inputs { display: flex; flex-direction: column; gap: 6px; }
   .label-inputs input {
     font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
-    border-radius: 3px; background: #fff; color: var(--ink);
+    border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   .habit-form select {
     font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
-    border-radius: 3px; background: #fff; color: var(--ink);
+    border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   .checkbox-field { display: flex; align-items: center; gap: 7px; font-size: 13px; margin-bottom: 4px; }
   .checkbox-field input { margin: 0; }
   .recovery-key-confirm-row {
     border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; margin: 12px 0 14px;
-    background: rgba(75, 107, 79, 0.06);
+    background: rgba(var(--moss-rgb), 0.06);
   }
   .recovery-key-confirm-row input[type="checkbox"] { width: 17px; height: 17px; flex-shrink: 0; accent-color: var(--moss); }
   .habit-form-actions { display: flex; gap: 8px; margin-top: 14px; }
@@ -359,7 +422,7 @@
   }
   .recovery-key-code {
     font-family: monospace; font-size: 13px; line-height: 1.6; word-break: break-all;
-    background: #fff; border: 1px solid var(--line); border-radius: 3px; padding: 10px;
+    background: var(--input-bg); border: 1px solid var(--line); border-radius: 3px; padding: 10px;
     margin: 4px 0 14px;
   }
   /* Honeypot: für Menschen unsichtbar (nicht display:none, das erkennen manche Bots),
@@ -632,6 +695,34 @@ function scoreColor(score) {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
 
+// Zusätzlich zur Farbe (scoreColor) ein Streifenmuster, dessen Dichte/Deckkraft mit
+// dem Score steigt — macht die Bewertung auch für Rot-Grün-Farbenblinde ohne Farbe
+// erkennbar, nicht als Ersatz für die Farbe, sondern als Ergänzung. Bewusst diskrete
+// Stufen statt stufenloser Variation: bei 8-22px Zellgröße wäre ein kontinuierlicher
+// Verlauf visuelles Rauschen, diskrete Stufen sind als "Sprosse auf einer Leiter"
+// erkennbar unabhängig vom Farbton. coarse=true (Jahres-Ansicht, ~8px Zellen) nutzt
+// nur 3 statt 5 Stufen mit weiter auseinanderliegenden Streifen.
+function scorePatternStyle(score, coarse) {
+  if (score === null || score === undefined) return '';
+  const spacing = coarse ? [6, 4, 2] : [6, 5, 4, 3, 2];
+  const opacity = coarse ? [0.15, 0.25, 0.35] : [0, 0.12, 0.2, 0.28, 0.35];
+  const buckets = spacing.length;
+  const step = Math.min(buckets - 1, Math.floor(score * buckets));
+  if (opacity[step] === 0) return '';
+  return `background-image:repeating-linear-gradient(45deg, rgba(0,0,0,${opacity[step]}) 0, rgba(0,0,0,${opacity[step]}) 1px, transparent 1px, transparent ${spacing[step]}px);`;
+}
+
+// Beschreibung für Kalenderzellen (Woche/Monat/Jahr), die nur per Hintergrundfarbe
+// bewertet sind — macht dieselbe Information per Tastatur/Screenreader zugänglich.
+// habitName optional: Wochen-Grid-Zellen gehören zu einem konkreten Feld, Monats-/
+// Jahres-Zellen zeigen den Tages-Gesamtwert über alle Felder.
+function dayCellAriaLabel(date, score, habitName) {
+  const scoreText = score === null || score === undefined ? t('common.noData') : `${Math.round(score * 100)}%`;
+  return habitName
+    ? t('ariaLabel.dayCellForHabit', { name: habitName, date: formatDMY(date), score: scoreText })
+    : t('ariaLabel.dayCell', { date: formatDMY(date), score: scoreText });
+}
+
 // Verschiebt einen normalisierten Score (0-1) anhand der pro Feld einstellbaren
 // Ziel-Quote (goalThreshold, Standard 1 = 100%) für die FARBGEBUNG — z.B. bei
 // "Kraftsport gemacht" kann eine 50%-Quote schon als voll erreicht (Score 1) gelten.
@@ -734,6 +825,19 @@ const state = {
 // generische State-Handhabung angefasst werden.
 let currentDek = null;
 
+// Merkt sich einen CSS-Selektor für das Element, das ein Modal (Konto löschen/
+// Tutorial überspringen) geöffnet hat, damit der Fokus beim Schließen
+// (Abbrechen/Escape) dorthin zurückspringt. Bewusst ein Selektor statt einer
+// direkten Element-Referenz: render() ersetzt bei jedem Aufruf das komplette
+// innerHTML, jede zuvor gemerkte Node wäre beim Schließen längst verwaist —
+// der Selektor wird erst beim tatsächlichen Zurückspringen neu aufgelöst.
+let modalTriggerSelector = null;
+function restoreModalFocus() {
+  if (!modalTriggerSelector) return;
+  document.querySelector(modalTriggerSelector)?.focus();
+  modalTriggerSelector = null;
+}
+
 function activeHabits() {
   return state.habits.filter((h) => !h.archivedAt);
 }
@@ -787,6 +891,7 @@ const STRINGS = {
     'notice.saveFailed': 'Speichern fehlgeschlagen: ',
     'notice.createFailed': 'Anlegen fehlgeschlagen: ',
     'notice.actionFailed': 'Aktion fehlgeschlagen: ',
+    'notice.reorderFailed': 'Reihenfolge konnte nicht gespeichert werden: ',
     'notice.deleteFailed': 'Löschen fehlgeschlagen: ',
     'notice.invalidNumber': 'Das ist keine gültige Zahl.',
     'notice.recoveryKeySaveError': 'Neuer Recovery-Key konnte nicht gespeichert werden: ',
@@ -871,6 +976,11 @@ const STRINGS = {
     'ariaLabel.nextYear': 'Nächstes Jahr',
     'ariaLabel.reorder': 'Reihenfolge ändern',
     'ariaLabel.menu': 'Menü',
+    'ariaLabel.dayCell': '{date}, {score}',
+    'ariaLabel.dayCellForHabit': '{name}, {date}, {score}',
+    'ariaLabel.moveUp': 'Nach oben verschieben',
+    'ariaLabel.moveDown': 'Nach unten verschieben',
+    'common.noData': 'keine Daten',
     'groupInfo.avgOf': 'Ø aus {names} ({filled}/{total} heute erfasst)',
     'numberBox.last': 'zuletzt: {value} ({date})',
     'today.jumpToday': 'Zu heute springen',
@@ -883,6 +993,10 @@ const STRINGS = {
     'numberChart.meta': '{last} zuletzt · Ø {avg} · {count}×',
     'numberChart.tooFewValues': 'Noch zu wenige Werte für einen Verlauf.',
     'numberChart.noValues': 'Noch keine Werte.',
+    'numberChart.trend.up': 'steigend',
+    'numberChart.trend.down': 'fallend',
+    'numberChart.trend.flat': 'gleichbleibend',
+    'numberChart.summary': '{name}: {count} Einträge, zuletzt {last}, Durchschnitt {avg}, Spanne {min} bis {max}, Trend {trend}.',
     'habitForm.goalLabel': 'Ab wann als voll erreicht gilt (%)',
     'habitForm.goalExplain': 'Bei unter 100%: schon eine niedrigere Quote/Wert zählt farblich als voll erreicht (grün) – z. B. bei "Kraftsport gemacht" reichen vielleicht schon 3 von 7 Tagen die Woche als Ziel. Ändert nur die Farbe, nie die angezeigte Prozentzahl. Wirkt sich nicht auf „Heute" aus. Standard 100% = nur der Maximalwert zählt als voll erreicht.',
     'habitForm.valueType': 'Werte-Art',
@@ -960,6 +1074,10 @@ const STRINGS = {
     'push.enable': 'aktivieren',
     'push.enableProminent': 'Erinnerungen aktivieren',
     'menu.language': 'Sprache',
+    'theme.label': 'Darstellung',
+    'theme.system': 'System',
+    'theme.light': 'Hell',
+    'theme.dark': 'Dunkel',
     'menu.manageFields': 'Felder verwalten',
     'menu.exportData': 'Meine Daten exportieren',
     'menu.regenerateRecoveryKey': 'Recovery-Key neu erzeugen',
@@ -999,6 +1117,7 @@ const STRINGS = {
     'notice.saveFailed': 'Save failed: ',
     'notice.createFailed': 'Creating failed: ',
     'notice.actionFailed': 'Action failed: ',
+    'notice.reorderFailed': 'Order could not be saved: ',
     'notice.deleteFailed': 'Delete failed: ',
     'notice.invalidNumber': 'That is not a valid number.',
     'notice.recoveryKeySaveError': 'New recovery key could not be saved: ',
@@ -1083,6 +1202,11 @@ const STRINGS = {
     'ariaLabel.nextYear': 'Next year',
     'ariaLabel.reorder': 'Change order',
     'ariaLabel.menu': 'Menu',
+    'ariaLabel.dayCell': '{date}, {score}',
+    'ariaLabel.dayCellForHabit': '{name}, {date}, {score}',
+    'ariaLabel.moveUp': 'Move up',
+    'ariaLabel.moveDown': 'Move down',
+    'common.noData': 'no data',
     'groupInfo.avgOf': 'avg. of {names} ({filled}/{total} entered today)',
     'numberBox.last': 'last: {value} ({date})',
     'today.jumpToday': 'Jump to today',
@@ -1095,6 +1219,10 @@ const STRINGS = {
     'numberChart.meta': 'last: {last} · avg. {avg} · {count}×',
     'numberChart.tooFewValues': 'Not enough values yet for a chart.',
     'numberChart.noValues': 'No values yet.',
+    'numberChart.trend.up': 'rising',
+    'numberChart.trend.down': 'falling',
+    'numberChart.trend.flat': 'steady',
+    'numberChart.summary': '{name}: {count} entries, last {last}, average {avg}, range {min} to {max}, trend {trend}.',
     'habitForm.goalLabel': 'Counts as fully reached from (%)',
     'habitForm.goalExplain': 'Below 100%: even a lower ratio/value already counts as fully reached (green) in terms of color – e.g. for "did strength training", maybe 3 out of 7 days a week is already the goal. Only changes the color, never the displayed percentage. Has no effect on "Today". Default 100% = only the maximum value counts as fully reached.',
     'habitForm.valueType': 'Value type',
@@ -1172,6 +1300,10 @@ const STRINGS = {
     'push.enable': 'enable',
     'push.enableProminent': 'Enable reminders',
     'menu.language': 'Language',
+    'theme.label': 'Appearance',
+    'theme.system': 'System',
+    'theme.light': 'Light',
+    'theme.dark': 'Dark',
     'menu.manageFields': 'Manage fields',
     'menu.exportData': 'Export my data',
     'menu.regenerateRecoveryKey': 'Regenerate recovery key',
@@ -1234,6 +1366,40 @@ function detectInitialLocale() {
   if (missingInEn.length) console.error('[i18n] Keys fehlen in en:', missingInEn);
   if (missingInDe.length) console.error('[i18n] Keys fehlen in de:', missingInDe);
 })();
+
+// --- Dark Mode ---------------------------------------------------------
+// Folgt standardmäßig prefers-color-scheme (siehe @media-Regeln im <style>-Block).
+// Ein manueller Override (System/Hell/Dunkel) im Burger-Menü setzt zusätzlich
+// data-theme auf <html> und wird NICHT über user_settings synchronisiert
+// (anders als die Sprache) — bewusst geräte-lokal in localStorage, analog zum
+// bestehenden installHintDismissed-Flag, kein DB-Roundtrip nötig.
+const THEME_COLOR_BY_MODE = { light: '#eae7df', dark: '#1e1c17' };
+
+function getThemeOverride() {
+  try { return localStorage.getItem('themeOverride'); } catch { return null; } // 'light' | 'dark' | null (= System)
+}
+
+function systemPrefersDark() {
+  try { return window.matchMedia('(prefers-color-scheme: dark)').matches; } catch { return false; }
+}
+
+function syncThemeColorMeta(mode) {
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLOR_BY_MODE[mode]);
+}
+
+function applyTheme(override) {
+  if (override) document.documentElement.setAttribute('data-theme', override);
+  else document.documentElement.removeAttribute('data-theme');
+  syncThemeColorMeta(override || (systemPrefersDark() ? 'dark' : 'light'));
+}
+
+function setThemeOverride(value) {
+  try {
+    if (value) localStorage.setItem('themeOverride', value);
+    else localStorage.removeItem('themeOverride');
+  } catch { /* z.B. privater Modus — Override wirkt dann nur für die laufende Sitzung */ }
+  applyTheme(value);
+}
 
 // --- Datum/Zeit: locale-abhängige Formatierung -----------------------------
 // Ersetzt frühere feste WEEKDAYS/MONTHS-Arrays + manuelles DD.MM.YYYY-Bauen.
@@ -1338,6 +1504,19 @@ function clearableInputHtml(id, type, value, opts = {}) {
 // einmal), aber bei Bedarf griffbereit sind.
 function infoTip(text) {
   return `<details class="info-tip"><summary aria-label="${esc(t('ariaLabel.explain'))}">?</summary><p>${esc(text)}</p></details>`;
+}
+
+// Zentrale Stelle für state.notice → DOM: state.notice wird an vielen Stellen im
+// Code gesetzt, aber nur hier gerendert — role/aria-live sorgen dafür, dass
+// Screenreader neue Fehler-/Erfolgsmeldungen automatisch mitbekommen, ohne dass
+// der Nutzer erst zur Meldung navigieren muss. Fehler unterbrechen sofort
+// (assertive/alert), Erfolgsmeldungen kündigen sich nur höflich an (polite/status).
+function renderNotice() {
+  if (!state.notice) return '';
+  const isErr = state.notice.type !== 'ok';
+  return isErr
+    ? `<div class="notice" role="alert" aria-live="assertive">${esc(state.notice.text)}</div>`
+    : `<div class="notice notice--ok" role="status" aria-live="polite">${esc(state.notice.text)}</div>`;
 }
 
 // Zahlen-Eingabe mit +/- Buttons daneben, für kurze/eingeschränkte Wertebereiche
@@ -1781,6 +1960,26 @@ async function handleHabitArchive(defId, archive) {
   render();
 }
 
+// Persistiert eine neue Reihenfolge der (nicht-archivierten) Felder — newIds ist
+// die vollständige defId-Liste in der gewünschten neuen Reihenfolge. Gemeinsamer
+// Pfad für Drag-Reordering (Pointer-Events) UND die Tastatur-Alternative
+// (Hoch/Runter-Buttons in renderManage), damit beide exakt gleich persistieren.
+async function commitHabitOrder(newIds) {
+  const activeInOrder = newIds.map((id, i) => ({ ...state.habits.find((h) => h.defId === id), sortOrder: i + 1 }));
+  const others = state.habits.filter((h) => !newIds.includes(h.defId));
+  state.habits = [...activeInOrder, ...others];
+  render();
+
+  const results = await Promise.all(
+    activeInOrder.map((h) => supabase.from('habit_definitions').update({ sort_order: h.sortOrder }).eq('id', h.defId))
+  );
+  const failed = results.find((r) => r.error);
+  if (failed) {
+    state.notice = { type: 'error', text: t('notice.reorderFailed') + translateDbError(failed.error.message) };
+    render();
+  }
+}
+
 async function handleHabitDelete(defId) {
   const habit = state.habits.find((h) => h.defId === defId);
   const { error } = await supabase.from('habit_definitions').delete().eq('id', defId);
@@ -2107,7 +2306,7 @@ function renderAuth() {
       <h1>Logbuch</h1>
       <p class="sub">${title}</p>
       ${state.authError ? `<div class="notice">${esc(state.authError)}</div>` : ''}
-      ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+      ${renderNotice()}
       ${isForgot ? `<p class="habit-form-lock-note">${t('auth.forgotRecoveryNote')}</p>` : ''}
       <form id="auth-form">
         <div class="auth-field">
@@ -2305,7 +2504,7 @@ function renderRecoveryKeyDisplay() {
       <p class="sub">${t('recoveryDisplay.title')}</p>
       <p class="tutorial-text">${t('recoveryDisplay.explain')}</p>
       <div class="notice">${t('recoveryDisplay.warning')}</div>
-      ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+      ${renderNotice()}
       <p class="habit-form-lock-note">${t('recoveryDisplay.regenerateNote')}</p>
       <p class="recovery-key-code">${esc(formatted)}</p>
       <div class="habit-form-actions">
@@ -2498,7 +2697,7 @@ function renderWeek() {
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
-        ${scores.map((s, i) => `<div class="grid-cell" data-action="open-day" data-date="${formatKey(days[i])}" style="background:${scoreColor(applyGoal(h, s))}"></div>`).join('')}
+        ${scores.map((s, i) => `<div class="grid-cell" data-action="open-day" data-date="${formatKey(days[i])}" style="background:${scoreColor(applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(days[i], s, h.name))}"></div>`).join('')}
         <div class="grid-cell grid-cell--avg" style="background:${scoreColor(applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
     `;
@@ -2513,7 +2712,7 @@ function renderWeek() {
     <div class="grid-scroll">
       <div class="grid-row grid-row--header">
         <div class="grid-label"></div>
-        ${days.map((d) => `<div class="grid-col-header" data-action="open-day" data-date="${formatKey(d)}"><span>${weekdayShort(d)}</span><span class="grid-col-date">${d.getDate()}</span></div>`).join('')}
+        ${days.map((d) => `<div class="grid-col-header" data-action="open-day" data-date="${formatKey(d)}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(d, dayOverallScore(d)))}"><span>${weekdayShort(d)}</span><span class="grid-col-date">${d.getDate()}</span></div>`).join('')}
         <div class="grid-col-header grid-col-header--avg">Ø</div>
       </div>
       ${rows}
@@ -2552,7 +2751,7 @@ function renderMonth() {
       ${cells.map((d) => {
         if (!d) return `<div class="month-cell month-cell--empty"></div>`;
         const s = dayOverallScore(d);
-        return `<div class="month-cell" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(s)}"><span class="month-cell-num">${d.getDate()}</span></div>`;
+        return `<div class="month-cell" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(s)};${scorePatternStyle(s)}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(d, s))}"><span class="month-cell-num">${d.getDate()}</span></div>`;
       }).join('')}
     </div>
     <div class="month-stats">${renderStatsRows(monthStats)}</div>
@@ -2570,7 +2769,7 @@ function renderYear() {
       <div class="year-month">
         <div class="year-month-label">${monthShort(new Date(year, mIdx, 1))}</div>
         <div class="year-month-grid">
-          ${cells.map((d) => `<div class="year-day-cell" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(dayOverallScore(d))}"></div>`).join('')}
+          ${cells.map((d) => { const s = dayOverallScore(d); return `<div class="year-day-cell" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(s)};${scorePatternStyle(s, true)}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(d, s))}"></div>`; }).join('')}
         </div>
       </div>
     `;
@@ -2626,6 +2825,19 @@ function renderStatsRows(stats) {
 // Datums-Keys — bewusst ohne Chart-Library, passend zum Build-Step-freien Ansatz.
 function round1(n) { return Math.round(n * 10) / 10; }
 
+// Durchschnitt erste vs. zweite Hälfte der Reihe statt reinem Endpunkt-Vergleich —
+// robuster gegen einzelne Ausreißer am Rand. Unterschiede unter 5% der Spannweite
+// gelten als Rauschen ("gleichbleibend"), nicht als echter Trend.
+function trendDirection(series, range) {
+  const mid = Math.floor(series.length / 2);
+  const firstAvg = series.slice(0, mid).reduce((a, p) => a + p.value, 0) / mid;
+  const secondHalf = series.slice(mid);
+  const secondAvg = secondHalf.reduce((a, p) => a + p.value, 0) / secondHalf.length;
+  const delta = secondAvg - firstAvg;
+  if (Math.abs(delta) < range * 0.05) return 'flat';
+  return delta > 0 ? 'up' : 'down';
+}
+
 function renderNumberChart(habit, dateKeys) {
   const stats = numberFieldStats(habit.id, dateKeys);
   const unitSuffix = habit.unit ? ` ${esc(habit.unit)}` : '';
@@ -2648,13 +2860,24 @@ function renderNumberChart(habit, dateKeys) {
   });
   const pointsAttr = points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
   const dots = points.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.6" style="fill:var(--ink)" />`).join('');
+  const trend = trendDirection(stats.series, range);
+  const summary = t('numberChart.summary', {
+    name: habit.name,
+    count: stats.count,
+    last: stats.last + unitSuffix,
+    avg: round1(stats.avg) + unitSuffix,
+    min: stats.min + unitSuffix,
+    max: stats.max + unitSuffix,
+    trend: t(`numberChart.trend.${trend}`),
+  });
   return `
     <div class="number-chart-box">
       ${head}
-      <svg viewBox="0 0 ${w} ${h}" class="number-chart-svg" preserveAspectRatio="none">
+      <svg viewBox="0 0 ${w} ${h}" class="number-chart-svg" preserveAspectRatio="none" aria-hidden="true">
         <polyline points="${pointsAttr}" fill="none" style="stroke:var(--moss);stroke-width:1.5" />
         ${dots}
       </svg>
+      <p class="visually-hidden">${summary}</p>
     </div>
   `;
 }
@@ -2826,7 +3049,7 @@ function renderManage() {
   const activeGroups = state.habits.filter((h) => !h.archivedAt && h.kind === 'group');
   const archivedGroups = state.habits.filter((h) => h.archivedAt && h.kind === 'group');
 
-  const row = (h) => {
+  const row = (h, idx, list) => {
     const hasData = habitHasData(h.id);
     const confirmingDelete = state.habitDeleteConfirm === h.defId;
     // Löschen mit vorhandenen historischen Einträgen bleibt möglich, aber erst nach
@@ -2843,7 +3066,13 @@ function renderManage() {
         : `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete-arm" data-id="${h.defId}">${t('common.delete')}</button>`;
     return `
       <div class="manage-row${h.archivedAt ? ' manage-row--archived' : ''}${confirmingDelete ? ' manage-row--confirm-delete' : ''}" data-def-id="${h.defId}">
-        ${!h.archivedAt ? `<span class="drag-handle" data-action="drag-handle" aria-label="${esc(t('ariaLabel.reorder'))}"><span></span><span></span></span>` : ''}
+        ${!h.archivedAt ? `
+          <span class="drag-handle" data-action="drag-handle" aria-label="${esc(t('ariaLabel.reorder'))}"><span></span><span></span></span>
+          <span class="move-buttons">
+            <button type="button" class="move-btn" data-action="habit-move" data-id="${h.defId}" data-dir="up" ${idx === 0 ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.moveUp'))}">↑</button>
+            <button type="button" class="move-btn" data-action="habit-move" data-id="${h.defId}" data-dir="down" ${idx === list.length - 1 ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.moveDown'))}">↓</button>
+          </span>
+        ` : ''}
         <div class="manage-info">
           <span class="manage-name">${esc(h.name)}</span>
           ${confirmingDelete
@@ -2909,8 +3138,8 @@ async function saveOnboardingCompleted() {
 function renderTutorialSkipConfirm() {
   return `
     <div class="modal-overlay">
-      <div class="modal-box">
-        <h2>${t('tutorial.skipConfirm.title')}</h2>
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="tutorial-skip-confirm-title">
+        <h2 id="tutorial-skip-confirm-title">${t('tutorial.skipConfirm.title')}</h2>
         <p>${t('tutorial.skipConfirm.body')}</p>
         <div class="habit-form-actions">
           <button type="button" class="manage-btn manage-btn--danger" data-action="tutorial-skip-confirm">${t('tutorial.skipConfirm.confirmButton')}</button>
@@ -2936,7 +3165,7 @@ function renderTutorialStep1() {
     <div class="auth-box">
       <h1>${t('tutorial.step1.title')}</h1>
       <p class="sub">${t('tutorial.stepLabel', { step: 1 })}</p>
-      ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+      ${renderNotice()}
       <p class="tutorial-text">${t('tutorial.step1.body')}</p>
       ${renderPushRow(true)}
       <div class="auth-field">
@@ -2955,7 +3184,7 @@ function renderTutorialStep2Intro() {
     <div class="auth-box">
       <h1>${t('tutorial.step2Intro.title')}</h1>
       <p class="sub">${t('tutorial.stepLabel', { step: 2 })}</p>
-      ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+      ${renderNotice()}
       <p class="tutorial-text">${t('tutorial.step2Intro.body')}</p>
       <button type="button" class="auth-submit" data-action="tutorial-ready">${t('tutorial.step2Intro.readyButton')}</button>
       <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${t('tutorial.skip')}</button>
@@ -2967,7 +3196,7 @@ function renderTutorialStep2Intro() {
 function renderTutorialStep2Form() {
   return `
     <p class="tutorial-step-label">${t('tutorial.stepLabel', { step: 2 })}</p>
-    ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+    ${renderNotice()}
     ${renderHabitForm()}
   `;
 }
@@ -2977,7 +3206,7 @@ function renderTutorialStep3() {
     <div class="auth-box">
       <h1>${t('tutorial.step3.title')}</h1>
       <p class="sub">${t('tutorial.stepLabel', { step: 3 })}</p>
-      ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
+      ${renderNotice()}
       <p class="tutorial-text">${t('tutorial.step3.body')}</p>
       <button type="button" class="auth-submit" data-action="tutorial-add-more">${t('tutorial.step3.addMoreButton')}</button>
       <button type="button" class="auth-toggle" data-action="tutorial-finish">${t('common.finish')}</button>
@@ -3044,6 +3273,14 @@ function renderMenu() {
           <option value="en" ${currentLocale === 'en' ? 'selected' : ''}>English</option>
         </select>
       </div>
+      <div class="menu-row">
+        <label id="menu-theme-label">${t('theme.label')}</label>
+        <div class="pill-group" role="group" aria-labelledby="menu-theme-label">
+          <button type="button" class="pill-toggle${!getThemeOverride() ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="" aria-pressed="${!getThemeOverride()}">${t('theme.system')}</button>
+          <button type="button" class="pill-toggle${getThemeOverride() === 'light' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="light" aria-pressed="${getThemeOverride() === 'light'}">${t('theme.light')}</button>
+          <button type="button" class="pill-toggle${getThemeOverride() === 'dark' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="dark" aria-pressed="${getThemeOverride() === 'dark'}">${t('theme.dark')}</button>
+        </div>
+      </div>
       <button type="button" class="menu-item-btn" data-action="open-manage">${t('menu.manageFields')}</button>
       <button type="button" class="menu-item-btn" data-action="export-data">${t('menu.exportData')}</button>
       <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key">${t('menu.regenerateRecoveryKey')}</button>
@@ -3057,8 +3294,8 @@ function renderDeleteConfirm() {
   const busy = state.deleteConfirm.busy;
   return `
     <div class="modal-overlay">
-      <div class="modal-box">
-        <h2>${t('deleteAccount.title')}</h2>
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
+        <h2 id="delete-confirm-title">${t('deleteAccount.title')}</h2>
         <p>${t('deleteAccount.warning')}</p>
         <div class="auth-field">
           <label for="delete-confirm-input">${t('deleteAccount.typeToConfirm', { word: t('deleteAccount.confirmWord') })}</label>
@@ -3074,7 +3311,7 @@ function renderDeleteConfirm() {
 }
 
 function renderApp() {
-  const noticeHtml = state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : '';
+  const noticeHtml = renderNotice();
   const body = state.loading ? `<div class="loading">${t('common.loading')}</div>` :
     state.view === 'today' ? renderToday() :
     state.view === 'week' ? renderWeek() :
@@ -3104,14 +3341,26 @@ function renderApp() {
   `;
 }
 
+// Fokussiert nach einem Re-Render das erste fokussierbare Element im gerade
+// offenen Modal (falls eins offen ist) — zentral hier statt an jeder
+// Öffnungsstelle einzeln, da render() das DOM immer komplett neu aufbaut und
+// damit jeden zuvor gesetzten Fokus ohnehin verwirft.
+function focusModalIfOpen() {
+  const modalBox = document.querySelector('.modal-box');
+  if (!modalBox) return;
+  const focusable = modalBox.querySelector('input, button, select, textarea, [tabindex]:not([tabindex="-1"])');
+  focusable?.focus();
+}
+
 function render() {
-  if (state.passwordRecovery) { renderPasswordRecovery(); return; }
-  if (!state.session) { renderAuth(); return; }
-  if (state.recoveryKeyToShow) { renderRecoveryKeyDisplay(); return; }
-  if (state.encryptionSetupInProgress) { app.innerHTML = `<div class="loading">${t('common.encryptingData')}</div>`; return; }
-  if (!currentDek) { renderUnlockPrompt(); return; }
-  if (!state.loading && !state.userSettings.onboardingCompleted) { renderTutorial(); return; }
-  renderApp();
+  if (state.passwordRecovery) { renderPasswordRecovery(); }
+  else if (!state.session) { renderAuth(); }
+  else if (state.recoveryKeyToShow) { renderRecoveryKeyDisplay(); }
+  else if (state.encryptionSetupInProgress) { app.innerHTML = `<div class="loading">${t('common.encryptingData')}</div>`; }
+  else if (!currentDek) { renderUnlockPrompt(); }
+  else if (!state.loading && !state.userSettings.onboardingCompleted) { renderTutorial(); }
+  else { renderApp(); }
+  focusModalIfOpen();
 }
 
 // --- Event-Delegation ----------------------------------------------------
@@ -3182,6 +3431,9 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'toggle-menu') {
     state.menuOpen = !state.menuOpen;
     render();
+  } else if (action === 'theme-set') {
+    setThemeOverride(el.dataset.theme || null);
+    render();
   } else if (action === 'open-manage') {
     state.view = 'manage';
     state.menuOpen = false;
@@ -3189,12 +3441,16 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'export-data') {
     await handleExportData();
   } else if (action === 'open-delete-confirm') {
+    // Der Menü-Button (☰) bleibt als einziges beteiligtes Element über das
+    // Zuklappen des Menüs hinaus im Header bestehen — passendstes Rücksprungziel.
+    modalTriggerSelector = '.menu-btn';
     state.deleteConfirm = { busy: false };
     state.menuOpen = false;
     render();
   } else if (action === 'delete-confirm-cancel') {
     state.deleteConfirm = null;
     render();
+    restoreModalFocus();
   } else if (action === 'delete-confirm-submit') {
     await handleDeleteAccount();
   } else if (action === 'set-view') {
@@ -3287,6 +3543,21 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'habit-delete') {
     state.habitDeleteConfirm = null;
     await handleHabitDelete(el.dataset.id);
+  } else if (action === 'habit-move') {
+    // Tastatur-/Klick-Alternative zum Pointer-Drag — liest wie der Drag-Handler die
+    // aktuellen Geschwister-Zeilen direkt aus dem DOM (derselbe Container-Scope,
+    // row.parentElement.children), damit beide Wege exakt dieselbe Reihenfolge
+    // berechnen und über commitHabitOrder() denselben Persistenz-Pfad nutzen.
+    const rowEl = el.closest('.manage-row');
+    const rows = [...rowEl.parentElement.children];
+    const fromIndex = rows.indexOf(rowEl);
+    const toIndex = el.dataset.dir === 'up' ? fromIndex - 1 : fromIndex + 1;
+    if (toIndex < 0 || toIndex >= rows.length) return;
+    const reordered = [...rows];
+    const [movedEl] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, movedEl);
+    const newIds = reordered.map((r) => r.dataset.defId);
+    await commitHabitOrder(newIds);
   } else if (action === 'tutorial-install-ack') {
     state.tutorialInstallAck = true;
     render();
@@ -3303,11 +3574,13 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'tutorial-finish') {
     await saveOnboardingCompleted();
   } else if (action === 'tutorial-skip-arm') {
+    modalTriggerSelector = '[data-action="tutorial-skip-arm"]';
     state.tutorialSkipConfirm = true;
     render();
   } else if (action === 'tutorial-skip-cancel') {
     state.tutorialSkipConfirm = false;
     render();
+    restoreModalFocus();
   } else if (action === 'tutorial-skip-confirm') {
     await saveOnboardingCompleted();
   } else if (action === 'clear-input') {
@@ -3414,6 +3687,42 @@ app.addEventListener('keydown', (e) => {
   if (e.target && e.target.classList?.contains('number-input') && e.key === 'Enter') {
     e.preventDefault();
     handleSaveNumber(formatKey(state.currentDate), e.target.dataset.habit, e.target.value);
+    return;
+  }
+  const modalBox = document.querySelector('.modal-box');
+  if (modalBox) {
+    if (e.key === 'Escape') {
+      state.deleteConfirm = null;
+      state.tutorialSkipConfirm = false;
+      render();
+      restoreModalFocus();
+      return;
+    }
+    // Fokus-Trap: Tab/Shift+Tab bleibt innerhalb des offenen Modals, statt in die
+    // dahinterliegende (verdeckte, aber technisch noch im DOM befindliche) Seite
+    // weiterzuwandern.
+    if (e.key === 'Tab') {
+      const focusable = [...modalBox.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])')]
+        .filter((el) => !el.disabled && el.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+    return;
+  }
+  // Generalisierte Tastatur-Aktivierung für per data-action klickbare, aber nicht
+  // nativ fokussierbare Elemente (v.a. die Kalenderzellen, die tabindex="0" bekommen
+  // haben) — löst denselben echten Klick aus, den die Maus auch auslösen würde, statt
+  // die ~60 bestehenden Klick-Aktionen für Tastatur-Nutzung zu duplizieren. Auf
+  // tabindex="0" beschränkt, damit z.B. Enter in einem normalen Input (das zufällig in
+  // einem [data-action]-Vorfahren sitzt) nicht versehentlich mit-ausgelöst wird.
+  if (e.key === 'Enter' || e.key === ' ') {
+    const el = e.target.closest('[data-action][tabindex="0"]');
+    if (el) {
+      e.preventDefault();
+      el.click();
+    }
   }
 });
 
@@ -3539,20 +3848,7 @@ app.addEventListener('pointerup', async (e) => {
   const [movedEl] = reordered.splice(fromIndex, 1);
   reordered.splice(toIndex, 0, movedEl);
   const newIds = reordered.map((r) => r.dataset.defId);
-
-  const activeInOrder = newIds.map((id, i) => ({ ...state.habits.find((h) => h.defId === id), sortOrder: i + 1 }));
-  const others = state.habits.filter((h) => !newIds.includes(h.defId));
-  state.habits = [...activeInOrder, ...others];
-  render();
-
-  const results = await Promise.all(
-    activeInOrder.map((h) => supabase.from('habit_definitions').update({ sort_order: h.sortOrder }).eq('id', h.defId))
-  );
-  const failed = results.find((r) => r.error);
-  if (failed) {
-    state.notice = { type: 'error', text: 'Reihenfolge konnte nicht gespeichert werden: ' + translateDbError(failed.error.message) };
-    render();
-  }
+  await commitHabitOrder(newIds);
 });
 
 // --- Auth-Status & Start ---------------------------------------------------
@@ -3617,6 +3913,12 @@ window.addEventListener('beforeunload', (e) => {
 
 resetIOSZoomOnStandaloneStart();
 applyLocale(detectInitialLocale());
+applyTheme(getThemeOverride());
+try {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (!getThemeOverride()) applyTheme(null); // nur relevant, wenn "System" aktiv ist
+  });
+} catch { /* z.B. sehr alter Browser ohne addEventListener auf MediaQueryList */ }
 
 const { data: { session } } = await supabase.auth.getSession();
 state.session = session;
