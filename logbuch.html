@@ -962,6 +962,7 @@ const STRINGS = {
     'recoveryDisplay.download': 'Als Datei herunterladen',
     'recoveryDisplay.confirmCheckbox': 'Ich habe den Code sicher gespeichert.',
     'common.next': 'Weiter',
+    'common.back': 'Zurück',
     'common.logout': 'Abmelden',
     'unlock.title': 'Entsperren',
     'unlock.explain': 'Neues Gerät, Browserdaten gelöscht oder gerade per E-Mail-Bestätigungslink angemeldet — bitte dein Passwort erneut eingeben, um deine Einträge zu entschlüsseln (bzw. bei einem ganz neuen Konto die Verschlüsselung einzurichten).',
@@ -1190,6 +1191,7 @@ const STRINGS = {
     'recoveryDisplay.download': 'Download as file',
     'recoveryDisplay.confirmCheckbox': 'I have saved the code securely.',
     'common.next': 'Next',
+    'common.back': 'Back',
     'common.logout': 'Sign out',
     'unlock.title': 'Unlock',
     'unlock.explain': 'New device, browser data cleared, or just signed in via an email confirmation link — please re-enter your password to decrypt your entries (or, for a brand-new account, to set up encryption).',
@@ -3226,6 +3228,7 @@ function renderTutorialStep2Intro() {
       ${renderNotice()}
       <p class="tutorial-text">${t('tutorial.step2Intro.body')}</p>
       <button type="button" class="auth-submit" data-action="tutorial-ready">${t('tutorial.step2Intro.readyButton')}</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-back">${t('common.back')}</button>
       <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${t('tutorial.skip')}</button>
     </div>
     ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
@@ -3248,6 +3251,7 @@ function renderTutorialStep3() {
       ${renderNotice()}
       <p class="tutorial-text">${t('tutorial.step3.body')}</p>
       <button type="button" class="auth-submit" data-action="tutorial-add-more">${t('tutorial.step3.addMoreButton')}</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-back">${t('common.back')}</button>
       <button type="button" class="auth-toggle" data-action="tutorial-finish">${t('common.finish')}</button>
     </div>
   `;
@@ -3609,6 +3613,15 @@ app.addEventListener('click', async (e) => {
     render();
   } else if (action === 'tutorial-next') {
     state.tutorialStep = 2;
+    render();
+  } else if (action === 'tutorial-back') {
+    // Gibt neuen Nutzern Vertrauen ("kann ich aus Versehen zu weit geklickt haben?"),
+    // obwohl technisch nichts verloren geht — jede Einstellung lässt sich später über
+    // Menü/Formular erneut ändern. state.habitForm wird mit geleert, falls Schritt 3
+    // gerade zu Schritt 2 zurückspringt, damit dort wieder der Zwischenschritt statt
+    // eines offenen Formulars erscheint.
+    state.tutorialStep = Math.max(1, state.tutorialStep - 1);
+    state.habitForm = null;
     render();
   } else if (action === 'tutorial-ready') {
     state.habitForm = defaultHabitForm();
