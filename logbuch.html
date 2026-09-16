@@ -342,14 +342,17 @@
     flex-shrink: 0; cursor: grab; touch-action: none;
   }
   .drag-handle span { display: block; width: 14px; height: 2px; background: var(--sand); border-radius: 1px; }
-  /* Tastatur-Alternative zum Drag-Handle (der rein per Pointer-Events funktioniert) —
-     visuell dezent (kleine Pfeil-Buttons statt eines vollen manage-btn-Paars), damit
-     die Zeile nicht überladen wirkt, aber vollwertig fokussierbar/bedienbar. */
-  .move-buttons { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+  /* Tastatur-/Tipp-Alternative zum Drag-Handle (der rein per Pointer-Events
+     funktioniert) — sichtbar kompakt gehalten, aber mit spürbarem Abstand
+     zueinander und einem unsichtbar über den sichtbaren Rand hinausragenden
+     Treffer-Bereich (::after), damit auch ungenaues Antippen zuverlässig den
+     richtigen der beiden Buttons trifft statt zu "verzugestopft" zu wirken. */
+  .move-buttons { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
   .move-btn {
-    font-family: inherit; font-size: 10px; line-height: 1; width: 20px; height: 16px;
-    border: 1px solid var(--line); border-radius: 3px; background: transparent; color: var(--ink); cursor: pointer;
+    position: relative; font-family: inherit; font-size: 11px; line-height: 1; width: 26px; height: 22px;
+    border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--ink); cursor: pointer;
   }
+  .move-btn::after { content: ''; position: absolute; inset: -6px; }
   .move-btn:disabled { opacity: 0.3; cursor: default; }
   .manage-btn {
     font-family: inherit; font-size: 11px; padding: 5px 9px; border-radius: 12px;
@@ -2136,8 +2139,19 @@ function installStepsText() {
   if (/Android/.test(navigator.userAgent)) return t('installSteps.android');
   return t('installSteps.other');
 }
+function isMobileDevice() {
+  return isIOSDevice() || /Android/.test(navigator.userAgent);
+}
+// Der dauerhafte In-App-Hinweis lohnt sich nur auf Mobilgeräten: auf iOS ist die
+// Installation zwingend für Push (siehe oben), auf Android zumindest ein spürbares
+// Plus. Auf Desktop funktioniert Push schon im normalen Browser-Tab genauso
+// zuverlässig — "installieren" brächte dort nur kosmetische Vorteile (eigenes
+// Fenster), das würde der bisherige Text aber fälschlich als Zuverlässigkeits-Vorteil
+// verkaufen. Statt den Text zu verwässern, blendet der Hinweis auf Desktop komplett
+// aus (das Tutorial-Pendant, renderTutorialInstallGate, bleibt unverändert – dort hat
+// sich der Nutzer schon bewusst fürs Einrichten entschieden).
 function renderInstallHint() {
-  if (isStandaloneDisplay() || isInstallHintDismissed()) return '';
+  if (isStandaloneDisplay() || isInstallHintDismissed() || !isMobileDevice()) return '';
   return `
     <div class="install-hint">
       <span>${esc(installHintText())}</span>
