@@ -274,7 +274,7 @@ einzelnes Feld hervorgehoben werden soll (z.B. Gewicht).
 
 **15-Minuten-Raster, DST-sicher ohne manuelles Nachjustieren**: `pg_cron` kennt keine
 Zeitzonen mit Sommerzeit-Umstellung, läuft nur in UTC. Die Function läuft deshalb
-**alle 15 Minuten** (`*/15 * * * *`, siehe `supabase-setup.sql`) und bestimmt sich
+**alle 15 Minuten** (`*/15 * * * *`, siehe `supabase/migrations/`) und bestimmt sich
 selbst per `Intl.DateTimeFormat` mit `timeZone: 'Europe/Berlin'`, welche Berliner
 Minute seit Mitternacht gerade ist – das deckt beliebige `reminder_minute`-Werte
 automatisch ab, ganz ohne feste UTC-Zeitpunkte-Liste. Der Berlin-UTC-Offset ist immer
@@ -407,17 +407,33 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
   Weg für jede*n, die Function beliebig oft zu triggern (sie verarbeitet dabei *immer
   alle* Nutzer). Die Function vergleicht den Header `x-cron-secret` mit `CRON_SECRET`
   und lehnt sonst mit 401 ab; nur der Cron-Job kennt den Wert (liest ihn aus dem Vault,
-  siehe `supabase-setup.sql`). Niemals im Repo, wie die anderen privaten Secrets.
+  siehe "Vault-Secrets" unten). Niemals im Repo, wie die anderen privaten Secrets.
+- **Vault-Secrets** (Supabase Vault, nicht Teil der Migrationen – Vault-Einträge sind
+  Daten, kein Schema, werden von `supabase db push` also nicht mit angelegt): der
+  Cron-Job (siehe unten) liest zur Laufzeit drei Einträge aus `vault.decrypted_secrets`
+  – `project_url` (die Projekt-URL), `publishable_key` (identisch mit
+  `SUPABASE_ANON_KEY` oben) und `cron_secret` (identisch mit dem Function Secret
+  `CRON_SECRET` oben). Bei einem Fresh-Setup einmalig im SQL Editor anzulegen:
+  ```sql
+  select vault.create_secret('<project-url>', 'project_url');
+  select vault.create_secret('<publishable-key>', 'publishable_key');
+  select vault.create_secret('<frisch generierter zufälliger Wert>', 'cron_secret');
+  ```
+  `cron_secret` muss exakt dem Wert entsprechen, der auch als Function Secret
+  `CRON_SECRET` gesetzt wird (`supabase secrets set CRON_SECRET=<wert>`).
 
 ## Deployment-Schritte (Referenz, siehe auch Anleitung im Chat-Verlauf)
 
 1. `logbuch.html` + `sw.js` → GitHub Pages (Root-Verzeichnis).
 2. `supabase functions deploy send-notifications` und `supabase functions deploy
    delete-account` (Code liegt/soll liegen unter `supabase/functions/<name>/index.ts`).
-3. `supabase-setup.sql` im Supabase SQL Editor ausführen (Tabellen, RLS, Vault-Secrets,
-   ein Cron-Job alle 15 Minuten). **Nicht automatisiert über Migrationen** – bislang manuell
-   im Dashboard ausgeführt. Wäre ein sinnvoller nächster Schritt, das in
-   `supabase/migrations/` zu überführen, falls das Projekt wächst.
+3. Schema-Änderungen laufen seit 2026-09-16 über **Supabase-Migrationen**
+   (`supabase/migrations/`) statt manuell per SQL-Editor-Copy-Paste. Lokaler Workflow
+   braucht Docker Desktop (startet eine lokale Schatten-Datenbank zum Abgleich):
+   Änderung lokal als neue Migrationsdatei anlegen (`supabase migration new <name>`),
+   dann `supabase db push` gegen das Live-Projekt. Bei Dashboard-Änderungen am Schema
+   (sollte die Ausnahme sein) danach `supabase db pull`, um die Migrationshistorie
+   wieder abzugleichen. Vault-Secrets sind davon ausgenommen, siehe oben.
 4. `supabase/config.toml` (seit 2026-09-15 im Repo, via `supabase config pull`) spiegelt
    Auth-/API-/DB-Projekteinstellungen (u.a. das Custom-SMTP-Setup, siehe oben) – rein
    dokumentarisch, kein automatisierter `config push` im normalen Ablauf. Bei
@@ -432,4 +448,4 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
 
 ## Noch nicht gebaut (bekannte TODOs, kein Zeitdruck)
 
-- SQL-Setup in Supabase-Migrationen überführen statt manuell im Dashboard auszuführen.
+(aktuell leer)
