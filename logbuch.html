@@ -3214,6 +3214,7 @@ function renderTutorialStep1() {
         ${reminderTimeInputHtml('tutorial-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', state.pushStatus !== 'on')}
       </div>
       <button type="button" class="auth-submit" data-action="tutorial-next">${t('common.next')}</button>
+      ${!isStandaloneDisplay() ? `<button type="button" class="auth-toggle" data-action="tutorial-back">${t('common.back')}</button>` : ''}
       <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${t('tutorial.skip')}</button>
     </div>
     ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
@@ -3619,9 +3620,16 @@ app.addEventListener('click', async (e) => {
     // obwohl technisch nichts verloren geht — jede Einstellung lässt sich später über
     // Menü/Formular erneut ändern. state.habitForm wird mit geleert, falls Schritt 3
     // gerade zu Schritt 2 zurückspringt, damit dort wieder der Zwischenschritt statt
-    // eines offenen Formulars erscheint.
-    state.tutorialStep = Math.max(1, state.tutorialStep - 1);
-    state.habitForm = null;
+    // eines offenen Formulars erscheint. Von Schritt 1 aus geht's zurück zum
+    // Install-Hinweis davor (nicht Teil der Schritt-Zählung, siehe renderTutorial) —
+    // der Button dafür wird nur gezeigt, wenn man diese Seite überhaupt gesehen haben
+    // kann (nicht standalone), siehe renderTutorialStep1.
+    if (state.tutorialStep === 1) {
+      state.tutorialInstallAck = false;
+    } else {
+      state.tutorialStep -= 1;
+      state.habitForm = null;
+    }
     render();
   } else if (action === 'tutorial-ready') {
     state.habitForm = defaultHabitForm();
