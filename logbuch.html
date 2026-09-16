@@ -2716,7 +2716,7 @@ function renderWeek() {
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
-        ${scores.map((s, i) => `<div class="grid-cell" data-action="open-day" data-date="${formatKey(days[i])}" style="background:${scoreColor(applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(days[i], s, h.name))}"></div>`).join('')}
+        ${scores.map((s, i) => `<div class="grid-cell" data-action="open-day" data-date="${formatKey(days[i])}" style="background:${scoreColor(applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
         <div class="grid-cell grid-cell--avg" style="background:${scoreColor(applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
     `;
