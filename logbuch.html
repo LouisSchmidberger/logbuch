@@ -2374,10 +2374,46 @@ function renderManage() {
 
 // --- Onboarding-Tutorial für neue Accounts ----------------------------------
 // state.userSettings.onboardingCompleted kommt aus der DB (Default false bei neuen
-// Accounts, siehe supabase-setup.sql) und steuert in render(), ob statt der normalen
+// Accounts, siehe supabase/migrations/) und steuert in render(), ob statt der normalen
 // App dieses Tutorial gezeigt wird. state.tutorialStep (1/2/3) lebt nur im Speicher,
 // kein Reload-Resume nötig — dafür verhindert die beforeunload-Warnung in Schritt 2
 // ein versehentliches Verlassen mitten im geführten Feld-Anlegen.
+//
+// Alle Tutorial-Texte zentral hier statt verteilt in den render*-Funktionen unten,
+// damit Textänderungen an einer Stelle passieren (immer noch ein Code-Deploy nötig,
+// aber nicht mehr Suchen in Template-Strings).
+const TUTORIAL_TEXTS = {
+  installGate: {
+    title: 'Bevor es losgeht',
+    bodyContinuation: 'Mach das am besten gleich jetzt: installiere Logbuch auf deinem Home-/Startbildschirm und öffne es danach über das neue Symbol – diese Seite hier brauchst du dann nicht mehr, es geht automatisch mit dem Tutorial weiter. Falls du dich dort nochmal kurz anmelden musst: einfach mit denselben Zugangsdaten wie gerade eben.',
+    browserFallbackButton: 'Stattdessen im Browser fortfahren (nicht empfohlen)',
+  },
+  skipConfirm: {
+    title: 'Tutorial überspringen?',
+    body: 'Du kannst jederzeit später eigene Felder über „Felder verwalten" im Menü anlegen.',
+    confirmButton: 'Ja, überspringen',
+    cancelButton: 'Abbrechen',
+  },
+  step1: {
+    title: 'Willkommen',
+    body: 'Logbuch lebt davon, dass du täglich ein paar Werte einträgst – je regelmäßiger, desto aussagekräftiger die Auswertung. Push-Erinnerungen helfen dir, das nicht zu vergessen – tippe dafür unten auf „Erinnerungen aktivieren" (nicht einfach nur „Weiter"):',
+    nextButton: 'Weiter',
+    skipButton: 'Tutorial überspringen',
+  },
+  step2Intro: {
+    title: 'Dein erstes Feld',
+    body: 'Überlege dir einen Wert, den du ab jetzt beobachten willst – zum Beispiel eine <strong>Skala</strong> (Stimmung, Schlafqualität) oder ein <strong>freier Zahlenwert</strong> (Gewicht, Schritte). Wenn du unsicher bist: fang einfach mit einem an, du kannst später jederzeit weitere Felder anlegen oder bestehende ändern.',
+    readyButton: 'Ich hab mir einen Wert überlegt',
+    skipButton: 'Tutorial überspringen',
+  },
+  step3: {
+    title: 'Gut gemacht!',
+    body: 'Dein erstes Feld ist angelegt. Du kannst optional noch 2–4 weitere ergänzen – wer sich unsicher fühlt, fängt lieber mit wenigen an und erweitert später jederzeit über „Felder verwalten" im Menü.',
+    addMoreButton: 'Weiteres Feld anlegen',
+    finishButton: 'Fertig',
+  },
+};
+
 async function saveOnboardingCompleted() {
   state.userSettings = { ...state.userSettings, onboardingCompleted: true };
   state.tutorialStep = null;
@@ -2392,14 +2428,15 @@ async function saveOnboardingCompleted() {
 }
 
 function renderTutorialSkipConfirm() {
+  const t = TUTORIAL_TEXTS.skipConfirm;
   return `
     <div class="modal-overlay">
       <div class="modal-box">
-        <h2>Tutorial überspringen?</h2>
-        <p>Du kannst jederzeit später eigene Felder über „Felder verwalten" im Menü anlegen.</p>
+        <h2>${esc(t.title)}</h2>
+        <p>${esc(t.body)}</p>
         <div class="habit-form-actions">
-          <button type="button" class="manage-btn manage-btn--danger" data-action="tutorial-skip-confirm">Ja, überspringen</button>
-          <button type="button" class="habit-form-cancel" data-action="tutorial-skip-cancel">Abbrechen</button>
+          <button type="button" class="manage-btn manage-btn--danger" data-action="tutorial-skip-confirm">${esc(t.confirmButton)}</button>
+          <button type="button" class="habit-form-cancel" data-action="tutorial-skip-cancel">${esc(t.cancelButton)}</button>
         </div>
       </div>
     </div>
@@ -2407,43 +2444,46 @@ function renderTutorialSkipConfirm() {
 }
 
 function renderTutorialInstallGate() {
+  const t = TUTORIAL_TEXTS.installGate;
   return `
     <div class="auth-box">
-      <h1>Bevor es losgeht</h1>
-      <p class="tutorial-text">${esc(installHintText())} Mach das am besten gleich jetzt: installiere Logbuch auf deinem Home-/Startbildschirm und öffne es danach über das neue Symbol – diese Seite hier brauchst du dann nicht mehr, es geht automatisch mit dem Tutorial weiter. Falls du dich dort nochmal kurz anmelden musst: einfach mit denselben Zugangsdaten wie gerade eben.${infoTip(installStepsText())}</p>
-      <button type="button" class="auth-toggle" data-action="tutorial-install-ack">Stattdessen im Browser fortfahren (nicht empfohlen)</button>
+      <h1>${esc(t.title)}</h1>
+      <p class="tutorial-text">${esc(installHintText())} ${esc(t.bodyContinuation)}${infoTip(installStepsText())}</p>
+      <button type="button" class="auth-toggle" data-action="tutorial-install-ack">${esc(t.browserFallbackButton)}</button>
     </div>
   `;
 }
 
 function renderTutorialStep1() {
+  const t = TUTORIAL_TEXTS.step1;
   return `
     <div class="auth-box">
-      <h1>Willkommen</h1>
+      <h1>${esc(t.title)}</h1>
       <p class="sub">Schritt 1 von 3</p>
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
-      <p class="tutorial-text">Logbuch lebt davon, dass du täglich ein paar Werte einträgst – je regelmäßiger, desto aussagekräftiger die Auswertung. Push-Erinnerungen helfen dir, das nicht zu vergessen – tippe dafür unten auf „Erinnerungen aktivieren" (nicht einfach nur „Weiter"):</p>
+      <p class="tutorial-text">${esc(t.body)}</p>
       ${renderPushRow(true)}
       <div class="auth-field">
         <label for="tutorial-default-time">Standard-Erinnerungszeit${state.pushStatus !== 'on' ? ' (erst wählbar, sobald Erinnerungen aktiv sind)' : ''}</label>
         ${reminderTimeInputHtml('tutorial-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', state.pushStatus !== 'on')}
       </div>
-      <button type="button" class="auth-submit" data-action="tutorial-next">Weiter</button>
-      <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">Tutorial überspringen</button>
+      <button type="button" class="auth-submit" data-action="tutorial-next">${esc(t.nextButton)}</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${esc(t.skipButton)}</button>
     </div>
     ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
   `;
 }
 
 function renderTutorialStep2Intro() {
+  const t = TUTORIAL_TEXTS.step2Intro;
   return `
     <div class="auth-box">
-      <h1>Dein erstes Feld</h1>
+      <h1>${esc(t.title)}</h1>
       <p class="sub">Schritt 2 von 3</p>
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
-      <p class="tutorial-text">Überlege dir einen Wert, den du ab jetzt beobachten willst – zum Beispiel eine <strong>Skala</strong> (Stimmung, Schlafqualität) oder ein <strong>freier Zahlenwert</strong> (Gewicht, Schritte). Wenn du unsicher bist: fang einfach mit einem an, du kannst später jederzeit weitere Felder anlegen oder bestehende ändern.</p>
-      <button type="button" class="auth-submit" data-action="tutorial-ready">Ich hab mir einen Wert überlegt</button>
-      <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">Tutorial überspringen</button>
+      <p class="tutorial-text">${t.body}</p>
+      <button type="button" class="auth-submit" data-action="tutorial-ready">${esc(t.readyButton)}</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${esc(t.skipButton)}</button>
     </div>
     ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
   `;
@@ -2458,14 +2498,15 @@ function renderTutorialStep2Form() {
 }
 
 function renderTutorialStep3() {
+  const t = TUTORIAL_TEXTS.step3;
   return `
     <div class="auth-box">
-      <h1>Gut gemacht!</h1>
+      <h1>${esc(t.title)}</h1>
       <p class="sub">Schritt 3 von 3</p>
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
-      <p class="tutorial-text">Dein erstes Feld ist angelegt. Du kannst optional noch 2–4 weitere ergänzen – wer sich unsicher fühlt, fängt lieber mit wenigen an und erweitert später jederzeit über „Felder verwalten" im Menü.</p>
-      <button type="button" class="auth-submit" data-action="tutorial-add-more">Weiteres Feld anlegen</button>
-      <button type="button" class="auth-toggle" data-action="tutorial-finish">Fertig</button>
+      <p class="tutorial-text">${esc(t.body)}</p>
+      <button type="button" class="auth-submit" data-action="tutorial-add-more">${esc(t.addMoreButton)}</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-finish">${esc(t.finishButton)}</button>
     </div>
   `;
 }
