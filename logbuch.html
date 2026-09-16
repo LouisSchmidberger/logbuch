@@ -1846,6 +1846,12 @@ async function handleHabitSave() {
   // diese Sperre konnten zwei parallele Inserts mit demselben Namen/Slug entstehen,
   // von denen der zweite mit einem kryptischen "duplicate key"-Fehler fehlschlug.
   if (state.habitFormSaving) return;
+  // Muss VOR dem render() für den "Wird gespeichert …"-Zustand passieren: dieses
+  // render() baut das Formular aus state.habitForm neu auf und hätte sonst gerade erst
+  // eingetippte, noch nicht synchronisierte Werte (z.B. Bezeichnungen) gelöscht, bevor
+  // handleHabitSaveInner() sie überhaupt prüfen konnte — wirkte wie ein zufälliger
+  // Reset der Eingabe.
+  syncHabitFormFromDom();
   state.habitFormSaving = true;
   render();
   try {
