@@ -1,6 +1,6 @@
 // Datei nach dem Deployment ablegen unter: supabase/functions/send-notifications/index.ts
 //
-// Läuft alle 15 Minuten (per pg_cron, siehe supabase-setup.sql) und schickt
+// Läuft alle 15 Minuten (per pg_cron, siehe supabase/migrations/) und schickt
 // Erinnerungen an Nutzer, deren Felder gerade "fällig" sind:
 // 1. Alle aktiven Felder OHNE eigene `reminder_minute` werden gemeinsam zur
 //    Standard-Erinnerungszeit des Nutzers geprüft (`user_settings.default_reminder_minute`,
@@ -40,7 +40,7 @@ const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:example@example.c
 // aufzurufen — ohne diesen zusätzlichen Header könnte jede*r sie beliebig oft triggern
 // und würde dabei JEDES MAL alle Nutzer verarbeiten (Spam-Push-Risiko, unnötige Last).
 // Nur der Cron-Job kennt das zugehörige Vault-Secret 'cron_secret' (siehe
-// supabase-setup.sql).
+// CLAUDE.md "Secrets" → Vault-Secrets).
 const CRON_SECRET = Deno.env.get('CRON_SECRET')!;
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
@@ -77,6 +77,27 @@ interface PushMessage {
   body: string;
   url: string;
 }
+
+// Eigene, bewusst einfachere Übersetzungstabelle als die t()-Maschinerie im Frontend
+// (logbuch.html) — anderes Laufzeit-Environment (Deno statt Browser), kein
+// gemeinsam nutzbares Modul zwischen Edge Function und Frontend, und nur 4 Texte.
+const PUSH_TEXTS = {
+  de: {
+    title: 'Logbuch',
+    defaultReminder: 'Erinnerung: Noch nicht alle Werte für heute eingetragen.',
+    customReminder: (names: string) => `Erinnerung: ${names} noch nicht eingetragen.`,
+    weekSummary: 'Deine Wochenübersicht ist da.',
+    monthSummary: 'Deine Monatsübersicht ist da.',
+  },
+  en: {
+    title: 'Logbuch',
+    defaultReminder: 'Reminder: not all values for today have been entered yet.',
+    customReminder: (names: string) => `Reminder: ${names} not entered yet.`,
+    weekSummary: 'Your weekly summary is ready.',
+    monthSummary: 'Your monthly summary is ready.',
+  },
+};
+type Locale = keyof typeof PUSH_TEXTS;
 
 interface HabitDef {
   user_id: string;
@@ -137,12 +158,16 @@ Deno.serve(async (req) => {
 
   const { data: settings, error: settingsErr } = await supabase
     .from('user_settings')
-    .select('user_id, default_reminder_minute');
+    .select('user_id, default_reminder_minute, locale');
   if (settingsErr) {
     return new Response(JSON.stringify({ error: settingsErr.message }), { status: 500 });
   }
   const defaultMinuteByUser = new Map<string, number>();
-  for (const s of settings ?? []) defaultMinuteByUser.set(s.user_id, s.default_reminder_minute);
+  const localeByUser = new Map<string, Locale>();
+  for (const s of settings ?? []) {
+    defaultMinuteByUser.set(s.user_id, s.default_reminder_minute);
+    localeByUser.set(s.user_id, s.locale === 'en' ? 'en' : 'de');
+  }
 
   // Für einen Nutzer die Namen der heute noch fehlenden Felder aus `group`, oder null,
   // wenn nichts fehlt (bzw. die Gruppe leer ist).
@@ -160,6 +185,7 @@ Deno.serve(async (req) => {
     const filledSlugs = filledSlugsByUser.get(sub.user_id) ?? [];
     const defsForUser = defsByUser.get(sub.user_id) ?? [];
     const defaultMinute = defaultMinuteByUser.get(sub.user_id) ?? 1320;
+    const texts = PUSH_TEXTS[localeByUser.get(sub.user_id) ?? 'de'];
     const messages: PushMessage[] = [];
 
     // Sammel-Erinnerung zur Standardzeit: bewusst generisch (nicht jedes fehlende Feld
@@ -168,8 +194,8 @@ Deno.serve(async (req) => {
       const defaultGroup = defsForUser.filter((d) => d.reminder_minute === null);
       if (missingNames(defaultGroup, filledSlugs).length) {
         messages.push({
-          title: 'Logbuch',
-          body: 'Erinnerung: Noch nicht alle Werte für heute eingetragen.',
+          title: texts.title,
+          body: texts.defaultReminder,
           url: './logbuch.html',
         });
       }
@@ -181,18 +207,18 @@ Deno.serve(async (req) => {
     const missingCustom = missingNames(customGroup, filledSlugs);
     if (missingCustom.length) {
       messages.push({
-        title: 'Logbuch',
-        body: `Erinnerung: ${missingCustom.join(', ')} noch nicht eingetragen.`,
+        title: texts.title,
+        body: texts.customReminder(missingCustom.join(', ')),
         url: './logbuch.html',
       });
     }
 
     if (berlin.minutesSinceMidnight === defaultMinute) {
       if (isSunday) {
-        messages.push({ title: 'Logbuch', body: 'Deine Wochenübersicht ist da.', url: './logbuch.html' });
+        messages.push({ title: texts.title, body: texts.weekSummary, url: './logbuch.html' });
       }
       if (isLastDayOfMonth) {
-        messages.push({ title: 'Logbuch', body: 'Deine Monatsübersicht ist da.', url: './logbuch.html' });
+        messages.push({ title: texts.title, body: texts.monthSummary, url: './logbuch.html' });
       }
     }
 

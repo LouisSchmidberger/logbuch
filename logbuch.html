@@ -547,10 +547,6 @@ function habitFromRow(row) {
 
 function isNumberKind(h) { return h.kind === 'number'; }
 
-const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-const WEEKDAYS_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
-
 // --- Datum-Helfer ----------------------------------------------------------
 function formatKey(date) {
   const y = date.getFullYear();
@@ -718,7 +714,7 @@ const state = {
   // Standard-Erinnerungszeit (Minuten seit Mitternacht) für Felder ohne eigene reminder_minute.
   // onboardingCompleted default true, bis loadUserSettings() den echten Wert lädt – verhindert,
   // dass das Tutorial kurz aufblitzt, bevor die tatsächlichen Einstellungen geladen sind.
-  userSettings: { defaultReminderMinute: 1320, onboardingCompleted: true },
+  userSettings: { defaultReminderMinute: 1320, onboardingCompleted: true, locale: 'de' },
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
   habitDeleteConfirm: null, // defId eines archivierten Feldes mit Daten, dessen Löschen gerade bestätigt wird
   tutorialStep: null, // 1/2/3 während das Onboarding-Tutorial für neue Accounts läuft, sonst null
@@ -767,18 +763,528 @@ function esc(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// --- i18n --------------------------------------------------------------
+// Flache Keys ("namespace.element"), DE und EN in schlüsselgleicher Reihenfolge
+// zum leichten Diffen. t(key, params) interpoliert {platzhalter} aus params (wird
+// dabei automatisch esc()'t) — das Template selbst bleibt unescaped, darf also
+// bewusst gesetztes HTML wie <strong> enthalten.
+const STRINGS = {
+  de: {
+    'error.db.duplicateSlug': 'Ein Feld mit einem sehr ähnlichen Namen existiert schon – bitte einen anderen Namen wählen.',
+    'error.db.duplicateGeneric': 'Das gibt es in dieser Form schon.',
+    'error.db.notNull': 'Ein Pflichtfeld fehlt oder enthält gerade keinen gültigen Wert – bitte alle Felder prüfen und nochmal versuchen.',
+    'error.db.check': 'Einer der eingegebenen Werte liegt außerhalb des erlaubten Bereichs.',
+    'error.db.foreignKey': 'Ein verknüpfter Eintrag existiert nicht mehr – bitte die Seite neu laden und nochmal versuchen.',
+    'error.db.network': 'Keine Verbindung zum Server – prüfe deine Internetverbindung und versuch es nochmal.',
+    'error.db.sessionExpired': 'Deine Sitzung ist abgelaufen – bitte lade die Seite neu und melde dich erneut an.',
+    'ariaLabel.clearInput': 'Eingabe löschen',
+    'ariaLabel.explain': 'Erklärung anzeigen',
+    'ariaLabel.decrease': 'Verringern',
+    'ariaLabel.increase': 'Erhöhen',
+    'notice.loadEntriesError': 'Einträge konnten nicht geladen werden: ',
+    'notice.loadHabitsError': 'Felder konnten nicht geladen werden: ',
+    'notice.loadSettingsError': 'Einstellungen konnten nicht geladen werden: ',
+    'notice.saveFailed': 'Speichern fehlgeschlagen: ',
+    'notice.createFailed': 'Anlegen fehlgeschlagen: ',
+    'notice.actionFailed': 'Aktion fehlgeschlagen: ',
+    'notice.deleteFailed': 'Löschen fehlgeschlagen: ',
+    'notice.invalidNumber': 'Das ist keine gültige Zahl.',
+    'notice.recoveryKeySaveError': 'Neuer Recovery-Key konnte nicht gespeichert werden: ',
+    'habitForm.error.minGroupMembers': 'Bitte mindestens 2 Felder zum Gruppieren auswählen.',
+    'habitForm.error.stepsRange': 'Anzahl Stufen muss zwischen 2 und 1000 liegen.',
+    'habitForm.error.maxGreaterMin': '„Bis" muss größer als „Von" sein.',
+    'habitForm.error.max12Steps': 'Bitte maximal 12 Stufen.',
+    'habitForm.error.fillAllLabels': 'Bitte alle Bezeichnungen ausfüllen.',
+    'habitForm.error.nameRequired': 'Bitte einen Namen eingeben.',
+    'scale.numberWithUnit': 'Zahlenwert ({unit})',
+    'scale.number': 'Zahlenwert',
+    'scale.grouped': 'Gruppiert · Ø aus: {names}',
+    'scale.slider': 'Schieberegler',
+    'scale.goal': 'Ziel {percent}%',
+    'ariaLabel.dismissHint': 'Hinweis schließen',
+    'installHint.ios': 'Für Erinnerungen per Push: Tippe auf das Teilen-Symbol (Quadrat mit Pfeil nach oben – je nach Einstellung oben in der Adressleiste oder unten in der Leiste) und dann „Zum Home-Bildschirm". Auf dem iPhone funktionieren Benachrichtigungen sonst leider gar nicht.',
+    'installHint.other': 'Für die beste Erfahrung (u.a. zuverlässigere Erinnerungen): füge Logbuch über das Browser-Menü zum Home-Bildschirm hinzu.',
+    'installSteps.ios': 'iPhone/iPad (Safari): Das Teilen-Symbol (Quadrat mit Pfeil nach oben) sitzt je nach Einstellung/iOS-Version OBEN in der Adressleiste oder UNTEN in der Symbolleiste – schau an beiden Stellen. Antippen, dann „Zum Home-Bildschirm" wählen (oder so ähnlich, der genaue Wortlaut kann leicht abweichen).',
+    'installSteps.android': 'Android (Chrome): Tippe oben rechts auf die drei Punkte und wähle „App installieren" bzw. „Zum Startbildschirm hinzufügen" (oder so ähnlich, je nach Android-/Chrome-Version kann der genaue Wortlaut/Ort leicht abweichen).',
+    'installSteps.other': 'Am Computer (Chrome/Edge): Klicke in der Adressleiste auf das Installations-Symbol, oder öffne das Browser-Menü und wähle „App installieren" (oder so ähnlich, je nach Browser/Version kann der genaue Wortlaut/Ort leicht abweichen).',
+    'notice.pushPermissionDenied': 'Ohne Benachrichtigungs-Erlaubnis im Browser geht das leider nicht.',
+    'notice.pushEnabled': 'Erinnerungen sind aktiv.',
+    'notice.enableFailed': 'Aktivieren fehlgeschlagen: ',
+    'notice.disableFailed': 'Deaktivieren fehlgeschlagen: ',
+    'notice.exportFailed': 'Export fehlgeschlagen: ',
+    'notice.exportDownloaded': 'Export heruntergeladen.',
+    'deleteAccount.confirmWord': 'LÖSCHEN',
+    'deleteAccount.confirmMismatch': 'Bitte tippe genau „{word}" zur Bestätigung.',
+    'auth.title.forgot': 'Passwort zurücksetzen',
+    'auth.title.signup': 'Neuen Account anlegen',
+    'auth.title.login': 'Anmelden',
+    'auth.forgotRecoveryNote': 'Zum eigentlichen Zurücksetzen brauchst du im nächsten Schritt deinen Recovery-Key (den du bei der Einrichtung einmalig angezeigt bekommen hast), um deine bisherigen Einträge zu behalten.',
+    'auth.email': 'E-Mail',
+    'auth.password': 'Passwort',
+    'auth.hide': 'Verbergen',
+    'auth.show': 'Anzeigen',
+    'auth.sendResetLink': 'Link zum Zurücksetzen senden',
+    'auth.createAccount': 'Account erstellen',
+    'auth.login': 'Anmelden',
+    'auth.haveAccount': 'Schon einen Account? Anmelden',
+    'auth.noAccount': 'Noch keinen Account? Registrieren',
+    'auth.backToLogin': 'Zurück zur Anmeldung',
+    'auth.forgotPassword': 'Passwort vergessen?',
+    'auth.resetLinkSent': 'Falls diese E-Mail bei uns registriert ist, haben wir einen Link zum Zurücksetzen geschickt.',
+    'auth.signupFailedGeneric': 'Registrierung fehlgeschlagen. Bitte versuche es erneut.',
+    'auth.confirmEmailNotice': 'Fast fertig: Bestätige deine E-Mail über den Link, den wir dir geschickt haben, und melde dich dann an.',
+    'recovery.title': 'Neues Passwort setzen',
+    'recovery.newPassword': 'Neues Passwort',
+    'recovery.key': 'Recovery-Key',
+    'recovery.keyPlaceholder': 'von der einmaligen Anzeige bei der Einrichtung',
+    'recovery.saving': 'Wird gespeichert …',
+    'recovery.savePassword': 'Passwort speichern',
+    'recovery.keyAlsoLost': 'Recovery-Key auch verloren?',
+    'recovery.fallbackWarning': 'Ohne Recovery-Key können deine bisherigen verschlüsselten Einträge nicht mehr entschlüsselt werden — sie sind dann unwiederbringlich verloren. Das betrifft nur die alten Einträge, dein Konto selbst bleibt nutzbar.',
+    'recovery.setAnyway': 'Verstanden, Passwort trotzdem setzen (alte Daten verloren)',
+    'recovery.cancelHaveKey': 'Doch abbrechen, ich habe den Code noch',
+    'recovery.error.noConfig': 'Keine Verschlüsselungs-Konfiguration gefunden.',
+    'recovery.error.wrongKey': 'Recovery-Key ist falsch oder unvollständig. Nichts wurde verändert.',
+    'recovery.passwordSaved': 'Passwort gespeichert.',
+    'recoveryDisplay.title': 'Dein Recovery-Key',
+    'recoveryDisplay.explain': 'Das ist ein separater Zugangs-Code – <strong>nicht dein Passwort</strong>. Du brauchst ihn nur, falls du dein Passwort mal vergisst.',
+    'recoveryDisplay.warning': 'Dieser Code wird nur einmal angezeigt. Ohne ihn UND dein Passwort sind deine Daten für immer verloren — auch wir können sie dann nicht wiederherstellen. Speichere ihn jetzt sicher (Passwort-Manager, ausgedruckt o.ä.).',
+    'recoveryDisplay.regenerateNote': 'Kein Stress, falls du gerade keine Zeit hast: du kannst dir jederzeit über "Recovery-Key neu erzeugen" im Menü einen neuen Code anzeigen lassen (der alte wird dann ungültig).',
+    'recoveryDisplay.copy': 'Kopieren',
+    'recoveryDisplay.download': 'Als Datei herunterladen',
+    'recoveryDisplay.confirmCheckbox': 'Ich habe den Code sicher gespeichert.',
+    'common.next': 'Weiter',
+    'common.logout': 'Abmelden',
+    'unlock.title': 'Entsperren',
+    'unlock.explain': 'Neues Gerät, Browserdaten gelöscht oder gerade per E-Mail-Bestätigungslink angemeldet — bitte dein Passwort erneut eingeben, um deine Einträge zu entschlüsseln (bzw. bei einem ganz neuen Konto die Verschlüsselung einzurichten).',
+    'unlock.unlocking': 'Wird entsperrt …',
+    'unlock.unlock': 'Entsperren',
+    'unlock.wrongPassword': 'Falsches Passwort.',
+    'ariaLabel.deleteEntry': 'Eintrag löschen',
+    'ariaLabel.prevDay': 'Vorheriger Tag',
+    'ariaLabel.nextDay': 'Nächster Tag',
+    'ariaLabel.prevWeek': 'Vorherige Woche',
+    'ariaLabel.nextWeek': 'Nächste Woche',
+    'ariaLabel.prevMonth': 'Vorheriger Monat',
+    'ariaLabel.nextMonth': 'Nächster Monat',
+    'ariaLabel.prevYear': 'Vorheriges Jahr',
+    'ariaLabel.nextYear': 'Nächstes Jahr',
+    'ariaLabel.reorder': 'Reihenfolge ändern',
+    'ariaLabel.menu': 'Menü',
+    'groupInfo.avgOf': 'Ø aus {names} ({filled}/{total} heute erfasst)',
+    'numberBox.last': 'zuletzt: {value} ({date})',
+    'today.jumpToday': 'Zu heute springen',
+    'today.noFields': 'Noch keine Felder angelegt – siehe Tab „Felder".',
+    'today.resetDay': 'Tag zurücksetzen',
+    'common.archived': 'archiviert',
+    'global.rangeNote': 'Seit {since} · {count} Tage mit Eintrag',
+    'global.noEntries': 'Noch keine Einträge.',
+    'global.title': 'Gesamt',
+    'numberChart.meta': '{last} zuletzt · Ø {avg} · {count}×',
+    'numberChart.tooFewValues': 'Noch zu wenige Werte für einen Verlauf.',
+    'numberChart.noValues': 'Noch keine Werte.',
+    'habitForm.goalLabel': 'Ab wann als voll erreicht gilt (%)',
+    'habitForm.goalExplain': 'Bei unter 100%: schon eine niedrigere Quote/Wert zählt farblich als voll erreicht (grün) – z. B. bei "Kraftsport gemacht" reichen vielleicht schon 3 von 7 Tagen die Woche als Ziel. Ändert nur die Farbe, nie die angezeigte Prozentzahl. Wirkt sich nicht auf „Heute" aus. Standard 100% = nur der Maximalwert zählt als voll erreicht.',
+    'habitForm.valueType': 'Werte-Art',
+    'habitForm.numberedSteps': 'Nummerierte Stufen',
+    'habitForm.ownLabels': 'Eigene Bezeichnungen',
+    'habitForm.display': 'Darstellung',
+    'habitForm.displayLockedExplain': 'Reine Anzeige-Einstellung, ändert nichts an bestehenden Werten – deshalb hier trotz gesperrtem Bereich änderbar.',
+    'habitForm.buttons': 'Buttons',
+    'habitForm.slider': 'Schieberegler',
+    'habitForm.numberOfSteps': 'Anzahl Stufen',
+    'habitForm.sliderRangeExplain': 'Der Regler zeigt nie eine Min/Max-Beschriftung beim Eintragen (nur hier in der Verwaltung).',
+    'habitForm.rangeLocked': 'Bereich {min}–{max} (durch vorhandene Einträge gesperrt).',
+    'habitForm.showValueWhileEntering': 'Aktuellen Wert beim Eintragen anzeigen',
+    'habitForm.from': 'Von',
+    'habitForm.to': 'Bis',
+    'habitForm.labelsInOrder': 'Bezeichnungen der Reihe nach (Wert 0 zuerst, z. B. „Nein“, „Ein bisschen“, „Ja“)',
+    'habitForm.goalDirection': 'Zielrichtung',
+    'habitForm.goalDirectionExplain': 'Legt fest, was als "gut" gilt und entsprechend grün eingefärbt wird. Meist "hohe Werte" (z. B. Sport, gesunde Ernährung). "Niedrige Werte" eignet sich für Dinge, von denen weniger besser ist (z. B. Konsum von etwas, das man reduzieren möchte).',
+    'habitForm.highIsGood': 'Hohe Werte erstrebenswert',
+    'habitForm.lowIsGood': 'Niedrige Werte erstrebenswert',
+    'habitForm.unit': 'Einheit (optional)',
+    'habitForm.unitPlaceholder': 'z. B. kg',
+    'habitForm.members': 'Mitglieder (mind. 2 Skala-Felder)',
+    'habitForm.noGroupCandidates': 'Noch keine Skala-Felder vorhanden, die sich gruppieren lassen.',
+    'habitForm.ownReminderTime': 'Eigene Erinnerungszeit',
+    'habitForm.defaultReminderNote': 'Ohne eigene Zeit gilt die Standard-Erinnerungszeit (aktuell {time}, änderbar im Menü).',
+    'habitForm.title.editGroup': 'Gruppe bearbeiten',
+    'habitForm.title.newGroup': 'Neue Gruppe',
+    'habitForm.title.editField': 'Feld bearbeiten',
+    'habitForm.title.newField': 'Neues Feld',
+    'habitForm.lockedNote': 'Für dieses Feld gibt es bereits Einträge – Feld-Typ/Skala/Bezeichnungen sind gesperrt. Für eine andere Skala: archivieren und neu anlegen.',
+    'habitForm.name': 'Name',
+    'habitForm.fieldType': 'Feld-Typ',
+    'habitForm.kindScale': 'Skala',
+    'habitForm.kindNumber': 'Freier Zahlenwert',
+    'common.saving': 'Wird gespeichert …',
+    'common.save': 'Speichern',
+    'common.cancel': 'Abbrechen',
+    'common.delete': 'Löschen',
+    'common.edit': 'Bearbeiten',
+    'manage.deleteConfirmFinal': 'Ja, endgültig löschen',
+    'manage.deleteWarning': 'Es gibt historische Einträge – nach dem Löschen in der App nicht mehr nutzbar.',
+    'manage.highIsGoodShort': 'hohe Werte gut',
+    'manage.lowIsGoodShort': 'niedrige Werte gut',
+    'manage.reminderAt': 'Erinnerung {time}',
+    'manage.archive': 'Archivieren',
+    'manage.reactivate': 'Reaktivieren',
+    'manage.archivedSectionLabel': 'Archiviert',
+    'manage.groupsTitle': 'Gruppen',
+    'manage.groupsExplain': 'Fassen mehrere Skala-Felder zu einem live berechneten Durchschnittswert zusammen – z. B. „Sport gemacht" aus „Ausdauersport" + „Kraftsport".',
+    'common.finish': 'Fertig',
+    'menu.defaultReminderTime': 'Standard-Erinnerungszeit',
+    'tutorial.stepLabel': 'Schritt {step} von 3',
+    'tutorial.skip': 'Tutorial überspringen',
+    'tutorial.skipConfirm.title': 'Tutorial überspringen?',
+    'tutorial.skipConfirm.body': 'Du kannst jederzeit später eigene Felder über „Felder verwalten" im Menü anlegen.',
+    'tutorial.skipConfirm.confirmButton': 'Ja, überspringen',
+    'tutorial.installGate.title': 'Bevor es losgeht',
+    'tutorial.installGate.bodyContinuation': 'Mach das am besten gleich jetzt: installiere Logbuch auf deinem Home-/Startbildschirm und öffne es danach über das neue Symbol – diese Seite hier brauchst du dann nicht mehr, es geht automatisch mit dem Tutorial weiter. Falls du dich dort nochmal kurz anmelden musst: einfach mit denselben Zugangsdaten wie gerade eben.',
+    'tutorial.installGate.browserFallbackButton': 'Stattdessen im Browser fortfahren (nicht empfohlen)',
+    'tutorial.step1.title': 'Willkommen',
+    'tutorial.step1.body': 'Logbuch lebt davon, dass du täglich ein paar Werte einträgst – je regelmäßiger, desto aussagekräftiger die Auswertung. Push-Erinnerungen helfen dir, das nicht zu vergessen – tippe dafür unten auf „Erinnerungen aktivieren" (nicht einfach nur „Weiter"):',
+    'tutorial.step1.timeDisabledNote': '(erst wählbar, sobald Erinnerungen aktiv sind)',
+    'tutorial.step2Intro.title': 'Dein erstes Feld',
+    'tutorial.step2Intro.body': 'Überlege dir einen Wert, den du ab jetzt beobachten willst – zum Beispiel eine <strong>Skala</strong> (Stimmung, Schlafqualität) oder ein <strong>freier Zahlenwert</strong> (Gewicht, Schritte). Wenn du unsicher bist: fang einfach mit einem an, du kannst später jederzeit weitere Felder anlegen oder bestehende ändern.',
+    'tutorial.step2Intro.readyButton': 'Ich hab mir einen Wert überlegt',
+    'tutorial.step3.title': 'Gut gemacht!',
+    'tutorial.step3.body': 'Dein erstes Feld ist angelegt. Du kannst optional noch 2–4 weitere ergänzen – wer sich unsicher fühlt, fängt lieber mit wenigen an und erweitert später jederzeit über „Felder verwalten" im Menü.',
+    'tutorial.step3.addMoreButton': 'Weiteres Feld anlegen',
+    'push.unsupported': 'Erinnerungen werden von diesem Browser nicht unterstützt.',
+    'push.checking': 'Erinnerungsstatus wird geprüft …',
+    'push.active': 'Erinnerungen aktiv',
+    'push.disable': 'deaktivieren',
+    'push.none': 'Keine Erinnerungen',
+    'push.enable': 'aktivieren',
+    'push.enableProminent': 'Erinnerungen aktivieren',
+    'menu.language': 'Sprache',
+    'menu.manageFields': 'Felder verwalten',
+    'menu.exportData': 'Meine Daten exportieren',
+    'menu.regenerateRecoveryKey': 'Recovery-Key neu erzeugen',
+    'menu.deleteAccount': 'Konto löschen',
+    'deleteAccount.title': 'Konto endgültig löschen',
+    'deleteAccount.warning': 'Alle deine Einträge, Felder und Einstellungen werden unwiderruflich gelöscht. Das kann nicht rückgängig gemacht werden.',
+    'deleteAccount.typeToConfirm': 'Tippe {word} zur Bestätigung',
+    'deleteAccount.deleting': 'Wird gelöscht …',
+    'deleteAccount.deletePermanently': 'Endgültig löschen',
+    'common.loading': 'Lädt …',
+    'tabs.today': 'Heute',
+    'tabs.week': 'Woche',
+    'tabs.month': 'Monat',
+    'tabs.year': 'Jahr',
+    'tabs.global': 'Gesamt',
+    'common.encryptingData': 'Deine Daten werden verschlüsselt …',
+    'recoveryDisplay.copied': 'In die Zwischenablage kopiert.',
+    'recoveryDisplay.copyFailed': 'Kopieren nicht möglich - bitte den Code manuell abschreiben.',
+    'recoveryDisplay.fileBody': 'Sicher aufbewahren - ohne diesen Code UND dein Passwort sind deine Daten unwiederbringlich verloren.',
+    'recoveryDisplay.downloading': 'Datei wird heruntergeladen.',
+  },
+  en: {
+    'error.db.duplicateSlug': 'A field with a very similar name already exists – please choose a different name.',
+    'error.db.duplicateGeneric': 'This already exists in this form.',
+    'error.db.notNull': 'A required field is missing or currently has no valid value – please check all fields and try again.',
+    'error.db.check': 'One of the entered values is outside the allowed range.',
+    'error.db.foreignKey': 'A linked entry no longer exists – please reload the page and try again.',
+    'error.db.network': 'No connection to the server – check your internet connection and try again.',
+    'error.db.sessionExpired': 'Your session has expired – please reload the page and sign in again.',
+    'ariaLabel.clearInput': 'Clear input',
+    'ariaLabel.explain': 'Show explanation',
+    'ariaLabel.decrease': 'Decrease',
+    'ariaLabel.increase': 'Increase',
+    'notice.loadEntriesError': 'Could not load entries: ',
+    'notice.loadHabitsError': 'Could not load fields: ',
+    'notice.loadSettingsError': 'Could not load settings: ',
+    'notice.saveFailed': 'Save failed: ',
+    'notice.createFailed': 'Creating failed: ',
+    'notice.actionFailed': 'Action failed: ',
+    'notice.deleteFailed': 'Delete failed: ',
+    'notice.invalidNumber': 'That is not a valid number.',
+    'notice.recoveryKeySaveError': 'New recovery key could not be saved: ',
+    'habitForm.error.minGroupMembers': 'Please select at least 2 fields to group.',
+    'habitForm.error.stepsRange': 'Number of steps must be between 2 and 1000.',
+    'habitForm.error.maxGreaterMin': '"To" must be greater than "From".',
+    'habitForm.error.max12Steps': 'Please use at most 12 steps.',
+    'habitForm.error.fillAllLabels': 'Please fill in all labels.',
+    'habitForm.error.nameRequired': 'Please enter a name.',
+    'scale.numberWithUnit': 'Number value ({unit})',
+    'scale.number': 'Number value',
+    'scale.grouped': 'Grouped · avg. of: {names}',
+    'scale.slider': 'Slider',
+    'scale.goal': 'Goal {percent}%',
+    'ariaLabel.dismissHint': 'Dismiss hint',
+    'installHint.ios': 'For push reminders: tap the share icon (a square with an arrow pointing up – depending on your settings, either at the top in the address bar or at the bottom in the toolbar) and then "Add to Home Screen". Notifications unfortunately do not work at all on iPhone otherwise.',
+    'installHint.other': 'For the best experience (incl. more reliable reminders): add Logbuch to your home screen via the browser menu.',
+    'installSteps.ios': 'iPhone/iPad (Safari): the share icon (a square with an arrow pointing up) sits, depending on settings/iOS version, at the TOP in the address bar or at the BOTTOM in the toolbar – check both spots. Tap it, then choose "Add to Home Screen" (or similarly worded, exact wording can vary slightly).',
+    'installSteps.android': 'Android (Chrome): tap the three dots at the top right and choose "Install app" or "Add to Home screen" (or similarly worded, exact wording/location can vary by Android/Chrome version).',
+    'installSteps.other': 'On a computer (Chrome/Edge): click the install icon in the address bar, or open the browser menu and choose "Install app" (or similarly worded, exact wording/location can vary by browser/version).',
+    'notice.pushPermissionDenied': 'Without notification permission in the browser this unfortunately does not work.',
+    'notice.pushEnabled': 'Reminders are active.',
+    'notice.enableFailed': 'Enabling failed: ',
+    'notice.disableFailed': 'Disabling failed: ',
+    'notice.exportFailed': 'Export failed: ',
+    'notice.exportDownloaded': 'Export downloaded.',
+    'deleteAccount.confirmWord': 'DELETE',
+    'deleteAccount.confirmMismatch': 'Please type exactly "{word}" to confirm.',
+    'auth.title.forgot': 'Reset password',
+    'auth.title.signup': 'Create new account',
+    'auth.title.login': 'Sign in',
+    'auth.forgotRecoveryNote': 'To actually reset your password, in the next step you will need your recovery key (shown to you once during setup) in order to keep your existing entries.',
+    'auth.email': 'Email',
+    'auth.password': 'Password',
+    'auth.hide': 'Hide',
+    'auth.show': 'Show',
+    'auth.sendResetLink': 'Send reset link',
+    'auth.createAccount': 'Create account',
+    'auth.login': 'Sign in',
+    'auth.haveAccount': 'Already have an account? Sign in',
+    'auth.noAccount': 'Do not have an account yet? Sign up',
+    'auth.backToLogin': 'Back to sign in',
+    'auth.forgotPassword': 'Forgot password?',
+    'auth.resetLinkSent': 'If this email is registered with us, we have sent a link to reset your password.',
+    'auth.signupFailedGeneric': 'Sign-up failed. Please try again.',
+    'auth.confirmEmailNotice': 'Almost done: confirm your email via the link we sent you, then sign in.',
+    'recovery.title': 'Set new password',
+    'recovery.newPassword': 'New password',
+    'recovery.key': 'Recovery key',
+    'recovery.keyPlaceholder': 'from the one-time display during setup',
+    'recovery.saving': 'Saving…',
+    'recovery.savePassword': 'Save password',
+    'recovery.keyAlsoLost': 'Also lost your recovery key?',
+    'recovery.fallbackWarning': 'Without the recovery key, your existing encrypted entries can no longer be decrypted — they will then be irrecoverably lost. This only affects the old entries, your account itself remains usable.',
+    'recovery.setAnyway': 'Understood, set password anyway (old data lost)',
+    'recovery.cancelHaveKey': 'Cancel after all, I still have the code',
+    'recovery.error.noConfig': 'No encryption configuration found.',
+    'recovery.error.wrongKey': 'Recovery key is incorrect or incomplete. Nothing was changed.',
+    'recovery.passwordSaved': 'Password saved.',
+    'recoveryDisplay.title': 'Your recovery key',
+    'recoveryDisplay.explain': 'This is a separate access code – <strong>not your password</strong>. You only need it if you ever forget your password.',
+    'recoveryDisplay.warning': 'This code is shown only once. Without it AND your password, your data is lost forever — even we cannot recover it then. Save it securely now (password manager, printed, etc.).',
+    'recoveryDisplay.regenerateNote': 'No stress if you do not have time right now: you can always display a new code via "Regenerate recovery key" in the menu (the old one then becomes invalid).',
+    'recoveryDisplay.copy': 'Copy',
+    'recoveryDisplay.download': 'Download as file',
+    'recoveryDisplay.confirmCheckbox': 'I have saved the code securely.',
+    'common.next': 'Next',
+    'common.logout': 'Sign out',
+    'unlock.title': 'Unlock',
+    'unlock.explain': 'New device, browser data cleared, or just signed in via an email confirmation link — please re-enter your password to decrypt your entries (or, for a brand-new account, to set up encryption).',
+    'unlock.unlocking': 'Unlocking…',
+    'unlock.unlock': 'Unlock',
+    'unlock.wrongPassword': 'Incorrect password.',
+    'ariaLabel.deleteEntry': 'Delete entry',
+    'ariaLabel.prevDay': 'Previous day',
+    'ariaLabel.nextDay': 'Next day',
+    'ariaLabel.prevWeek': 'Previous week',
+    'ariaLabel.nextWeek': 'Next week',
+    'ariaLabel.prevMonth': 'Previous month',
+    'ariaLabel.nextMonth': 'Next month',
+    'ariaLabel.prevYear': 'Previous year',
+    'ariaLabel.nextYear': 'Next year',
+    'ariaLabel.reorder': 'Change order',
+    'ariaLabel.menu': 'Menu',
+    'groupInfo.avgOf': 'avg. of {names} ({filled}/{total} entered today)',
+    'numberBox.last': 'last: {value} ({date})',
+    'today.jumpToday': 'Jump to today',
+    'today.noFields': 'No fields created yet – see the "Fields" tab.',
+    'today.resetDay': 'Reset day',
+    'common.archived': 'archived',
+    'global.rangeNote': 'Since {since} · {count} days with entry',
+    'global.noEntries': 'No entries yet.',
+    'global.title': 'Overall',
+    'numberChart.meta': 'last: {last} · avg. {avg} · {count}×',
+    'numberChart.tooFewValues': 'Not enough values yet for a chart.',
+    'numberChart.noValues': 'No values yet.',
+    'habitForm.goalLabel': 'Counts as fully reached from (%)',
+    'habitForm.goalExplain': 'Below 100%: even a lower ratio/value already counts as fully reached (green) in terms of color – e.g. for "did strength training", maybe 3 out of 7 days a week is already the goal. Only changes the color, never the displayed percentage. Has no effect on "Today". Default 100% = only the maximum value counts as fully reached.',
+    'habitForm.valueType': 'Value type',
+    'habitForm.numberedSteps': 'Numbered steps',
+    'habitForm.ownLabels': 'Custom labels',
+    'habitForm.display': 'Display',
+    'habitForm.displayLockedExplain': 'Pure display setting, does not change existing values – that is why it stays editable here despite the locked range.',
+    'habitForm.buttons': 'Buttons',
+    'habitForm.slider': 'Slider',
+    'habitForm.numberOfSteps': 'Number of steps',
+    'habitForm.sliderRangeExplain': 'The slider never shows a min/max label while entering a value (only here in management).',
+    'habitForm.rangeLocked': 'Range {min}–{max} (locked due to existing entries).',
+    'habitForm.showValueWhileEntering': 'Show current value while entering',
+    'habitForm.from': 'From',
+    'habitForm.to': 'To',
+    'habitForm.labelsInOrder': 'Labels in order (value 0 first, e.g. "No", "A little", "Yes")',
+    'habitForm.goalDirection': 'Goal direction',
+    'habitForm.goalDirectionExplain': 'Determines what counts as "good" and is colored green accordingly. Usually "high values" (e.g. exercise, healthy eating). "Low values" suits things you want less of (e.g. consumption of something you want to reduce).',
+    'habitForm.highIsGood': 'High values desirable',
+    'habitForm.lowIsGood': 'Low values desirable',
+    'habitForm.unit': 'Unit (optional)',
+    'habitForm.unitPlaceholder': 'e.g. kg',
+    'habitForm.members': 'Members (at least 2 scale fields)',
+    'habitForm.noGroupCandidates': 'No scale fields available yet that can be grouped.',
+    'habitForm.ownReminderTime': 'Custom reminder time',
+    'habitForm.defaultReminderNote': 'Without a custom time, the default reminder time applies (currently {time}, changeable in the menu).',
+    'habitForm.title.editGroup': 'Edit group',
+    'habitForm.title.newGroup': 'New group',
+    'habitForm.title.editField': 'Edit field',
+    'habitForm.title.newField': 'New field',
+    'habitForm.lockedNote': 'This field already has entries – field type/scale/labels are locked. For a different scale: archive and create a new one.',
+    'habitForm.name': 'Name',
+    'habitForm.fieldType': 'Field type',
+    'habitForm.kindScale': 'Scale',
+    'habitForm.kindNumber': 'Free number value',
+    'common.saving': 'Saving…',
+    'common.save': 'Save',
+    'common.cancel': 'Cancel',
+    'common.delete': 'Delete',
+    'common.edit': 'Edit',
+    'manage.deleteConfirmFinal': 'Yes, delete permanently',
+    'manage.deleteWarning': 'There are historical entries – no longer usable in the app after deletion.',
+    'manage.highIsGoodShort': 'high values good',
+    'manage.lowIsGoodShort': 'low values good',
+    'manage.reminderAt': 'Reminder {time}',
+    'manage.archive': 'Archive',
+    'manage.reactivate': 'Reactivate',
+    'manage.archivedSectionLabel': 'Archived',
+    'manage.groupsTitle': 'Groups',
+    'manage.groupsExplain': 'Combine multiple scale fields into one live-calculated average – e.g. "exercised" from "cardio" + "strength training".',
+    'common.finish': 'Done',
+    'menu.defaultReminderTime': 'Default reminder time',
+    'tutorial.stepLabel': 'Step {step} of 3',
+    'tutorial.skip': 'Skip tutorial',
+    'tutorial.skipConfirm.title': 'Skip tutorial?',
+    'tutorial.skipConfirm.body': 'You can always create your own fields later via "Manage fields" in the menu.',
+    'tutorial.skipConfirm.confirmButton': 'Yes, skip',
+    'tutorial.installGate.title': 'Before you start',
+    'tutorial.installGate.bodyContinuation': 'Best do this right now: install Logbuch to your home/start screen and then open it via the new icon – you will not need this page anymore, the tutorial continues automatically. If you need to sign in again there: just use the same credentials as just now.',
+    'tutorial.installGate.browserFallbackButton': 'Continue in the browser instead (not recommended)',
+    'tutorial.step1.title': 'Welcome',
+    'tutorial.step1.body': 'Logbuch works by entering a few values every day – the more regularly, the more meaningful the evaluation. Push reminders help you not to forget – tap "Enable reminders" below to do that (not just "Next"):',
+    'tutorial.step1.timeDisabledNote': '(selectable once reminders are active)',
+    'tutorial.step2Intro.title': 'Your first field',
+    'tutorial.step2Intro.body': 'Think of a value you want to track from now on – for example a <strong>scale</strong> (mood, sleep quality) or a <strong>free number value</strong> (weight, steps). If unsure: just start with one, you can add or change fields anytime later.',
+    'tutorial.step2Intro.readyButton': 'I have thought of a value',
+    'tutorial.step3.title': 'Well done!',
+    'tutorial.step3.body': 'Your first field has been created. You can optionally add 2–4 more – if unsure, start with fewer and expand anytime later via "Manage fields" in the menu.',
+    'tutorial.step3.addMoreButton': 'Add another field',
+    'push.unsupported': 'Reminders are not supported by this browser.',
+    'push.checking': 'Checking reminder status …',
+    'push.active': 'Reminders active',
+    'push.disable': 'disable',
+    'push.none': 'No reminders',
+    'push.enable': 'enable',
+    'push.enableProminent': 'Enable reminders',
+    'menu.language': 'Language',
+    'menu.manageFields': 'Manage fields',
+    'menu.exportData': 'Export my data',
+    'menu.regenerateRecoveryKey': 'Regenerate recovery key',
+    'menu.deleteAccount': 'Delete account',
+    'deleteAccount.title': 'Permanently delete account',
+    'deleteAccount.warning': 'All your entries, fields and settings will be permanently deleted. This cannot be undone.',
+    'deleteAccount.typeToConfirm': 'Type {word} to confirm',
+    'deleteAccount.deleting': 'Deleting …',
+    'deleteAccount.deletePermanently': 'Delete permanently',
+    'common.loading': 'Loading …',
+    'tabs.today': 'Today',
+    'tabs.week': 'Week',
+    'tabs.month': 'Month',
+    'tabs.year': 'Year',
+    'tabs.global': 'Overall',
+    'common.encryptingData': 'Your data is being encrypted …',
+    'recoveryDisplay.copied': 'Copied to clipboard.',
+    'recoveryDisplay.copyFailed': 'Copying not possible - please write down the code manually.',
+    'recoveryDisplay.fileBody': 'Keep this safe - without this code AND your password, your data is irrecoverably lost.',
+    'recoveryDisplay.downloading': 'File is being downloaded.',
+  },
+};
+
+let currentLocale = 'de';
+
+function t(key, params) {
+  const table = STRINGS[currentLocale] || STRINGS.de;
+  let str = table[key];
+  if (str === undefined) {
+    console.warn(`[i18n] fehlender Key "${key}" für Locale "${currentLocale}"`);
+    str = STRINGS.de[key] ?? key;
+  }
+  if (!params) return str;
+  return str.replace(/\{(\w+)\}/g, (_, name) => {
+    const v = params[name];
+    return v === undefined ? `{${name}}` : esc(String(v));
+  });
+}
+
+function applyLocale(locale) {
+  currentLocale = locale;
+  document.documentElement.lang = locale;
+}
+
+function detectInitialLocale() {
+  try {
+    return (navigator.language || '').toLowerCase().startsWith('en') ? 'en' : 'de';
+  } catch {
+    return 'de';
+  }
+}
+
+// Prüft beim Laden, ob DE und EN exakt dieselben Keys haben — deckt vergessene
+// Übersetzungen sofort im Dev-Verlauf auf, statt sie erst live auffallen zu lassen.
+(function assertStringsSymmetry() {
+  const deKeys = new Set(Object.keys(STRINGS.de));
+  const enKeys = new Set(Object.keys(STRINGS.en));
+  const missingInEn = [...deKeys].filter((k) => !enKeys.has(k));
+  const missingInDe = [...enKeys].filter((k) => !deKeys.has(k));
+  if (missingInEn.length) console.error('[i18n] Keys fehlen in en:', missingInEn);
+  if (missingInDe.length) console.error('[i18n] Keys fehlen in de:', missingInDe);
+})();
+
+// --- Datum/Zeit: locale-abhängige Formatierung -----------------------------
+// Ersetzt frühere feste WEEKDAYS/MONTHS-Arrays + manuelles DD.MM.YYYY-Bauen.
+// Die Montag-zuerst-Wochentag-Reihenfolge ((d.getDay()+6)%7) bleibt an den
+// jeweiligen Aufrufstellen unverändert — reine Tages-Erzeugungslogik, keine
+// Formatierungsfrage, dafür hat Intl kein verlässliches Grid-Primitiv.
+function localeTag() {
+  return currentLocale === 'en' ? 'en-US' : 'de-DE';
+}
+const dtfCache = new Map();
+function dtf(options) {
+  const key = localeTag() + JSON.stringify(options);
+  if (!dtfCache.has(key)) dtfCache.set(key, new Intl.DateTimeFormat(localeTag(), options));
+  return dtfCache.get(key);
+}
+function weekdayShort(date) { return dtf({ weekday: 'short' }).format(date); }
+function weekdayLong(date) { return dtf({ weekday: 'long' }).format(date); }
+function monthName(date) { return dtf({ month: 'long' }).format(date); }
+function monthShort(date) { return dtf({ month: 'short' }).format(date); }
+// 2024-01-01 ist ein Montag – fester Referenzpunkt, um Montag-zuerst-Kurznamen
+// unabhängig vom aktuellen Datum aus Intl zu erzeugen (reine Label-Erzeugung, hat
+// nichts mit der eigentlichen Tages-Reihenfolge-Logik an den Aufrufstellen zu tun).
+function mondayFirstWeekdayShortNames() {
+  return Array.from({ length: 7 }, (_, i) => weekdayShort(new Date(2024, 0, 1 + i)));
+}
+function longDate(date) { return dtf({ day: 'numeric', month: 'long', year: 'numeric' }).format(date); }
+function formatDMY(dateKeyOrDate) {
+  const d = typeof dateKeyOrDate === 'string' ? new Date(dateKeyOrDate + 'T00:00:00') : dateKeyOrDate;
+  return dtf({ year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+}
+
 // Supabase liefert Auth-Fehlermeldungen nur auf Englisch. "Invalid login credentials"
 // bleibt bewusst unspezifisch (verrät nicht, ob die E-Mail existiert oder nur das
 // Passwort falsch ist — sonst ließe sich der Nutzerbestand durchscannen), wird aber
-// zumindest ins Deutsche übersetzt. Unbekannte Meldungen kommen unverändert durch.
+// zumindest übersetzt. Unbekannte Meldungen kommen unverändert durch.
 const AUTH_ERROR_TRANSLATIONS = {
-  'Invalid login credentials': 'E-Mail oder Passwort falsch.',
-  'User already registered': 'Für diese E-Mail existiert bereits ein Account.',
-  'Email not confirmed': 'Bitte bestätige zuerst deine E-Mail-Adresse über den Link, den wir dir geschickt haben.',
-  'Password should be at least 6 characters': 'Das Passwort muss mindestens 6 Zeichen lang sein.',
+  de: {
+    'Invalid login credentials': 'E-Mail oder Passwort falsch.',
+    'User already registered': 'Für diese E-Mail existiert bereits ein Account.',
+    'Email not confirmed': 'Bitte bestätige zuerst deine E-Mail-Adresse über den Link, den wir dir geschickt haben.',
+    'Password should be at least 6 characters': 'Das Passwort muss mindestens 6 Zeichen lang sein.',
+  },
+  en: {
+    'Invalid login credentials': 'Email or password incorrect.',
+    'User already registered': 'An account already exists for this email address.',
+    'Email not confirmed': 'Please confirm your email address first via the link we sent you.',
+    'Password should be at least 6 characters': 'The password must be at least 6 characters long.',
+  },
 };
 function translateAuthError(message) {
-  return AUTH_ERROR_TRANSLATIONS[message] || message;
+  return (AUTH_ERROR_TRANSLATIONS[currentLocale] || AUTH_ERROR_TRANSLATIONS.de)[message] || message;
 }
 
 // Übersetzt/vereinfacht technische Postgres-/Netzwerk-Fehlermeldungen (z.B. aus
@@ -788,25 +1294,25 @@ function translateAuthError(message) {
 // translateAuthError), damit trotzdem etwas Nützliches angezeigt wird statt nichts.
 function translateDbError(message) {
   if (/duplicate key value violates unique constraint "habit_definitions_user_id_slug_key"/.test(message)) {
-    return 'Ein Feld mit einem sehr ähnlichen Namen existiert schon – bitte einen anderen Namen wählen.';
+    return t('error.db.duplicateSlug');
   }
   if (/duplicate key value violates unique constraint/.test(message)) {
-    return 'Das gibt es in dieser Form schon.';
+    return t('error.db.duplicateGeneric');
   }
   if (/violates not-null constraint/.test(message)) {
-    return 'Ein Pflichtfeld fehlt oder enthält gerade keinen gültigen Wert – bitte alle Felder prüfen und nochmal versuchen.';
+    return t('error.db.notNull');
   }
   if (/violates check constraint/.test(message)) {
-    return 'Einer der eingegebenen Werte liegt außerhalb des erlaubten Bereichs.';
+    return t('error.db.check');
   }
   if (/violates foreign key constraint/.test(message)) {
-    return 'Ein verknüpfter Eintrag existiert nicht mehr – bitte die Seite neu laden und nochmal versuchen.';
+    return t('error.db.foreignKey');
   }
   if (/Failed to fetch|NetworkError|network error/i.test(message)) {
-    return 'Keine Verbindung zum Server – prüfe deine Internetverbindung und versuch es nochmal.';
+    return t('error.db.network');
   }
   if (/JWT expired|invalid JWT|refresh_token_not_found/i.test(message)) {
-    return 'Deine Sitzung ist abgelaufen – bitte lade die Seite neu und melde dich erneut an.';
+    return t('error.db.sessionExpired');
   }
   return message;
 }
@@ -822,7 +1328,7 @@ function clearableInputHtml(id, type, value, opts = {}) {
     <div class="input-clear-wrap">
       <input type="${inputType}" id="${id}" value="${esc(value)}" ${required ? 'required' : ''}
         ${autocomplete ? `autocomplete="${autocomplete}"` : ''} ${minlength ? `minlength="${minlength}"` : ''} />
-      ${value ? `<button type="button" class="input-clear-btn" data-action="clear-input" data-target="${id}" tabindex="-1" aria-label="Eingabe löschen">×</button>` : ''}
+      ${value ? `<button type="button" class="input-clear-btn" data-action="clear-input" data-target="${id}" tabindex="-1" aria-label="${esc(t('ariaLabel.clearInput'))}">×</button>` : ''}
     </div>
   `;
 }
@@ -831,7 +1337,7 @@ function clearableInputHtml(id, type, value, opts = {}) {
 // JS nötig) — für Erklärungen, die nicht direkt sichtbar sein sollen (zu viel auf
 // einmal), aber bei Bedarf griffbereit sind.
 function infoTip(text) {
-  return `<details class="info-tip"><summary aria-label="Erklärung anzeigen">?</summary><p>${esc(text)}</p></details>`;
+  return `<details class="info-tip"><summary aria-label="${esc(t('ariaLabel.explain'))}">?</summary><p>${esc(text)}</p></details>`;
 }
 
 // Zahlen-Eingabe mit +/- Buttons daneben, für kurze/eingeschränkte Wertebereiche
@@ -842,9 +1348,9 @@ function infoTip(text) {
 function stepperInput(id, value, min, max, disabled, extraAttrs = '') {
   return `
     <div class="stepper-row">
-      <button type="button" class="stepper-btn" data-action="stepper-dec" data-target="${id}" ${disabled ? 'disabled' : ''} aria-label="Verringern">−</button>
+      <button type="button" class="stepper-btn" data-action="stepper-dec" data-target="${id}" ${disabled ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.decrease'))}">−</button>
       <input type="number" id="${id}" min="${min}" max="${max}" value="${value}" ${extraAttrs} ${disabled ? 'disabled' : ''} />
-      <button type="button" class="stepper-btn" data-action="stepper-inc" data-target="${id}" ${disabled ? 'disabled' : ''} aria-label="Erhöhen">+</button>
+      <button type="button" class="stepper-btn" data-action="stepper-inc" data-target="${id}" ${disabled ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.increase'))}">+</button>
     </div>
   `;
 }
@@ -853,7 +1359,7 @@ function stepperInput(id, value, min, max, disabled, extraAttrs = '') {
 async function loadEntries() {
   const { data, error } = await supabase.from('habit_entries').select('entry_date, data');
   if (error) {
-    state.notice = { type: 'error', text: 'Einträge konnten nicht geladen werden: ' + translateDbError(error.message) };
+    state.notice = { type: 'error', text: t('notice.loadEntriesError') + translateDbError(error.message) };
     return;
   }
   const map = {};
@@ -872,7 +1378,7 @@ async function loadEntries() {
 async function loadHabits() {
   const { data, error } = await supabase.from('habit_definitions').select('*').order('sort_order');
   if (error) {
-    state.notice = { type: 'error', text: 'Felder konnten nicht geladen werden: ' + translateDbError(error.message) };
+    state.notice = { type: 'error', text: t('notice.loadHabitsError') + translateDbError(error.message) };
     return;
   }
   state.habits = data.map(habitFromRow);
@@ -880,15 +1386,17 @@ async function loadHabits() {
 
 async function loadUserSettings() {
   const { data, error } = await supabase.from('user_settings')
-    .select('default_reminder_minute, onboarding_completed').maybeSingle();
+    .select('default_reminder_minute, onboarding_completed, locale').maybeSingle();
   if (error) {
-    state.notice = { type: 'error', text: 'Einstellungen konnten nicht geladen werden: ' + translateDbError(error.message) };
+    state.notice = { type: 'error', text: t('notice.loadSettingsError') + translateDbError(error.message) };
     return;
   }
   state.userSettings = {
     defaultReminderMinute: data ? data.default_reminder_minute : 1320,
     onboardingCompleted: data ? data.onboarding_completed : true,
+    locale: data && data.locale ? data.locale : detectInitialLocale(),
   };
+  applyLocale(state.userSettings.locale);
 }
 
 async function saveDefaultReminderMinute(minutes) {
@@ -900,7 +1408,19 @@ async function saveDefaultReminderMinute(minutes) {
   const { error } = await supabase.from('user_settings')
     .upsert({ user_id: state.session.user.id, default_reminder_minute: minutes }, { onConflict: 'user_id' });
   if (error) {
-    state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + translateDbError(error.message) };
+    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+    render();
+  }
+}
+
+async function saveLocale(locale) {
+  applyLocale(locale);
+  state.userSettings = { ...state.userSettings, locale };
+  render();
+  const { error } = await supabase.from('user_settings')
+    .upsert({ user_id: state.session.user.id, locale }, { onConflict: 'user_id' });
+  if (error) {
+    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
     render();
   }
 }
@@ -1007,7 +1527,7 @@ async function regenerateRecoveryKey() {
     .update({ recovery_wrap_iv: recoveryWrapIv, wrapped_dek_recovery: wrappedDekRecovery })
     .eq('user_id', state.session.user.id);
   if (error) {
-    state.notice = { type: 'error', text: 'Neuer Recovery-Key konnte nicht gespeichert werden: ' + translateDbError(error.message) };
+    state.notice = { type: 'error', text: t('notice.recoveryKeySaveError') + translateDbError(error.message) };
     render();
     return;
   }
@@ -1056,17 +1576,17 @@ function habitToForm(h) {
 }
 
 function formatScale(h) {
-  if (h.kind === 'number') return h.unit ? `Zahlenwert (${h.unit})` : 'Zahlenwert';
+  if (h.kind === 'number') return h.unit ? t('scale.numberWithUnit', { unit: h.unit }) : t('scale.number');
   if (h.kind === 'group') {
     const names = (h.groupMembers || [])
       .map((slug) => state.habits.find((x) => x.id === slug)?.name || slug)
       .join(', ');
-    return `Gruppiert · Ø aus: ${names || '–'}`;
+    return t('scale.grouped', { names: names || '–' });
   }
   const scale = h.labels ? h.labels.join(' / ') : `${h.min} – ${h.max}`;
   const goalPercent = Math.round((h.goalThreshold ?? 1) * 100);
-  const styleSuffix = h.displayStyle === 'slider' ? ' · Schieberegler' : '';
-  return (goalPercent < 100 ? `${scale} · Ziel ${goalPercent}%` : scale) + styleSuffix;
+  const styleSuffix = h.displayStyle === 'slider' ? ` · ${t('scale.slider')}` : '';
+  return (goalPercent < 100 ? `${scale} · ${t('scale.goal', { percent: goalPercent })}` : scale) + styleSuffix;
 }
 
 // Liest die gerade sichtbaren Formularfelder (Name + je nach Modus Min/Max oder
@@ -1143,7 +1663,7 @@ async function handleHabitSaveInner() {
   syncHabitFormFromDom();
   const name = (document.getElementById('habit-form-name')?.value || '').trim();
   if (!name) {
-    state.notice = { type: 'error', text: 'Bitte einen Namen eingeben.' };
+    state.notice = { type: 'error', text: t('habitForm.error.nameRequired') };
     return;
   }
 
@@ -1167,7 +1687,7 @@ async function handleHabitSaveInner() {
   } else if (f.kind === 'group') {
     const groupMembers = [...document.querySelectorAll('[data-group-member]:checked')].map((el) => el.dataset.groupMember);
     if (groupMembers.length < 2) {
-      state.notice = { type: 'error', text: 'Bitte mindestens 2 Felder zum Gruppieren auswählen.' };
+      state.notice = { type: 'error', text: t('habitForm.error.minGroupMembers') };
       return;
     }
     fields = { kind: 'group', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: groupMembers, goal_threshold: goalThreshold };
@@ -1182,7 +1702,7 @@ async function handleHabitSaveInner() {
     const stepsEl = document.getElementById('habit-form-slider-steps');
     const steps = Math.round(Number(stepsEl ? stepsEl.value : f.sliderSteps));
     if (!Number.isFinite(steps) || steps < 2 || steps > 1000) {
-      state.notice = { type: 'error', text: 'Anzahl Stufen muss zwischen 2 und 1000 liegen.' };
+      state.notice = { type: 'error', text: t('habitForm.error.stepsRange') };
       return;
     }
     const showValueEl = document.getElementById('habit-form-slider-show-value');
@@ -1192,11 +1712,11 @@ async function handleHabitSaveInner() {
     const min = Number(document.getElementById('habit-form-min').value);
     const max = Number(document.getElementById('habit-form-max').value);
     if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
-      state.notice = { type: 'error', text: '„Bis" muss größer als „Von" sein.' };
+      state.notice = { type: 'error', text: t('habitForm.error.maxGreaterMin') };
       return;
     }
     if (max - min + 1 > 12) {
-      state.notice = { type: 'error', text: 'Bitte maximal 12 Stufen.' };
+      state.notice = { type: 'error', text: t('habitForm.error.max12Steps') };
       return;
     }
     fields = { kind: 'scale', min, max, labels: null, good: f.good, unit: null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: goalThreshold };
@@ -1205,7 +1725,7 @@ async function handleHabitSaveInner() {
       .sort((a, b) => Number(a.dataset.labelIndex) - Number(b.dataset.labelIndex));
     const labels = labelEls.map((el) => el.value.trim());
     if (labels.some((l) => !l)) {
-      state.notice = { type: 'error', text: 'Bitte alle Bezeichnungen ausfüllen.' };
+      state.notice = { type: 'error', text: t('habitForm.error.fillAllLabels') };
       return;
     }
     fields = { kind: 'scale', min: 0, max: labels.length - 1, labels, good: f.good, unit: null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: goalThreshold };
@@ -1223,7 +1743,7 @@ async function handleHabitSaveInner() {
       : { name, ...fields, reminder_minute: reminderMinute };
     const { data, error } = await supabase.from('habit_definitions').update(patch).eq('id', f.defId).select().single();
     if (error) {
-      state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + translateDbError(error.message) };
+      state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
       return;
     }
     const idx = state.habits.findIndex((h) => h.defId === f.defId);
@@ -1235,7 +1755,7 @@ async function handleHabitSaveInner() {
       .insert({ user_id: state.session.user.id, slug, name, ...fields, reminder_minute: reminderMinute, sort_order: sortOrder })
       .select().single();
     if (error) {
-      state.notice = { type: 'error', text: 'Anlegen fehlgeschlagen: ' + translateDbError(error.message) };
+      state.notice = { type: 'error', text: t('notice.createFailed') + translateDbError(error.message) };
       return;
     }
     state.habits = [...state.habits, habitFromRow(data)];
@@ -1252,7 +1772,7 @@ async function handleHabitArchive(defId, archive) {
     .update({ archived_at: archive ? new Date().toISOString() : null })
     .eq('id', defId);
   if (error) {
-    state.notice = { type: 'error', text: 'Aktion fehlgeschlagen: ' + translateDbError(error.message) };
+    state.notice = { type: 'error', text: t('notice.actionFailed') + translateDbError(error.message) };
     render();
     return;
   }
@@ -1265,7 +1785,7 @@ async function handleHabitDelete(defId) {
   const habit = state.habits.find((h) => h.defId === defId);
   const { error } = await supabase.from('habit_definitions').delete().eq('id', defId);
   if (error) {
-    state.notice = { type: 'error', text: 'Löschen fehlgeschlagen: ' + translateDbError(error.message) };
+    state.notice = { type: 'error', text: t('notice.deleteFailed') + translateDbError(error.message) };
     render();
     return;
   }
@@ -1299,7 +1819,7 @@ async function saveDay(dateKey, dayData) {
       { onConflict: 'user_id,entry_date' }
     );
   if (error) {
-    state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + translateDbError(error.message) };
+    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
     render();
   }
 }
@@ -1338,7 +1858,7 @@ function handleSaveNumber(dateKey, habitId, rawValue) {
   } else {
     const num = parseFloat(trimmed);
     if (Number.isNaN(num)) {
-      state.notice = { type: 'error', text: 'Das ist keine gültige Zahl.' };
+      state.notice = { type: 'error', text: t('notice.invalidNumber') };
       render();
       return;
     }
@@ -1388,28 +1908,22 @@ function isInstallHintDismissed() {
   try { return localStorage.getItem('installHintDismissed') === 'true'; } catch { return false; /* z.B. privater Modus */ }
 }
 function installHintText() {
-  return isIOSDevice()
-    ? 'Für Erinnerungen per Push: Tippe auf das Teilen-Symbol (Quadrat mit Pfeil nach oben – je nach Einstellung oben in der Adressleiste oder unten in der Leiste) und dann „Zum Home-Bildschirm". Auf dem iPhone funktionieren Benachrichtigungen sonst leider gar nicht.'
-    : 'Für die beste Erfahrung (u.a. zuverlässigere Erinnerungen): füge Logbuch über das Browser-Menü zum Home-Bildschirm hinzu.';
+  return isIOSDevice() ? t('installHint.ios') : t('installHint.other');
 }
 // Genauere, betriebssystemspezifische Schritt-für-Schritt-Anleitung fürs Tutorial
 // (als aufklappbarer Info-Tip, siehe renderTutorialInstallGate) – installHintText()
 // bleibt bewusst kürzer für den dauerhaften, unaufdringlichen Hinweis in der App.
 function installStepsText() {
-  if (isIOSDevice()) {
-    return 'iPhone/iPad (Safari): Das Teilen-Symbol (Quadrat mit Pfeil nach oben) sitzt je nach Einstellung/iOS-Version OBEN in der Adressleiste oder UNTEN in der Symbolleiste – schau an beiden Stellen. Antippen, dann „Zum Home-Bildschirm" wählen (oder so ähnlich, der genaue Wortlaut kann leicht abweichen).';
-  }
-  if (/Android/.test(navigator.userAgent)) {
-    return 'Android (Chrome): Tippe oben rechts auf die drei Punkte und wähle „App installieren" bzw. „Zum Startbildschirm hinzufügen" (oder so ähnlich, je nach Android-/Chrome-Version kann der genaue Wortlaut/Ort leicht abweichen).';
-  }
-  return 'Am Computer (Chrome/Edge): Klicke in der Adressleiste auf das Installations-Symbol, oder öffne das Browser-Menü und wähle „App installieren" (oder so ähnlich, je nach Browser/Version kann der genaue Wortlaut/Ort leicht abweichen).';
+  if (isIOSDevice()) return t('installSteps.ios');
+  if (/Android/.test(navigator.userAgent)) return t('installSteps.android');
+  return t('installSteps.other');
 }
 function renderInstallHint() {
   if (isStandaloneDisplay() || isInstallHintDismissed()) return '';
   return `
     <div class="install-hint">
       <span>${esc(installHintText())}</span>
-      <button type="button" class="install-hint-close" data-action="dismiss-install-hint" aria-label="Hinweis schließen">×</button>
+      <button type="button" class="install-hint-close" data-action="dismiss-install-hint" aria-label="${esc(t('ariaLabel.dismissHint'))}">×</button>
     </div>
   `;
 }
@@ -1436,7 +1950,7 @@ async function enablePush() {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
       state.pushStatus = 'off';
-      state.notice = { type: 'error', text: 'Ohne Benachrichtigungs-Erlaubnis im Browser geht das leider nicht.' };
+      state.notice = { type: 'error', text: t('notice.pushPermissionDenied') };
       render();
       return;
     }
@@ -1457,10 +1971,10 @@ async function enablePush() {
     );
     if (error) throw error;
     state.pushStatus = 'on';
-    state.notice = { type: 'ok', text: 'Erinnerungen sind aktiv.' };
+    state.notice = { type: 'ok', text: t('notice.pushEnabled') };
   } catch (err) {
     state.pushStatus = 'off';
-    state.notice = { type: 'error', text: 'Aktivieren fehlgeschlagen: ' + (err.message || err) };
+    state.notice = { type: 'error', text: t('notice.enableFailed') + (err.message || err) };
   }
   render();
 }
@@ -1477,7 +1991,7 @@ async function disablePush() {
     }
     state.pushStatus = 'off';
   } catch (err) {
-    state.notice = { type: 'error', text: 'Deaktivieren fehlgeschlagen: ' + (err.message || err) };
+    state.notice = { type: 'error', text: t('notice.disableFailed') + (err.message || err) };
   }
   render();
 }
@@ -1496,7 +2010,7 @@ async function handleExportData() {
   ]);
   const err = defsRes.error || entriesRes.error || settingsRes.error || subsRes.error;
   if (err) {
-    state.notice = { type: 'error', text: 'Export fehlgeschlagen: ' + err.message };
+    state.notice = { type: 'error', text: t('notice.exportFailed') + err.message };
     render();
     return;
   }
@@ -1529,15 +2043,15 @@ async function handleExportData() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  state.notice = { type: 'ok', text: 'Export heruntergeladen.' };
+  state.notice = { type: 'ok', text: t('notice.exportDownloaded') };
   render();
 }
 
 // --- Konto löschen (Recht auf Löschung) -------------------------------------
 async function handleDeleteAccount() {
   const input = (document.getElementById('delete-confirm-input')?.value || '').trim();
-  if (input !== 'LÖSCHEN') {
-    state.notice = { type: 'error', text: 'Bitte tippe genau „LÖSCHEN" zur Bestätigung.' };
+  if (input !== t('deleteAccount.confirmWord')) {
+    state.notice = { type: 'error', text: t('deleteAccount.confirmMismatch', { word: t('deleteAccount.confirmWord') }) };
     render();
     return;
   }
@@ -1548,7 +2062,7 @@ async function handleDeleteAccount() {
   const { data, error } = await supabase.functions.invoke('delete-account');
   if (error || data?.error) {
     state.deleteConfirm.busy = false;
-    state.notice = { type: 'error', text: 'Löschen fehlgeschlagen: ' + (error?.message || data?.error) };
+    state.notice = { type: 'error', text: t('notice.deleteFailed') + (error?.message || data?.error) };
     render();
     return;
   }
@@ -1586,7 +2100,7 @@ let signupFormShownAt = null;
 function renderAuth() {
   const isSignup = state.authMode === 'signup';
   const isForgot = state.authMode === 'forgot';
-  const title = isForgot ? 'Passwort zurücksetzen' : isSignup ? 'Neuen Account anlegen' : 'Anmelden';
+  const title = isForgot ? t('auth.title.forgot') : isSignup ? t('auth.title.signup') : t('auth.title.login');
 
   app.innerHTML = `
     <div class="auth-box">
@@ -1594,17 +2108,17 @@ function renderAuth() {
       <p class="sub">${title}</p>
       ${state.authError ? `<div class="notice">${esc(state.authError)}</div>` : ''}
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
-      ${isForgot ? `<p class="habit-form-lock-note">Zum eigentlichen Zurücksetzen brauchst du im nächsten Schritt deinen Recovery-Key (den du bei der Einrichtung einmalig angezeigt bekommen hast), um deine bisherigen Einträge zu behalten.</p>` : ''}
+      ${isForgot ? `<p class="habit-form-lock-note">${t('auth.forgotRecoveryNote')}</p>` : ''}
       <form id="auth-form">
         <div class="auth-field">
-          <label for="email">E-Mail</label>
+          <label for="email">${t('auth.email')}</label>
           ${clearableInputHtml('email', 'email', state.authEmail, { autocomplete: 'email' })}
         </div>
         ${!isForgot ? `
           <div class="auth-field">
             <div class="auth-field-label-row">
-              <label for="password">Passwort</label>
-              <button type="button" class="push-toggle" data-action="toggle-password-visibility">${state.authPasswordVisible ? 'Verbergen' : 'Anzeigen'}</button>
+              <label for="password">${t('auth.password')}</label>
+              <button type="button" class="push-toggle" data-action="toggle-password-visibility">${state.authPasswordVisible ? t('auth.hide') : t('auth.show')}</button>
             </div>
             ${clearableInputHtml('password', 'password', state.authPassword, {
               autocomplete: isSignup ? 'new-password' : 'current-password',
@@ -1620,16 +2134,16 @@ function renderAuth() {
             <input type="text" id="website" name="website" tabindex="-1" autocomplete="off" />
           </div>
         ` : ''}
-        <button type="submit" class="auth-submit">${isForgot ? 'Link zum Zurücksetzen senden' : isSignup ? 'Account erstellen' : 'Anmelden'}</button>
+        <button type="submit" class="auth-submit">${isForgot ? t('auth.sendResetLink') : isSignup ? t('auth.createAccount') : t('auth.login')}</button>
       </form>
       ${!isForgot ? `
         <button type="button" class="auth-toggle" data-action="toggle-auth-mode">
-          ${isSignup ? 'Schon einen Account? Anmelden' : 'Noch keinen Account? Registrieren'}
+          ${isSignup ? t('auth.haveAccount') : t('auth.noAccount')}
         </button>
       ` : ''}
       ${!isSignup ? `
         <button type="button" class="auth-toggle" data-action="${isForgot ? 'cancel-forgot' : 'start-forgot'}">
-          ${isForgot ? 'Zurück zur Anmeldung' : 'Passwort vergessen?'}
+          ${isForgot ? t('auth.backToLogin') : t('auth.forgotPassword')}
         </button>
       ` : ''}
     </div>
@@ -1653,7 +2167,7 @@ function renderAuth() {
         redirectTo: window.location.origin + window.location.pathname,
       });
       if (error) { state.authError = translateAuthError(error.message); render(); return; }
-      state.notice = { type: 'ok', text: 'Falls diese E-Mail bei uns registriert ist, haben wir einen Link zum Zurücksetzen geschickt.' };
+      state.notice = { type: 'ok', text: t('auth.resetLinkSent') };
       render();
       return;
     }
@@ -1670,7 +2184,7 @@ function renderAuth() {
           // Stillschweigend ablehnen statt konkret zu sagen warum — sonst lässt sich
           // der Filter durch einen Bot leicht anpassen ("Website"-Feld leer lassen,
           // langsamer abschicken).
-          state.authError = 'Registrierung fehlgeschlagen. Bitte versuche es erneut.';
+          state.authError = t('auth.signupFailedGeneric');
           render();
           return;
         }
@@ -1680,7 +2194,7 @@ function renderAuth() {
         });
         if (error) { state.authError = translateAuthError(error.message); render(); return; }
         if (!data.session) {
-          state.notice = { type: 'ok', text: 'Fast fertig: Bestätige deine E-Mail über den Link, den wir dir geschickt haben, und melde dich dann an.' };
+          state.notice = { type: 'ok', text: t('auth.confirmEmailNotice') };
           state.authMode = 'signin';
           render();
           return;
@@ -1704,24 +2218,24 @@ function renderPasswordRecovery() {
   app.innerHTML = `
     <div class="auth-box">
       <h1>Logbuch</h1>
-      <p class="sub">Neues Passwort setzen</p>
+      <p class="sub">${t('recovery.title')}</p>
       ${state.authError ? `<div class="notice">${esc(state.authError)}</div>` : ''}
       <form id="recovery-form">
         <div class="auth-field">
-          <label for="new-password">Neues Passwort</label>
+          <label for="new-password">${t('recovery.newPassword')}</label>
           <input type="password" id="new-password" required autocomplete="new-password" minlength="6" ${state.recoveryBusy ? 'disabled' : ''} />
         </div>
         ${!fallback ? `
           <div class="auth-field">
-            <label for="recovery-key-input">Recovery-Key</label>
-            <input type="text" id="recovery-key-input" placeholder="von der einmaligen Anzeige bei der Einrichtung" autocomplete="off" ${state.recoveryBusy ? 'disabled' : ''} />
+            <label for="recovery-key-input">${t('recovery.key')}</label>
+            <input type="text" id="recovery-key-input" placeholder="${esc(t('recovery.keyPlaceholder'))}" autocomplete="off" ${state.recoveryBusy ? 'disabled' : ''} />
           </div>
-          <button type="submit" class="auth-submit" ${state.recoveryBusy ? 'disabled' : ''}>${state.recoveryBusy ? 'Wird gespeichert …' : 'Passwort speichern'}</button>
-          <button type="button" class="auth-toggle" data-action="toggle-recovery-fallback">Recovery-Key auch verloren?</button>
+          <button type="submit" class="auth-submit" ${state.recoveryBusy ? 'disabled' : ''}>${state.recoveryBusy ? t('recovery.saving') : t('recovery.savePassword')}</button>
+          <button type="button" class="auth-toggle" data-action="toggle-recovery-fallback">${t('recovery.keyAlsoLost')}</button>
         ` : `
-          <div class="notice">Ohne Recovery-Key können deine bisherigen verschlüsselten Einträge nicht mehr entschlüsselt werden — sie sind dann unwiederbringlich verloren. Das betrifft nur die alten Einträge, dein Konto selbst bleibt nutzbar.</div>
-          <button type="submit" class="auth-submit" ${state.recoveryBusy ? 'disabled' : ''}>${state.recoveryBusy ? 'Wird gespeichert …' : 'Verstanden, Passwort trotzdem setzen (alte Daten verloren)'}</button>
-          <button type="button" class="auth-toggle" data-action="toggle-recovery-fallback">Doch abbrechen, ich habe den Code noch</button>
+          <div class="notice">${t('recovery.fallbackWarning')}</div>
+          <button type="submit" class="auth-submit" ${state.recoveryBusy ? 'disabled' : ''}>${state.recoveryBusy ? t('recovery.saving') : t('recovery.setAnyway')}</button>
+          <button type="button" class="auth-toggle" data-action="toggle-recovery-fallback">${t('recovery.cancelHaveKey')}</button>
         `}
       </form>
     </div>
@@ -1746,10 +2260,10 @@ function renderPasswordRecovery() {
         let dek;
         try {
           const row = await fetchEncryptionRow(userId);
-          if (!row) throw new Error('Keine Verschlüsselungs-Konfiguration gefunden.');
+          if (!row) throw new Error(t('recovery.error.noConfig'));
           dek = await unwrapDekWithRecoveryKey(row, recoveryKeyHex);
         } catch {
-          throw new Error('Recovery-Key ist falsch oder unvollständig. Nichts wurde verändert.');
+          throw new Error(t('recovery.error.wrongKey'));
         }
         const { error } = await supabase.auth.updateUser({ password });
         if (error) throw error;
@@ -1766,7 +2280,7 @@ function renderPasswordRecovery() {
       state.recoveryBusy = false;
       state.passwordRecovery = false;
       state.recoveryFallbackConfirm = false;
-      state.notice = { type: 'ok', text: 'Passwort gespeichert.' };
+      state.notice = { type: 'ok', text: t('recovery.passwordSaved') };
       state.loading = true;
       render();
       await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
@@ -1788,21 +2302,21 @@ function renderRecoveryKeyDisplay() {
   app.innerHTML = `
     <div class="auth-box">
       <h1>Logbuch</h1>
-      <p class="sub">Dein Recovery-Key</p>
-      <p class="tutorial-text">Das ist ein separater Zugangs-Code – <strong>nicht dein Passwort</strong>. Du brauchst ihn nur, falls du dein Passwort mal vergisst.</p>
-      <div class="notice">Dieser Code wird nur einmal angezeigt. Ohne ihn UND dein Passwort sind deine Daten für immer verloren — auch wir können sie dann nicht wiederherstellen. Speichere ihn jetzt sicher (Passwort-Manager, ausgedruckt o.ä.).</div>
+      <p class="sub">${t('recoveryDisplay.title')}</p>
+      <p class="tutorial-text">${t('recoveryDisplay.explain')}</p>
+      <div class="notice">${t('recoveryDisplay.warning')}</div>
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
-      <p class="habit-form-lock-note">Kein Stress, falls du gerade keine Zeit hast: du kannst dir jederzeit über "Recovery-Key neu erzeugen" im Menü einen neuen Code anzeigen lassen (der alte wird dann ungültig).</p>
+      <p class="habit-form-lock-note">${t('recoveryDisplay.regenerateNote')}</p>
       <p class="recovery-key-code">${esc(formatted)}</p>
       <div class="habit-form-actions">
-        <button type="button" class="manage-btn" data-action="copy-recovery-key">Kopieren</button>
-        <button type="button" class="manage-btn" data-action="download-recovery-key">Als Datei herunterladen</button>
+        <button type="button" class="manage-btn" data-action="copy-recovery-key">${t('recoveryDisplay.copy')}</button>
+        <button type="button" class="manage-btn" data-action="download-recovery-key">${t('recoveryDisplay.download')}</button>
       </div>
       <label class="checkbox-field recovery-key-confirm-row">
         <input type="checkbox" id="recovery-key-confirm" />
-        Ich habe den Code sicher gespeichert.
+        ${t('recoveryDisplay.confirmCheckbox')}
       </label>
-      <button type="button" class="auth-submit" data-action="confirm-recovery-key" id="recovery-key-continue" disabled>Weiter</button>
+      <button type="button" class="auth-submit" data-action="confirm-recovery-key" id="recovery-key-continue" disabled>${t('common.next')}</button>
     </div>
   `;
 
@@ -1815,17 +2329,17 @@ function renderUnlockPrompt() {
   app.innerHTML = `
     <div class="auth-box">
       <h1>Logbuch</h1>
-      <p class="sub">Entsperren</p>
-      <p class="habit-form-lock-note">Neues Gerät, Browserdaten gelöscht oder gerade per E-Mail-Bestätigungslink angemeldet — bitte dein Passwort erneut eingeben, um deine Einträge zu entschlüsseln (bzw. bei einem ganz neuen Konto die Verschlüsselung einzurichten).</p>
+      <p class="sub">${t('unlock.title')}</p>
+      <p class="habit-form-lock-note">${t('unlock.explain')}</p>
       ${state.unlockError ? `<div class="notice">${esc(state.unlockError)}</div>` : ''}
       <form id="unlock-form">
         <div class="auth-field">
-          <label for="unlock-password">Passwort</label>
+          <label for="unlock-password">${t('auth.password')}</label>
           <input type="password" id="unlock-password" required autocomplete="current-password" ${state.unlockBusy ? 'disabled' : ''} />
         </div>
-        <button type="submit" class="auth-submit" ${state.unlockBusy ? 'disabled' : ''}>${state.unlockBusy ? 'Wird entsperrt …' : 'Entsperren'}</button>
+        <button type="submit" class="auth-submit" ${state.unlockBusy ? 'disabled' : ''}>${state.unlockBusy ? t('unlock.unlocking') : t('unlock.unlock')}</button>
       </form>
-      <button type="button" class="auth-toggle" data-action="logout">Abmelden</button>
+      <button type="button" class="auth-toggle" data-action="logout">${t('common.logout')}</button>
     </div>
   `;
 
@@ -1847,7 +2361,7 @@ function renderUnlockPrompt() {
       state.unlockBusy = false;
     } catch {
       state.unlockBusy = false;
-      state.unlockError = 'Falsches Passwort.';
+      state.unlockError = t('unlock.wrongPassword');
       render();
     }
   });
@@ -1888,7 +2402,7 @@ function renderHabitSlider(habit, value) {
         data-habit="${habit.id}" min="${habit.min}" max="${habit.max}" step="1" value="${v}"
         style="--slider-color:${color};--slider-pct:${pct}%;" />
       ${habit.sliderShowValue ? `<span class="slider-value" id="slider-value-${habit.id}">${hasValue ? v : '–'}</span>` : ''}
-      ${hasValue ? `<button type="button" class="slider-clear" data-action="clear-value" data-habit="${habit.id}" aria-label="Eintrag löschen">×</button>` : ''}
+      ${hasValue ? `<button type="button" class="slider-clear" data-action="clear-value" data-habit="${habit.id}" aria-label="${esc(t('ariaLabel.deleteEntry'))}">×</button>` : ''}
     </div>
   `;
 }
@@ -1904,7 +2418,7 @@ function renderGroupInfo(habit, dateKey) {
   const score = habitScore(habit, dateKey);
   return `
     <div class="group-readout" style="background:${scoreColor(score)}">${score !== null ? Math.round(score * 100) + '%' : '–'}</div>
-    <span class="manage-meta">Ø aus ${esc(members.map((m) => m.name).join(', '))} (${filledCount}/${members.length} heute erfasst)</span>
+    <span class="manage-meta">${t('groupInfo.avgOf', { names: members.map((m) => m.name).join(', '), filled: filledCount, total: members.length })}</span>
   `;
 }
 
@@ -1915,11 +2429,11 @@ function renderNumberBox(h, dateKey, dayEntry) {
   const unitSuffix = h.unit ? ` ${h.unit}` : '';
   const lastNote =
     last && last.dateKey !== dateKey
-      ? `zuletzt: ${last.value}${unitSuffix} (${last.dateKey.split('-').reverse().join('.')})`
+      ? t('numberBox.last', { value: last.value + unitSuffix, date: formatDMY(last.dateKey) })
       : '';
   return `
     <div class="number-box">
-      <label for="number-input-${h.id}">${esc(h.name)}${h.unit ? ` (${esc(h.unit)})` : ''}${lastNote ? `<span class="number-last">${esc(lastNote)}</span>` : ''}</label>
+      <label for="number-input-${h.id}">${esc(h.name)}${h.unit ? ` (${esc(h.unit)})` : ''}${lastNote ? `<span class="number-last">${lastNote}</span>` : ''}</label>
       <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-action="number-input" data-habit="${h.id}" value="${esc(currentValue)}" />
     </div>
   `;
@@ -1932,14 +2446,14 @@ function renderToday() {
 
   return `
     <div class="day-nav">
-      <button type="button" class="nav-btn" data-action="nav-day" data-dir="-1" aria-label="Vorheriger Tag">‹</button>
+      <button type="button" class="nav-btn" data-action="nav-day" data-dir="-1" aria-label="${esc(t('ariaLabel.prevDay'))}">‹</button>
       <div class="day-label">
-        <span class="day-weekday">${WEEKDAYS_FULL[(state.currentDate.getDay() + 6) % 7]}</span>
-        <span class="day-date">${state.currentDate.getDate()}. ${MONTHS[state.currentDate.getMonth()]} ${state.currentDate.getFullYear()}</span>
+        <span class="day-weekday">${weekdayLong(state.currentDate)}</span>
+        <span class="day-date">${longDate(state.currentDate)}</span>
       </div>
-      <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" ${isToday ? 'disabled' : ''} aria-label="Nächster Tag">›</button>
+      <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" ${isToday ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.nextDay'))}">›</button>
     </div>
-    ${!isToday ? `<button type="button" class="today-jump" data-action="jump-today">Zu heute springen</button>` : ''}
+    ${!isToday ? `<button type="button" class="today-jump" data-action="jump-today">${t('today.jumpToday')}</button>` : ''}
     <div class="habit-list">
       ${activeHabits().map((h) => {
         if (isNumberKind(h)) return renderNumberBox(h, dateKey, dayEntry);
@@ -1962,9 +2476,9 @@ function renderToday() {
           </div>
         `;
       }).join('')}
-      ${!activeHabits().length ? `<p class="manage-meta">Noch keine Felder angelegt – siehe Tab „Felder".</p>` : ''}
+      ${!activeHabits().length ? `<p class="manage-meta">${t('today.noFields')}</p>` : ''}
     </div>
-    <button type="button" class="reset-btn" data-action="reset-day">Tag zurücksetzen</button>
+    <button type="button" class="reset-btn" data-action="reset-day">${t('today.resetDay')}</button>
   `;
 }
 
@@ -1983,7 +2497,7 @@ function renderWeek() {
     const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
     return `
       <div class="grid-row">
-        <div class="grid-label">${esc(h.name)}${h.archivedAt ? ' <span class="manage-meta">(archiviert)</span>' : ''}</div>
+        <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
         ${scores.map((s, i) => `<div class="grid-cell" data-action="open-day" data-date="${formatKey(days[i])}" style="background:${scoreColor(applyGoal(h, s))}"></div>`).join('')}
         <div class="grid-cell grid-cell--avg" style="background:${scoreColor(applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
@@ -1992,14 +2506,14 @@ function renderWeek() {
 
   return `
     <div class="day-nav">
-      <button type="button" class="nav-btn" data-action="nav-week" data-dir="-1" aria-label="Vorherige Woche">‹</button>
-      <div class="day-label"><span class="day-date">${days[0].getDate()}. ${MONTHS[days[0].getMonth()]} – ${days[6].getDate()}. ${MONTHS[days[6].getMonth()]}</span></div>
-      <button type="button" class="nav-btn" data-action="nav-week" data-dir="1" aria-label="Nächste Woche">›</button>
+      <button type="button" class="nav-btn" data-action="nav-week" data-dir="-1" aria-label="${esc(t('ariaLabel.prevWeek'))}">‹</button>
+      <div class="day-label"><span class="day-date">${days[0].getDate()}. ${monthName(days[0])} – ${days[6].getDate()}. ${monthName(days[6])}</span></div>
+      <button type="button" class="nav-btn" data-action="nav-week" data-dir="1" aria-label="${esc(t('ariaLabel.nextWeek'))}">›</button>
     </div>
     <div class="grid-scroll">
       <div class="grid-row grid-row--header">
         <div class="grid-label"></div>
-        ${days.map((d) => `<div class="grid-col-header" data-action="open-day" data-date="${formatKey(d)}"><span>${WEEKDAYS[(d.getDay() + 6) % 7]}</span><span class="grid-col-date">${d.getDate()}</span></div>`).join('')}
+        ${days.map((d) => `<div class="grid-col-header" data-action="open-day" data-date="${formatKey(d)}"><span>${weekdayShort(d)}</span><span class="grid-col-date">${d.getDate()}</span></div>`).join('')}
         <div class="grid-col-header grid-col-header--avg">Ø</div>
       </div>
       ${rows}
@@ -2029,12 +2543,12 @@ function renderMonth() {
 
   return `
     <div class="day-nav">
-      <button type="button" class="nav-btn" data-action="nav-month" data-dir="-1" aria-label="Vorheriger Monat">‹</button>
-      <div class="day-label"><span class="day-date">${MONTHS[month]} ${year}</span></div>
-      <button type="button" class="nav-btn" data-action="nav-month" data-dir="1" aria-label="Nächster Monat">›</button>
+      <button type="button" class="nav-btn" data-action="nav-month" data-dir="-1" aria-label="${esc(t('ariaLabel.prevMonth'))}">‹</button>
+      <div class="day-label"><span class="day-date">${monthName(first)} ${year}</span></div>
+      <button type="button" class="nav-btn" data-action="nav-month" data-dir="1" aria-label="${esc(t('ariaLabel.nextMonth'))}">›</button>
     </div>
     <div class="month-grid">
-      ${WEEKDAYS.map((w) => `<div class="month-weekday">${w}</div>`).join('')}
+      ${mondayFirstWeekdayShortNames().map((w) => `<div class="month-weekday">${w}</div>`).join('')}
       ${cells.map((d) => {
         if (!d) return `<div class="month-cell month-cell--empty"></div>`;
         const s = dayOverallScore(d);
@@ -2049,12 +2563,12 @@ function renderMonth() {
 // --- Rendering: Year ---------------------------------------------------------
 function renderYear() {
   const year = state.yearAnchor;
-  const monthsGrid = MONTHS.map((name, mIdx) => {
+  const monthsGrid = Array.from({ length: 12 }, (_, mIdx) => {
     const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
     const cells = Array.from({ length: daysInMonth }, (_, i) => new Date(year, mIdx, i + 1));
     return `
       <div class="year-month">
-        <div class="year-month-label">${name.slice(0, 3)}</div>
+        <div class="year-month-label">${monthShort(new Date(year, mIdx, 1))}</div>
         <div class="year-month-grid">
           ${cells.map((d) => `<div class="year-day-cell" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(dayOverallScore(d))}"></div>`).join('')}
         </div>
@@ -2071,9 +2585,9 @@ function renderYear() {
 
   return `
     <div class="day-nav">
-      <button type="button" class="nav-btn" data-action="nav-year" data-dir="-1" aria-label="Vorheriges Jahr">‹</button>
+      <button type="button" class="nav-btn" data-action="nav-year" data-dir="-1" aria-label="${esc(t('ariaLabel.prevYear'))}">‹</button>
       <div class="day-label"><span class="day-date">${year}</span></div>
-      <button type="button" class="nav-btn" data-action="nav-year" data-dir="1" aria-label="Nächstes Jahr">›</button>
+      <button type="button" class="nav-btn" data-action="nav-year" data-dir="1" aria-label="${esc(t('ariaLabel.nextYear'))}">›</button>
     </div>
     <div class="year-grid">${monthsGrid}</div>
     <div class="month-stats">${renderStatsRows(yearStats)}</div>
@@ -2086,14 +2600,14 @@ function renderGlobal() {
   const dateKeys = Object.keys(state.entries).sort();
   const stats = computeHabitStats(state.habits.filter((h) => h.kind === 'scale' || h.kind === 'group'), dateKeys);
   const rangeNote = dateKeys.length
-    ? `Seit ${dateKeys[0].split('-').reverse().join('.')} · ${dateKeys.length} Tage mit Eintrag`
-    : 'Noch keine Einträge.';
+    ? t('global.rangeNote', { since: formatDMY(dateKeys[0]), count: dateKeys.length })
+    : t('global.noEntries');
 
   return `
     <div class="day-nav">
-      <div class="day-label"><span class="day-date">Gesamt</span></div>
+      <div class="day-label"><span class="day-date">${t('global.title')}</span></div>
     </div>
-    <p class="manage-meta" style="margin: -8px 0 14px;">${esc(rangeNote)}</p>
+    <p class="manage-meta" style="margin: -8px 0 14px;">${rangeNote}</p>
     <div class="month-stats">${renderStatsRows(stats)}</div>
     ${renderNumberCharts(state.habits, dateKeys)}
   `;
@@ -2102,7 +2616,7 @@ function renderGlobal() {
 function renderStatsRows(stats) {
   return stats.map(({ habit, avg, count }) => `
     <div class="month-stat-row">
-      <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ' <span class="manage-meta">(archiviert)</span>' : ''}</span>
+      <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
       <span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : scoreColor(applyGoal(habit, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'} <span class="month-stat-count">(${count}×)</span></span>
     </div>
   `).join('');
@@ -2117,12 +2631,12 @@ function renderNumberChart(habit, dateKeys) {
   const unitSuffix = habit.unit ? ` ${esc(habit.unit)}` : '';
   const head = `
     <div class="number-chart-head">
-      <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ' <span class="manage-meta">(archiviert)</span>' : ''}</span>
-      ${stats ? `<span class="number-chart-meta">${stats.last}${unitSuffix} zuletzt · Ø ${round1(stats.avg)}${unitSuffix} · ${stats.count}×</span>` : ''}
+      <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
+      ${stats ? `<span class="number-chart-meta">${t('numberChart.meta', { last: stats.last + unitSuffix, avg: round1(stats.avg) + unitSuffix, count: stats.count })}</span>` : ''}
     </div>
   `;
   if (!stats || stats.series.length < 2) {
-    return `<div class="number-chart-box">${head}<p class="manage-meta">${stats ? 'Noch zu wenige Werte für einen Verlauf.' : 'Noch keine Werte.'}</p></div>`;
+    return `<div class="number-chart-box">${head}<p class="manage-meta">${stats ? t('numberChart.tooFewValues') : t('numberChart.noValues')}</p></div>`;
   }
   const w = 280, h = 56, pad = 4;
   const n = stats.series.length;
@@ -2168,69 +2682,69 @@ function renderHabitForm() {
 
   const goalField = `
     <div class="auth-field">
-      <label for="habit-form-goal">Ab wann als voll erreicht gilt (%)${infoTip('Bei unter 100%: schon eine niedrigere Quote/Wert zählt farblich als voll erreicht (grün) – z. B. bei "Kraftsport gemacht" reichen vielleicht schon 3 von 7 Tagen die Woche als Ziel. Ändert nur die Farbe, nie die angezeigte Prozentzahl. Wirkt sich nicht auf „Heute" aus. Standard 100% = nur der Maximalwert zählt als voll erreicht.')}</label>
+      <label for="habit-form-goal">${t('habitForm.goalLabel')}${infoTip(t('habitForm.goalExplain'))}</label>
       <input type="number" id="habit-form-goal" min="1" max="100" step="1" value="${f.goalPercent}" />
     </div>
   `;
 
   const scaleBody = `
     <div class="auth-field">
-      <label>Werte-Art</label>
+      <label>${t('habitForm.valueType')}</label>
       <div class="pill-group">
-        <button type="button" class="pill-toggle${f.mode === 'numeric' ? ' pill-toggle--active' : ''}" data-action="habit-mode" data-mode="numeric" ${f.locked ? 'disabled' : ''}>Nummerierte Stufen</button>
-        <button type="button" class="pill-toggle${f.mode === 'labels' ? ' pill-toggle--active' : ''}" data-action="habit-mode" data-mode="labels" ${f.locked ? 'disabled' : ''}>Eigene Bezeichnungen</button>
+        <button type="button" class="pill-toggle${f.mode === 'numeric' ? ' pill-toggle--active' : ''}" data-action="habit-mode" data-mode="numeric" ${f.locked ? 'disabled' : ''}>${t('habitForm.numberedSteps')}</button>
+        <button type="button" class="pill-toggle${f.mode === 'labels' ? ' pill-toggle--active' : ''}" data-action="habit-mode" data-mode="labels" ${f.locked ? 'disabled' : ''}>${t('habitForm.ownLabels')}</button>
       </div>
     </div>
     ${f.mode === 'numeric' ? `
       <div class="auth-field">
-        <label>Darstellung${f.locked ? infoTip('Reine Anzeige-Einstellung, ändert nichts an bestehenden Werten – deshalb hier trotz gesperrtem Bereich änderbar.') : ''}</label>
+        <label>${t('habitForm.display')}${f.locked ? infoTip(t('habitForm.displayLockedExplain')) : ''}</label>
         <div class="pill-group">
-          <button type="button" class="pill-toggle${f.displayStyle === 'buttons' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="buttons">Buttons</button>
-          <button type="button" class="pill-toggle${f.displayStyle === 'slider' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="slider">Schieberegler</button>
+          <button type="button" class="pill-toggle${f.displayStyle === 'buttons' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="buttons">${t('habitForm.buttons')}</button>
+          <button type="button" class="pill-toggle${f.displayStyle === 'slider' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="slider">${t('habitForm.slider')}</button>
         </div>
       </div>
       ${f.displayStyle === 'slider' ? `
         <div class="auth-field">
-          <label for="habit-form-slider-steps">Anzahl Stufen${infoTip('Der Regler zeigt nie eine Min/Max-Beschriftung beim Eintragen (nur hier in der Verwaltung).')}</label>
+          <label for="habit-form-slider-steps">${t('habitForm.numberOfSteps')}${infoTip(t('habitForm.sliderRangeExplain'))}</label>
           ${f.locked
-            ? `<p class="habit-form-lock-note">Bereich ${f.min}–${f.max} (durch vorhandene Einträge gesperrt).</p>`
+            ? `<p class="habit-form-lock-note">${t('habitForm.rangeLocked', { min: f.min, max: f.max })}</p>`
             : stepperInput('habit-form-slider-steps', f.sliderSteps, 2, 1000, false)}
         </div>
         <div class="auth-field">
           <label class="checkbox-field">
             <input type="checkbox" id="habit-form-slider-show-value" ${f.sliderShowValue ? 'checked' : ''} />
-            Aktuellen Wert beim Eintragen anzeigen
+            ${t('habitForm.showValueWhileEntering')}
           </label>
         </div>
       ` : `
         <div class="habit-form-minmax">
           <div class="auth-field">
-            <label for="habit-form-min">Von</label>
+            <label for="habit-form-min">${t('habitForm.from')}</label>
             <input type="number" id="habit-form-min" value="${f.min}" ${f.locked ? 'disabled' : ''} />
           </div>
           <div class="auth-field">
-            <label for="habit-form-max">Bis</label>
+            <label for="habit-form-max">${t('habitForm.to')}</label>
             <input type="number" id="habit-form-max" value="${f.max}" ${f.locked ? 'disabled' : ''} />
           </div>
         </div>
       `}
     ` : `
       <div class="auth-field">
-        <label for="habit-form-steps">Anzahl Stufen</label>
+        <label for="habit-form-steps">${t('habitForm.numberOfSteps')}</label>
         ${stepperInput('habit-form-steps', f.steps, 2, 8, f.locked, 'data-action="habit-steps"')}
       </div>
       <div class="auth-field">
-        <label>Bezeichnungen der Reihe nach (Wert 0 zuerst, z. B. „Nein“, „Ein bisschen“, „Ja“)</label>
+        <label>${t('habitForm.labelsInOrder')}</label>
         <div class="label-inputs">
           ${f.labels.map((l, i) => `<input type="text" data-label-index="${i}" value="${esc(l)}" maxlength="20" ${f.locked ? 'disabled' : ''} />`).join('')}
         </div>
       </div>
     `}
     <div class="auth-field">
-      <label>Zielrichtung${infoTip('Legt fest, was als "gut" gilt und entsprechend grün eingefärbt wird. Meist "hohe Werte" (z. B. Sport, gesunde Ernährung). "Niedrige Werte" eignet sich für Dinge, von denen weniger besser ist (z. B. Konsum von etwas, das man reduzieren möchte).')}</label>
+      <label>${t('habitForm.goalDirection')}${infoTip(t('habitForm.goalDirectionExplain'))}</label>
       <div class="pill-group">
-        <button type="button" class="pill-toggle${f.good === 'high' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="high">Hohe Werte erstrebenswert</button>
-        <button type="button" class="pill-toggle${f.good === 'low' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="low">Niedrige Werte erstrebenswert</button>
+        <button type="button" class="pill-toggle${f.good === 'high' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="high">${t('habitForm.highIsGood')}</button>
+        <button type="button" class="pill-toggle${f.good === 'low' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="low">${t('habitForm.lowIsGood')}</button>
       </div>
     </div>
     ${goalField}
@@ -2238,8 +2752,8 @@ function renderHabitForm() {
 
   const numberBody = `
     <div class="auth-field">
-      <label for="habit-form-unit">Einheit (optional)</label>
-      <input type="text" id="habit-form-unit" value="${esc(f.unit)}" maxlength="10" placeholder="z. B. kg" />
+      <label for="habit-form-unit">${t('habitForm.unit')}</label>
+      <input type="text" id="habit-form-unit" value="${esc(f.unit)}" maxlength="10" placeholder="${esc(t('habitForm.unitPlaceholder'))}" />
     </div>
   `;
 
@@ -2251,17 +2765,17 @@ function renderHabitForm() {
   );
   const groupBody = `
     <div class="auth-field">
-      <label>Mitglieder (mind. 2 Skala-Felder)</label>
+      <label>${t('habitForm.members')}</label>
       ${scaleCandidates.length ? `
         <div class="group-member-list">
           ${scaleCandidates.map((h) => `
             <label class="checkbox-field group-member-check">
               <input type="checkbox" data-group-member="${esc(h.id)}" ${f.groupMembers.includes(h.id) ? 'checked' : ''} />
-              ${esc(h.name)}${h.archivedAt ? ' <span class="manage-meta">(archiviert)</span>' : ''}
+              ${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}
             </label>
           `).join('')}
         </div>
-      ` : `<p class="habit-form-lock-note">Noch keine Skala-Felder vorhanden, die sich gruppieren lassen.</p>`}
+      ` : `<p class="habit-form-lock-note">${t('habitForm.noGroupCandidates')}</p>`}
     </div>
     ${goalField}
   `;
@@ -2270,37 +2784,37 @@ function renderHabitForm() {
     <div class="auth-field">
       <label class="checkbox-field">
         <input type="checkbox" id="habit-form-reminder-enabled" data-action="habit-reminder-toggle" ${f.reminderEnabled ? 'checked' : ''} />
-        Eigene Erinnerungszeit
+        ${t('habitForm.ownReminderTime')}
       </label>
       ${f.reminderEnabled
         ? reminderTimeInputHtml('habit-form-reminder-time', f.reminderMinute ?? defaultReminderMinute, 'habit-reminder-time-changed')
-        : `<p class="habit-form-lock-note">Ohne eigene Zeit gilt die Standard-Erinnerungszeit (aktuell ${minutesToTimeStr(defaultReminderMinute)}, änderbar im Menü).</p>`}
+        : `<p class="habit-form-lock-note">${t('habitForm.defaultReminderNote', { time: minutesToTimeStr(defaultReminderMinute) })}</p>`}
     </div>
   `;
 
   const isGroup = f.kind === 'group';
   return `
     <div class="habit-form" id="habit-form">
-      <h2>${isGroup ? (f.defId ? 'Gruppe bearbeiten' : 'Neue Gruppe') : (f.defId ? 'Feld bearbeiten' : 'Neues Feld')}</h2>
-      ${f.locked ? `<p class="habit-form-lock-note">Für dieses Feld gibt es bereits Einträge – Feld-Typ/Skala/Bezeichnungen sind gesperrt. Für eine andere Skala: archivieren und neu anlegen.</p>` : ''}
+      <h2>${isGroup ? (f.defId ? t('habitForm.title.editGroup') : t('habitForm.title.newGroup')) : (f.defId ? t('habitForm.title.editField') : t('habitForm.title.newField'))}</h2>
+      ${f.locked ? `<p class="habit-form-lock-note">${t('habitForm.lockedNote')}</p>` : ''}
       <div class="auth-field">
-        <label for="habit-form-name">Name</label>
+        <label for="habit-form-name">${t('habitForm.name')}</label>
         <input type="text" id="habit-form-name" value="${esc(f.name)}" maxlength="40" />
       </div>
       ${!isGroup ? `
         <div class="auth-field">
-          <label>Feld-Typ</label>
+          <label>${t('habitForm.fieldType')}</label>
           <div class="pill-group">
-            <button type="button" class="pill-toggle${f.kind === 'scale' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="scale" ${f.locked ? 'disabled' : ''}>Skala</button>
-            <button type="button" class="pill-toggle${f.kind === 'number' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="number" ${f.locked ? 'disabled' : ''}>Freier Zahlenwert</button>
+            <button type="button" class="pill-toggle${f.kind === 'scale' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="scale" ${f.locked ? 'disabled' : ''}>${t('habitForm.kindScale')}</button>
+            <button type="button" class="pill-toggle${f.kind === 'number' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="number" ${f.locked ? 'disabled' : ''}>${t('habitForm.kindNumber')}</button>
           </div>
         </div>
       ` : ''}
       ${isGroup ? groupBody : f.kind === 'scale' ? scaleBody : numberBody}
       ${!isGroup ? reminderBody : ''}
       <div class="habit-form-actions">
-        <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? 'Wird gespeichert …' : 'Speichern'}</button>
-        <button type="button" class="habit-form-cancel" data-action="habit-cancel" ${state.habitFormSaving ? 'disabled' : ''}>Abbrechen</button>
+        <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t('common.save')}</button>
+        <button type="button" class="habit-form-cancel" data-action="habit-cancel" ${state.habitFormSaving ? 'disabled' : ''}>${t('common.cancel')}</button>
       </div>
     </div>
   `;
@@ -2320,28 +2834,28 @@ function renderManage() {
     // JSON in habit_entries.data liegen (kein Cascade auf einzelne Slugs), sind ohne
     // die Feld-Definition in der App aber nicht mehr nutzbar/auswertbar.
     const deleteAction = !hasData
-      ? `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete" data-id="${h.defId}">Löschen</button>`
+      ? `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete" data-id="${h.defId}">${t('common.delete')}</button>`
       : confirmingDelete
         ? `
-          <button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete" data-id="${h.defId}">Ja, endgültig löschen</button>
-          <button type="button" class="manage-btn" data-action="habit-delete-cancel">Abbrechen</button>
+          <button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete" data-id="${h.defId}">${t('manage.deleteConfirmFinal')}</button>
+          <button type="button" class="manage-btn" data-action="habit-delete-cancel">${t('common.cancel')}</button>
         `
-        : `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete-arm" data-id="${h.defId}">Löschen</button>`;
+        : `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete-arm" data-id="${h.defId}">${t('common.delete')}</button>`;
     return `
       <div class="manage-row${h.archivedAt ? ' manage-row--archived' : ''}${confirmingDelete ? ' manage-row--confirm-delete' : ''}" data-def-id="${h.defId}">
-        ${!h.archivedAt ? `<span class="drag-handle" data-action="drag-handle" aria-label="Reihenfolge ändern"><span></span><span></span></span>` : ''}
+        ${!h.archivedAt ? `<span class="drag-handle" data-action="drag-handle" aria-label="${esc(t('ariaLabel.reorder'))}"><span></span><span></span></span>` : ''}
         <div class="manage-info">
           <span class="manage-name">${esc(h.name)}</span>
           ${confirmingDelete
-            ? `<span class="manage-delete-warning">Es gibt historische Einträge – nach dem Löschen in der App nicht mehr nutzbar.</span>`
-            : `<span class="manage-meta">${esc(formatScale(h))}${h.kind === 'scale' ? ` · ${h.good === 'high' ? 'hohe Werte gut' : 'niedrige Werte gut'}` : ''}${h.reminderMinute !== null && h.reminderMinute !== undefined ? ` · Erinnerung ${minutesToTimeStr(h.reminderMinute)}` : ''}</span>`}
+            ? `<span class="manage-delete-warning">${t('manage.deleteWarning')}</span>`
+            : `<span class="manage-meta">${formatScale(h)}${h.kind === 'scale' ? ` · ${h.good === 'high' ? t('manage.highIsGoodShort') : t('manage.lowIsGoodShort')}` : ''}${h.reminderMinute !== null && h.reminderMinute !== undefined ? ` · ${t('manage.reminderAt', { time: minutesToTimeStr(h.reminderMinute) })}` : ''}</span>`}
         </div>
         <div class="manage-actions">
           ${!h.archivedAt ? `
-            <button type="button" class="manage-btn" data-action="habit-edit" data-id="${h.defId}">Bearbeiten</button>
-            <button type="button" class="manage-btn" data-action="habit-archive" data-id="${h.defId}">Archivieren</button>
+            <button type="button" class="manage-btn" data-action="habit-edit" data-id="${h.defId}">${t('common.edit')}</button>
+            <button type="button" class="manage-btn" data-action="habit-archive" data-id="${h.defId}">${t('manage.archive')}</button>
           ` : confirmingDelete ? deleteAction : `
-            <button type="button" class="manage-btn" data-action="habit-reactivate" data-id="${h.defId}">Reaktivieren</button>
+            <button type="button" class="manage-btn" data-action="habit-reactivate" data-id="${h.defId}">${t('manage.reactivate')}</button>
             ${deleteAction}
           `}
         </div>
@@ -2353,20 +2867,20 @@ function renderManage() {
   const showGroupForm = state.habitForm && state.habitForm.kind === 'group';
 
   return `
-    ${showFieldForm ? renderHabitForm() : !state.habitForm ? `<button type="button" class="manage-new-btn" data-action="habit-new">+ Neues Feld</button>` : ''}
+    ${showFieldForm ? renderHabitForm() : !state.habitForm ? `<button type="button" class="manage-new-btn" data-action="habit-new">+ ${t('habitForm.title.newField')}</button>` : ''}
     <div class="manage-list">${active.map(row).join('')}</div>
     ${archived.length ? `
-      <p class="habit-form-lock-note">Archiviert</p>
+      <p class="habit-form-lock-note">${t('manage.archivedSectionLabel')}</p>
       <div class="manage-list">${archived.map(row).join('')}</div>
     ` : ''}
 
     <div class="manage-section-divider"></div>
-    <h3 class="manage-section-title">Gruppen</h3>
-    <p class="manage-meta">Fassen mehrere Skala-Felder zu einem live berechneten Durchschnittswert zusammen – z. B. „Sport gemacht" aus „Ausdauersport" + „Kraftsport".</p>
-    ${showGroupForm ? renderHabitForm() : !state.habitForm ? `<button type="button" class="manage-new-btn" data-action="group-new">+ Neue Gruppe</button>` : ''}
+    <h3 class="manage-section-title">${t('manage.groupsTitle')}</h3>
+    <p class="manage-meta">${t('manage.groupsExplain')}</p>
+    ${showGroupForm ? renderHabitForm() : !state.habitForm ? `<button type="button" class="manage-new-btn" data-action="group-new">+ ${t('habitForm.title.newGroup')}</button>` : ''}
     <div class="manage-list">${activeGroups.map(row).join('')}</div>
     ${archivedGroups.length ? `
-      <p class="habit-form-lock-note">Archiviert</p>
+      <p class="habit-form-lock-note">${t('manage.archivedSectionLabel')}</p>
       <div class="manage-list">${archivedGroups.map(row).join('')}</div>
     ` : ''}
   `;
@@ -2379,41 +2893,6 @@ function renderManage() {
 // kein Reload-Resume nötig — dafür verhindert die beforeunload-Warnung in Schritt 2
 // ein versehentliches Verlassen mitten im geführten Feld-Anlegen.
 //
-// Alle Tutorial-Texte zentral hier statt verteilt in den render*-Funktionen unten,
-// damit Textänderungen an einer Stelle passieren (immer noch ein Code-Deploy nötig,
-// aber nicht mehr Suchen in Template-Strings).
-const TUTORIAL_TEXTS = {
-  installGate: {
-    title: 'Bevor es losgeht',
-    bodyContinuation: 'Mach das am besten gleich jetzt: installiere Logbuch auf deinem Home-/Startbildschirm und öffne es danach über das neue Symbol – diese Seite hier brauchst du dann nicht mehr, es geht automatisch mit dem Tutorial weiter. Falls du dich dort nochmal kurz anmelden musst: einfach mit denselben Zugangsdaten wie gerade eben.',
-    browserFallbackButton: 'Stattdessen im Browser fortfahren (nicht empfohlen)',
-  },
-  skipConfirm: {
-    title: 'Tutorial überspringen?',
-    body: 'Du kannst jederzeit später eigene Felder über „Felder verwalten" im Menü anlegen.',
-    confirmButton: 'Ja, überspringen',
-    cancelButton: 'Abbrechen',
-  },
-  step1: {
-    title: 'Willkommen',
-    body: 'Logbuch lebt davon, dass du täglich ein paar Werte einträgst – je regelmäßiger, desto aussagekräftiger die Auswertung. Push-Erinnerungen helfen dir, das nicht zu vergessen – tippe dafür unten auf „Erinnerungen aktivieren" (nicht einfach nur „Weiter"):',
-    nextButton: 'Weiter',
-    skipButton: 'Tutorial überspringen',
-  },
-  step2Intro: {
-    title: 'Dein erstes Feld',
-    body: 'Überlege dir einen Wert, den du ab jetzt beobachten willst – zum Beispiel eine <strong>Skala</strong> (Stimmung, Schlafqualität) oder ein <strong>freier Zahlenwert</strong> (Gewicht, Schritte). Wenn du unsicher bist: fang einfach mit einem an, du kannst später jederzeit weitere Felder anlegen oder bestehende ändern.',
-    readyButton: 'Ich hab mir einen Wert überlegt',
-    skipButton: 'Tutorial überspringen',
-  },
-  step3: {
-    title: 'Gut gemacht!',
-    body: 'Dein erstes Feld ist angelegt. Du kannst optional noch 2–4 weitere ergänzen – wer sich unsicher fühlt, fängt lieber mit wenigen an und erweitert später jederzeit über „Felder verwalten" im Menü.',
-    addMoreButton: 'Weiteres Feld anlegen',
-    finishButton: 'Fertig',
-  },
-};
-
 async function saveOnboardingCompleted() {
   state.userSettings = { ...state.userSettings, onboardingCompleted: true };
   state.tutorialStep = null;
@@ -2422,21 +2901,20 @@ async function saveOnboardingCompleted() {
   const { error } = await supabase.from('user_settings')
     .upsert({ user_id: state.session.user.id, onboarding_completed: true }, { onConflict: 'user_id' });
   if (error) {
-    state.notice = { type: 'error', text: 'Speichern fehlgeschlagen: ' + translateDbError(error.message) };
+    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
     render();
   }
 }
 
 function renderTutorialSkipConfirm() {
-  const t = TUTORIAL_TEXTS.skipConfirm;
   return `
     <div class="modal-overlay">
       <div class="modal-box">
-        <h2>${esc(t.title)}</h2>
-        <p>${esc(t.body)}</p>
+        <h2>${t('tutorial.skipConfirm.title')}</h2>
+        <p>${t('tutorial.skipConfirm.body')}</p>
         <div class="habit-form-actions">
-          <button type="button" class="manage-btn manage-btn--danger" data-action="tutorial-skip-confirm">${esc(t.confirmButton)}</button>
-          <button type="button" class="habit-form-cancel" data-action="tutorial-skip-cancel">${esc(t.cancelButton)}</button>
+          <button type="button" class="manage-btn manage-btn--danger" data-action="tutorial-skip-confirm">${t('tutorial.skipConfirm.confirmButton')}</button>
+          <button type="button" class="habit-form-cancel" data-action="tutorial-skip-cancel">${t('common.cancel')}</button>
         </div>
       </div>
     </div>
@@ -2444,46 +2922,43 @@ function renderTutorialSkipConfirm() {
 }
 
 function renderTutorialInstallGate() {
-  const t = TUTORIAL_TEXTS.installGate;
   return `
     <div class="auth-box">
-      <h1>${esc(t.title)}</h1>
-      <p class="tutorial-text">${esc(installHintText())} ${esc(t.bodyContinuation)}${infoTip(installStepsText())}</p>
-      <button type="button" class="auth-toggle" data-action="tutorial-install-ack">${esc(t.browserFallbackButton)}</button>
+      <h1>${t('tutorial.installGate.title')}</h1>
+      <p class="tutorial-text">${esc(installHintText())} ${t('tutorial.installGate.bodyContinuation')}${infoTip(installStepsText())}</p>
+      <button type="button" class="auth-toggle" data-action="tutorial-install-ack">${t('tutorial.installGate.browserFallbackButton')}</button>
     </div>
   `;
 }
 
 function renderTutorialStep1() {
-  const t = TUTORIAL_TEXTS.step1;
   return `
     <div class="auth-box">
-      <h1>${esc(t.title)}</h1>
-      <p class="sub">Schritt 1 von 3</p>
+      <h1>${t('tutorial.step1.title')}</h1>
+      <p class="sub">${t('tutorial.stepLabel', { step: 1 })}</p>
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
-      <p class="tutorial-text">${esc(t.body)}</p>
+      <p class="tutorial-text">${t('tutorial.step1.body')}</p>
       ${renderPushRow(true)}
       <div class="auth-field">
-        <label for="tutorial-default-time">Standard-Erinnerungszeit${state.pushStatus !== 'on' ? ' (erst wählbar, sobald Erinnerungen aktiv sind)' : ''}</label>
+        <label for="tutorial-default-time">${t('menu.defaultReminderTime')}${state.pushStatus !== 'on' ? ` ${t('tutorial.step1.timeDisabledNote')}` : ''}</label>
         ${reminderTimeInputHtml('tutorial-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', state.pushStatus !== 'on')}
       </div>
-      <button type="button" class="auth-submit" data-action="tutorial-next">${esc(t.nextButton)}</button>
-      <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${esc(t.skipButton)}</button>
+      <button type="button" class="auth-submit" data-action="tutorial-next">${t('common.next')}</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${t('tutorial.skip')}</button>
     </div>
     ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
   `;
 }
 
 function renderTutorialStep2Intro() {
-  const t = TUTORIAL_TEXTS.step2Intro;
   return `
     <div class="auth-box">
-      <h1>${esc(t.title)}</h1>
-      <p class="sub">Schritt 2 von 3</p>
+      <h1>${t('tutorial.step2Intro.title')}</h1>
+      <p class="sub">${t('tutorial.stepLabel', { step: 2 })}</p>
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
-      <p class="tutorial-text">${t.body}</p>
-      <button type="button" class="auth-submit" data-action="tutorial-ready">${esc(t.readyButton)}</button>
-      <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${esc(t.skipButton)}</button>
+      <p class="tutorial-text">${t('tutorial.step2Intro.body')}</p>
+      <button type="button" class="auth-submit" data-action="tutorial-ready">${t('tutorial.step2Intro.readyButton')}</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${t('tutorial.skip')}</button>
     </div>
     ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
   `;
@@ -2491,22 +2966,21 @@ function renderTutorialStep2Intro() {
 
 function renderTutorialStep2Form() {
   return `
-    <p class="tutorial-step-label">Schritt 2 von 3</p>
+    <p class="tutorial-step-label">${t('tutorial.stepLabel', { step: 2 })}</p>
     ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
     ${renderHabitForm()}
   `;
 }
 
 function renderTutorialStep3() {
-  const t = TUTORIAL_TEXTS.step3;
   return `
     <div class="auth-box">
-      <h1>${esc(t.title)}</h1>
-      <p class="sub">Schritt 3 von 3</p>
+      <h1>${t('tutorial.step3.title')}</h1>
+      <p class="sub">${t('tutorial.stepLabel', { step: 3 })}</p>
       ${state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : ''}
-      <p class="tutorial-text">${esc(t.body)}</p>
-      <button type="button" class="auth-submit" data-action="tutorial-add-more">${esc(t.addMoreButton)}</button>
-      <button type="button" class="auth-toggle" data-action="tutorial-finish">${esc(t.finishButton)}</button>
+      <p class="tutorial-text">${t('tutorial.step3.body')}</p>
+      <button type="button" class="auth-submit" data-action="tutorial-add-more">${t('tutorial.step3.addMoreButton')}</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-finish">${t('common.finish')}</button>
     </div>
   `;
 }
@@ -2539,18 +3013,18 @@ function renderTutorial() {
 // als schlichter Link (im normalen Burger-Menü bleibt es bewusst unauffälliger).
 function renderPushRow(prominent = false) {
   if (state.pushStatus === 'unsupported') {
-    return `<div class="push-row push-row--muted">Erinnerungen werden von diesem Browser nicht unterstützt.</div>`;
+    return `<div class="push-row push-row--muted">${t('push.unsupported')}</div>`;
   }
   if (state.pushStatus === 'unknown' || state.pushStatus === 'busy') {
-    return `<div class="push-row push-row--muted">Erinnerungsstatus wird geprüft …</div>`;
+    return `<div class="push-row push-row--muted">${t('push.checking')}</div>`;
   }
   if (state.pushStatus === 'on') {
-    return `<div class="push-row">🔔 Erinnerungen aktiv <button type="button" class="push-toggle" data-action="disable-push">deaktivieren</button></div>`;
+    return `<div class="push-row">🔔 ${t('push.active')} <button type="button" class="push-toggle" data-action="disable-push">${t('push.disable')}</button></div>`;
   }
   return `
     <div class="push-row">
-      🔕 Keine Erinnerungen
-      <button type="button" class="${prominent ? 'push-toggle push-toggle--prominent' : 'push-toggle'}" data-action="enable-push">${prominent ? 'Erinnerungen aktivieren' : 'aktivieren'}</button>
+      🔕 ${t('push.none')}
+      <button type="button" class="${prominent ? 'push-toggle push-toggle--prominent' : 'push-toggle'}" data-action="enable-push">${prominent ? t('push.enableProminent') : t('push.enable')}</button>
     </div>
   `;
 }
@@ -2560,14 +3034,21 @@ function renderMenu() {
     <div class="menu-panel">
       ${renderPushRow()}
       <div class="menu-row">
-        <label for="menu-default-time">Standard-Erinnerungszeit</label>
+        <label for="menu-default-time">${t('menu.defaultReminderTime')}</label>
         ${reminderTimeInputHtml('menu-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time')}
       </div>
-      <button type="button" class="menu-item-btn" data-action="open-manage">Felder verwalten</button>
-      <button type="button" class="menu-item-btn" data-action="export-data">Meine Daten exportieren</button>
-      <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key">Recovery-Key neu erzeugen</button>
-      <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="open-delete-confirm">Konto löschen</button>
-      <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="logout">Abmelden</button>
+      <div class="menu-row">
+        <label for="menu-locale">${t('menu.language')}</label>
+        <select id="menu-locale" data-action="menu-locale">
+          <option value="de" ${currentLocale === 'de' ? 'selected' : ''}>Deutsch</option>
+          <option value="en" ${currentLocale === 'en' ? 'selected' : ''}>English</option>
+        </select>
+      </div>
+      <button type="button" class="menu-item-btn" data-action="open-manage">${t('menu.manageFields')}</button>
+      <button type="button" class="menu-item-btn" data-action="export-data">${t('menu.exportData')}</button>
+      <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key">${t('menu.regenerateRecoveryKey')}</button>
+      <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="open-delete-confirm">${t('menu.deleteAccount')}</button>
+      <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="logout">${t('common.logout')}</button>
     </div>
   `;
 }
@@ -2577,15 +3058,15 @@ function renderDeleteConfirm() {
   return `
     <div class="modal-overlay">
       <div class="modal-box">
-        <h2>Konto endgültig löschen</h2>
-        <p>Alle deine Einträge, Felder und Einstellungen werden unwiderruflich gelöscht. Das kann nicht rückgängig gemacht werden.</p>
+        <h2>${t('deleteAccount.title')}</h2>
+        <p>${t('deleteAccount.warning')}</p>
         <div class="auth-field">
-          <label for="delete-confirm-input">Tippe LÖSCHEN zur Bestätigung</label>
+          <label for="delete-confirm-input">${t('deleteAccount.typeToConfirm', { word: t('deleteAccount.confirmWord') })}</label>
           <input type="text" id="delete-confirm-input" autocomplete="off" ${busy ? 'disabled' : ''} />
         </div>
         <div class="habit-form-actions">
-          <button type="button" class="manage-btn manage-btn--danger" data-action="delete-confirm-submit" ${busy ? 'disabled' : ''}>${busy ? 'Wird gelöscht …' : 'Endgültig löschen'}</button>
-          <button type="button" class="habit-form-cancel" data-action="delete-confirm-cancel" ${busy ? 'disabled' : ''}>Abbrechen</button>
+          <button type="button" class="manage-btn manage-btn--danger" data-action="delete-confirm-submit" ${busy ? 'disabled' : ''}>${busy ? t('deleteAccount.deleting') : t('deleteAccount.deletePermanently')}</button>
+          <button type="button" class="habit-form-cancel" data-action="delete-confirm-cancel" ${busy ? 'disabled' : ''}>${t('common.cancel')}</button>
         </div>
       </div>
     </div>
@@ -2594,7 +3075,7 @@ function renderDeleteConfirm() {
 
 function renderApp() {
   const noticeHtml = state.notice ? `<div class="notice${state.notice.type === 'ok' ? ' notice--ok' : ''}">${esc(state.notice.text)}</div>` : '';
-  const body = state.loading ? `<div class="loading">Lädt …</div>` :
+  const body = state.loading ? `<div class="loading">${t('common.loading')}</div>` :
     state.view === 'today' ? renderToday() :
     state.view === 'week' ? renderWeek() :
     state.view === 'month' ? renderMonth() :
@@ -2605,17 +3086,17 @@ function renderApp() {
     <div class="header">
       <h1>Logbuch</h1>
       <div class="header-menu-wrap">
-        <button type="button" class="menu-btn" data-action="toggle-menu" aria-label="Menü">☰</button>
+        <button type="button" class="menu-btn" data-action="toggle-menu" aria-label="${esc(t('ariaLabel.menu'))}">☰</button>
         ${state.menuOpen ? renderMenu() : ''}
       </div>
     </div>
     ${renderInstallHint()}
     <div class="tabs">
-      <button type="button" class="tab${state.view === 'today' ? ' tab--active' : ''}" data-action="set-view" data-view="today">Heute</button>
-      <button type="button" class="tab${state.view === 'week' ? ' tab--active' : ''}" data-action="set-view" data-view="week">Woche</button>
-      <button type="button" class="tab${state.view === 'month' ? ' tab--active' : ''}" data-action="set-view" data-view="month">Monat</button>
-      <button type="button" class="tab${state.view === 'year' ? ' tab--active' : ''}" data-action="set-view" data-view="year">Jahr</button>
-      <button type="button" class="tab${state.view === 'global' ? ' tab--active' : ''}" data-action="set-view" data-view="global">Gesamt</button>
+      <button type="button" class="tab${state.view === 'today' ? ' tab--active' : ''}" data-action="set-view" data-view="today">${t('tabs.today')}</button>
+      <button type="button" class="tab${state.view === 'week' ? ' tab--active' : ''}" data-action="set-view" data-view="week">${t('tabs.week')}</button>
+      <button type="button" class="tab${state.view === 'month' ? ' tab--active' : ''}" data-action="set-view" data-view="month">${t('tabs.month')}</button>
+      <button type="button" class="tab${state.view === 'year' ? ' tab--active' : ''}" data-action="set-view" data-view="year">${t('tabs.year')}</button>
+      <button type="button" class="tab${state.view === 'global' ? ' tab--active' : ''}" data-action="set-view" data-view="global">${t('tabs.global')}</button>
     </div>
     ${noticeHtml}
     ${body}
@@ -2627,7 +3108,7 @@ function render() {
   if (state.passwordRecovery) { renderPasswordRecovery(); return; }
   if (!state.session) { renderAuth(); return; }
   if (state.recoveryKeyToShow) { renderRecoveryKeyDisplay(); return; }
-  if (state.encryptionSetupInProgress) { app.innerHTML = `<div class="loading">Deine Daten werden verschlüsselt …</div>`; return; }
+  if (state.encryptionSetupInProgress) { app.innerHTML = `<div class="loading">${t('common.encryptingData')}</div>`; return; }
   if (!currentDek) { renderUnlockPrompt(); return; }
   if (!state.loading && !state.userSettings.onboardingCompleted) { renderTutorial(); return; }
   renderApp();
@@ -2663,14 +3144,14 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'copy-recovery-key') {
     try {
       await navigator.clipboard.writeText(formatRecoveryKey(state.recoveryKeyToShow.hex));
-      state.notice = { type: 'ok', text: 'In die Zwischenablage kopiert.' };
+      state.notice = { type: 'ok', text: t('recoveryDisplay.copied') };
     } catch {
-      state.notice = { type: 'error', text: 'Kopieren nicht möglich - bitte den Code manuell abschreiben.' };
+      state.notice = { type: 'error', text: t('recoveryDisplay.copyFailed') };
     }
     render();
   } else if (action === 'download-recovery-key') {
     const blob = new Blob(
-      [`Logbuch Recovery-Key\n${formatRecoveryKey(state.recoveryKeyToShow.hex)}\n\nSicher aufbewahren - ohne diesen Code UND dein Passwort sind deine Daten unwiederbringlich verloren.\n`],
+      [`Logbuch Recovery Key\n${formatRecoveryKey(state.recoveryKeyToShow.hex)}\n\n${t('recoveryDisplay.fileBody')}\n`],
       { type: 'text/plain' }
     );
     const url = URL.createObjectURL(blob);
@@ -2681,7 +3162,7 @@ app.addEventListener('click', async (e) => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    state.notice = { type: 'ok', text: 'Datei wird heruntergeladen.' };
+    state.notice = { type: 'ok', text: t('recoveryDisplay.downloading') };
     render();
   } else if (action === 'confirm-recovery-key') {
     if (!document.getElementById('recovery-key-confirm')?.checked) return; // Button ist sonst disabled
@@ -2875,6 +3356,11 @@ app.addEventListener('change', (e) => {
   const defaultTimeEl = e.target.closest('[data-action="menu-default-time"]');
   if (defaultTimeEl) {
     saveDefaultReminderMinute(Number(defaultTimeEl.value));
+    return;
+  }
+  const localeEl = e.target.closest('[data-action="menu-locale"]');
+  if (localeEl) {
+    saveLocale(localeEl.value);
     return;
   }
   const habitReminderTimeEl = e.target.closest('[data-action="habit-reminder-time-changed"]');
@@ -3130,6 +3616,7 @@ window.addEventListener('beforeunload', (e) => {
 });
 
 resetIOSZoomOnStandaloneStart();
+applyLocale(detectInitialLocale());
 
 const { data: { session } } = await supabase.auth.getSession();
 state.session = session;

@@ -244,8 +244,44 @@ nicht auf generische Tailwind-/Card-Optik wechseln.
 
 Tab-Leiste zeigt nur noch die Auswertungs-Ansichten (Heute/Woche/Monat/Jahr/Gesamt).
 Alles Konfigurative sitzt im **Burger-Menü** (☰-Button oben rechts, `renderMenu` in
-`logbuch.html`): Push aktiv/inaktiv, Standard-Erinnerungszeit, "Felder verwalten"
-(öffnet `renderManage`, kein eigener Tab mehr) und Abmelden.
+`logbuch.html`): Push aktiv/inaktiv, Standard-Erinnerungszeit, Sprache, "Felder
+verwalten" (öffnet `renderManage`, kein eigener Tab mehr) und Abmelden.
+
+## Internationalisierung (i18n)
+
+Seit 2026-09-16: Deutsch + Englisch, Deutsch bleibt Standard/Fallback. Zentraler
+Mechanismus in `logbuch.html`, direkt nach `esc()`:
+- `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
+  (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
+  Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 210 Keys je Sprache.
+- `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
+  aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
+  fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
+  selbst bleibt unescaped (darf bewusst gesetztes HTML wie `<strong>` enthalten).
+  Eine Start-Assertion beim Laden vergleicht `Object.keys(STRINGS.de)` gegen
+  `.en` und meldet jede Abweichung per `console.error`.
+- `currentLocale` (Modul-Variable) wird über `applyLocale(locale)` gesetzt (setzt
+  zusätzlich `document.documentElement.lang`) – beim Start per
+  `detectInitialLocale()` (Browser-Locale als Platzhalter), dann beim Laden von
+  `user_settings.locale` überschrieben, änderbar über die Sprachauswahl im
+  Burger-Menü (`saveLocale()`, spiegelt exakt das Muster von
+  `saveDefaultReminderMinute()`).
+- Datum/Wochentage/Monatsnamen laufen über `Intl.DateTimeFormat`-Helfer
+  (`weekdayShort`/`weekdayLong`/`monthName`/`monthShort`/`longDate`/`formatDMY`,
+  gecacht in `dtfCache`) statt fester Arrays – passt sich automatisch an
+  `currentLocale` an (`de-DE` → `DD.MM.YYYY`, `en-US` → `MM/DD/YYYY`). Die
+  Montag-zuerst-Wochentag-**Reihenfolge** (`(d.getDay()+6)%7`) ist davon
+  unberührt, reine Formatierung der Labels ändert sich, nicht die Tages-Logik.
+- `user_settings.locale` (text, Default `'de'`, Check-Constraint `de`/`en`) hält
+  die Sprachpräferenz serverseitig, analog zu `default_reminder_minute`.
+- Die Edge Function `send-notifications` hat eine eigene, bewusst simplere
+  `PUSH_TEXTS`-Tabelle (nur 4 Strings × 2 Sprachen, kein Teilen der `t()`-
+  Maschinerie über die Browser/Deno-Grenze hinweg) und liest `user_settings.locale`
+  pro Nutzer, um Push-Texte in der jeweils richtigen Sprache zu verschicken.
+- `habit_definitions.name` (frei vom Nutzer vergebene Feldnamen) ist bewusst
+  **nicht** Teil dieses Mechanismus – nur App-Chrome-Texte werden übersetzt, nie
+  Nutzerinhalte.
 
 ## Erinnerungen (Web Push)
 
@@ -444,7 +480,9 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
 
 - Code-Qualität geht vor Geschwindigkeit.
 - Bei Unklarheiten nachfragen statt zu raten.
-- UI-Texte durchgängig auf Deutsch.
+- UI-Texte seit der i18n-Umstellung (siehe Abschnitt oben) auf Deutsch UND
+  Englisch pflegen, neue Strings immer über `STRINGS`/`t()` in beiden Sprachen
+  anlegen statt hartkodiert.
 
 ## Noch nicht gebaut (bekannte TODOs, kein Zeitdruck)
 
