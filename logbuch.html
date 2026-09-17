@@ -2700,7 +2700,7 @@ function renderToday() {
         <span class="day-weekday">${weekdayLong(state.currentDate)}</span>
         <span class="day-date">${longDate(state.currentDate)}</span>
       </div>
-      <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" ${isToday ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.nextDay'))}">›</button>
+      <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" aria-label="${esc(t('ariaLabel.nextDay'))}">›</button>
     </div>
     ${!isToday ? `<button type="button" class="today-jump" data-action="jump-today">${t('today.jumpToday')}</button>` : ''}
     <div class="habit-list">
@@ -3834,8 +3834,6 @@ app.addEventListener('touchend', (e) => {
   const dir = dx < 0 ? 1 : -1;
 
   if (state.view === 'today') {
-    const isToday = formatKey(state.currentDate) === formatKey(new Date());
-    if (dir === 1 && isToday) return; // nicht in die Zukunft
     state.currentDate = addDays(state.currentDate, dir);
   } else if (state.view === 'week') {
     state.weekAnchor = addDays(state.weekAnchor, dir * 7);
