@@ -1359,9 +1359,9 @@ function applyLocale(locale) {
 
 function detectInitialLocale() {
   try {
-    return (navigator.language || '').toLowerCase().startsWith('en') ? 'en' : 'de';
+    return (navigator.language || '').toLowerCase().startsWith('de') ? 'de' : 'en';
   } catch {
-    return 'de';
+    return 'en';
   }
 }
 
@@ -1710,6 +1710,15 @@ async function unlockEncryption(userId, password) {
     render();
     try {
       await setupEncryption(userId, password);
+      // Einmalig beim allerersten Login: die vom Gerät erkannte Sprache statt des
+      // festen DB-Standards ('de', siehe Migration) übernehmen — sonst bliebe ein
+      // Konto, dessen Registrierung z.B. schon auf Englisch angezeigt wurde (weil das
+      // Gerät auf Englisch steht), nach dem Einloggen trotzdem auf Deutsch stehen, bis
+      // manuell im Menü umgestellt wird. Best effort: schlägt der Schreibzugriff fehl,
+      // bleibt einfach der DB-Standard bestehen, kein Grund, den Login abzubrechen.
+      await supabase.from('user_settings')
+        .update({ locale: detectInitialLocale() })
+        .eq('user_id', userId);
     } finally {
       state.encryptionSetupInProgress = false;
     }
