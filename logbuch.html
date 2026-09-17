@@ -189,7 +189,7 @@
     width: auto; min-width: 28px; height: 28px; border-radius: 14px; padding: 0 10px;
     white-space: nowrap;
   }
-  .opt-btn--selected { color: var(--paper); }
+  .opt-btn--selected { color: var(--on-score); }
 
   .reset-btn {
     display: block; margin: 18px auto 0; background: none; border: none; color: var(--sand);
@@ -242,7 +242,7 @@
   }
 
   .habit-row--group .group-readout {
-    font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 12px; color: var(--paper);
+    font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 12px; color: var(--on-score);
   }
   .habit-row--group { flex-wrap: wrap; }
   .habit-row--group .manage-meta { flex-basis: 100%; }
@@ -3070,7 +3070,7 @@ function trendDirection(series, range) {
 
 function renderNumberChart(habit, dateKeys) {
   const stats = numberFieldStats(habit.id, dateKeys);
-  const unitSuffix = habit.unit ? ` ${esc(habit.unit)}` : '';
+  const unitSuffix = habit.unit ? ` ${habit.unit}` : '';
   const head = `
     <div class="number-chart-head">
       <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
