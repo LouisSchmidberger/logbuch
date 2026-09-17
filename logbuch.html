@@ -371,6 +371,13 @@
   .tip:last-child { margin-bottom: 0; }
   .tip-title { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
   .tip-body { font-size: 13px; line-height: 1.5; color: var(--sand); margin: 0; }
+  .a11y-highlight {
+    background: rgba(var(--moss-rgb), 0.08); border: 1px solid rgba(var(--moss-rgb), 0.3);
+    border-radius: 6px; padding: 16px;
+  }
+  .a11y-highlight .manage-section-title { margin-bottom: 8px; }
+  .a11y-highlight > .tip-body { margin-bottom: 14px; }
+  .a11y-highlight .tip:last-child { margin-bottom: 0; }
 
   .habit-form { border: 1px solid var(--line); border-radius: 4px; padding: 14px; margin-bottom: 18px; }
   .habit-form h2 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 12px; }
@@ -1098,14 +1105,20 @@ const STRINGS = {
     'about.group.fields': 'Felder & Auswertung',
     'about.group.appearance': 'Darstellung',
     'about.group.account': 'Konto & Daten',
+    'about.a11y.title': 'Barrierefreiheit bei Logbuch',
+    'about.a11y.intro': 'Menschen mit Einschränkungen — ob durch eine Behinderung, Farbenblindheit oder eingeschränkte Beweglichkeit — gehören zu den in der Gesellschaft am wenigsten berücksichtigten Gruppen. Gerade eine App, die dabei helfen soll, gut für sich selbst zu sorgen, sollte hier besonders genau hinschauen — nicht weil es irgendwann Pflicht wird, sondern weil es uns wichtig ist. Ein paar konkrete Dinge, die wir deshalb bewusst eingebaut haben, und warum:',
+    'about.a11y.pattern.title': 'Warum ein Muster zusätzlich zur Farbe?',
+    'about.a11y.pattern.body': 'Rund 1 von 12 Männern und 1 von 200 Frauen hat eine Rot-Grün-Sehschwäche — oft unbemerkt, weil sie selten diagnostiziert wird. Bewertungen in Logbuch (rot bis grün) sind deshalb standardmäßig zusätzlich mit einem feinen Streifenmuster versehen, dessen Dichte sich nach dem Wert richtet. Bewusst nicht als Extra-Einstellung, die man erst suchen muss (Opt-in), sondern als Standard, den man bei Bedarf abschalten kann (im Menü unter „Darstellung") — wer es braucht, weiß oft selbst nicht, dass er danach suchen müsste.',
+    'about.a11y.keyboard.title': 'Tastatur statt Maus oder Finger',
+    'about.a11y.keyboard.body': 'Alles in Logbuch lässt sich vollständig ohne Maus oder Touch bedienen — wichtig für Menschen, die aus motorischen Gründen keine Maus präzise führen oder einen Touchscreen nicht zuverlässig treffen können. Kalenderzellen, Dialoge und selbst das Umsortieren von Feldern (sonst nur per Ziehen möglich) haben eine vollwertige Tastatur-Alternative. In Dialogen wie „Konto löschen" bleibt der Tastatur-Fokus zuverlässig innerhalb des Dialogs, statt unbemerkt in den Hintergrund abzurutschen, und Escape schließt sie, wie man es von anderer Software gewohnt ist.',
+    'about.a11y.screenreader.title': 'Screenreader (Vorlese-Software für blinde Menschen)',
+    'about.a11y.screenreader.body': 'Neue Fehler- oder Erfolgsmeldungen werden automatisch vorgelesen, ohne dass man erst danach suchen muss. Der Verlaufs-Graph bei Zahlenwert-Feldern (z. B. Gewicht) hat zusätzlich zur Grafik eine vollständige Textzusammenfassung (Anzahl der Einträge, letzter Wert, Durchschnitt, Trend) — eine reine Grafik wäre für einen Screenreader sonst stumm. Das ist kein abgeschlossenes Kapitel, wir bauen daran laufend weiter.',
     'about.tip.swipe.title': 'Wischen',
     'about.tip.swipe.body': 'In Tag-, Wochen-, Monats- und Jahresansicht kannst du nach links/rechts wischen, um zum vorherigen/nächsten Zeitraum zu springen — schneller als die Pfeil-Buttons.',
     'about.tip.jumpDay.title': 'Direkt zu einem Tag springen',
     'about.tip.jumpDay.body': 'Tippe in der Wochen-, Monats- oder Jahresansicht auf eine beliebige Zelle, um direkt zu diesem Tag zu springen.',
     'about.tip.toggleOff.title': 'Eine Antwort wieder löschen',
     'about.tip.toggleOff.body': 'Tippe eine bereits ausgewählte Option nochmal an, um sie zu entfernen — praktisch, falls du dich vertippt hast.',
-    'about.tip.numberAutosave.title': 'Zahlenwerte speichern automatisch',
-    'about.tip.numberAutosave.body': 'Bei Feldern wie Gewicht musst du nichts extra bestätigen — der Wert wird gespeichert, sobald du das Eingabefeld verlässt.',
     'about.tip.reorder.title': 'Felder umsortieren',
     'about.tip.reorder.body': 'In „Felder verwalten" kannst du Felder per Ziehen am Griff-Symbol oder mit den ↑/↓-Buttons neu anordnen.',
     'about.tip.groups.title': 'Gruppierte Felder',
@@ -1122,8 +1135,6 @@ const STRINGS = {
     'about.tip.theme.body': 'Folgt automatisch deiner Systemeinstellung, lässt sich im Menü aber auch fest auf Hell oder Dunkel stellen.',
     'about.tip.language.title': 'Sprache',
     'about.tip.language.body': 'Logbuch gibt\'s auf Deutsch und Englisch, umstellbar im Menü.',
-    'about.tip.pattern.title': 'Muster bei farbcodierten Werten',
-    'about.tip.pattern.body': 'Bewertungen sind zusätzlich zur Farbe mit einem Streifenmuster versehen, damit sie auch für Rot-Grün-Farbenblinde unterscheidbar sind — im Menü abschaltbar, falls du es nicht brauchst.',
     'about.tip.export.title': 'Eigene Daten exportieren',
     'about.tip.export.body': 'Lädt alle deine Rohdaten als Datei herunter — dein Recht auf Datenauskunft, jederzeit im Menü.',
     'about.tip.recoveryKey.title': 'Recovery-Key jederzeit neu erzeugen',
@@ -1364,14 +1375,20 @@ const STRINGS = {
     'about.group.fields': 'Fields & evaluation',
     'about.group.appearance': 'Appearance',
     'about.group.account': 'Account & data',
+    'about.a11y.title': 'Accessibility at Logbuch',
+    'about.a11y.intro': 'People with disabilities — whether through a physical condition, color blindness, or limited mobility — are among the least considered groups in society. An app meant to help you take good care of yourself should pay particular attention here — not because it will eventually be required, but because it matters to us. Here are a few concrete things we built in on purpose, and why:',
+    'about.a11y.pattern.title': 'Why a pattern in addition to color?',
+    'about.a11y.pattern.body': 'About 1 in 12 men and 1 in 200 women has red-green color vision deficiency — often unnoticed, since it is rarely diagnosed. Ratings in Logbuch (red to green) therefore get a subtle stripe pattern by default, whose density follows the value. Deliberately not an extra setting you would have to go looking for (opt-in), but a default you can switch off if you do not need it (in the menu under "Appearance") — the people who need it often would not know to look for it.',
+    'about.a11y.keyboard.title': 'Keyboard instead of mouse or touch',
+    'about.a11y.keyboard.body': 'Everything in Logbuch can be operated fully without a mouse or touch — important for people who, for motor reasons, cannot precisely control a mouse or reliably hit targets on a touchscreen. Calendar cells, dialogs, and even reordering fields (otherwise only possible by dragging) have a full keyboard alternative. In dialogs like "Delete account", keyboard focus reliably stays within the dialog instead of unnoticeably slipping into the background, and Escape closes them, as is standard in other software.',
+    'about.a11y.screenreader.title': 'Screen readers (software that reads the screen aloud for blind users)',
+    'about.a11y.screenreader.body': 'New error or success messages are announced automatically, without having to go looking for them. The history chart for number fields (e.g. weight) has a full text summary in addition to the graphic (number of entries, last value, average, trend) — a plain graphic would otherwise be silent to a screen reader. This is not a finished chapter, we keep expanding it.',
     'about.tip.swipe.title': 'Swiping',
     'about.tip.swipe.body': 'In the day, week, month, and year views, you can swipe left/right to jump to the previous/next period — faster than the arrow buttons.',
     'about.tip.jumpDay.title': 'Jump straight to a day',
     'about.tip.jumpDay.body': 'Tap any cell in the week, month, or year view to jump directly to that day.',
     'about.tip.toggleOff.title': 'Clearing an answer',
     'about.tip.toggleOff.body': 'Tap an already-selected option again to remove it — handy if you tapped the wrong one.',
-    'about.tip.numberAutosave.title': 'Number values save automatically',
-    'about.tip.numberAutosave.body': 'For fields like weight, there is nothing to confirm separately — the value saves as soon as you leave the input field.',
     'about.tip.reorder.title': 'Reordering fields',
     'about.tip.reorder.body': 'In "Manage fields" you can reorder fields by dragging the handle or using the ↑/↓ buttons.',
     'about.tip.groups.title': 'Grouped fields',
@@ -1388,8 +1405,6 @@ const STRINGS = {
     'about.tip.theme.body': 'Follows your system setting automatically, but can also be fixed to light or dark in the menu.',
     'about.tip.language.title': 'Language',
     'about.tip.language.body': 'Logbuch is available in German and English, switchable in the menu.',
-    'about.tip.pattern.title': 'Pattern on color-coded values',
-    'about.tip.pattern.body': 'Ratings get a stripe pattern in addition to color, so they are also distinguishable for red-green colorblind users — switch it off in the menu if you do not need it.',
     'about.tip.export.title': 'Export your data',
     'about.tip.export.body': 'Downloads all your raw data as a file — your right to data access, available anytime in the menu.',
     'about.tip.recoveryKey.title': 'Regenerate your recovery key anytime',
@@ -2962,17 +2977,44 @@ function tipGroup(groupTitleKey, tips) {
   `;
 }
 
+// Eigener, optisch hervorgehobener Bereich (statt nur einer weiteren Tipp-Gruppe) —
+// ausdrücklicher Nutzerwunsch, das Thema sichtbar stärker zu gewichten als die
+// übrigen, eher beiläufigen Bedienungs-Tipps. Ausführlichere Texte inkl. der
+// Begründung, warum uns das wichtig ist (siehe CLAUDE.md-Präferenz "Accessibility
+// als proaktiver Standard" bzw. die dahinterliegende Motivation), nicht nur die
+// nackten Fakten.
+function renderA11ySection() {
+  const items = [
+    ['about.a11y.pattern.title', 'about.a11y.pattern.body'],
+    ['about.a11y.keyboard.title', 'about.a11y.keyboard.body'],
+    ['about.a11y.screenreader.title', 'about.a11y.screenreader.body'],
+  ];
+  return `
+    <div class="a11y-highlight">
+      <h3 class="manage-section-title">${t('about.a11y.title')}</h3>
+      <p class="tip-body">${t('about.a11y.intro')}</p>
+      ${items.map(([titleKey, bodyKey]) => `
+        <div class="tip">
+          <p class="tip-title">${t(titleKey)}</p>
+          <p class="tip-body">${t(bodyKey)}</p>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 function renderAbout() {
   return `
     <div class="day-nav">
       <div class="day-label"><span class="day-date">${t('about.title')}</span></div>
     </div>
     <p class="about-intro">${t('about.intro')}</p>
+    ${renderA11ySection()}
+    <div class="manage-section-divider"></div>
     ${tipGroup('about.group.usage', [
       ['about.tip.swipe.title', 'about.tip.swipe.body'],
       ['about.tip.jumpDay.title', 'about.tip.jumpDay.body'],
       ['about.tip.toggleOff.title', 'about.tip.toggleOff.body'],
-      ['about.tip.numberAutosave.title', 'about.tip.numberAutosave.body'],
       ['about.tip.reorder.title', 'about.tip.reorder.body'],
     ])}
     <div class="manage-section-divider"></div>
@@ -2987,7 +3029,6 @@ function renderAbout() {
     ${tipGroup('about.group.appearance', [
       ['about.tip.theme.title', 'about.tip.theme.body'],
       ['about.tip.language.title', 'about.tip.language.body'],
-      ['about.tip.pattern.title', 'about.tip.pattern.body'],
     ])}
     <div class="manage-section-divider"></div>
     ${tipGroup('about.group.account', [
