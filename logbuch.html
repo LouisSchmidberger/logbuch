@@ -378,6 +378,7 @@
   .a11y-highlight .manage-section-title { margin-bottom: 8px; }
   .a11y-highlight > .tip-body { margin-bottom: 14px; }
   .a11y-highlight .tip:last-child { margin-bottom: 0; }
+  .a11y-feedback { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(var(--moss-rgb), 0.3); font-style: italic; }
 
   .habit-form { border: 1px solid var(--line); border-radius: 4px; padding: 14px; margin-bottom: 18px; }
   .habit-form h2 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 12px; }
@@ -1106,13 +1107,14 @@ const STRINGS = {
     'about.group.appearance': 'Darstellung',
     'about.group.account': 'Konto & Daten',
     'about.a11y.title': 'Barrierefreiheit bei Logbuch',
-    'about.a11y.intro': 'Menschen mit Einschränkungen — ob durch eine Behinderung, Farbenblindheit oder eingeschränkte Beweglichkeit — gehören zu den in der Gesellschaft am wenigsten berücksichtigten Gruppen. Gerade eine App, die dabei helfen soll, gut für sich selbst zu sorgen, sollte hier besonders genau hinschauen — nicht weil es irgendwann Pflicht wird, sondern weil es uns wichtig ist. Ein paar konkrete Dinge, die wir deshalb bewusst eingebaut haben, und warum:',
+    'about.a11y.intro': 'Menschen mit Einschränkungen — ob durch eine Behinderung, Farbenblindheit oder eingeschränkte Beweglichkeit — gehören zu den in der Gesellschaft am wenigsten berücksichtigten Gruppen. Gerade eine App, die dabei helfen soll, gut für sich selbst zu sorgen, sollte hier besonders genau hinschauen — nicht weil es irgendwann Pflicht wird, sondern weil es mir wichtig ist. Ein paar konkrete Dinge, die ich deshalb bewusst eingebaut habe, und warum:',
     'about.a11y.pattern.title': 'Warum ein Muster zusätzlich zur Farbe?',
     'about.a11y.pattern.body': 'Rund 1 von 12 Männern und 1 von 200 Frauen hat eine Rot-Grün-Sehschwäche — oft unbemerkt, weil sie selten diagnostiziert wird. Bewertungen in Logbuch (rot bis grün) sind deshalb standardmäßig zusätzlich mit einem feinen Streifenmuster versehen, dessen Dichte sich nach dem Wert richtet. Bewusst nicht als Extra-Einstellung, die man erst suchen muss (Opt-in), sondern als Standard, den man bei Bedarf abschalten kann (im Menü unter „Darstellung") — wer es braucht, weiß oft selbst nicht, dass er danach suchen müsste.',
     'about.a11y.keyboard.title': 'Tastatur statt Maus oder Finger',
     'about.a11y.keyboard.body': 'Alles in Logbuch lässt sich vollständig ohne Maus oder Touch bedienen — wichtig für Menschen, die aus motorischen Gründen keine Maus präzise führen oder einen Touchscreen nicht zuverlässig treffen können. Kalenderzellen, Dialoge und selbst das Umsortieren von Feldern (sonst nur per Ziehen möglich) haben eine vollwertige Tastatur-Alternative. In Dialogen wie „Konto löschen" bleibt der Tastatur-Fokus zuverlässig innerhalb des Dialogs, statt unbemerkt in den Hintergrund abzurutschen, und Escape schließt sie, wie man es von anderer Software gewohnt ist.',
     'about.a11y.screenreader.title': 'Screenreader (Vorlese-Software für blinde Menschen)',
-    'about.a11y.screenreader.body': 'Neue Fehler- oder Erfolgsmeldungen werden automatisch vorgelesen, ohne dass man erst danach suchen muss. Der Verlaufs-Graph bei Zahlenwert-Feldern (z. B. Gewicht) hat zusätzlich zur Grafik eine vollständige Textzusammenfassung (Anzahl der Einträge, letzter Wert, Durchschnitt, Trend) — eine reine Grafik wäre für einen Screenreader sonst stumm. Das ist kein abgeschlossenes Kapitel, wir bauen daran laufend weiter.',
+    'about.a11y.screenreader.body': 'Neue Fehler- oder Erfolgsmeldungen werden automatisch vorgelesen, ohne dass man erst danach suchen muss. Der Verlaufs-Graph bei Zahlenwert-Feldern (z. B. Gewicht) hat zusätzlich zur Grafik eine vollständige Textzusammenfassung (Anzahl der Einträge, letzter Wert, Durchschnitt, Trend) — eine reine Grafik wäre für einen Screenreader sonst stumm. Das ist kein abgeschlossenes Kapitel, ich baue daran laufend weiter.',
+    'about.a11y.feedback': 'Fehlt dir etwas, oder hast du eine Idee, was ich noch verbessern könnte? Ich freue mich über jedes Feedback.',
     'about.tip.swipe.title': 'Wischen',
     'about.tip.swipe.body': 'In Tag-, Wochen-, Monats- und Jahresansicht kannst du nach links/rechts wischen, um zum vorherigen/nächsten Zeitraum zu springen — schneller als die Pfeil-Buttons.',
     'about.tip.jumpDay.title': 'Direkt zu einem Tag springen',
@@ -1376,13 +1378,14 @@ const STRINGS = {
     'about.group.appearance': 'Appearance',
     'about.group.account': 'Account & data',
     'about.a11y.title': 'Accessibility at Logbuch',
-    'about.a11y.intro': 'People with disabilities — whether through a physical condition, color blindness, or limited mobility — are among the least considered groups in society. An app meant to help you take good care of yourself should pay particular attention here — not because it will eventually be required, but because it matters to us. Here are a few concrete things we built in on purpose, and why:',
+    'about.a11y.intro': 'People with disabilities — whether through a physical condition, color blindness, or limited mobility — are among the least considered groups in society. An app meant to help you take good care of yourself should pay particular attention here — not because it will eventually be required, but because it matters to me. Here are a few concrete things I built in on purpose, and why:',
     'about.a11y.pattern.title': 'Why a pattern in addition to color?',
     'about.a11y.pattern.body': 'About 1 in 12 men and 1 in 200 women has red-green color vision deficiency — often unnoticed, since it is rarely diagnosed. Ratings in Logbuch (red to green) therefore get a subtle stripe pattern by default, whose density follows the value. Deliberately not an extra setting you would have to go looking for (opt-in), but a default you can switch off if you do not need it (in the menu under "Appearance") — the people who need it often would not know to look for it.',
     'about.a11y.keyboard.title': 'Keyboard instead of mouse or touch',
     'about.a11y.keyboard.body': 'Everything in Logbuch can be operated fully without a mouse or touch — important for people who, for motor reasons, cannot precisely control a mouse or reliably hit targets on a touchscreen. Calendar cells, dialogs, and even reordering fields (otherwise only possible by dragging) have a full keyboard alternative. In dialogs like "Delete account", keyboard focus reliably stays within the dialog instead of unnoticeably slipping into the background, and Escape closes them, as is standard in other software.',
     'about.a11y.screenreader.title': 'Screen readers (software that reads the screen aloud for blind users)',
-    'about.a11y.screenreader.body': 'New error or success messages are announced automatically, without having to go looking for them. The history chart for number fields (e.g. weight) has a full text summary in addition to the graphic (number of entries, last value, average, trend) — a plain graphic would otherwise be silent to a screen reader. This is not a finished chapter, we keep expanding it.',
+    'about.a11y.screenreader.body': 'New error or success messages are announced automatically, without having to go looking for them. The history chart for number fields (e.g. weight) has a full text summary in addition to the graphic (number of entries, last value, average, trend) — a plain graphic would otherwise be silent to a screen reader. This is not a finished chapter, I keep expanding it.',
+    'about.a11y.feedback': 'Is something missing, or do you have an idea for what I could improve? I would love to hear your feedback.',
     'about.tip.swipe.title': 'Swiping',
     'about.tip.swipe.body': 'In the day, week, month, and year views, you can swipe left/right to jump to the previous/next period — faster than the arrow buttons.',
     'about.tip.jumpDay.title': 'Jump straight to a day',
@@ -2999,6 +3002,7 @@ function renderA11ySection() {
           <p class="tip-body">${t(bodyKey)}</p>
         </div>
       `).join('')}
+      <p class="tip-body a11y-feedback">${t('about.a11y.feedback')}</p>
     </div>
   `;
 }
