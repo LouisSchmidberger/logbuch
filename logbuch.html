@@ -943,6 +943,7 @@ const STRINGS = {
     'auth.forgotRecoveryNote': 'Zum eigentlichen Zurücksetzen brauchst du im nächsten Schritt deinen Recovery-Key (den du bei der Einrichtung einmalig angezeigt bekommen hast), um deine bisherigen Einträge zu behalten.',
     'auth.email': 'E-Mail',
     'auth.password': 'Passwort',
+    'auth.passwordHint': 'Deine Einträge sind Ende-zu-Ende verschlüsselt – dein Passwort ist der einzige Schlüssel dazu. Wähle deshalb eines, das du sonst nirgends verwendest.',
     'auth.hide': 'Verbergen',
     'auth.show': 'Anzeigen',
     'auth.sendResetLink': 'Link zum Zurücksetzen senden',
@@ -1214,6 +1215,7 @@ const STRINGS = {
     'auth.forgotRecoveryNote': 'To actually reset your password, in the next step you will need your recovery key (shown to you once during setup) in order to keep your existing entries.',
     'auth.email': 'Email',
     'auth.password': 'Password',
+    'auth.passwordHint': 'Your entries are end-to-end encrypted – your password is the only key to them. Choose one you don’t use anywhere else.',
     'auth.hide': 'Hide',
     'auth.show': 'Show',
     'auth.sendResetLink': 'Send reset link',
@@ -2473,6 +2475,7 @@ function renderAuth() {
               showVisibilityToggle: true,
               visible: state.authPasswordVisible,
             })}
+            ${isSignup ? `<p class="habit-form-lock-note">${t('auth.passwordHint')}</p>` : ''}
           </div>
         ` : ''}
         ${isSignup ? `
