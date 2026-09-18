@@ -457,6 +457,16 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
   Dashboard-Formular, nie im Repo. `supabase/config.toml` dokumentiert die
   SMTP-Konfiguration (ohne den Key selbst, per `env(RESEND_API_KEY)`-Platzhalter).
 
+- **Passwort-Policy** (seit 2026-09-18): Mindestlänge auf 10 Zeichen angehoben
+  (`auth.minimum_password_length` in `supabase/config.toml`, vorher 6 — bewusst
+  ohne Zeichenklassen-Zwang, `password_requirements` bleibt leer/"No required
+  characters", da aktuelle Empfehlungen Länge über erzwungene Komplexität stellen).
+  Zusätzlich im Dashboard aktiviert (Authentication → Sign In / Providers → Email,
+  **nicht** Teil von `config.toml`): "Require current password when updating" —
+  passt zur Zero-Access-Architektur, da das Passwort der einzige Schlüssel ist.
+  "Leaked password protection" (HaveIBeenPwned-Abgleich) bleibt vorerst
+  deaktiviert — nur ab Supabase Pro-Plan verfügbar, aktuell auf Free.
+
 ## Secrets
 
 - `VAPID_PUBLIC_KEY` ist im Klartext in `logbuch.html` hinterlegt – das ist beabsichtigt,

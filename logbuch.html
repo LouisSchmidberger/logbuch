@@ -956,6 +956,7 @@ const STRINGS = {
     'auth.resetLinkSent': 'Falls diese E-Mail bei uns registriert ist, haben wir einen Link zum Zurücksetzen geschickt.',
     'auth.signupFailedGeneric': 'Registrierung fehlgeschlagen. Bitte versuche es erneut.',
     'auth.confirmEmailNotice': 'Fast fertig: Bestätige deine E-Mail über den Link, den wir dir geschickt haben, und melde dich dann an.',
+    'auth.error.passwordTooShort': 'Das Passwort muss mindestens {min} Zeichen lang sein.',
     'recovery.title': 'Neues Passwort setzen',
     'recovery.newPassword': 'Neues Passwort',
     'recovery.key': 'Recovery-Key',
@@ -1228,6 +1229,7 @@ const STRINGS = {
     'auth.resetLinkSent': 'If this email is registered with us, we have sent a link to reset your password.',
     'auth.signupFailedGeneric': 'Sign-up failed. Please try again.',
     'auth.confirmEmailNotice': 'Almost done: confirm your email via the link we sent you, then sign in.',
+    'auth.error.passwordTooShort': 'The password must be at least {min} characters long.',
     'recovery.title': 'Set new password',
     'recovery.newPassword': 'New password',
     'recovery.key': 'Recovery key',
@@ -1555,6 +1557,13 @@ function formatDMY(dateKeyOrDate) {
   return dtf({ year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 }
 
+// Einzige Quelle für die client-seitig angezeigte Mindestlänge (Browser-Validierung
+// via minlength-Attribut). Muss mit dem serverseitigen Supabase-Wert
+// (auth.minimum_password_length in supabase/config.toml, Dashboard-verwaltet)
+// übereinstimmen, ist aber rein kosmetisch — Supabase lehnt zu kurze Passwörter
+// ohnehin serverseitig ab, unabhängig von diesem Attribut.
+const AUTH_MIN_PASSWORD_LENGTH = 10;
+
 // Supabase liefert Auth-Fehlermeldungen nur auf Englisch. "Invalid login credentials"
 // bleibt bewusst unspezifisch (verrät nicht, ob die E-Mail existiert oder nur das
 // Passwort falsch ist — sonst ließe sich der Nutzerbestand durchscannen), wird aber
@@ -1564,16 +1573,20 @@ const AUTH_ERROR_TRANSLATIONS = {
     'Invalid login credentials': 'E-Mail oder Passwort falsch.',
     'User already registered': 'Für diese E-Mail existiert bereits ein Account.',
     'Email not confirmed': 'Bitte bestätige zuerst deine E-Mail-Adresse über den Link, den wir dir geschickt haben.',
-    'Password should be at least 6 characters': 'Das Passwort muss mindestens 6 Zeichen lang sein.',
   },
   en: {
     'Invalid login credentials': 'Email or password incorrect.',
     'User already registered': 'An account already exists for this email address.',
     'Email not confirmed': 'Please confirm your email address first via the link we sent you.',
-    'Password should be at least 6 characters': 'The password must be at least 6 characters long.',
   },
 };
 function translateAuthError(message) {
+  // "Password should be at least N characters" trägt die serverseitig konfigurierte
+  // Mindestlänge direkt in der Zahl — fest übersetzte Strings würden bei jeder
+  // künftigen Policy-Änderung wieder auseinanderlaufen (genau das ist hier passiert,
+  // als minimum_password_length von 6 auf 10 erhöht wurde).
+  const shortMatch = /^Password should be at least (\d+) characters?/.exec(message);
+  if (shortMatch) return t('auth.error.passwordTooShort', { min: shortMatch[1] });
   return (AUTH_ERROR_TRANSLATIONS[currentLocale] || AUTH_ERROR_TRANSLATIONS.de)[message] || message;
 }
 
@@ -2428,6 +2441,9 @@ async function handleDeleteAccount() {
   currentDek = null;
 
   state.deleteConfirm = null;
+  state.authEmail = '';
+  state.authPassword = '';
+  state.authPasswordVisible = false;
   await supabase.auth.signOut();
 }
 
@@ -2471,7 +2487,7 @@ function renderAuth() {
             </div>
             ${clearableInputHtml('password', 'password', state.authPassword, {
               autocomplete: isSignup ? 'new-password' : 'current-password',
-              minlength: 6,
+              minlength: AUTH_MIN_PASSWORD_LENGTH,
               showVisibilityToggle: true,
               visible: state.authPasswordVisible,
             })}
@@ -2573,7 +2589,7 @@ function renderPasswordRecovery() {
       <form id="recovery-form">
         <div class="auth-field">
           <label for="new-password">${t('recovery.newPassword')}</label>
-          <input type="password" id="new-password" required autocomplete="new-password" minlength="6" ${state.recoveryBusy ? 'disabled' : ''} />
+          <input type="password" id="new-password" required autocomplete="new-password" minlength="${AUTH_MIN_PASSWORD_LENGTH}" ${state.recoveryBusy ? 'disabled' : ''} />
         </div>
         ${!fallback ? `
           <div class="auth-field">
