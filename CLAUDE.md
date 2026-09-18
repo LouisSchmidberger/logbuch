@@ -148,6 +148,24 @@ der Eingabe sichtbar ist. Live-Vorschau (Wert + Farbe) läuft beim Ziehen rein �
 `input`-Listener ohne Re-Render; gespeichert wird erst bei `change` (Loslassen), über
 denselben `handleSelect`-Pfad wie bei den Buttons.
 
+**Skala-Felder ohne Wertung (`good = null`, seit 2026-09-18)**: `good` ist bei
+`kind='scale'` nicht mehr zwingend `'high'`/`'low'` – ein dritter Zustand "Keine
+Wertung" (Formular-Pill neben Hoch/Niedrig, `habit-good`-Action mit `data-good=""`)
+erlaubt reines Tracken ohne Gut/Schlecht-Urteil (z.B. für Dinge, die man beobachten,
+aber nicht bewerten will). `isNeutralScale(h)` erkennt diesen Fall. `normalize()`
+selbst braucht dafür keine Änderung (liefert ohne Richtung einfach die rohe Position
+im Wertebereich zurück), aber die reine 0-1-Zahl wird bei `good=null` als Magnitude,
+nicht als Bewertung interpretiert: `habitColor(habit, score)` ist die zentrale Weiche,
+die für unbewertete Felder `neutralColor()` (monochrome Graustufen-Skala) statt
+`scoreColor()` (Rot-Grün) liefert – überall dort verwendet, wo bisher direkt
+`scoreColor()` mit einem konkreten Feld aufgerufen wurde (Heute-Buttons/-Slider,
+Wochen-Grid-Zeilen, Monats-/Jahres-/Gesamt-Tabellenzeilen). Unbewertete Felder
+fließen NICHT in `dayOverallScore` (Monats-/Jahres-Heatmap) und nicht als
+Gruppen-Mitglied ein (im Formular als Kandidat ausgeschlossen, in `habitScore`
+zusätzlich defensiv gefiltert) – beides baut auf einem Gut/Schlecht-Urteil auf, das
+hier fehlt. Ziel-Quote (`goal_threshold`) ist bei `good=null` immer `null` (DB-Check
+`habit_definitions_kind_fields_check` erzwingt das, Formular blendet das Feld aus).
+
 **Gruppierte Felder (`kind='group'`)**: fassen mehrere `kind='scale'`-Felder (`slugs` in
 `group_members`) zu einem Durchschnittswert zusammen (z.B. "Sport gemacht" = Ø aus
 "Ausdauersport" + "Kraftsport"). Nie selbst direkt befüllbar – kein Eintrag in

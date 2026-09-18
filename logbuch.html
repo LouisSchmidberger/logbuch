@@ -687,7 +687,7 @@ function habitScore(h, dateKey) {
   if (h.kind === 'group') {
     const memberScores = (h.groupMembers || [])
       .map((slug) => state.habits.find((x) => x.id === slug))
-      .filter(Boolean)
+      .filter((m) => m && !isNeutralScale(m)) // unbewertete Mitglieder haben kein Gut/Schlecht zum Mitteln
       .map((m) => normalize(m, day[m.id]))
       .filter((s) => s !== null);
     if (!memberScores.length) return null;
@@ -711,6 +711,23 @@ function scoreColor(score) {
   if (score < 0.5) { const t = score / 0.5; c = rust.map((v, i) => Math.round(v + (sand[i] - v) * t)); }
   else { const t = (score - 0.5) / 0.5; c = sand.map((v, i) => Math.round(v + (moss[i] - v) * t)); }
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+}
+
+// Skala-Felder ohne Gut/Schlecht-Bewertung (good = null, siehe habitForm.noValuation) -
+// bewusstes Tracken ohne Wertung. Bekommen eine eigene, monochrome Farbskala statt
+// scoreColor()s Rot-Grün, damit nirgends fälschlich ein "gut"/"schlecht" suggeriert
+// wird, wo der Nutzer das explizit nicht wollte.
+function isNeutralScale(h) { return h.kind === 'scale' && !h.good; }
+function neutralColor(score) {
+  if (score === null || score === undefined) return 'transparent';
+  const light = [214, 206, 186], dark = [110, 98, 78];
+  const c = light.map((v, i) => Math.round(v + (dark[i] - v) * score));
+  return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+}
+// Zentrale Weiche für jede farbliche Score-Darstellung eines konkreten Feldes -
+// scoreColor() für bewertete Felder/Gruppen, neutralColor() für unbewertete.
+function habitColor(habit, score) {
+  return isNeutralScale(habit) ? neutralColor(score) : scoreColor(score);
 }
 
 // Zusätzlich zur Farbe (scoreColor) ein Streifenmuster, dessen Dichte/Deckkraft mit
@@ -754,14 +771,15 @@ function applyGoal(habit, score) {
   return Math.min(1, score / threshold);
 }
 
-// Gesamt-Score eines Tages über alle Skala-/Gruppen-Felder gemittelt (für Monats-/
-// Jahres-Heatmap). Zahlenwert-Felder (kind='number') fließen bewusst nicht ein —
-// kein Gut/Schlecht dort.
+// Gesamt-Score eines Tages über alle bewerteten Skala-/Gruppen-Felder gemittelt (für
+// Monats-/Jahres-Heatmap). Zahlenwert-Felder (kind='number') UND unbewertete
+// Skala-Felder (isNeutralScale) fließen bewusst nicht ein — beide haben kein
+// Gut/Schlecht, würden die Tages-Gesamtwertung sonst verfälschen.
 function dayOverallScore(date) {
   const dateKey = formatKey(date);
   const day = state.entries[dateKey];
   if (!day) return null;
-  const scores = state.habits.filter((h) => h.kind === 'scale' || h.kind === 'group')
+  const scores = state.habits.filter((h) => (h.kind === 'scale' && !isNeutralScale(h)) || h.kind === 'group')
     .map((h) => applyGoal(h, habitScore(h, dateKey)))
     .filter((s) => s !== null);
   if (!scores.length) return null;
@@ -1035,10 +1053,11 @@ const STRINGS = {
     'habitForm.from': 'Von',
     'habitForm.to': 'Bis',
     'habitForm.labelsInOrder': 'Bezeichnungen der Reihe nach (Wert 0 zuerst, z. B. „Nein“, „Ein bisschen“, „Ja“)',
-    'habitForm.goalDirection': 'Zielrichtung',
-    'habitForm.goalDirectionExplain': 'Legt fest, was als "gut" gilt und entsprechend grün eingefärbt wird. Meist "hohe Werte" (z. B. Sport, gesunde Ernährung). "Niedrige Werte" eignet sich für Dinge, von denen weniger besser ist (z. B. Konsum von etwas, das man reduzieren möchte).',
+    'habitForm.goalDirection': 'Bewertung',
+    'habitForm.goalDirectionExplain': 'Legt fest, was als "gut" gilt und entsprechend grün eingefärbt wird. Meist "hohe Werte" (z. B. Sport, gesunde Ernährung). "Niedrige Werte" eignet sich für Dinge, von denen weniger besser ist (z. B. Konsum von etwas, das man reduzieren möchte). "Keine Wertung" trackt den Wert einfach nur, ohne Rot-Grün-Färbung – z. B. für Dinge, die du beobachten, aber nicht bewerten willst.',
     'habitForm.highIsGood': 'Hohe Werte erstrebenswert',
     'habitForm.lowIsGood': 'Niedrige Werte erstrebenswert',
+    'habitForm.noValuation': 'Keine Wertung',
     'habitForm.unit': 'Einheit (optional)',
     'habitForm.unitPlaceholder': 'z. B. kg',
     'habitForm.members': 'Mitglieder (mind. 2 Skala-Felder)',
@@ -1063,6 +1082,7 @@ const STRINGS = {
     'manage.deleteWarning': 'Es gibt historische Einträge – nach dem Löschen in der App nicht mehr nutzbar.',
     'manage.highIsGoodShort': 'hohe Werte gut',
     'manage.lowIsGoodShort': 'niedrige Werte gut',
+    'manage.noValuationShort': 'keine Wertung',
     'manage.reminderAt': 'Erinnerung {time}',
     'manage.archive': 'Archivieren',
     'manage.reactivate': 'Reaktivieren',
@@ -1128,6 +1148,8 @@ const STRINGS = {
     'about.tip.toggleOff.body': 'Tippe eine bereits ausgewählte Option nochmal an, um sie zu entfernen — praktisch, falls du dich vertippt hast.',
     'about.tip.reorder.title': 'Felder umsortieren',
     'about.tip.reorder.body': 'In „Felder verwalten" kannst du Felder per Ziehen am Griff-Symbol oder mit den ↑/↓-Buttons neu anordnen.',
+    'about.tip.noValuation.title': 'Felder ohne Wertung',
+    'about.tip.noValuation.body': 'Nicht alles muss gut oder schlecht sein. Bei „Keine Wertung" (statt „Hohe/Niedrige Werte erstrebenswert") wird ein Feld einfach nur getrackt, ohne Rot-Grün-Färbung — dafür in der Auswertung mit einer eigenen, neutralen Graustufen-Skala statt der üblichen Farben.',
     'about.tip.groups.title': 'Gruppierte Felder',
     'about.tip.groups.body': 'Fassen mehrere Skala-Felder zu einem gemeinsamen Durchschnittswert zusammen, z. B. „Sport gemacht" aus „Ausdauersport" + „Kraftsport". Kein eigener Eintrag — der Wert berechnet sich immer live aus den Mitgliedern.',
     'about.tip.goalThreshold.title': 'Ziel-Quote statt 100 %',
@@ -1310,10 +1332,11 @@ const STRINGS = {
     'habitForm.from': 'From',
     'habitForm.to': 'To',
     'habitForm.labelsInOrder': 'Labels in order (value 0 first, e.g. "No", "A little", "Yes")',
-    'habitForm.goalDirection': 'Goal direction',
-    'habitForm.goalDirectionExplain': 'Determines what counts as "good" and is colored green accordingly. Usually "high values" (e.g. exercise, healthy eating). "Low values" suits things you want less of (e.g. consumption of something you want to reduce).',
+    'habitForm.goalDirection': 'Valuation',
+    'habitForm.goalDirectionExplain': 'Determines what counts as "good" and is colored green accordingly. Usually "high values" (e.g. exercise, healthy eating). "Low values" suits things you want less of (e.g. consumption of something you want to reduce). "No valuation" simply tracks the value without red/green coloring - e.g. for things you want to observe but not judge.',
     'habitForm.highIsGood': 'High values desirable',
     'habitForm.lowIsGood': 'Low values desirable',
+    'habitForm.noValuation': 'No valuation',
     'habitForm.unit': 'Unit (optional)',
     'habitForm.unitPlaceholder': 'e.g. kg',
     'habitForm.members': 'Members (at least 2 scale fields)',
@@ -1338,6 +1361,7 @@ const STRINGS = {
     'manage.deleteWarning': 'There are historical entries – no longer usable in the app after deletion.',
     'manage.highIsGoodShort': 'high values good',
     'manage.lowIsGoodShort': 'low values good',
+    'manage.noValuationShort': 'no valuation',
     'manage.reminderAt': 'Reminder {time}',
     'manage.archive': 'Archive',
     'manage.reactivate': 'Reactivate',
@@ -1403,6 +1427,8 @@ const STRINGS = {
     'about.tip.toggleOff.body': 'Tap an already-selected option again to remove it — handy if you tapped the wrong one.',
     'about.tip.reorder.title': 'Reordering fields',
     'about.tip.reorder.body': 'In "Manage fields" you can reorder fields by dragging the handle or using the ↑/↓ buttons.',
+    'about.tip.noValuation.title': 'Fields without valuation',
+    'about.tip.noValuation.body': 'Not everything has to be good or bad. With "No valuation" (instead of "High/Low values desirable"), a field is simply tracked without red/green coloring — shown in the evaluation views with its own neutral grayscale instead of the usual colors.',
     'about.tip.groups.title': 'Grouped fields',
     'about.tip.groups.body': 'Combine multiple scale fields into one shared average, e.g. "exercised" from "cardio" + "strength training". No entry of its own — the value is always calculated live from its members.',
     'about.tip.goalThreshold.title': 'Goal threshold instead of 100%',
@@ -1915,7 +1941,10 @@ function habitToForm(h) {
     max,
     steps: labeled ? h.labels.length : (max - min + 1),
     labels: labeled ? [...h.labels] : Array.from({ length: max - min + 1 }, () => ''),
-    good: h.good || 'high',
+    // Bei Skala-Feldern h.good unverändert übernehmen (kann null = "Keine Wertung" sein)
+    // - der "|| 'high'"-Fallback gilt nur für number/group, deren h.good in der DB immer
+    // null ist, als sinnvoller Startwert falls im Formular noch auf "Skala" gewechselt wird.
+    good: h.kind === 'scale' ? h.good : 'high',
     displayStyle,
     sliderSteps: displayStyle === 'slider' ? max : 100,
     sliderShowValue: h.sliderShowValue ?? true,
@@ -2034,7 +2063,10 @@ async function handleHabitSaveInner() {
 
   const goalEl = document.getElementById('habit-form-goal');
   const goalPercent = goalEl ? Number(goalEl.value) : f.goalPercent;
-  const goalThreshold = (f.kind === 'scale' || f.kind === 'group') && Number.isFinite(goalPercent) && goalPercent > 0 && goalPercent < 100
+  // Ziel-Quote ergibt bei "Keine Wertung" keinen Sinn (kein Gut/Schlecht zum Stauchen)
+  // - das Formularfeld ist dann versteckt (siehe scaleBody), aber f.goalPercent könnte
+  // noch einen alten Wert von vor dem Umschalten auf "Keine Wertung" tragen.
+  const goalThreshold = ((f.kind === 'scale' && f.good) || f.kind === 'group') && Number.isFinite(goalPercent) && goalPercent > 0 && goalPercent < 100
     ? goalPercent / 100
     : null;
 
@@ -2772,8 +2804,8 @@ function renderHabitOptions(habit, value) {
 
   return options.map(([v, label]) => {
     const selected = value === v;
-    const score = normalize(habit, v);
-    const style = selected ? `background:${scoreColor(score)};border-color:${scoreColor(score)};` : '';
+    const color = habitColor(habit, normalize(habit, v));
+    const style = selected ? `background:${color};border-color:${color};` : '';
     const isText = label.length > 1;
     return `<button type="button" class="opt-btn${isText ? ' opt-btn--text' : ''}${selected ? ' opt-btn--selected' : ''}" style="${style}"
       data-action="select" data-habit="${habit.id}" data-value='${JSON.stringify(v)}' aria-pressed="${selected}">${esc(label)}</button>`;
@@ -2787,7 +2819,7 @@ function renderHabitOptions(habit, value) {
 function renderHabitSlider(habit, value) {
   const hasValue = value !== undefined;
   const v = hasValue ? value : Math.round((habit.min + habit.max) / 2);
-  const color = hasValue ? scoreColor(normalize(habit, v)) : 'var(--sand)';
+  const color = hasValue ? habitColor(habit, normalize(habit, v)) : 'var(--sand)';
   const pct = ((v - habit.min) / (habit.max - habit.min)) * 100;
   // Eigene --slider-color/--slider-pct-Variablen statt der nativen accent-color: die
   // ließ sich in manchen Browsern bei jedem 'input'-Event nicht glitch-frei neu
@@ -2896,8 +2928,8 @@ function renderWeek() {
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
-        ${scores.map((s, i) => `<div class="grid-cell" data-action="open-day" data-date="${formatKey(days[i])}" style="background:${scoreColor(applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
-        <div class="grid-cell grid-cell--avg" style="background:${scoreColor(applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
+        ${scores.map((s, i) => `<div class="grid-cell" data-action="open-day" data-date="${formatKey(days[i])}" style="background:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
+        <div class="grid-cell grid-cell--avg" style="background:${habitColor(h, applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
     `;
   }).join('');
@@ -3081,6 +3113,7 @@ function renderAbout() {
     ])}
     <div class="manage-section-divider"></div>
     ${tipGroup('about.group.fields', [
+      ['about.tip.noValuation.title', 'about.tip.noValuation.body'],
       ['about.tip.groups.title', 'about.tip.groups.body'],
       ['about.tip.goalThreshold.title', 'about.tip.goalThreshold.body'],
       ['about.tip.slider.title', 'about.tip.slider.body'],
@@ -3104,7 +3137,7 @@ function renderStatsRows(stats) {
   return stats.map(({ habit, avg, count }) => `
     <div class="month-stat-row">
       <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
-      <span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : scoreColor(applyGoal(habit, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'} <span class="month-stat-count">(${count}×)</span></span>
+      <span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : habitColor(habit, applyGoal(habit, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'} <span class="month-stat-count">(${count}×)</span></span>
     </div>
   `).join('');
 }
@@ -3256,9 +3289,10 @@ function renderHabitForm() {
       <div class="pill-group">
         <button type="button" class="pill-toggle${f.good === 'high' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="high">${t('habitForm.highIsGood')}</button>
         <button type="button" class="pill-toggle${f.good === 'low' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="low">${t('habitForm.lowIsGood')}</button>
+        <button type="button" class="pill-toggle${!f.good ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="">${t('habitForm.noValuation')}</button>
       </div>
     </div>
-    ${goalField}
+    ${f.good ? goalField : ''}
   `;
 
   const numberBody = `
@@ -3268,11 +3302,12 @@ function renderHabitForm() {
     </div>
   `;
 
-  // Mitglieder-Auswahl: aktive Skala-Felder (nicht sich selbst), plus bereits
-  // gewählte Mitglieder, die inzwischen archiviert wurden (sonst würde man sie beim
-  // nächsten Bearbeiten der Gruppe unsichtbar wieder verlieren).
+  // Mitglieder-Auswahl: aktive, bewertete Skala-Felder (nicht sich selbst, keine
+  // unbewerteten - die haben kein Gut/Schlecht zum Mitteln), plus bereits gewählte
+  // Mitglieder, die inzwischen archiviert wurden (sonst würde man sie beim nächsten
+  // Bearbeiten der Gruppe unsichtbar wieder verlieren).
   const scaleCandidates = state.habits.filter(
-    (h) => h.kind === 'scale' && h.defId !== f.defId && (!h.archivedAt || f.groupMembers.includes(h.id))
+    (h) => h.kind === 'scale' && !isNeutralScale(h) && h.defId !== f.defId && (!h.archivedAt || f.groupMembers.includes(h.id))
   );
   const groupBody = `
     <div class="auth-field">
@@ -3365,7 +3400,7 @@ function renderManage() {
           <span class="manage-name">${esc(h.name)}</span>
           ${confirmingDelete
             ? `<span class="manage-delete-warning">${t('manage.deleteWarning')}</span>`
-            : `<span class="manage-meta">${formatScale(h)}${h.kind === 'scale' ? ` · ${h.good === 'high' ? t('manage.highIsGoodShort') : t('manage.lowIsGoodShort')}` : ''}${h.reminderMinute !== null && h.reminderMinute !== undefined ? ` · ${t('manage.reminderAt', { time: minutesToTimeStr(h.reminderMinute) })}` : ''}</span>`}
+            : `<span class="manage-meta">${formatScale(h)}${h.kind === 'scale' ? ` · ${h.good === 'high' ? t('manage.highIsGoodShort') : h.good === 'low' ? t('manage.lowIsGoodShort') : t('manage.noValuationShort')}` : ''}${h.reminderMinute !== null && h.reminderMinute !== undefined ? ` · ${t('manage.reminderAt', { time: minutesToTimeStr(h.reminderMinute) })}` : ''}</span>`}
         </div>
         <div class="manage-actions">
           ${!h.archivedAt ? `
@@ -3820,7 +3855,7 @@ app.addEventListener('click', async (e) => {
     render();
   } else if (action === 'habit-good') {
     syncHabitFormFromDom();
-    state.habitForm.good = el.dataset.good;
+    state.habitForm.good = el.dataset.good || null;
     render();
   } else if (action === 'habit-display-style') {
     syncHabitFormFromDom();
@@ -3999,7 +4034,7 @@ app.addEventListener('input', (e) => {
   const v = Number(slider.value);
   const pct = ((v - habit.min) / (habit.max - habit.min)) * 100;
   slider.classList.remove('value-slider--unset');
-  slider.style.setProperty('--slider-color', scoreColor(normalize(habit, v)));
+  slider.style.setProperty('--slider-color', habitColor(habit, normalize(habit, v)));
   slider.style.setProperty('--slider-pct', pct + '%');
   const valueEl = document.getElementById('slider-value-' + habit.id);
   if (valueEl) valueEl.textContent = String(v);
