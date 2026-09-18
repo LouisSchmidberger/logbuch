@@ -83,29 +83,32 @@
     padding: 20px 18px 40px;
   }
 
-  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .header h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 22px; margin: 0; }
-  .subpage-header-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
-  .subpage-header-title h1 { font-size: 21px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; }
-  /* Eigener Bereich statt nur ein normaler .header - deutlich abgesetzt (eigene Fläche,
-     mehr Innenabstand, Trennlinie) statt nur ein etwas anderer Titel, damit klar ist,
-     dass man auf einer eigenen Seite ist. Full-bleed über die seitliche #app-Polsterung
-     hinweg (negative Margins = deren Breite, siehe #app), dafür mit passendem
-     Innenabstand kompensiert. Die SVG-Chevron statt eines "←"-Zeichens zentriert sich
-     unabhängig von Font-Metriken zuverlässig exakt. */
-  .subpage-header {
-    background: var(--surface); border-bottom: 1px solid var(--line);
-    margin: -20px -18px 18px; padding: 18px 18px 16px;
-  }
+  .subpage-header-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .subpage-header-title h1 { font-size: 19px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; }
+  /* Trennlinie + etwas mehr Innenabstand unten, da hier (anders als bei den Tabs, die
+     ihre eigene Trennlinie mitbringen) nichts anderes den unteren Rand der Fläche
+     markiert. Die SVG-Chevron statt eines "←"-Zeichens zentriert sich unabhängig von
+     Font-Metriken zuverlässig exakt. */
+  .subpage-header { border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 0; }
   .back-btn {
-    background: var(--ink); border: none; border-radius: 50%; width: 36px; height: 36px;
+    background: var(--ink); border: none; border-radius: 50%; width: 32px; height: 32px;
     flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--paper);
     cursor: pointer;
   }
 
-  /* Header (+ bei den Tabs auch die Tab-Leiste) bleiben beim Scrollen oben fixiert,
-     damit Menü/Zurück/Tab-Wechsel immer erreichbar sind, ohne erst hochzuscrollen. */
-  .sticky-top { position: sticky; top: 0; z-index: 6; background: var(--paper); padding-top: 20px; margin-top: -20px; }
+  /* Header + Tab-Leiste bzw. Unterseiten-Header bleiben beim Scrollen oben fixiert
+     (Menü/Zurück/Tab-Wechsel immer erreichbar) und bekommen dieselbe abgesetzte Fläche
+     (eigene Hintergrundfarbe, full-bleed über die seitliche #app-Polsterung hinweg via
+     negativer Margins) statt nur die Unterseiten - einheitlicher als "nur manche
+     Ansichten sehen anders aus". Die Trennlinie am unteren Rand kommt je nach Kontext
+     von .tabs oder .subpage-header selbst (siehe dort), .sticky-top braucht keine
+     eigene - Kindelement-Margins kollabieren sonst nicht sauber nach außen. */
+  .sticky-top {
+    position: sticky; top: 0; z-index: 6; background: var(--surface);
+    margin: -20px -18px 0; padding: 14px 18px 0;
+  }
 
   .header-menu-wrap { position: relative; }
   .menu-btn {
@@ -1294,7 +1297,7 @@ const STRINGS = {
     'about.mentalHealth.crisis.closing': 'Du brauchst dafür keinen Notfall, ein Gespräch reicht.',
     'about.mentalHealth.feedback': 'Fehlt dir hier etwas, oder siehst du das anders? Ich freue mich über dein Feedback.',
     'about.tip.swipe.title': 'Wischen',
-    'about.tip.swipe.body': 'In Tag-, Wochen-, Monats- und Jahresansicht kannst du nach links/rechts wischen, um zum vorherigen/nächsten Zeitraum zu springen — schneller als die Pfeil-Buttons.',
+    'about.tip.swipe.body': 'In Tag-, Wochen-, Monats- und Jahresansicht kannst du nach links/rechts wischen, um zum vorherigen/nächsten Zeitraum zu springen — schneller als die Pfeil-Buttons. In "Felder verwalten" und "Über Logbuch" bringt dich ein Wisch nach rechts zurück.',
     'about.tip.jumpDay.title': 'Direkt zu einem Tag springen',
     'about.tip.jumpDay.body': 'Tippe in der Wochen-, Monats- oder Jahresansicht auf eine beliebige Zelle, um direkt zu diesem Tag zu springen.',
     'about.tip.toggleOff.title': 'Eine Antwort wieder löschen',
@@ -1585,7 +1588,7 @@ const STRINGS = {
     'about.mentalHealth.crisis.closing': 'You do not need to be in an emergency for this — a conversation is enough.',
     'about.mentalHealth.feedback': 'Is something missing here, or do you see it differently? I would love to hear your feedback.',
     'about.tip.swipe.title': 'Swiping',
-    'about.tip.swipe.body': 'In the day, week, month, and year views, you can swipe left/right to jump to the previous/next period — faster than the arrow buttons.',
+    'about.tip.swipe.body': 'In the day, week, month, and year views, you can swipe left/right to jump to the previous/next period — faster than the arrow buttons. On "Manage fields" and "About Logbuch", swiping right takes you back.',
     'about.tip.jumpDay.title': 'Jump straight to a day',
     'about.tip.jumpDay.body': 'Tap any cell in the week, month, or year view to jump directly to that day.',
     'about.tip.toggleOff.title': 'Clearing an answer',
