@@ -361,7 +361,7 @@
   .manage-list { display: flex; flex-direction: column; margin-bottom: 18px; }
   .manage-row {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    padding: 11px 0; border-bottom: 1px solid var(--line);
+    padding: 7px 0; border-bottom: 1px solid var(--line);
   }
   .manage-row:first-child { border-top: 1px solid var(--line); }
   .manage-row--archived { opacity: 0.55; }
@@ -373,21 +373,22 @@
   .manage-delete-warning { font-size: 11px; color: var(--rust); }
   .manage-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
   .drag-handle {
-    display: flex; flex-direction: column; justify-content: center; gap: 3px; width: 20px; height: 28px;
+    display: flex; flex-direction: column; justify-content: center; gap: 3px; width: 16px; height: 22px;
     flex-shrink: 0; cursor: grab; touch-action: none;
   }
-  .drag-handle span { display: block; width: 14px; height: 2px; background: var(--sand); border-radius: 1px; }
+  .drag-handle span { display: block; width: 12px; height: 2px; background: var(--sand); border-radius: 1px; }
   /* Tastatur-/Tipp-Alternative zum Drag-Handle (der rein per Pointer-Events
-     funktioniert) — sichtbar kompakt gehalten, aber mit spürbarem Abstand
-     zueinander und einem unsichtbar über den sichtbaren Rand hinausragenden
-     Treffer-Bereich (::after), damit auch ungenaues Antippen zuverlässig den
-     richtigen der beiden Buttons trifft statt zu "verzugestopft" zu wirken. */
-  .move-buttons { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+     funktioniert) — nebeneinander statt gestapelt, damit sie nicht die
+     Zeilenhöhe treiben; mit spürbarem Abstand zueinander und einem unsichtbar
+     über den sichtbaren Rand hinausragenden Treffer-Bereich (::after), damit
+     auch ungenaues Antippen zuverlässig den richtigen der beiden Buttons
+     trifft statt zu "verzugestopft" zu wirken. */
+  .move-buttons { display: flex; flex-direction: row; gap: 5px; flex-shrink: 0; }
   .move-btn {
-    position: relative; font-family: inherit; font-size: 11px; line-height: 1; width: 26px; height: 22px;
+    position: relative; font-family: inherit; font-size: 11px; line-height: 1; width: 22px; height: 22px;
     border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--ink); cursor: pointer;
   }
-  .move-btn::after { content: ''; position: absolute; inset: -6px; }
+  .move-btn::after { content: ''; position: absolute; inset: -4px; }
   .move-btn:disabled { opacity: 0.3; cursor: default; }
   .manage-btn {
     font-family: inherit; font-size: 11px; padding: 5px 9px; border-radius: 12px;
