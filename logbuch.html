@@ -4492,18 +4492,22 @@ let touchStartY = null;
 const SWIPE_THRESHOLD = 50;
 const SWIPEABLE_VIEWS = ['today', 'week', 'month', 'year'];
 
+// Auf Unterseiten (Verwalten/Über Logbuch) ersetzt ein Wisch nach rechts (dieselbe
+// Richtung, die in den Tab-Ansichten "vorheriger Zeitraum" bedeutet) den ←-Button -
+// gängige Geste für "zurück", passend zum sonstigen Swipe-Vokabular der App.
 app.addEventListener('touchstart', (e) => {
   // Ein Wisch, der innerhalb einer eigenen horizontal scrollbaren Zeile beginnt (z.B. die
   // Feld-Buttons, wenn deren Bezeichnungen den Platz sprengen) oder auf dem Schieberegler
   // selbst beginnt (der Drag muss den Wert setzen, nicht den Tag wechseln), soll dort
   // wirken statt die Ansicht zu wechseln.
-  if (!SWIPEABLE_VIEWS.includes(state.view) || e.touches.length !== 1 || e.target.closest('.habit-options, .tabs, .slider-row')) return;
+  if ((!SWIPEABLE_VIEWS.includes(state.view) && !isSubpageView(state.view)) || e.touches.length !== 1 || e.target.closest('.habit-options, .tabs, .slider-row')) return;
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
 }, { passive: true });
 
 app.addEventListener('touchend', (e) => {
-  if (touchStartX === null || !SWIPEABLE_VIEWS.includes(state.view)) return;
+  const subpage = isSubpageView(state.view);
+  if (touchStartX === null || (!SWIPEABLE_VIEWS.includes(state.view) && !subpage)) return;
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = e.changedTouches[0].clientY - touchStartY;
   touchStartX = null;
@@ -4511,6 +4515,10 @@ app.addEventListener('touchend', (e) => {
   if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy) * 1.5) return;
   const dir = dx < 0 ? 1 : -1;
 
+  if (subpage) {
+    if (dir === -1) { state.view = state.previousTabView || 'today'; render(); }
+    return;
+  }
   if (state.view === 'today') {
     state.currentDate = addDays(state.currentDate, dir);
   } else if (state.view === 'week') {
