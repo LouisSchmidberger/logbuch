@@ -4044,7 +4044,10 @@ function renderApp() {
     ${body}
     ${state.deleteConfirm ? renderDeleteConfirm() : ''}
   `;
-  if (subpage) document.querySelector('.subpage-header h1')?.focus();
+  // preventScroll: der Header ist ohnehin (sticky) sichtbar - der native
+  // Scroll-in-View-Effekt beim Fokussieren kennt "position: sticky" nicht und hat
+  // dadurch leicht falsch/zu weit gescrollt (Header wirkte oben angeschnitten).
+  if (subpage) document.querySelector('.subpage-header h1')?.focus({ preventScroll: true });
 }
 
 // Fokussiert nach einem Re-Render das erste fokussierbare Element im gerade
