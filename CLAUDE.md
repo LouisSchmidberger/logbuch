@@ -337,6 +337,21 @@ Pointer-Drag) eine Tastatur-Alternative. Der Zahlenwert-Verlaufsgraph hat eine
 `.visually-hidden`-Textzusammenfassung (Anzahl/letzter Wert/Durchschnitt/Spanne/Trend)
 statt eines reinen `aria-label`.
 
+**Android-Zurück-Taste** (seit 2026-09-18): ohne eigene Browser-History-Einträge hatte
+die native/Gesten-Zurück-Taste nichts, wohin sie zurückgehen könnte, und hat
+stattdessen sofort die App verlassen — unabhängig davon, was gerade offen war.
+`isOverlayOpen()`/`closeTopOverlay()`/`syncOverlayHistory()` (direkt nach
+`modalTriggerSelector` in `logbuch.html`) schließen stattdessen offene Overlays
+(Burger-Menü, Feld-Formular, Konto-/Tutorial-/Feld-Lösch-Bestätigungen) über einen
+`popstate`-Listener, bevor die App wirklich verlassen wird — ein `history.pushState()`
+pro geöffnetem Overlay, synchron gehalten mit `render()` (auch wenn ein Overlay ganz
+normal über die App statt über die Zurück-Taste geschlossen wird, sonst bliebe ein
+toter History-Eintrag stehen). Bewusst NUR für Overlays, nicht für Tab-Wechsel
+(Heute/Woche/...) — entspricht dem üblichen Verhalten von Android-Apps mit Tab-Leiste.
+`state.recoveryKeyToShow` ist bewusst ausgenommen (schon jetzt absichtlich nur über die
+Bestätigungs-Checkbox schließbar, auch Escape greift dort nicht — soll die Zurück-Taste
+nicht aushebeln).
+
 ## Internationalisierung (i18n)
 
 Seit 2026-09-16: Deutsch + Englisch, Deutsch bleibt Standard/Fallback. Zentraler

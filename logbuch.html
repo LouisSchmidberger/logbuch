@@ -906,6 +906,61 @@ function restoreModalFocus() {
   modalTriggerSelector = null;
 }
 
+// --- Android-Zurück-Taste schließt offene Overlays statt die App zu verlassen -----
+// Ohne eigene History-Einträge hat die native/Gesten-Zurück-Taste nichts, wohin sie
+// "zurückgehen" könnte, und beendet stattdessen sofort die App (bzw. den Tab) -
+// unabhängig davon, was gerade offen ist. Bewusst nur für Overlays (Menü,
+// Feld-Formular, Lösch-Bestätigungen), NICHT für reine Tab-Wechsel (Heute/Woche/...) -
+// das entspricht dem üblichen Verhalten von Android-Apps mit Tab-Leiste.
+// state.recoveryKeyToShow bleibt bewusst ausgenommen: das ist schon jetzt absichtlich
+// nur über die Bestätigungs-Checkbox schließbar (auch Escape greift dort nicht),
+// das soll die Zurück-Taste nicht aushebeln.
+function isOverlayOpen() {
+  return state.menuOpen || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
+}
+// Schließt jeweils nur das "oberste" Overlay (analog zur bestehenden Escape-Logik) -
+// in der Praxis nie mehrere gleichzeitig offen, da z.B. die Menü-Aktionen state.menuOpen
+// beim Öffnen eines anderen Overlays bereits selbst auf false setzen.
+function closeTopOverlay() {
+  if (state.deleteConfirm || state.tutorialSkipConfirm) {
+    state.deleteConfirm = null;
+    state.tutorialSkipConfirm = false;
+    restoreModalFocus();
+  } else if (state.menuOpen) {
+    state.menuOpen = false;
+  } else if (state.habitForm) {
+    state.habitForm = null;
+  } else if (state.habitDeleteConfirm) {
+    state.habitDeleteConfirm = null;
+  }
+}
+let overlayHistoryPushed = false;
+let closingOverlayViaPopstate = false;
+window.addEventListener('popstate', () => {
+  if (!isOverlayOpen()) return; // nichts (mehr) zu schließen - Browser navigiert normal weiter
+  closingOverlayViaPopstate = true;
+  overlayHistoryPushed = false; // History-Position ist durch den Pop bereits korrekt
+  closeTopOverlay();
+  render();
+  closingOverlayViaPopstate = false;
+});
+// Von render() aufgerufen: hält die History mit dem Overlay-Zustand synchron, damit
+// pro geöffnetem Overlay genau ein Zurück-Druck es wieder schließt - auch wenn es
+// stattdessen ganz normal über die App (Abbrechen-Button o.ä.) geschlossen wird (sonst
+// bliebe ein "toter" History-Eintrag stehen, der einen zusätzlichen, wirkungslosen
+// Zurück-Druck vor dem eigentlichen Verlassen der App erfordert hätte).
+function syncOverlayHistory() {
+  if (closingOverlayViaPopstate) return;
+  const overlayOpenNow = isOverlayOpen();
+  if (overlayOpenNow && !overlayHistoryPushed) {
+    history.pushState({ logbuchOverlay: true }, '');
+    overlayHistoryPushed = true;
+  } else if (!overlayOpenNow && overlayHistoryPushed) {
+    overlayHistoryPushed = false;
+    history.back();
+  }
+}
+
 function activeHabits() {
   return state.habits.filter((h) => !h.archivedAt);
 }
@@ -3923,6 +3978,7 @@ function render() {
   else if (!state.loading && !state.userSettings.onboardingCompleted) { renderTutorial(); }
   else { renderApp(); }
   focusModalIfOpen();
+  syncOverlayHistory();
 }
 
 // --- Event-Delegation ----------------------------------------------------
