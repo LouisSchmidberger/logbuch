@@ -136,17 +136,44 @@ Auswertungs-Tabs einen Verlaufs-Graphen (`renderNumberChart`), statt in die Scor
 Heatmap-Logik einzufließen. Es gibt keinen separaten Bool-Typ mehr – ein Ja/Nein-Feld ist
 einfach eine `scale` mit `min:0, max:1, labels:['Nein','Ja']`.
 
-**Darstellung von `scale`-Feldern mit nummerierten Stufen (`labels=null`)**:
-`display_style='buttons'` (Standard) zeigt Auswahl-Buttons wie bisher, gedeckelt auf 12
-Stufen (mehr wäre unbedienbar). `display_style='slider'` zeigt stattdessen einen
-Schieberegler (`renderHabitSlider`) – dafür wird beim Anlegen keine freie Von/Bis-Spanne
-eingegeben, sondern nur eine Stufenzahl (Standard 100, wirkt wie Prozent; Ganzzahl,
-2–1000), intern als `min=0`/`max=<Stufenzahl>` gespeichert. Der Regler zeigt **nie** eine
-Min/Max-Beschriftung im Eingabe-UI (nur in der Verwaltungs-Zusammenfassung,
-`formatScale`) – `slider_show_value` steuert nur, ob der aktuell gewählte Wert während
-der Eingabe sichtbar ist. Live-Vorschau (Wert + Farbe) läuft beim Ziehen rein über einen
-`input`-Listener ohne Re-Render; gespeichert wird erst bei `change` (Loslassen), über
-denselben `handleSelect`-Pfad wie bei den Buttons.
+**Darstellung von `scale`-Feldern (`display_style`)**: `buttons` (Standard) zeigt
+Auswahl-Buttons, `slider` einen Schieberegler (`renderHabitSlider`) – dafür wird beim
+Anlegen keine freie Von/Bis-Spanne eingegeben, sondern nur eine Stufenzahl (Standard
+100, wirkt wie Prozent; Ganzzahl, 2–1000), intern als `min=0`/`max=<Stufenzahl>`
+gespeichert. Der Regler zeigt **nie** eine Min/Max-Beschriftung im Eingabe-UI (nur in
+der Verwaltungs-Zusammenfassung, `formatScale`) – `slider_show_value` steuert nur, ob
+der aktuell gewählte Wert während der Eingabe sichtbar ist. Live-Vorschau (Wert + Farbe)
+läuft beim Ziehen rein über einen `input`-Listener ohne Re-Render; gespeichert wird erst
+bei `change` (Loslassen), über denselben `handleSelect`-Pfad wie bei den Buttons.
+
+**Bezeichnungen (`labels`) sind seit 2026-09-18 kein eigener Modus mehr, sondern ein
+optionaler Text-Overlay über denselben Stufen** – vorher waren "Nummerierte Stufen" und
+"Eigene Bezeichnungen" im Formular zwei sich ausschließende Zustände (`f.mode`), obwohl
+die DB nie zwischen ihnen unterschieden hat (`labels` ist einfach `null` oder ein Array
+über demselben `min`/`max`-Bereich). Das Formular (`scaleBody` in `renderHabitForm`)
+fragt jetzt in dieser Reihenfolge: Darstellung (Buttons/Schieberegler) → Bereich (Von/Bis
+bzw. Anzahl Stufen, weiterhin gedeckelt auf 12 bei Buttons bzw. 2–1000 beim Schieberegler)
+→ Checkbox "Eigene Bezeichnungen verwenden", darunter immer eine Zeile pro Stufe (Zahl
+oder Textfeld) → Live-Vorschau (rendert `renderHabitOptions`/`renderHabitSlider` mit
+einem synthetischen Habit-Objekt aus dem Formular-Stand, `inert`/`aria-hidden`, rein
+informativ) → Bewertung/Ziel-Quote. `habitFormStepCount(f)`/`resizeLabels(labels,
+newLength)` halten die Bezeichnungs-Liste bei jeder Bereichs-/Stufenzahl-Änderung auf
+der richtigen Länge (bereits eingetippter Text an gleicher Position bleibt erhalten),
+unabhängig davon ob die Checkbox gerade an ist. Der Schieberegler kann seit diesem Umbau
+ebenfalls Bezeichnungen anzeigen (`habitSliderValueText`) – vorher eine unbeabsichtigte
+Lücke, keine bewusste Einschränkung.
+
+**Bearbeiten mit vorhandenen Daten (`f.locked`, siehe `habitHasData`)**: nur Von/Bis
+bzw. die Stufenzahl bleiben gesperrt (das wäre eine rückwirkende Neuinterpretation
+bestehender Werte – bewusst NICHT gebaut, siehe unten). Darstellung, die
+Bezeichnungen-Checkbox und der Bezeichnungs-Text selbst bleiben dagegen auch mit
+vorhandenen Daten änderbar, da sich dabei nur die Beschriftung ändert, nie die
+zugrundeliegende Zahl/Position. **Bewusst nicht umgesetzt**: eine rückwirkende
+Umrechnung bei einer echten Anzahl-Änderung (z.B. 3 Stufen → 5 Stufen) eines Feldes mit
+vorhandenen Daten – mathematisch bei rein nummerierten Stufen unproblematisch (linear,
+Score/Farbe bleibt exakt erhalten), bei Text-Bezeichnungen aber riskant (ein altes "Ja"
+bei 2 Stufen bekäme nachträglich eine Intensität zugeschrieben, die so nie gemeint war).
+Für eine andere Skala bleibt der Weg: archivieren und neu anlegen.
 
 **Skala-Felder ohne Wertung (`good = null`, seit 2026-09-18)**: `good` ist bei
 `kind='scale'` nicht mehr zwingend `'high'`/`'low'` – ein dritter Zustand "Keine
