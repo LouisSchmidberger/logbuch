@@ -395,8 +395,10 @@
   .mental-health-highlight .tip:last-child { margin-bottom: 14px; }
   .mental-health-crisis { background: rgba(var(--rust-rgb), 0.08); border: 1px solid rgba(var(--rust-rgb), 0.3); border-radius: 4px; padding: 10px 12px; margin-bottom: 14px; }
   .mental-health-crisis .tip-body + .tip-body { margin-top: 6px; }
-  .tel-button {
-    display: inline-block; margin-top: 8px; padding: 8px 14px; font-family: inherit; font-size: 13px;
+  .mental-health-crisis .tip-body a { color: var(--moss); text-decoration: underline; }
+  .crisis-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .crisis-action-button {
+    display: inline-block; padding: 8px 14px; font-family: inherit; font-size: 13px;
     font-weight: 600; text-decoration: none; color: var(--paper); background: var(--rust);
     border-radius: 4px;
   }
@@ -1170,9 +1172,11 @@ const STRINGS = {
     'about.mentalHealth.noSubstitute.title': 'Logbuch ersetzt keine professionelle Hilfe',
     'about.mentalHealth.noSubstitute.body': 'Diese App kann helfen, Muster über die Zeit zu erkennen — sie kann aber kein Gespräch mit einem Therapeuten, einer Ärztin oder einer Vertrauensperson ersetzen, gerade bei Themen wie Stimmung, Schlaf oder Konsum. Wenn es dir über längere Zeit schlecht geht, sprich bitte mit jemandem.',
     'about.mentalHealth.crisis.title': 'Falls es dir gerade richtig schlecht geht',
-    'about.mentalHealth.crisis.germany': 'In Deutschland ist die Telefonseelsorge kostenlos, anonym und rund um die Uhr erreichbar — auch per Chat auf telefonseelsorge.de oder unter der zweiten Nummer 0800 111 0 222.',
-    'about.mentalHealth.crisis.callButton': 'Telefonseelsorge anrufen (0800 111 0 111)',
-    'about.mentalHealth.crisis.international': 'Außerhalb Deutschlands (oder wenn dir das lieber ist) findest du auf findahelpline.com kostenlose Anlaufstellen nach Land.',
+    'about.mentalHealth.crisis.germany': 'In Deutschland ist die Telefonseelsorge kostenlos, anonym und rund um die Uhr erreichbar — per Telefon (zwei unabhängige Nummern, falls eine besetzt ist) oder im Chat.',
+    'about.mentalHealth.crisis.websiteButton': 'Chat auf telefonseelsorge.de',
+    'about.mentalHealth.crisis.callButton1': '0800 111 0 111 anrufen',
+    'about.mentalHealth.crisis.callButton2': '0800 111 0 222 anrufen',
+    'about.mentalHealth.crisis.international': 'Außerhalb Deutschlands (oder wenn dir das lieber ist) findest du auf <a href="https://findahelpline.com" target="_blank" rel="noopener">findahelpline.com</a> kostenlose Anlaufstellen nach Land.',
     'about.mentalHealth.crisis.closing': 'Du brauchst dafür keinen Notfall, ein Gespräch reicht.',
     'about.mentalHealth.feedback': 'Fehlt dir hier etwas, oder siehst du das anders? Ich freue mich über dein Feedback.',
     'about.tip.swipe.title': 'Wischen',
@@ -1462,9 +1466,11 @@ const STRINGS = {
     'about.mentalHealth.noSubstitute.title': 'Logbuch is not a substitute for professional help',
     'about.mentalHealth.noSubstitute.body': 'This app can help you notice patterns over time — but it cannot replace a conversation with a therapist, doctor, or someone you trust, especially around topics like mood, sleep, or substance use. If you are struggling for an extended period, please talk to someone.',
     'about.mentalHealth.crisis.title': 'If things feel really bad right now',
-    'about.mentalHealth.crisis.germany': 'In Germany, Telefonseelsorge is free, anonymous, and available 24/7 — also via chat at telefonseelsorge.de or on the second number 0800 111 0 222.',
-    'about.mentalHealth.crisis.callButton': 'Call Telefonseelsorge (0800 111 0 111)',
-    'about.mentalHealth.crisis.international': 'Outside Germany (or if you prefer), findahelpline.com lists free helplines by country.',
+    'about.mentalHealth.crisis.germany': 'In Germany, Telefonseelsorge is free, anonymous, and available 24/7 — by phone (two independent numbers, in case one is busy) or via chat.',
+    'about.mentalHealth.crisis.websiteButton': 'Chat at telefonseelsorge.de',
+    'about.mentalHealth.crisis.callButton1': 'Call 0800 111 0 111',
+    'about.mentalHealth.crisis.callButton2': 'Call 0800 111 0 222',
+    'about.mentalHealth.crisis.international': 'Outside Germany (or if you prefer), <a href="https://findahelpline.com" target="_blank" rel="noopener">findahelpline.com</a> lists free helplines by country.',
     'about.mentalHealth.crisis.closing': 'You do not need to be in an emergency for this — a conversation is enough.',
     'about.mentalHealth.feedback': 'Is something missing here, or do you see it differently? I would love to hear your feedback.',
     'about.tip.swipe.title': 'Swiping',
@@ -3198,7 +3204,11 @@ function renderMentalHealthSection() {
         <p class="tip-title">${t('about.mentalHealth.crisis.title')}</p>
         ${detectLikelyCountry() === 'DE' ? `
           <p class="tip-body">${t('about.mentalHealth.crisis.germany')}</p>
-          <a class="tel-button" href="tel:+498001110111">${esc(t('about.mentalHealth.crisis.callButton'))}</a>
+          <div class="crisis-actions">
+            <a class="crisis-action-button" href="https://www.telefonseelsorge.de" target="_blank" rel="noopener">${esc(t('about.mentalHealth.crisis.websiteButton'))}</a>
+            <a class="crisis-action-button" href="tel:+498001110111">${esc(t('about.mentalHealth.crisis.callButton1'))}</a>
+            <a class="crisis-action-button" href="tel:+498001110222">${esc(t('about.mentalHealth.crisis.callButton2'))}</a>
+          </div>
         ` : ''}
         <p class="tip-body">${t('about.mentalHealth.crisis.international')}</p>
         <p class="tip-body">${t('about.mentalHealth.crisis.closing')}</p>
