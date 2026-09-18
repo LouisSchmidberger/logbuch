@@ -85,18 +85,23 @@
 
   .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
   .header h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 22px; margin: 0; }
-  .subpage-header-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .subpage-header-title h1 { font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; }
-  /* Deutlich kräftiger als ein reiner Umriss (gefüllter Kreis statt nur Rand), damit
-     der Rückweg aus einer Unterseite sofort ins Auge fällt. Der Pfeil selbst sitzt bei
-     "←" je nach Font nie ganz exakt in der Mitte der Zeichenbox — der kleine
-     translateY-Schubs gleicht das optisch aus. */
-  .back-btn {
-    background: var(--ink); border: none; border-radius: 50%; width: 34px; height: 34px;
-    flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--paper);
-    cursor: pointer; font-size: 18px; line-height: 1;
+  .subpage-header-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .subpage-header-title h1 { font-size: 21px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; }
+  /* Eigener Bereich statt nur ein normaler .header - deutlich abgesetzt (eigene Fläche,
+     mehr Innenabstand, Trennlinie) statt nur ein etwas anderer Titel, damit klar ist,
+     dass man auf einer eigenen Seite ist. Full-bleed über die seitliche #app-Polsterung
+     hinweg (negative Margins = deren Breite, siehe #app), dafür mit passendem
+     Innenabstand kompensiert. Die SVG-Chevron statt eines "←"-Zeichens zentriert sich
+     unabhängig von Font-Metriken zuverlässig exakt. */
+  .subpage-header {
+    background: var(--surface); border-bottom: 1px solid var(--line);
+    margin: -20px -18px 18px; padding: 18px 18px 16px;
   }
-  .back-btn span { display: block; transform: translateY(-1px); }
+  .back-btn {
+    background: var(--ink); border: none; border-radius: 50%; width: 36px; height: 36px;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--paper);
+    cursor: pointer;
+  }
 
   /* Header (+ bei den Tabs auch die Tab-Leiste) bleiben beim Scrollen oben fixiert,
      damit Menü/Zurück/Tab-Wechsel immer erreichbar sind, ohne erst hochzuscrollen. */
@@ -3992,7 +3997,9 @@ function renderSubpageHeader(titleKey) {
   return `
     <div class="header subpage-header">
       <div class="subpage-header-title">
-        <button type="button" class="back-btn" data-action="subpage-back" aria-label="${esc(t('ariaLabel.back'))}"><span>←</span></button>
+        <button type="button" class="back-btn" data-action="subpage-back" aria-label="${esc(t('ariaLabel.back'))}">
+          <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
         <h1 tabindex="-1">${t(titleKey)}</h1>
       </div>
       ${renderMenuButton()}
