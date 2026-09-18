@@ -394,9 +394,10 @@
     border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
   }
   .manage-btn--danger { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.4); }
+  .manage-btn--warn { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.25); background: rgba(var(--rust-rgb), 0.06); }
   .manage-new-btn {
-    display: block; width: 100%; margin-top: 4px; padding: 10px; font-family: inherit; font-size: 13px;
-    border: 1px dashed var(--line); border-radius: 4px; background: transparent; color: var(--moss); cursor: pointer;
+    display: block; width: 100%; margin-top: 4px; padding: 11px; font-family: inherit; font-size: 14px; font-weight: 600;
+    border: none; border-radius: 4px; background: var(--moss); color: var(--paper); cursor: pointer;
   }
   .manage-section-divider { border-top: 1px solid var(--line); margin: 22px 0 14px; }
   .manage-section-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 15px; margin: 0 0 4px; }
@@ -1085,11 +1086,6 @@ const STRINGS = {
     'habitForm.error.max12Steps': 'Bitte maximal 12 Stufen.',
     'habitForm.error.fillAllLabels': 'Bitte alle Bezeichnungen ausfüllen.',
     'habitForm.error.nameRequired': 'Bitte einen Namen eingeben.',
-    'scale.numberWithUnit': 'Zahlenwert ({unit})',
-    'scale.number': 'Zahlenwert',
-    'scale.grouped': 'Gruppiert · Ø aus: {names}',
-    'scale.slider': 'Schieberegler',
-    'scale.goal': 'Ziel {percent}%',
     'ariaLabel.dismissHint': 'Hinweis schließen',
     'installHint.ios': 'Für Erinnerungen per Push: Tippe auf das Teilen-Symbol (Quadrat mit Pfeil nach oben – je nach Einstellung oben in der Adressleiste oder unten in der Leiste) und dann „Zum Home-Bildschirm". Auf dem iPhone funktionieren Benachrichtigungen sonst leider gar nicht.',
     'installHint.other': 'Für die beste Erfahrung (u.a. zuverlässigere Erinnerungen): füge Logbuch über das Browser-Menü zum Home-Bildschirm hinzu.',
@@ -1224,10 +1220,8 @@ const STRINGS = {
     'common.edit': 'Bearbeiten',
     'manage.deleteConfirmFinal': 'Ja, endgültig löschen',
     'manage.deleteWarning': 'Es gibt historische Einträge – nach dem Löschen in der App nicht mehr nutzbar.',
-    'manage.highIsGoodShort': 'hohe Werte gut',
-    'manage.lowIsGoodShort': 'niedrige Werte gut',
-    'manage.noValuationShort': 'keine Wertung',
     'manage.reminderAt': 'Erinnerung {time}',
+    'manage.groupMembers': 'Ø aus: {names}',
     'manage.archive': 'Archivieren',
     'manage.reactivate': 'Reaktivieren',
     'manage.archivedSectionLabel': 'Archiviert',
@@ -1376,11 +1370,6 @@ const STRINGS = {
     'habitForm.error.max12Steps': 'Please use at most 12 steps.',
     'habitForm.error.fillAllLabels': 'Please fill in all labels.',
     'habitForm.error.nameRequired': 'Please enter a name.',
-    'scale.numberWithUnit': 'Number value ({unit})',
-    'scale.number': 'Number value',
-    'scale.grouped': 'Grouped · avg. of: {names}',
-    'scale.slider': 'Slider',
-    'scale.goal': 'Goal {percent}%',
     'ariaLabel.dismissHint': 'Dismiss hint',
     'installHint.ios': 'For push reminders: tap the share icon (a square with an arrow pointing up – depending on your settings, either at the top in the address bar or at the bottom in the toolbar) and then "Add to Home Screen". Notifications unfortunately do not work at all on iPhone otherwise.',
     'installHint.other': 'For the best experience (incl. more reliable reminders): add Logbuch to your home screen via the browser menu.',
@@ -1515,10 +1504,8 @@ const STRINGS = {
     'common.edit': 'Edit',
     'manage.deleteConfirmFinal': 'Yes, delete permanently',
     'manage.deleteWarning': 'There are historical entries – no longer usable in the app after deletion.',
-    'manage.highIsGoodShort': 'high values good',
-    'manage.lowIsGoodShort': 'low values good',
-    'manage.noValuationShort': 'no valuation',
     'manage.reminderAt': 'Reminder {time}',
+    'manage.groupMembers': 'avg. of: {names}',
     'manage.archive': 'Archive',
     'manage.reactivate': 'Reactivate',
     'manage.archivedSectionLabel': 'Archived',
@@ -2185,20 +2172,6 @@ function habitToForm(h) {
     reminderEnabled: h.reminderMinute !== null && h.reminderMinute !== undefined,
     reminderMinute: h.reminderMinute ?? state.userSettings.defaultReminderMinute,
   };
-}
-
-function formatScale(h) {
-  if (h.kind === 'number') return h.unit ? t('scale.numberWithUnit', { unit: h.unit }) : t('scale.number');
-  if (h.kind === 'group') {
-    const names = (h.groupMembers || [])
-      .map((slug) => state.habits.find((x) => x.id === slug)?.name || slug)
-      .join(', ');
-    return t('scale.grouped', { names: names || '–' });
-  }
-  const scale = h.labels ? h.labels.join(' / ') : `${h.min} – ${h.max}`;
-  const goalPercent = Math.round((h.goalThreshold ?? 1) * 100);
-  const styleSuffix = h.displayStyle === 'slider' ? ` · ${t('scale.slider')}` : '';
-  return (goalPercent < 100 ? `${scale} · ${t('scale.goal', { percent: goalPercent })}` : scale) + styleSuffix;
 }
 
 // Liest die gerade sichtbaren Formularfelder (Name, Bereich, ggf. Bezeichnungen) ins
@@ -3738,12 +3711,14 @@ function renderManage() {
           <span class="manage-name">${esc(h.name)}</span>
           ${confirmingDelete
             ? `<span class="manage-delete-warning">${t('manage.deleteWarning')}</span>`
-            : `<span class="manage-meta">${formatScale(h)}${h.kind === 'scale' ? ` · ${h.good === 'high' ? t('manage.highIsGoodShort') : h.good === 'low' ? t('manage.lowIsGoodShort') : t('manage.noValuationShort')}` : ''}${h.reminderMinute !== null && h.reminderMinute !== undefined ? ` · ${t('manage.reminderAt', { time: minutesToTimeStr(h.reminderMinute) })}` : ''}</span>`}
+            : h.kind === 'group'
+              ? `<span class="manage-meta">${t('manage.groupMembers', { names: (h.groupMembers || []).map((slug) => state.habits.find((x) => x.id === slug)?.name || slug).join(', ') || '–' })}</span>`
+              : (h.reminderMinute !== null && h.reminderMinute !== undefined ? `<span class="manage-meta">${t('manage.reminderAt', { time: minutesToTimeStr(h.reminderMinute) })}</span>` : '')}
         </div>
         <div class="manage-actions">
           ${!h.archivedAt ? `
             <button type="button" class="manage-btn" data-action="habit-edit" data-id="${h.defId}">${t('common.edit')}</button>
-            <button type="button" class="manage-btn" data-action="habit-archive" data-id="${h.defId}">${t('manage.archive')}</button>
+            <button type="button" class="manage-btn manage-btn--warn" data-action="habit-archive" data-id="${h.defId}">${t('manage.archive')}</button>
           ` : confirmingDelete ? deleteAction : `
             <button type="button" class="manage-btn" data-action="habit-reactivate" data-id="${h.defId}">${t('manage.reactivate')}</button>
             ${deleteAction}

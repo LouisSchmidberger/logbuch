@@ -140,9 +140,9 @@ einfach eine `scale` mit `min:0, max:1, labels:['Nein','Ja']`.
 Auswahl-Buttons, `slider` einen Schieberegler (`renderHabitSlider`) – dafür wird beim
 Anlegen keine freie Von/Bis-Spanne eingegeben, sondern nur eine Stufenzahl (Standard
 100, wirkt wie Prozent; Ganzzahl, 2–1000), intern als `min=0`/`max=<Stufenzahl>`
-gespeichert. Der Regler zeigt **nie** eine Min/Max-Beschriftung im Eingabe-UI (nur in
-der Verwaltungs-Zusammenfassung, `formatScale`) – `slider_show_value` steuert nur, ob
-der aktuell gewählte Wert während der Eingabe sichtbar ist. Live-Vorschau (Wert + Farbe)
+gespeichert. Der Regler zeigt **nie** eine Min/Max-Beschriftung im Eingabe-UI –
+`slider_show_value` steuert nur, ob der aktuell gewählte Wert während der Eingabe
+sichtbar ist. Live-Vorschau (Wert + Farbe)
 läuft beim Ziehen rein über einen `input`-Listener ohne Re-Render; gespeichert wird erst
 bei `change` (Loslassen), über denselben `handleSelect`-Pfad wie bei den Buttons.
 
@@ -336,6 +336,23 @@ dann fälschlich zurück beim ursprünglichen Tab). `closingLayerViaPopstate` wi
 auch vor einem selbst ausgelösten `history.back()` gesetzt, nicht nur beim echten
 Zurück-Druck, und der `popstate`-Listener konsumiert dieses "eigene" Pop-Event ohne
 weitere Aktion.
+
+**Verwaltungsliste entschlackt** (seit 2026-09-18, `renderManage` in `logbuch.html`):
+pro Feld-Zeile steht nur noch der Name plus – falls gesetzt – die eigene
+Erinnerungszeit (`manage.reminderAt`); Skala/Bereich, Bezeichnungen, Gut/Schlecht-
+Richtung und Ziel-Quote werden dort nicht mehr aufgeführt (`formatScale` entfernt,
+keine andere Stelle nutzte es). Begründung: der Nutzer befüllt seine Felder täglich
+und kennt ihre Bedeutung bereits, eine Zusammenfassung pro Zeile ist redundant –
+nur die (unauffällige) eigene Erinnerungszeit ist erwähnenswert genug, um
+hervorgehoben zu bleiben. `kind='group'`-Zeilen zeigen stattdessen weiterhin ihre
+Mitglieder (`manage.groupMembers`, "Ø aus: ..."), da das die einzige Stelle in der
+Liste ist, an der das sichtbar wird (nicht Teil des Entschlackens, sondern
+weiterhin nötige Identifikationsinformation). "+ Neues Feld"/"+ Neue Gruppe"
+(`.manage-new-btn`) ist jetzt ein ausgefüllter statt gestrichelter Button (deutlich
+prominenter als primäre Aktion der Seite). "Archivieren" hat eine eigene, dezent
+rost-getönte Stil-Klasse (`.manage-btn--warn`, heller als `.manage-btn--danger` bei
+"Löschen") statt optisch identisch zu "Bearbeiten" zu sein – reversibel, aber ein
+Entfernen aus der Tageseingabe, daher bewusst nicht neutral gestylt.
 
 **Dark Mode** (seit 2026-09-16): folgt standardmäßig `prefers-color-scheme`, im
 Burger-Menü überschreibbar (System/Hell/Dunkel als Pill-Toggle, gleiches Muster wie
