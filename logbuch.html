@@ -4064,6 +4064,12 @@ function focusModalIfOpen() {
   focusable?.focus();
 }
 
+// Merkt sich die zuletzt gerenderte Ansicht, um beim tatsächlichen Wechsel (Tab oder
+// Unterseite) nach oben zu scrollen - sonst behält der Browser die Scroll-Position
+// einer SPA über einen kompletten Inhaltswechsel hinweg bei (kein echter
+// Seitenwechsel), z.B. wäre man nach dem Wechsel von einem herunter gescrollten
+// "Heute" zu "Monat" dort ebenfalls mitten in der Seite statt oben gelandet.
+let lastRenderedView = null;
 function render() {
   if (state.passwordRecovery) { renderPasswordRecovery(); }
   else if (!state.session) { renderAuth(); }
@@ -4074,6 +4080,10 @@ function render() {
   else { renderApp(); }
   focusModalIfOpen();
   syncLayerHistory();
+  if (state.view !== lastRenderedView) {
+    lastRenderedView = state.view;
+    window.scrollTo(0, 0);
+  }
 }
 
 // --- Event-Delegation ----------------------------------------------------
