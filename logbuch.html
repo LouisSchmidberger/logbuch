@@ -23,6 +23,7 @@
     --rust: #a2503a;
     --sand: #8c8371;
     --surface: #eae7df;
+    --popover-bg: #f4f1e9;
     --input-bg: #ffffff;
     --shadow: rgba(0, 0, 0, 0.15);
     --scrim: rgba(0, 0, 0, 0.45);
@@ -45,6 +46,7 @@
       --rust: #d3785d;
       --sand: #a89f8c;
       --surface: #29261f;
+      --popover-bg: #343025;
       --input-bg: #2c2920;
       --rust-rgb: 211, 120, 93;
       --moss-rgb: 127, 165, 131;
@@ -58,6 +60,7 @@
     --rust: #d3785d;
     --sand: #a89f8c;
     --surface: #29261f;
+    --popover-bg: #343025;
     --input-bg: #2c2920;
     --rust-rgb: 211, 120, 93;
     --moss-rgb: 127, 165, 131;
@@ -121,7 +124,7 @@
   .menu-panel {
     position: absolute; top: 38px; right: 0; z-index: 10; width: 250px;
     display: flex; flex-direction: column; gap: 8px;
-    background: var(--surface); border: 1px solid var(--ink); border-radius: 4px; padding: 14px;
+    background: var(--popover-bg); border: 1px solid var(--ink); border-radius: 4px; padding: 14px;
     box-shadow: 0 12px 32px var(--shadow);
   }
   .menu-panel .push-row { margin-bottom: 0; }
@@ -1029,6 +1032,13 @@ function syncLayerHistory() {
     history.back();
   }
 }
+// Das Menü-Panel ist nur position:absolute (nicht fixed) und blockiert daher für sich
+// genommen kein Scrollen des Hintergrunds - ein Klick außerhalb schließt es bereits
+// (siehe Klick-Delegator), Scrollen bisher nicht. Schließt das Menü deshalb zusätzlich
+// bei jedem Scroll, statt eigens Body-Scroll zu sperren.
+window.addEventListener('scroll', () => {
+  if (state.menuOpen) { state.menuOpen = false; render(); }
+}, { passive: true });
 
 function activeHabits() {
   return state.habits.filter((h) => !h.archivedAt);
@@ -4507,6 +4517,11 @@ app.addEventListener('keydown', (e) => {
 let touchStartX = null;
 let touchStartY = null;
 const SWIPE_THRESHOLD = 50;
+// Höher als SWIPE_THRESHOLD: ein Wisch auf einer Unterseite (z.B. "Verwalten") verlässt
+// die Seite komplett statt nur den Zeitraum zu wechseln - dort ist "aus Versehen
+// ausgelöst" ärgerlicher als bei Heute/Woche/Monat/Jahr, deshalb absichtlich weniger
+// empfindlich.
+const SWIPE_THRESHOLD_SUBPAGE = 100;
 const SWIPEABLE_VIEWS = ['today', 'week', 'month', 'year'];
 
 // Auf Unterseiten (Verwalten/Über Logbuch) ersetzt ein Wisch nach rechts (dieselbe
@@ -4529,7 +4544,7 @@ app.addEventListener('touchend', (e) => {
   const dy = e.changedTouches[0].clientY - touchStartY;
   touchStartX = null;
   touchStartY = null;
-  if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+  if (Math.abs(dx) < (subpage ? SWIPE_THRESHOLD_SUBPAGE : SWIPE_THRESHOLD) || Math.abs(dx) < Math.abs(dy) * 1.5) return;
   const dir = dx < 0 ? 1 : -1;
 
   if (subpage) {

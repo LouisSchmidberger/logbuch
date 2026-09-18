@@ -318,7 +318,12 @@ sich seitdem außerdem über einen kräftigeren Rand (`var(--ink)` statt `var(--
 und stärkeren Schlagschatten vom Hintergrund ab – `--surface` ist im Hellmodus
 bewusst identisch mit `--paper` (siehe Dark-Mode-Abschnitt, wichtig für nahtlose
 `.sticky-top`-Header), reichte für ein freischwebendes Popover wie das Menü aber nicht
-als Abgrenzung.
+als Abgrenzung. Deshalb seit 2026-09-19 eigener Farb-Token `--popover-bg` (in beiden
+Themes leicht heller/anders als `--surface`), aktuell nur vom Menü-Panel genutzt, aber
+bewusst allgemein benannt für künftige weitere Popovers. Das Menü schließt sich
+außerdem bei jedem `scroll`-Event des Fensters (nicht nur bei Klick außerhalb) – ohne
+eigene Body-Scroll-Sperre, das Panel ist nur `position: absolute`, nicht `fixed`, und
+blockierte Scrollen des Hintergrunds bisher gar nicht.
 
 **Unterseiten statt Tab-Swap** (seit 2026-09-18): "Felder verwalten" und "Über Logbuch"
 sind `state.view`-Werte wie die Tabs, aber keine Tabs — sie werden über
@@ -365,6 +370,13 @@ prominenter als primäre Aktion der Seite). "Archivieren" hat eine eigene, dezen
 rost-getönte Stil-Klasse (`.manage-btn--warn`, heller als `.manage-btn--danger` bei
 "Löschen") statt optisch identisch zu "Bearbeiten" zu sein – reversibel, aber ein
 Entfernen aus der Tageseingabe, daher bewusst nicht neutral gestylt.
+
+**Swipe-Schwellenwert für Unterseiten höher als für Tab-Wechsel** (seit 2026-09-19,
+`SWIPE_THRESHOLD_SUBPAGE` in `logbuch.html`, 100px statt 50px): ein Wisch nach rechts
+verlässt auf einer Unterseite (Verwalten/Über Logbuch) die Seite komplett, während er
+bei Heute/Woche/Monat/Jahr nur den Zeitraum wechselt – dort war versehentliches
+Auslösen (z.B. beim Scrollen in einer langen Feldliste) spürbar störender als bei den
+Tabs, deshalb absichtlich weniger empfindlich statt eines einheitlichen Schwellenwerts.
 
 **Dark Mode** (seit 2026-09-16): folgt standardmäßig `prefers-color-scheme`, im
 Burger-Menü überschreibbar (System/Hell/Dunkel als Pill-Toggle, gleiches Muster wie
