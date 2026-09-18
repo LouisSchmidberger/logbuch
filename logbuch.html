@@ -381,6 +381,16 @@
   .a11y-highlight > .tip-body { margin-bottom: 14px; }
   .a11y-highlight .tip:last-child { margin-bottom: 0; }
   .a11y-feedback { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(var(--moss-rgb), 0.3); font-style: italic; }
+  .mental-health-highlight {
+    background: rgba(var(--moss-rgb), 0.08); border: 1px solid rgba(var(--moss-rgb), 0.3);
+    border-radius: 6px; padding: 16px; margin-top: 16px;
+  }
+  .mental-health-highlight .manage-section-title { margin-bottom: 8px; }
+  .mental-health-highlight > .tip-body { margin-bottom: 14px; }
+  .mental-health-highlight .tip:last-child { margin-bottom: 14px; }
+  .mental-health-crisis { background: rgba(var(--rust-rgb), 0.08); border: 1px solid rgba(var(--rust-rgb), 0.3); border-radius: 4px; padding: 10px 12px; margin-bottom: 14px; }
+  .mental-health-crisis .tip-title { margin-bottom: 4px; }
+  .mental-health-feedback { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(var(--moss-rgb), 0.3); font-style: italic; }
 
   .habit-form { border: 1px solid var(--line); border-radius: 4px; padding: 14px; margin-bottom: 18px; }
   .habit-form h2 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 12px; }
@@ -1128,7 +1138,7 @@ const STRINGS = {
     'about.title': 'Über Logbuch',
     'about.intro': 'Ein paar Dinge, die sich nicht von selbst erklären — zum Nachlesen, falls du magst.',
     'about.status': 'Beta – Stand {date}. Ich baue laufend weiter, melde dich gern, falls dir etwas auffällt.',
-    'about.monetizationNote': 'Aktuell komplett kostenlos. Es ist möglich, dass ich das später in Teilen monetarisiere (z. B. über ein Abo für neue Funktionen) – falls das passiert, wird das rechtzeitig angekündigt, statt dich zu überraschen.',
+    'about.monetizationNote': 'Logbuch ist aktuell in vollem Umfang kostenlos. Es ist möglich, dass ich künftig bestimmte Funktionen kostenpflichtig mache, zum Beispiel über ein Abonnement.',
     'about.group.usage': 'Bedienung',
     'about.group.fields': 'Felder & Auswertung',
     'about.group.appearance': 'Darstellung',
@@ -1142,6 +1152,15 @@ const STRINGS = {
     'about.a11y.screenreader.title': 'Screenreader (Vorlese-Software für blinde Menschen)',
     'about.a11y.screenreader.body': 'Neue Fehler- oder Erfolgsmeldungen werden automatisch vorgelesen, ohne dass man erst danach suchen muss. Der Verlaufs-Graph bei Zahlenwert-Feldern (z. B. Gewicht) hat zusätzlich zur Grafik eine vollständige Textzusammenfassung (Anzahl der Einträge, letzter Wert, Durchschnitt, Trend) — eine reine Grafik wäre für einen Screenreader sonst stumm. Das ist kein abgeschlossenes Kapitel, ich baue daran laufend weiter.',
     'about.a11y.feedback': 'Fehlt dir etwas, oder hast du eine Idee, was ich noch verbessern könnte? Ich freue mich über jedes Feedback.',
+    'about.mentalHealth.title': 'Psychische Gesundheit',
+    'about.mentalHealth.intro': 'An sich selbst arbeiten zu wollen ist ein guter Impuls — aber nur, wenn er nicht in Druck oder Selbstkritik umschlägt. Mir ist wichtig, dass Logbuch dabei hilft, ohne selbst zur Belastung zu werden. Ein paar Dinge, die mir dabei am Herzen liegen:',
+    'about.mentalHealth.observation.title': 'Ein Eintrag ist eine Beobachtung, keine Bewertung',
+    'about.mentalHealth.observation.body': 'Ein roter Tag heißt nicht, dass du versagt hast — nur, dass an diesem Tag etwas anders war als sonst. Wenn Zahlen oder Farben anfangen, sich wie eine Note für dich als Person anzufühlen, ist das ein guter Moment für eine Pause vom Tracken.',
+    'about.mentalHealth.noSubstitute.title': 'Logbuch ersetzt keine professionelle Hilfe',
+    'about.mentalHealth.noSubstitute.body': 'Diese App kann helfen, Muster über die Zeit zu erkennen — sie kann aber kein Gespräch mit einem Therapeuten, einer Ärztin oder einer Vertrauensperson ersetzen, gerade bei Themen wie Stimmung, Schlaf oder Konsum. Wenn es dir über längere Zeit schlecht geht, sprich bitte mit jemandem.',
+    'about.mentalHealth.crisis.title': 'Falls es dir gerade richtig schlecht geht',
+    'about.mentalHealth.crisis.body': 'Die Telefonseelsorge ist kostenlos, anonym und rund um die Uhr erreichbar — unter 0800 111 0 111 oder 0800 111 0 222, auch per Chat auf telefonseelsorge.de. Du brauchst dafür keinen Notfall, ein Gespräch reicht.',
+    'about.mentalHealth.feedback': 'Fehlt dir hier etwas, oder siehst du das anders? Ich freue mich über dein Feedback.',
     'about.tip.swipe.title': 'Wischen',
     'about.tip.swipe.body': 'In Tag-, Wochen-, Monats- und Jahresansicht kannst du nach links/rechts wischen, um zum vorherigen/nächsten Zeitraum zu springen — schneller als die Pfeil-Buttons.',
     'about.tip.jumpDay.title': 'Direkt zu einem Tag springen',
@@ -1408,7 +1427,7 @@ const STRINGS = {
     'about.title': 'About Logbuch',
     'about.intro': 'A few things that are not obvious at first glance — here to read up on if you are curious.',
     'about.status': 'Beta – as of {date}. I am actively continuing to build this out, feel free to reach out if you notice anything.',
-    'about.monetizationNote': 'Currently completely free. It is possible that I will monetize parts of this later (e.g. via a subscription for new features) – if that happens, it will be announced in advance instead of catching you by surprise.',
+    'about.monetizationNote': 'Logbuch is currently completely free. I may make certain features paid in the future, for example via a subscription.',
     'about.group.usage': 'Using the app',
     'about.group.fields': 'Fields & evaluation',
     'about.group.appearance': 'Appearance',
@@ -1422,6 +1441,15 @@ const STRINGS = {
     'about.a11y.screenreader.title': 'Screen readers (software that reads the screen aloud for blind users)',
     'about.a11y.screenreader.body': 'New error or success messages are announced automatically, without having to go looking for them. The history chart for number fields (e.g. weight) has a full text summary in addition to the graphic (number of entries, last value, average, trend) — a plain graphic would otherwise be silent to a screen reader. This is not a finished chapter, I keep expanding it.',
     'about.a11y.feedback': 'Is something missing, or do you have an idea for what I could improve? I would love to hear your feedback.',
+    'about.mentalHealth.title': 'Mental health',
+    'about.mentalHealth.intro': 'Wanting to work on yourself is a good impulse — but only if it does not turn into pressure or self-criticism. It matters to me that Logbuch helps with that instead of becoming a burden itself. A few things I care about here:',
+    'about.mentalHealth.observation.title': 'An entry is an observation, not a verdict',
+    'about.mentalHealth.observation.body': 'A red day does not mean you failed — just that something was different that day. If numbers or colors start to feel like a grade on you as a person, that is a good moment to take a break from tracking.',
+    'about.mentalHealth.noSubstitute.title': 'Logbuch is not a substitute for professional help',
+    'about.mentalHealth.noSubstitute.body': 'This app can help you notice patterns over time — but it cannot replace a conversation with a therapist, doctor, or someone you trust, especially around topics like mood, sleep, or substance use. If you are struggling for an extended period, please talk to someone.',
+    'about.mentalHealth.crisis.title': 'If things feel really bad right now',
+    'about.mentalHealth.crisis.body': 'In Germany, Telefonseelsorge is free, anonymous, and available 24/7 at 0800 111 0 111 or via chat at telefonseelsorge.de. Outside Germany, findahelpline.com lists free helplines by country. You do not need to be in an emergency for this — a conversation is enough.',
+    'about.mentalHealth.feedback': 'Is something missing here, or do you see it differently? I would love to hear your feedback.',
     'about.tip.swipe.title': 'Swiping',
     'about.tip.swipe.body': 'In the day, week, month, and year views, you can swipe left/right to jump to the previous/next period — faster than the arrow buttons.',
     'about.tip.jumpDay.title': 'Jump straight to a day',
@@ -3093,6 +3121,35 @@ function renderA11ySection() {
   `;
 }
 
+// Ebenfalls eigener hervorgehobener Bereich, gleiches Muster wie renderA11ySection —
+// derselbe Gedanke, dass ein Produkt, das beim An-sich-selbst-Arbeiten helfen soll,
+// auch aktiv auf einen gesunden Umgang damit hinweisen sollte, statt das nur implizit
+// zu hoffen. Der Krisen-Hinweis (Telefonseelsorge) ist bewusst optisch eigenständig
+// (rust- statt moss-Ton) hervorgehoben, da er der konkret handlungsrelevante Teil ist.
+function renderMentalHealthSection() {
+  const items = [
+    ['about.mentalHealth.observation.title', 'about.mentalHealth.observation.body'],
+    ['about.mentalHealth.noSubstitute.title', 'about.mentalHealth.noSubstitute.body'],
+  ];
+  return `
+    <div class="mental-health-highlight">
+      <h3 class="manage-section-title">${t('about.mentalHealth.title')}</h3>
+      <p class="tip-body">${t('about.mentalHealth.intro')}</p>
+      ${items.map(([titleKey, bodyKey]) => `
+        <div class="tip">
+          <p class="tip-title">${t(titleKey)}</p>
+          <p class="tip-body">${t(bodyKey)}</p>
+        </div>
+      `).join('')}
+      <div class="tip mental-health-crisis">
+        <p class="tip-title">${t('about.mentalHealth.crisis.title')}</p>
+        <p class="tip-body">${t('about.mentalHealth.crisis.body')}</p>
+      </div>
+      <p class="tip-body mental-health-feedback">${t('about.mentalHealth.feedback')}</p>
+    </div>
+  `;
+}
+
 // Von Hand hochgezählt bei größeren Änderungen - kein Build-Step im Projekt, der das
 // automatisch aus Git ableiten könnte, und ein Datum genügt hier als Rückverfolgbarkeit
 // (siehe Diskussion in CLAUDE.md-Kontext: keine echte Versionsnummer nötig, solange es
@@ -3108,6 +3165,7 @@ function renderAbout() {
     <p class="about-status about-status--secondary">${t('about.monetizationNote')}</p>
     <p class="about-intro">${t('about.intro')}</p>
     ${renderA11ySection()}
+    ${renderMentalHealthSection()}
     <div class="manage-section-divider"></div>
     ${tipGroup('about.group.usage', [
       ['about.tip.swipe.title', 'about.tip.swipe.body'],
