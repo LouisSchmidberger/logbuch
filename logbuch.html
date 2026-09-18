@@ -1090,7 +1090,7 @@ const STRINGS = {
     'habitForm.title.newGroup': 'Neue Gruppe',
     'habitForm.title.editField': 'Feld bearbeiten',
     'habitForm.title.newField': 'Neues Feld',
-    'habitForm.lockedNote': 'Für dieses Feld gibt es bereits Einträge – Feld-Typ/Skala/Bezeichnungen sind gesperrt. Für eine andere Skala: archivieren und neu anlegen.',
+    'habitForm.lockedNote': 'Für dieses Feld gibt es bereits Einträge – Feld-Typ und Skala (Von/Bis bzw. Anzahl Stufen) sind gesperrt. Bezeichnungs-Text lässt sich trotzdem noch korrigieren. Für eine andere Skala: archivieren und neu anlegen.',
     'habitForm.name': 'Name',
     'habitForm.fieldType': 'Feld-Typ',
     'habitForm.kindScale': 'Skala',
@@ -1382,7 +1382,7 @@ const STRINGS = {
     'habitForm.title.newGroup': 'New group',
     'habitForm.title.editField': 'Edit field',
     'habitForm.title.newField': 'New field',
-    'habitForm.lockedNote': 'This field already has entries – field type/scale/labels are locked. For a different scale: archive and create a new one.',
+    'habitForm.lockedNote': 'This field already has entries – field type and scale (from/to or number of steps) are locked. Label text can still be corrected. For a different scale: archive and create a new one.',
     'habitForm.name': 'Name',
     'habitForm.fieldType': 'Field type',
     'habitForm.kindScale': 'Scale',
@@ -2150,12 +2150,20 @@ async function handleHabitSaveInner() {
     }
     fields = { kind: 'group', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: groupMembers, goal_threshold: goalThreshold };
   } else if (f.locked) {
-    // Bereich/Bezeichnungen bleiben unangetastet (original.min/max/labels) – die
-    // Darstellung (Buttons/Slider) und die Sichtbarkeit des Werts beim Eintragen sind
-    // reine Anzeige-Einstellungen ohne Auswirkung auf bestehende Daten, deshalb aus dem
+    // Bereich/Anzahl bleiben unangetastet (original.min/max) – die Darstellung
+    // (Buttons/Slider) und die Sichtbarkeit des Werts beim Eintragen sind reine
+    // Anzeige-Einstellungen ohne Auswirkung auf bestehende Daten, deshalb aus dem
     // aktuellen Formular übernommen statt wie der Rest vom Original beibehalten.
+    // Bezeichnungs-TEXT ist trotz Sperre editierbar (siehe scaleBody) - reine
+    // Beschriftungskorrektur ohne Verschiebung der zugrundeliegenden Werte/Positionen,
+    // deshalb aus f.labels statt original.labels übernommen. Die Anzahl bleibt dabei
+    // immer gleich (Stepper ist weiterhin gesperrt), nur der Text kann sich ändern.
     const original = state.habits.find((h) => h.defId === f.defId);
-    fields = { kind: 'scale', min: original.min, max: original.max, labels: original.labels, good: f.good, unit: null, display_style: f.displayStyle, slider_show_value: f.sliderShowValue, group_members: null, goal_threshold: goalThreshold };
+    if (f.mode === 'labels' && f.labels.some((l) => !l.trim())) {
+      state.notice = { type: 'error', text: t('habitForm.error.fillAllLabels') };
+      return;
+    }
+    fields = { kind: 'scale', min: original.min, max: original.max, labels: f.mode === 'labels' ? f.labels : original.labels, good: f.good, unit: null, display_style: f.displayStyle, slider_show_value: f.sliderShowValue, group_members: null, goal_threshold: goalThreshold };
   } else if (f.mode === 'numeric' && f.displayStyle === 'slider') {
     const stepsEl = document.getElementById('habit-form-slider-steps');
     const steps = Math.round(Number(stepsEl ? stepsEl.value : f.sliderSteps));
@@ -2194,7 +2202,7 @@ async function handleHabitSaveInner() {
       ? {
           name,
           ...(f.kind === 'scale'
-            ? { good: f.good, goal_threshold: goalThreshold, display_style: fields.display_style, slider_show_value: fields.slider_show_value }
+            ? { good: f.good, goal_threshold: goalThreshold, display_style: fields.display_style, slider_show_value: fields.slider_show_value, labels: fields.labels }
             : { unit: fields.unit }),
           reminder_minute: reminderMinute,
         }
@@ -3392,7 +3400,7 @@ function renderHabitForm() {
       <div class="auth-field">
         <label>${t('habitForm.labelsInOrder')}</label>
         <div class="label-inputs">
-          ${f.labels.map((l, i) => `<input type="text" data-label-index="${i}" value="${esc(l)}" maxlength="20" ${f.locked ? 'disabled' : ''} />`).join('')}
+          ${f.labels.map((l, i) => `<input type="text" data-label-index="${i}" value="${esc(l)}" maxlength="20" />`).join('')}
         </div>
       </div>
     `}
