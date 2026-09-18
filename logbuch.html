@@ -368,7 +368,8 @@
   .about-status { font-size: 13px; line-height: 1.5; color: var(--ink); font-weight: 600; margin: -8px 0 10px; }
   .about-status--secondary { font-weight: 400; color: var(--sand); margin: 0 0 10px; }
   .about-intro { font-size: 13px; line-height: 1.5; color: var(--sand); margin: 0 0 22px; }
-  .tip-group .manage-section-title { margin-bottom: 12px; }
+  .tip-group summary.manage-section-title { cursor: pointer; margin-bottom: 0; }
+  .tip-group[open] summary.manage-section-title { margin-bottom: 12px; }
   .tip { margin-bottom: 16px; }
   .tip:last-child { margin-bottom: 0; }
   .tip-title { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
@@ -393,6 +394,7 @@
   .mental-health-highlight > .tip-body { margin-bottom: 14px; }
   .mental-health-highlight .tip:last-child { margin-bottom: 14px; }
   .mental-health-crisis { background: rgba(var(--rust-rgb), 0.08); border: 1px solid rgba(var(--rust-rgb), 0.3); border-radius: 4px; padding: 10px 12px; margin-bottom: 14px; }
+  .mental-health-crisis .tip-body + .tip-body { margin-top: 6px; }
   .mental-health-crisis .tip-title { margin-bottom: 4px; }
   .mental-health-feedback { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(var(--moss-rgb), 0.3); font-style: italic; }
 
@@ -1163,7 +1165,9 @@ const STRINGS = {
     'about.mentalHealth.noSubstitute.title': 'Logbuch ersetzt keine professionelle Hilfe',
     'about.mentalHealth.noSubstitute.body': 'Diese App kann helfen, Muster über die Zeit zu erkennen — sie kann aber kein Gespräch mit einem Therapeuten, einer Ärztin oder einer Vertrauensperson ersetzen, gerade bei Themen wie Stimmung, Schlaf oder Konsum. Wenn es dir über längere Zeit schlecht geht, sprich bitte mit jemandem.',
     'about.mentalHealth.crisis.title': 'Falls es dir gerade richtig schlecht geht',
-    'about.mentalHealth.crisis.body': 'Die Telefonseelsorge ist kostenlos, anonym und rund um die Uhr erreichbar — unter 0800 111 0 111 oder 0800 111 0 222, auch per Chat auf telefonseelsorge.de. Du brauchst dafür keinen Notfall, ein Gespräch reicht.',
+    'about.mentalHealth.crisis.germany': 'In Deutschland ist die Telefonseelsorge kostenlos, anonym und rund um die Uhr erreichbar — unter 0800 111 0 111 oder 0800 111 0 222, auch per Chat auf telefonseelsorge.de.',
+    'about.mentalHealth.crisis.international': 'Außerhalb Deutschlands (oder wenn dir das lieber ist) findest du auf findahelpline.com kostenlose Anlaufstellen nach Land.',
+    'about.mentalHealth.crisis.closing': 'Du brauchst dafür keinen Notfall, ein Gespräch reicht.',
     'about.mentalHealth.feedback': 'Fehlt dir hier etwas, oder siehst du das anders? Ich freue mich über dein Feedback.',
     'about.tip.swipe.title': 'Wischen',
     'about.tip.swipe.body': 'In Tag-, Wochen-, Monats- und Jahresansicht kannst du nach links/rechts wischen, um zum vorherigen/nächsten Zeitraum zu springen — schneller als die Pfeil-Buttons.',
@@ -1452,7 +1456,9 @@ const STRINGS = {
     'about.mentalHealth.noSubstitute.title': 'Logbuch is not a substitute for professional help',
     'about.mentalHealth.noSubstitute.body': 'This app can help you notice patterns over time — but it cannot replace a conversation with a therapist, doctor, or someone you trust, especially around topics like mood, sleep, or substance use. If you are struggling for an extended period, please talk to someone.',
     'about.mentalHealth.crisis.title': 'If things feel really bad right now',
-    'about.mentalHealth.crisis.body': 'In Germany, Telefonseelsorge is free, anonymous, and available 24/7 at 0800 111 0 111 or via chat at telefonseelsorge.de. Outside Germany, findahelpline.com lists free helplines by country. You do not need to be in an emergency for this — a conversation is enough.',
+    'about.mentalHealth.crisis.germany': 'In Germany, Telefonseelsorge is free, anonymous, and available 24/7 at 0800 111 0 111 or via chat at telefonseelsorge.de.',
+    'about.mentalHealth.crisis.international': 'Outside Germany (or if you prefer), findahelpline.com lists free helplines by country.',
+    'about.mentalHealth.crisis.closing': 'You do not need to be in an emergency for this — a conversation is enough.',
     'about.mentalHealth.feedback': 'Is something missing here, or do you see it differently? I would love to hear your feedback.',
     'about.tip.swipe.title': 'Swiping',
     'about.tip.swipe.body': 'In the day, week, month, and year views, you can swipe left/right to jump to the previous/next period — faster than the arrow buttons.',
@@ -1530,6 +1536,26 @@ function detectInitialLocale() {
     return (navigator.language || '').toLowerCase().startsWith('de') ? 'de' : 'en';
   } catch {
     return 'en';
+  }
+}
+
+// Grobe, rein clientseitige Vermutung des Aufenthaltslands aus der Region-Angabe der
+// Browser-/Systemsprache (z.B. "de-DE" -> "DE") - bewusst KEINE IP-Geolocation oder
+// navigator.geolocation, das würde einen Drittanbieter-Roundtrip bzw. einen
+// Berechtigungsdialog für eine reine Textanzeige bedeuten und widerspräche der
+// Zero-Access-Ausrichtung der App (siehe CLAUDE.md "Datenschutz & Sicherheit").
+// Unabhängig von currentLocale (der von Nutzern selbst gewählten App-Sprache) - beide
+// können auseinanderlaufen (z.B. App auf Englisch gestellt, System auf de-DE), siehe
+// Verwendung in renderMentalHealthSection. Liefert null, wenn der Browser keine
+// Region angibt (z.B. nur "de" ohne Länder-Suffix) - dann bleibt es beim
+// länderunabhängigen Verweis, kein hartes Scheitern.
+function detectLikelyCountry() {
+  try {
+    const lang = navigator.language || (navigator.languages && navigator.languages[0]) || '';
+    const match = /-([A-Za-z]{2})$/.exec(lang);
+    return match ? match[1].toUpperCase() : null;
+  } catch {
+    return null;
   }
 }
 
@@ -3092,16 +3118,17 @@ function renderGlobal() {
 // neugierig ist. Die Tipp-Gruppen (tipGroup) sind eine simple Array-Struktur statt
 // vieler Einzel-Strings, damit neue Tipps sich leicht ergänzen lassen.
 function tipGroup(groupTitleKey, tips) {
+  const collapseKey = `tipGroup:${groupTitleKey}`;
   return `
-    <div class="tip-group">
-      <h3 class="manage-section-title">${t(groupTitleKey)}</h3>
+    <details class="tip-group" data-collapse-key="${collapseKey}" ${isAboutSectionCollapsed(collapseKey) ? '' : 'open'}>
+      <summary class="manage-section-title">${t(groupTitleKey)}</summary>
       ${tips.map(([titleKey, bodyKey]) => `
         <div class="tip">
           <p class="tip-title">${t(titleKey)}</p>
           <p class="tip-body">${t(bodyKey)}</p>
         </div>
       `).join('')}
-    </div>
+    </details>
   `;
 }
 
@@ -3154,7 +3181,9 @@ function renderMentalHealthSection() {
       `).join('')}
       <div class="tip mental-health-crisis">
         <p class="tip-title">${t('about.mentalHealth.crisis.title')}</p>
-        <p class="tip-body">${t('about.mentalHealth.crisis.body')}</p>
+        ${detectLikelyCountry() === 'DE' ? `<p class="tip-body">${t('about.mentalHealth.crisis.germany')}</p>` : ''}
+        <p class="tip-body">${t('about.mentalHealth.crisis.international')}</p>
+        <p class="tip-body">${t('about.mentalHealth.crisis.closing')}</p>
       </div>
       <p class="tip-body mental-health-feedback">${t('about.mentalHealth.feedback')}</p>
     </details>
