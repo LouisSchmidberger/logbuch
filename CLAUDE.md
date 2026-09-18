@@ -301,11 +301,24 @@ Fraunces (Serif, kursiv für Überschriften) + IBM Plex Sans. Farb-Tokens als CS
 im `<style>`-Block von `logbuch.html`. Bei Erweiterungen an diesem Stil festhalten,
 nicht auf generische Tailwind-/Card-Optik wechseln.
 
-Tab-Leiste zeigt nur noch die Auswertungs-Ansichten (Heute/Woche/Monat/Jahr/Gesamt).
-Alles Konfigurative sitzt im **Burger-Menü** (☰-Button oben rechts, `renderMenu` in
-`logbuch.html`): Push aktiv/inaktiv, Standard-Erinnerungszeit, Sprache, Darstellung
-(Dark Mode), "Felder verwalten" (öffnet `renderManage`, kein eigener Tab mehr) und
-Abmelden.
+Tab-Leiste zeigt nur noch die Auswertungs-Ansichten (Heute/Woche/Monat/Jahr/Gesamt,
+`.tabs` bereits horizontal scrollbar für künftig weitere Views). Alles Konfigurative
+sitzt im **Burger-Menü** (☰-Button oben rechts, `renderMenu` in `logbuch.html`), intern
+in drei Gruppen unterteilt (`.menu-group-divider`): Navigation ("Felder verwalten",
+"Über Logbuch") oben, Einstellungen (Push/Erinnerungszeit/Sprache/Darstellung/
+Streifenmuster) in der Mitte, Konto (Export/Recovery-Key/Löschen/Abmelden) unten.
+
+**Unterseiten statt Tab-Swap** (seit 2026-09-18): "Felder verwalten" und "Über Logbuch"
+sind `state.view`-Werte wie die Tabs, aber keine Tabs — sie werden über
+`enterSubpage(view)` betreten (merkt sich in `state.previousTabView`, von welchem Tab
+aus man kam, außer man wechselt direkt zwischen zwei Unterseiten übers Menü) und
+ersetzen Header **und** Tab-Leiste komplett durch einen eigenen `renderSubpageHeader()`
+(← Zurück-Button + Seitentitel + derselbe ☰-Button/`renderMenu()` rechts) —
+`isSubpageView(view)` steuert diese Verzweigung in `renderApp()`. Kein "Tab ohne
+Highlight unter totem Header" mehr wie vorher. Der ←-Button und Android-/Browser-Zurück
+(`closeTopLayer()`, siehe unten) führen zum gemerkten `previousTabView` zurück, nie
+hart zu "Heute". Nach dem Öffnen einer Unterseite wird deren `<h1>` fokussiert
+(`tabindex="-1"`, screenreaderfreundliche Bestätigung der Navigation).
 
 **Dark Mode** (seit 2026-09-16): folgt standardmäßig `prefers-color-scheme`, im
 Burger-Menü überschreibbar (System/Hell/Dunkel als Pill-Toggle, gleiches Muster wie
@@ -337,20 +350,23 @@ Pointer-Drag) eine Tastatur-Alternative. Der Zahlenwert-Verlaufsgraph hat eine
 `.visually-hidden`-Textzusammenfassung (Anzahl/letzter Wert/Durchschnitt/Spanne/Trend)
 statt eines reinen `aria-label`.
 
-**Android-Zurück-Taste** (seit 2026-09-18): ohne eigene Browser-History-Einträge hatte
-die native/Gesten-Zurück-Taste nichts, wohin sie zurückgehen könnte, und hat
-stattdessen sofort die App verlassen — unabhängig davon, was gerade offen war.
-`isOverlayOpen()`/`closeTopOverlay()`/`syncOverlayHistory()` (direkt nach
-`modalTriggerSelector` in `logbuch.html`) schließen stattdessen offene Overlays
-(Burger-Menü, Feld-Formular, Konto-/Tutorial-/Feld-Lösch-Bestätigungen) über einen
-`popstate`-Listener, bevor die App wirklich verlassen wird — ein `history.pushState()`
-pro geöffnetem Overlay, synchron gehalten mit `render()` (auch wenn ein Overlay ganz
-normal über die App statt über die Zurück-Taste geschlossen wird, sonst bliebe ein
-toter History-Eintrag stehen). Bewusst NUR für Overlays, nicht für Tab-Wechsel
-(Heute/Woche/...) — entspricht dem üblichen Verhalten von Android-Apps mit Tab-Leiste.
-`state.recoveryKeyToShow` ist bewusst ausgenommen (schon jetzt absichtlich nur über die
-Bestätigungs-Checkbox schließbar, auch Escape greift dort nicht — soll die Zurück-Taste
-nicht aushebeln).
+**Android-Zurück-Taste** (seit 2026-09-18, um Unterseiten erweitert am selben Tag): ohne
+eigene Browser-History-Einträge hatte die native/Gesten-Zurück-Taste nichts, wohin sie
+zurückgehen könnte, und hat stattdessen sofort die App verlassen — unabhängig davon,
+was gerade offen war. `isOverlayOpen()`/`isSubpageView()`/`currentLayerCount()`/
+`closeTopLayer()`/`syncLayerHistory()` (direkt nach `modalTriggerSelector` in
+`logbuch.html`) schließen stattdessen offene Overlays (Burger-Menü, Feld-Formular,
+Konto-/Tutorial-/Feld-Lösch-Bestätigungen) UND Unterseiten (Verwalten/Über Logbuch,
+siehe oben) über einen `popstate`-Listener, bevor die App wirklich verlassen wird.
+Overlay und Unterseite können gleichzeitig offen sein (z.B. "Neues Feld" innerhalb von
+"Verwalten") — `currentLayerCount()` zählt deshalb 0-2 statt nur an/aus, mit je einem
+`history.pushState()` pro Ebene, synchron gehalten mit `render()` (auch wenn eine Ebene
+ganz normal über die App statt über die Zurück-Taste geschlossen wird, sonst blieben
+tote History-Einträge stehen). Bewusst NUR für Overlays/Unterseiten, nicht für
+Tab-Wechsel (Heute/Woche/...) — entspricht dem üblichen Verhalten von Android-Apps mit
+Tab-Leiste. `state.recoveryKeyToShow` ist bewusst ausgenommen (schon jetzt absichtlich
+nur über die Bestätigungs-Checkbox schließbar, auch Escape greift dort nicht — soll die
+Zurück-Taste nicht aushebeln).
 
 ## Internationalisierung (i18n)
 

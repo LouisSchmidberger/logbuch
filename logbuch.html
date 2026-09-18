@@ -85,6 +85,13 @@
 
   .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
   .header h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 22px; margin: 0; }
+  .subpage-header-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .subpage-header-title h1 { font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; }
+  .back-btn {
+    background: none; border: 1px solid var(--line); border-radius: 50%; width: 30px; height: 30px;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--ink);
+    cursor: pointer; font-size: 16px; line-height: 1;
+  }
 
   .header-menu-wrap { position: relative; }
   .menu-btn {
@@ -98,6 +105,7 @@
     box-shadow: 0 4px 14px var(--shadow);
   }
   .menu-panel .push-row { margin-bottom: 0; }
+  .menu-group-divider { border-top: 1px solid var(--line); }
   .menu-row { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--sand); }
   .menu-row select {
     font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
@@ -855,6 +863,7 @@ const state = {
   loading: true,
   notice: null,       // { type: 'error'|'ok', text }
   view: 'today',
+  previousTabView: 'today', // Tab, zu dem "Verwalten"/"Über Logbuch" zurückspringen (siehe enterSubpage/closeTopLayer)
   currentDate: startOfDay(new Date()),
   weekAnchor: startOfWeek(new Date()),
   monthAnchor: (() => { const d = startOfDay(new Date()); d.setDate(1); return d; })(),
@@ -906,22 +915,42 @@ function restoreModalFocus() {
   modalTriggerSelector = null;
 }
 
-// --- Android-Zurück-Taste schließt offene Overlays statt die App zu verlassen -----
+// --- Android-Zurück-Taste schließt offene Overlays/Unterseiten statt die App zu
+// verlassen -------------------------------------------------------------------
 // Ohne eigene History-Einträge hat die native/Gesten-Zurück-Taste nichts, wohin sie
 // "zurückgehen" könnte, und beendet stattdessen sofort die App (bzw. den Tab) -
 // unabhängig davon, was gerade offen ist. Bewusst nur für Overlays (Menü,
-// Feld-Formular, Lösch-Bestätigungen), NICHT für reine Tab-Wechsel (Heute/Woche/...) -
-// das entspricht dem üblichen Verhalten von Android-Apps mit Tab-Leiste.
-// state.recoveryKeyToShow bleibt bewusst ausgenommen: das ist schon jetzt absichtlich
-// nur über die Bestätigungs-Checkbox schließbar (auch Escape greift dort nicht),
-// das soll die Zurück-Taste nicht aushebeln.
+// Feld-Formular, Lösch-Bestätigungen) und Unterseiten (Verwalten/Über Logbuch), NICHT
+// für reine Tab-Wechsel (Heute/Woche/...) - das entspricht dem üblichen Verhalten von
+// Android-Apps mit Tab-Leiste. state.recoveryKeyToShow bleibt bewusst ausgenommen: das
+// ist schon jetzt absichtlich nur über die Bestätigungs-Checkbox schließbar (auch
+// Escape greift dort nicht), das soll die Zurück-Taste nicht aushebeln.
+//
+// Overlay und Unterseite können gleichzeitig offen sein (z.B. "Neues Feld" innerhalb
+// von "Verwalten") - deshalb ein Layer-Zähler statt einer reinen Boolean-Prüfung, mit
+// je einem History-Eintrag pro Layer, damit zwei Zurück-Drücke auch zwei Ebenen
+// nacheinander schließen.
+function isSubpageView(view) { return view === 'manage' || view === 'about'; }
+// Merkt sich den Tab, von dem aus eine Unterseite betreten wurde (nicht überschreiben,
+// wenn man z.B. innerhalb von "Verwalten" übers Menü direkt zu "Über Logbuch"
+// wechselt - sonst würde "Zurück" dann fälschlich zu "Verwalten" statt zum
+// ursprünglichen Tab führen).
+function enterSubpage(view) {
+  if (!isSubpageView(state.view)) state.previousTabView = state.view;
+  state.view = view;
+  state.menuOpen = false;
+}
 function isOverlayOpen() {
   return state.menuOpen || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
 }
-// Schließt jeweils nur das "oberste" Overlay (analog zur bestehenden Escape-Logik) -
-// in der Praxis nie mehrere gleichzeitig offen, da z.B. die Menü-Aktionen state.menuOpen
-// beim Öffnen eines anderen Overlays bereits selbst auf false setzen.
-function closeTopOverlay() {
+function currentLayerCount() {
+  return (isSubpageView(state.view) ? 1 : 0) + (isOverlayOpen() ? 1 : 0);
+}
+// Schließt jeweils nur die "oberste" Ebene (analog zur bestehenden Escape-Logik) -
+// Overlays vor der Unterseite, da sie darüber liegen. In der Praxis nie mehrere
+// Overlays gleichzeitig offen, da z.B. die Menü-Aktionen state.menuOpen beim Öffnen
+// eines anderen Overlays bereits selbst auf false setzen.
+function closeTopLayer() {
   if (state.deleteConfirm || state.tutorialSkipConfirm) {
     state.deleteConfirm = null;
     state.tutorialSkipConfirm = false;
@@ -932,31 +961,33 @@ function closeTopOverlay() {
     state.habitForm = null;
   } else if (state.habitDeleteConfirm) {
     state.habitDeleteConfirm = null;
+  } else if (isSubpageView(state.view)) {
+    state.view = state.previousTabView || 'today';
   }
 }
-let overlayHistoryPushed = false;
-let closingOverlayViaPopstate = false;
+let openLayerCount = 0;
+let closingLayerViaPopstate = false;
 window.addEventListener('popstate', () => {
-  if (!isOverlayOpen()) return; // nichts (mehr) zu schließen - Browser navigiert normal weiter
-  closingOverlayViaPopstate = true;
-  overlayHistoryPushed = false; // History-Position ist durch den Pop bereits korrekt
-  closeTopOverlay();
+  if (currentLayerCount() === 0) return; // nichts (mehr) zu schließen - Browser navigiert normal weiter
+  closingLayerViaPopstate = true;
+  openLayerCount = Math.max(0, openLayerCount - 1); // History-Position ist durch den Pop bereits korrekt
+  closeTopLayer();
   render();
-  closingOverlayViaPopstate = false;
+  closingLayerViaPopstate = false;
 });
-// Von render() aufgerufen: hält die History mit dem Overlay-Zustand synchron, damit
-// pro geöffnetem Overlay genau ein Zurück-Druck es wieder schließt - auch wenn es
-// stattdessen ganz normal über die App (Abbrechen-Button o.ä.) geschlossen wird (sonst
-// bliebe ein "toter" History-Eintrag stehen, der einen zusätzlichen, wirkungslosen
-// Zurück-Druck vor dem eigentlichen Verlassen der App erfordert hätte).
-function syncOverlayHistory() {
-  if (closingOverlayViaPopstate) return;
-  const overlayOpenNow = isOverlayOpen();
-  if (overlayOpenNow && !overlayHistoryPushed) {
-    history.pushState({ logbuchOverlay: true }, '');
-    overlayHistoryPushed = true;
-  } else if (!overlayOpenNow && overlayHistoryPushed) {
-    overlayHistoryPushed = false;
+// Von render() aufgerufen: hält die History mit der Layer-Anzahl synchron, damit pro
+// geöffneter Ebene genau ein Zurück-Druck sie wieder schließt - auch wenn sie
+// stattdessen ganz normal über die App (Abbrechen-Button, ←-Button o.ä.) geschlossen
+// wird (sonst blieben "tote" History-Einträge stehen, die zusätzliche, wirkungslose
+// Zurück-Drücke vor dem eigentlichen Verlassen der App erfordert hätten).
+function syncLayerHistory() {
+  if (closingLayerViaPopstate) return;
+  const n = currentLayerCount();
+  if (n > openLayerCount) {
+    history.pushState({ logbuchLayer: true }, '');
+    openLayerCount = n;
+  } else if (n < openLayerCount) {
+    openLayerCount = n;
     history.back();
   }
 }
@@ -1103,6 +1134,7 @@ const STRINGS = {
     'ariaLabel.nextYear': 'Nächstes Jahr',
     'ariaLabel.reorder': 'Reihenfolge ändern',
     'ariaLabel.menu': 'Menü',
+    'ariaLabel.back': 'Zurück',
     'ariaLabel.dayCell': '{date}, {score}',
     'ariaLabel.dayCellForHabit': '{name}, {date}, {score}',
     'ariaLabel.moveUp': 'Nach oben verschieben',
@@ -1393,6 +1425,7 @@ const STRINGS = {
     'ariaLabel.nextYear': 'Next year',
     'ariaLabel.reorder': 'Change order',
     'ariaLabel.menu': 'Menu',
+    'ariaLabel.back': 'Back',
     'ariaLabel.dayCell': '{date}, {score}',
     'ariaLabel.dayCellForHabit': '{name}, {date}, {score}',
     'ariaLabel.moveUp': 'Move up',
@@ -3376,9 +3409,6 @@ const APP_STATUS_DATE = '2026-09-18';
 
 function renderAbout() {
   return `
-    <div class="day-nav">
-      <div class="day-label"><span class="day-date">${t('about.title')}</span></div>
-    </div>
     <p class="about-status">${t('about.status', { date: formatDMY(APP_STATUS_DATE) })}</p>
     <p class="about-status about-status--secondary">${t('about.monetizationNote')}</p>
     <p class="about-intro">${t('about.intro')}</p>
@@ -3869,6 +3899,9 @@ function renderPushRow(prominent = false) {
 function renderMenu() {
   return `
     <div class="menu-panel">
+      <button type="button" class="menu-item-btn" data-action="open-manage">${t('menu.manageFields')}</button>
+      <button type="button" class="menu-item-btn" data-action="open-about">${t('menu.about')}</button>
+      <div class="menu-group-divider"></div>
       ${renderPushRow()}
       <div class="menu-row">
         <label for="menu-default-time">${t('menu.defaultReminderTime')}</label>
@@ -3896,8 +3929,7 @@ function renderMenu() {
         </label>
         ${infoTip(t('pattern.explain'))}
       </div>
-      <button type="button" class="menu-item-btn" data-action="open-manage">${t('menu.manageFields')}</button>
-      <button type="button" class="menu-item-btn" data-action="open-about">${t('menu.about')}</button>
+      <div class="menu-group-divider"></div>
       <button type="button" class="menu-item-btn" data-action="export-data">${t('menu.exportData')}</button>
       <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key">${t('menu.regenerateRecoveryKey')}</button>
       <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="open-delete-confirm">${t('menu.deleteAccount')}</button>
@@ -3926,8 +3958,33 @@ function renderDeleteConfirm() {
   `;
 }
 
+// Header+☰-Menü sind für Tabs und Unterseiten identisch aufgebaut (nur der linke Teil
+// unterscheidet sich: "Logbuch"-Wortmarke vs. ←-Button + Seitentitel) - deshalb hier
+// als eigener Baustein statt zweimal dupliziert.
+function renderMenuButton() {
+  return `
+    <div class="header-menu-wrap">
+      <button type="button" class="menu-btn" data-action="toggle-menu" aria-label="${esc(t('ariaLabel.menu'))}">☰</button>
+      ${state.menuOpen ? renderMenu() : ''}
+    </div>
+  `;
+}
+
+function renderSubpageHeader(titleKey) {
+  return `
+    <div class="header subpage-header">
+      <div class="subpage-header-title">
+        <button type="button" class="back-btn" data-action="subpage-back" aria-label="${esc(t('ariaLabel.back'))}">←</button>
+        <h1 tabindex="-1">${t(titleKey)}</h1>
+      </div>
+      ${renderMenuButton()}
+    </div>
+  `;
+}
+
 function renderApp() {
   const noticeHtml = renderNotice();
+  const subpage = isSubpageView(state.view);
   const body = state.loading ? `<div class="loading">${t('common.loading')}</div>` :
     state.view === 'today' ? renderToday() :
     state.view === 'week' ? renderWeek() :
@@ -3937,25 +3994,30 @@ function renderApp() {
     state.view === 'about' ? renderAbout() : renderManage();
 
   app.innerHTML = `
-    <div class="header">
-      <h1>Logbuch</h1>
-      <div class="header-menu-wrap">
-        <button type="button" class="menu-btn" data-action="toggle-menu" aria-label="${esc(t('ariaLabel.menu'))}">☰</button>
-        ${state.menuOpen ? renderMenu() : ''}
-      </div>
-    </div>
-    ${renderInstallHint()}
-    <div class="tabs">
-      <button type="button" class="tab${state.view === 'today' ? ' tab--active' : ''}" data-action="set-view" data-view="today">${t('tabs.today')}</button>
-      <button type="button" class="tab${state.view === 'week' ? ' tab--active' : ''}" data-action="set-view" data-view="week">${t('tabs.week')}</button>
-      <button type="button" class="tab${state.view === 'month' ? ' tab--active' : ''}" data-action="set-view" data-view="month">${t('tabs.month')}</button>
-      <button type="button" class="tab${state.view === 'year' ? ' tab--active' : ''}" data-action="set-view" data-view="year">${t('tabs.year')}</button>
-      <button type="button" class="tab${state.view === 'global' ? ' tab--active' : ''}" data-action="set-view" data-view="global">${t('tabs.global')}</button>
-    </div>
+    ${subpage
+      ? `
+        ${renderSubpageHeader(state.view === 'manage' ? 'menu.manageFields' : 'about.title')}
+        ${renderInstallHint()}
+      `
+      : `
+        <div class="header">
+          <h1>Logbuch</h1>
+          ${renderMenuButton()}
+        </div>
+        ${renderInstallHint()}
+        <div class="tabs">
+          <button type="button" class="tab${state.view === 'today' ? ' tab--active' : ''}" data-action="set-view" data-view="today">${t('tabs.today')}</button>
+          <button type="button" class="tab${state.view === 'week' ? ' tab--active' : ''}" data-action="set-view" data-view="week">${t('tabs.week')}</button>
+          <button type="button" class="tab${state.view === 'month' ? ' tab--active' : ''}" data-action="set-view" data-view="month">${t('tabs.month')}</button>
+          <button type="button" class="tab${state.view === 'year' ? ' tab--active' : ''}" data-action="set-view" data-view="year">${t('tabs.year')}</button>
+          <button type="button" class="tab${state.view === 'global' ? ' tab--active' : ''}" data-action="set-view" data-view="global">${t('tabs.global')}</button>
+        </div>
+      `}
     ${noticeHtml}
     ${body}
     ${state.deleteConfirm ? renderDeleteConfirm() : ''}
   `;
+  if (subpage) document.querySelector('.subpage-header h1')?.focus();
 }
 
 // Fokussiert nach einem Re-Render das erste fokussierbare Element im gerade
@@ -3978,7 +4040,7 @@ function render() {
   else if (!state.loading && !state.userSettings.onboardingCompleted) { renderTutorial(); }
   else { renderApp(); }
   focusModalIfOpen();
-  syncOverlayHistory();
+  syncLayerHistory();
 }
 
 // --- Event-Delegation ----------------------------------------------------
@@ -4053,12 +4115,13 @@ app.addEventListener('click', async (e) => {
     setThemeOverride(el.dataset.theme || null);
     render();
   } else if (action === 'open-manage') {
-    state.view = 'manage';
-    state.menuOpen = false;
+    enterSubpage('manage');
     render();
   } else if (action === 'open-about') {
-    state.view = 'about';
-    state.menuOpen = false;
+    enterSubpage('about');
+    render();
+  } else if (action === 'subpage-back') {
+    state.view = state.previousTabView || 'today';
     render();
   } else if (action === 'export-data') {
     await handleExportData();
