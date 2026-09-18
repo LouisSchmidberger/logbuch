@@ -320,13 +320,17 @@ bewusst identisch mit `--paper` (siehe Dark-Mode-Abschnitt, wichtig für nahtlos
 `.sticky-top`-Header), reichte für ein freischwebendes Popover wie das Menü aber nicht
 als Abgrenzung. Deshalb seit 2026-09-19 eigener Farb-Token `--popover-bg` (in beiden
 Themes leicht heller/anders als `--surface`), aktuell nur vom Menü-Panel genutzt, aber
-bewusst allgemein benannt für künftige weitere Popovers. Solange das Menü offen ist, sperrt `render()` zusätzlich das Scrollen des Hintergrunds
-(`document.body.style.overflow = 'hidden'`, da das Panel nur `position: absolute` ist,
-nicht `fixed`, und für sich genommen kein Scrollen dahinter blockiert) – ein reiner
-"Menü schließt bei Scroll-Event"-Listener reichte nicht, weil auf Touch-Geräten der
-Hintergrund schon sichtbar mitscrollte, bevor das `scroll`-Event überhaupt feuerte. Der
-`scroll`-Listener bleibt trotzdem als Sicherheitsnetz bestehen, falls die Sperre (v.a.
-iOS Safari Rubber-Band-Scrolling) doch mal durchlässig ist.
+bewusst allgemein benannt für künftige weitere Popovers. Zwei unterschiedliche Fälle beim Scrollen mit offenem Menü: Scrollen NEBEN dem Panel
+(Hintergrund/Fenster) soll das Menü schließen, Scrollen AUF dem Panel selbst (falls
+dessen Inhalt z.B. bei Zoom nicht mehr auf den Bildschirm passt) soll dagegen gar
+nichts am Hintergrund auslösen, aber innerhalb des Panels normal funktionieren. Löst
+sich rein über CSS + einen `scroll`-Listener am `window` (`logbuch.html`, direkt nach
+`syncLayerHistory()`): `.menu-panel` hat ein eigenes `max-height`/`overflow-y: auto`
+(scrollt bei Bedarf in sich selbst) und `overscroll-behavior: contain` (verhindert
+Scroll-Chaining zum Hintergrund, sobald das Panel selbst an sein Scroll-Ende kommt).
+`scroll`-Events bubbeln nicht – ein Scroll innerhalb des Panels feuert nur dort, nie am
+`window`, der window-weite Listener sieht deshalb ausschließlich echte
+Hintergrund-Scrolls und schließt dann das Menü. Keine Body-Scroll-Sperre nötig.
 
 **Unterseiten statt Tab-Swap** (seit 2026-09-18): "Felder verwalten" und "Über Logbuch"
 sind `state.view`-Werte wie die Tabs, aber keine Tabs — sie werden über
