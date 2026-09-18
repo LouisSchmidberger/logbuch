@@ -320,10 +320,13 @@ bewusst identisch mit `--paper` (siehe Dark-Mode-Abschnitt, wichtig für nahtlos
 `.sticky-top`-Header), reichte für ein freischwebendes Popover wie das Menü aber nicht
 als Abgrenzung. Deshalb seit 2026-09-19 eigener Farb-Token `--popover-bg` (in beiden
 Themes leicht heller/anders als `--surface`), aktuell nur vom Menü-Panel genutzt, aber
-bewusst allgemein benannt für künftige weitere Popovers. Das Menü schließt sich
-außerdem bei jedem `scroll`-Event des Fensters (nicht nur bei Klick außerhalb) – ohne
-eigene Body-Scroll-Sperre, das Panel ist nur `position: absolute`, nicht `fixed`, und
-blockierte Scrollen des Hintergrunds bisher gar nicht.
+bewusst allgemein benannt für künftige weitere Popovers. Solange das Menü offen ist, sperrt `render()` zusätzlich das Scrollen des Hintergrunds
+(`document.body.style.overflow = 'hidden'`, da das Panel nur `position: absolute` ist,
+nicht `fixed`, und für sich genommen kein Scrollen dahinter blockiert) – ein reiner
+"Menü schließt bei Scroll-Event"-Listener reichte nicht, weil auf Touch-Geräten der
+Hintergrund schon sichtbar mitscrollte, bevor das `scroll`-Event überhaupt feuerte. Der
+`scroll`-Listener bleibt trotzdem als Sicherheitsnetz bestehen, falls die Sperre (v.a.
+iOS Safari Rubber-Band-Scrolling) doch mal durchlässig ist.
 
 **Unterseiten statt Tab-Swap** (seit 2026-09-18): "Felder verwalten" und "Über Logbuch"
 sind `state.view`-Werte wie die Tabs, aber keine Tabs — sie werden über

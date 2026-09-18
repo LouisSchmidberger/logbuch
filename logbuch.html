@@ -1032,10 +1032,10 @@ function syncLayerHistory() {
     history.back();
   }
 }
-// Das Menü-Panel ist nur position:absolute (nicht fixed) und blockiert daher für sich
-// genommen kein Scrollen des Hintergrunds - ein Klick außerhalb schließt es bereits
-// (siehe Klick-Delegator), Scrollen bisher nicht. Schließt das Menü deshalb zusätzlich
-// bei jedem Scroll, statt eigens Body-Scroll zu sperren.
+// Zusätzliches Sicherheitsnetz zur Body-Scroll-Sperre in render() (document.body.style.
+// overflow): manche Browser (v.a. iOS Safari) lassen trotz overflow:hidden noch ein
+// kurzes Rubber-Band-Mitscrollen des Hintergrunds zu. Schließt das Menü deshalb
+// zusätzlich bei jedem Scroll-Event, das trotzdem durchkommt.
 window.addEventListener('scroll', () => {
   if (state.menuOpen) { state.menuOpen = false; render(); }
 }, { passive: true });
@@ -4088,6 +4088,12 @@ function render() {
   else { renderApp(); }
   focusModalIfOpen();
   syncLayerHistory();
+  // Das Menü-Panel ist nur position:absolute, blockiert also für sich genommen kein
+  // Scrollen des Hintergrunds dahinter - schließt zwar seit kurzem bei jedem Scroll-
+  // Event, aber genau dieses Event kommt bei Touch-Wischen erst NACH bereits
+  // sichtbarem Mitscrollen des Hintergrunds. Body-Scroll-Sperre verhindert das von
+  // vornherein, solange das Menü offen ist.
+  document.body.style.overflow = state.menuOpen ? 'hidden' : '';
   if (state.view !== lastRenderedView) {
     lastRenderedView = state.view;
     window.scrollTo(0, 0);
