@@ -304,9 +304,15 @@ nicht auf generische Tailwind-/Card-Optik wechseln.
 Tab-Leiste zeigt nur noch die Auswertungs-Ansichten (Heute/Woche/Monat/Jahr/Gesamt,
 `.tabs` bereits horizontal scrollbar für künftig weitere Views). Alles Konfigurative
 sitzt im **Burger-Menü** (☰-Button oben rechts, `renderMenu` in `logbuch.html`), intern
-in drei Gruppen unterteilt (`.menu-group-divider`): Navigation ("Felder verwalten",
-"Über Logbuch") oben, Einstellungen (Push/Erinnerungszeit/Sprache/Darstellung/
-Streifenmuster) in der Mitte, Konto (Export/Recovery-Key/Löschen/Abmelden) unten.
+in drei Gruppen unterteilt: Navigation ("Felder verwalten", "Über Logbuch") oben,
+Einstellungen (Push/Erinnerungszeit/Sprache/Darstellung/Streifenmuster) in der Mitte,
+Konto (Export/Recovery-Key/Löschen/Abmelden) unten. Jede Gruppe steckt in einem eigenen
+`.menu-group` (kleines, dezentes Caps-Label, `menu.groupNavigation`/`menu.groupSettings`/
+`menu.groupAccount`) mit `.menu-group-divider` dazwischen – seit 2026-09-19 (vorher nur
+eine dünne Trennlinie ohne Beschriftung, wirkte trotz Gruppierung noch zu wenig
+strukturiert/zu eng). `.menu-item-btn` ist bewusst randlos (nur Hover-/Fokus-Hintergrund)
+statt einzeln umrandet – einheitlicher mit den randlosen `.menu-row`-Zeilen (Sprache/
+Zeit/Darstellung/Muster), die vorher optisch aus der Reihe fielen.
 
 **Unterseiten statt Tab-Swap** (seit 2026-09-18): "Felder verwalten" und "Über Logbuch"
 sind `state.view`-Werte wie die Tabs, aber keine Tabs — sie werden über

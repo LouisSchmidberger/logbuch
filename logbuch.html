@@ -119,23 +119,30 @@
     display: flex; align-items: center; justify-content: center; color: var(--ink); cursor: pointer; font-size: 15px;
   }
   .menu-panel {
-    position: absolute; top: 38px; right: 0; z-index: 10; width: 230px;
-    display: flex; flex-direction: column; gap: 10px;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 12px;
+    position: absolute; top: 38px; right: 0; z-index: 10; width: 250px;
+    display: flex; flex-direction: column; gap: 8px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 14px;
     box-shadow: 0 4px 14px var(--shadow);
   }
   .menu-panel .push-row { margin-bottom: 0; }
-  .menu-group-divider { border-top: 1px solid var(--line); }
+  .menu-group { display: flex; flex-direction: column; gap: 9px; }
+  .menu-group-label {
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--sand); margin: 0;
+  }
+  .menu-group-divider { border-top: 1px solid var(--line); margin: 2px 0; }
   .menu-row { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--sand); }
   .menu-row select {
     font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   .menu-item-btn {
-    font-family: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid var(--line);
+    font-family: inherit; font-size: 13px; padding: 8px 10px; border: none;
     border-radius: 3px; background: transparent; color: var(--ink); cursor: pointer; text-align: left;
   }
-  .menu-item-btn--danger { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.4); }
+  .menu-item-btn:hover, .menu-item-btn:focus-visible { background: rgba(var(--moss-rgb), 0.10); }
+  .menu-item-btn--danger { color: var(--rust); }
+  .menu-item-btn--danger:hover, .menu-item-btn--danger:focus-visible { background: rgba(var(--rust-rgb), 0.08); }
 
   .modal-overlay {
     position: fixed; inset: 0; background: var(--scrim); z-index: 50;
@@ -1261,6 +1268,9 @@ const STRINGS = {
     'theme.dark': 'Dunkel',
     'pattern.enableLabel': 'Muster zusätzlich zur Farbe anzeigen',
     'pattern.explain': 'Etwa 1 von 12 Männern und 1 von 200 Frauen hat eine Rot-Grün-Sehschwäche – oft unbemerkt, da sie selten diagnostiziert wird. Damit Bewertungen (rot bis grün) nicht ausschließlich über die Farbe erkennbar sind, zeigt Logbuch standardmäßig zusätzlich ein feines Streifenmuster: je dichter, desto besser der Wert. Rein optisch abschaltbar, falls du es nicht brauchst und nicht magst.',
+    'menu.groupNavigation': 'Navigation',
+    'menu.groupSettings': 'Einstellungen',
+    'menu.groupAccount': 'Konto',
     'menu.manageFields': 'Felder verwalten',
     'menu.about': 'Über Logbuch',
     'about.title': 'Über Logbuch',
@@ -1545,6 +1555,9 @@ const STRINGS = {
     'theme.dark': 'Dark',
     'pattern.enableLabel': 'Show pattern in addition to color',
     'pattern.explain': 'About 1 in 12 men and 1 in 200 women has red-green color vision deficiency – often unnoticed, since it is rarely diagnosed. So that ratings (red to green) are not recognizable through color alone, Logbuch shows a subtle stripe pattern in addition by default: the denser it is, the better the value. Purely a visual choice, switch it off if you do not need or want it.',
+    'menu.groupNavigation': 'Navigation',
+    'menu.groupSettings': 'Settings',
+    'menu.groupAccount': 'Account',
     'menu.manageFields': 'Manage fields',
     'menu.about': 'About Logbuch',
     'about.title': 'About Logbuch',
@@ -3904,41 +3917,50 @@ function renderPushRow(prominent = false) {
 function renderMenu() {
   return `
     <div class="menu-panel">
-      <button type="button" class="menu-item-btn" data-action="open-manage">${t('menu.manageFields')}</button>
-      <button type="button" class="menu-item-btn" data-action="open-about">${t('menu.about')}</button>
+      <div class="menu-group">
+        <p class="menu-group-label">${t('menu.groupNavigation')}</p>
+        <button type="button" class="menu-item-btn" data-action="open-manage">${t('menu.manageFields')}</button>
+        <button type="button" class="menu-item-btn" data-action="open-about">${t('menu.about')}</button>
+      </div>
       <div class="menu-group-divider"></div>
-      ${renderPushRow()}
-      <div class="menu-row">
-        <label for="menu-default-time">${t('menu.defaultReminderTime')}</label>
-        ${reminderTimeInputHtml('menu-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time')}
-      </div>
-      <div class="menu-row">
-        <label for="menu-locale">${t('menu.language')}</label>
-        <select id="menu-locale" data-action="menu-locale">
-          <option value="de" ${currentLocale === 'de' ? 'selected' : ''}>Deutsch</option>
-          <option value="en" ${currentLocale === 'en' ? 'selected' : ''}>English</option>
-        </select>
-      </div>
-      <div class="menu-row">
-        <label id="menu-theme-label">${t('theme.label')}</label>
-        <div class="pill-group" role="group" aria-labelledby="menu-theme-label">
-          <button type="button" class="pill-toggle${!getThemeOverride() ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="" aria-pressed="${!getThemeOverride()}">${t('theme.system')}</button>
-          <button type="button" class="pill-toggle${getThemeOverride() === 'light' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="light" aria-pressed="${getThemeOverride() === 'light'}">${t('theme.light')}</button>
-          <button type="button" class="pill-toggle${getThemeOverride() === 'dark' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="dark" aria-pressed="${getThemeOverride() === 'dark'}">${t('theme.dark')}</button>
+      <div class="menu-group">
+        <p class="menu-group-label">${t('menu.groupSettings')}</p>
+        ${renderPushRow()}
+        <div class="menu-row">
+          <label for="menu-default-time">${t('menu.defaultReminderTime')}</label>
+          ${reminderTimeInputHtml('menu-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time')}
+        </div>
+        <div class="menu-row">
+          <label for="menu-locale">${t('menu.language')}</label>
+          <select id="menu-locale" data-action="menu-locale">
+            <option value="de" ${currentLocale === 'de' ? 'selected' : ''}>Deutsch</option>
+            <option value="en" ${currentLocale === 'en' ? 'selected' : ''}>English</option>
+          </select>
+        </div>
+        <div class="menu-row">
+          <label id="menu-theme-label">${t('theme.label')}</label>
+          <div class="pill-group" role="group" aria-labelledby="menu-theme-label">
+            <button type="button" class="pill-toggle${!getThemeOverride() ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="" aria-pressed="${!getThemeOverride()}">${t('theme.system')}</button>
+            <button type="button" class="pill-toggle${getThemeOverride() === 'light' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="light" aria-pressed="${getThemeOverride() === 'light'}">${t('theme.light')}</button>
+            <button type="button" class="pill-toggle${getThemeOverride() === 'dark' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="dark" aria-pressed="${getThemeOverride() === 'dark'}">${t('theme.dark')}</button>
+          </div>
+        </div>
+        <div class="menu-row">
+          <label class="checkbox-field">
+            <input type="checkbox" data-action="pattern-toggle" ${isPatternDisabled() ? '' : 'checked'} />
+            ${t('pattern.enableLabel')}
+          </label>
+          ${infoTip(t('pattern.explain'))}
         </div>
       </div>
-      <div class="menu-row">
-        <label class="checkbox-field">
-          <input type="checkbox" data-action="pattern-toggle" ${isPatternDisabled() ? '' : 'checked'} />
-          ${t('pattern.enableLabel')}
-        </label>
-        ${infoTip(t('pattern.explain'))}
-      </div>
       <div class="menu-group-divider"></div>
-      <button type="button" class="menu-item-btn" data-action="export-data">${t('menu.exportData')}</button>
-      <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key">${t('menu.regenerateRecoveryKey')}</button>
-      <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="open-delete-confirm">${t('menu.deleteAccount')}</button>
-      <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="logout">${t('common.logout')}</button>
+      <div class="menu-group">
+        <p class="menu-group-label">${t('menu.groupAccount')}</p>
+        <button type="button" class="menu-item-btn" data-action="export-data">${t('menu.exportData')}</button>
+        <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key">${t('menu.regenerateRecoveryKey')}</button>
+        <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="open-delete-confirm">${t('menu.deleteAccount')}</button>
+        <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="logout">${t('common.logout')}</button>
+      </div>
     </div>
   `;
 }
