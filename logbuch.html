@@ -86,7 +86,10 @@
   .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .header h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 22px; margin: 0; }
   .subpage-header-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .subpage-header-title h1 { font-size: 19px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; }
+  /* line-height/padding großzügig, da "overflow: hidden" (für die "…"-Kürzung bei
+     langen Titeln) sonst die Oberlängen der kursiven Fraunces-Schrift abschneidet
+     (z.B. die Ü-Punkte bei "Über Logbuch"). */
+  .subpage-header-title h1 { font-size: 19px; line-height: 1.5; padding: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; }
   /* Trennlinie + etwas mehr Innenabstand unten, da hier (anders als bei den Tabs, die
      ihre eigene Trennlinie mitbringen) nichts anderes den unteren Rand der Fläche
      markiert. Die SVG-Chevron statt eines "←"-Zeichens zentriert sich unabhängig von
