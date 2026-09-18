@@ -365,7 +365,8 @@
   }
   .manage-section-divider { border-top: 1px solid var(--line); margin: 22px 0 14px; }
   .manage-section-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 15px; margin: 0 0 4px; }
-  .about-intro { font-size: 13px; line-height: 1.5; color: var(--sand); margin: -8px 0 22px; }
+  .about-status { font-size: 13px; line-height: 1.5; color: var(--ink); font-weight: 600; margin: -8px 0 10px; }
+  .about-intro { font-size: 13px; line-height: 1.5; color: var(--sand); margin: 0 0 22px; }
   .tip-group .manage-section-title { margin-bottom: 12px; }
   .tip { margin-bottom: 16px; }
   .tip:last-child { margin-bottom: 0; }
@@ -1105,6 +1106,7 @@ const STRINGS = {
     'menu.about': 'Über Logbuch',
     'about.title': 'Über Logbuch',
     'about.intro': 'Ein paar Dinge, die sich nicht von selbst erklären — zum Nachlesen, falls du magst.',
+    'about.status': 'Beta – Stand {date}. Ich baue laufend weiter, melde dich gern, falls dir etwas auffällt.',
     'about.group.usage': 'Bedienung',
     'about.group.fields': 'Felder & Auswertung',
     'about.group.appearance': 'Darstellung',
@@ -1379,6 +1381,7 @@ const STRINGS = {
     'menu.about': 'About Logbuch',
     'about.title': 'About Logbuch',
     'about.intro': 'A few things that are not obvious at first glance — here to read up on if you are curious.',
+    'about.status': 'Beta – as of {date}. I am actively continuing to build this out, feel free to reach out if you notice anything.',
     'about.group.usage': 'Using the app',
     'about.group.fields': 'Fields & evaluation',
     'about.group.appearance': 'Appearance',
@@ -3055,11 +3058,18 @@ function renderA11ySection() {
   `;
 }
 
+// Von Hand hochgezählt bei größeren Änderungen - kein Build-Step im Projekt, der das
+// automatisch aus Git ableiten könnte, und ein Datum genügt hier als Rückverfolgbarkeit
+// (siehe Diskussion in CLAUDE.md-Kontext: keine echte Versionsnummer nötig, solange es
+// keine Release-Branches/nennenswerten externen Nutzerkreis gibt).
+const APP_STATUS_DATE = '2026-09-18';
+
 function renderAbout() {
   return `
     <div class="day-nav">
       <div class="day-label"><span class="day-date">${t('about.title')}</span></div>
     </div>
+    <p class="about-status">${t('about.status', { date: formatDMY(APP_STATUS_DATE) })}</p>
     <p class="about-intro">${t('about.intro')}</p>
     ${renderA11ySection()}
     <div class="manage-section-divider"></div>
