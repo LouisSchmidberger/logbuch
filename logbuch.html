@@ -438,9 +438,7 @@
   .info-tip[open] summary { color: var(--ink); border-color: var(--ink); }
   .info-tip p { font-size: 11px; color: var(--sand); margin: 6px 0 10px; }
 
-  .habit-form-minmax { display: flex; gap: 10px; }
-  .habit-form-minmax .auth-field { flex: 1; margin-bottom: 0; }
-  .label-inputs { display: flex; flex-direction: column; gap: 6px; }
+  .label-inputs { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
   .label-inputs input {
     font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
@@ -962,7 +960,6 @@ const STRINGS = {
     'habitForm.error.minGroupMembers': 'Bitte mindestens 2 Felder zum Gruppieren auswählen.',
     'habitForm.error.stepsRange': 'Anzahl Stufen muss zwischen 2 und 1000 liegen.',
     'habitForm.error.sliderLabelStepsRange': 'Mit eigenen Bezeichnungen sind beim Schieberegler maximal {cap} Stufen möglich.',
-    'habitForm.error.maxGreaterMin': '„Bis" muss größer als „Von" sein.',
     'habitForm.error.max12Steps': 'Bitte maximal 12 Stufen.',
     'habitForm.error.fillAllLabels': 'Bitte alle Bezeichnungen ausfüllen.',
     'habitForm.error.nameRequired': 'Bitte einen Namen eingeben.',
@@ -1077,8 +1074,6 @@ const STRINGS = {
     'habitForm.sliderRangeExplain': 'Der Regler zeigt nie eine Min/Max-Beschriftung beim Eintragen (nur hier in der Verwaltung).',
     'habitForm.rangeLocked': 'Bereich {min}–{max} (durch vorhandene Einträge gesperrt).',
     'habitForm.showValueWhileEntering': 'Aktuellen Wert beim Eintragen anzeigen',
-    'habitForm.from': 'Von',
-    'habitForm.to': 'Bis',
     'habitForm.goalDirection': 'Bewertung',
     'habitForm.goalDirectionExplain': 'Legt fest, was als "gut" gilt und entsprechend grün eingefärbt wird. Meist "hohe Werte" (z. B. Sport, gesunde Ernährung). "Niedrige Werte" eignet sich für Dinge, von denen weniger besser ist (z. B. Konsum von etwas, das man reduzieren möchte). "Keine Wertung" trackt den Wert einfach nur, ohne Rot-Grün-Färbung – z. B. für Dinge, die du beobachten, aber nicht bewerten willst.',
     'habitForm.highIsGood': 'Hohe Werte erstrebenswert',
@@ -1255,7 +1250,6 @@ const STRINGS = {
     'habitForm.error.minGroupMembers': 'Please select at least 2 fields to group.',
     'habitForm.error.stepsRange': 'Number of steps must be between 2 and 1000.',
     'habitForm.error.sliderLabelStepsRange': 'With custom labels, a slider can have at most {cap} steps.',
-    'habitForm.error.maxGreaterMin': '"To" must be greater than "From".',
     'habitForm.error.max12Steps': 'Please use at most 12 steps.',
     'habitForm.error.fillAllLabels': 'Please fill in all labels.',
     'habitForm.error.nameRequired': 'Please enter a name.',
@@ -1370,8 +1364,6 @@ const STRINGS = {
     'habitForm.sliderRangeExplain': 'The slider never shows a min/max label while entering a value (only here in management).',
     'habitForm.rangeLocked': 'Range {min}–{max} (locked due to existing entries).',
     'habitForm.showValueWhileEntering': 'Show current value while entering',
-    'habitForm.from': 'From',
-    'habitForm.to': 'To',
     'habitForm.goalDirection': 'Valuation',
     'habitForm.goalDirectionExplain': 'Determines what counts as "good" and is colored green accordingly. Usually "high values" (e.g. exercise, healthy eating). "Low values" suits things you want less of (e.g. consumption of something you want to reduce). "No valuation" simply tracks the value without red/green coloring - e.g. for things you want to observe but not judge.',
     'habitForm.highIsGood': 'High values desirable',
@@ -2004,25 +1996,39 @@ function resizeLabels(labels, newLength, defaultForIndex) {
 // Aktuelle Stufenzahl eines Skala-Formulars, abgeleitet aus Darstellung + Bereich -
 // einzige Quelle dafür, sowohl für die Bezeichnungs-Liste als auch die Live-Vorschau.
 function habitFormStepCount(f) {
-  return f.displayStyle === 'slider' ? f.sliderSteps + 1 : f.max - f.min + 1;
+  return f.max - f.min + 1;
 }
 // Ein Schieberegler ist normalerweise für viele Stufen gedacht (bis 1000, wie Prozent) -
 // mit eigenen Bezeichnungen wäre eine dreistellige Liste einzelner Textfelder aber
 // unbedienbar. Bei aktivierten Bezeichnungen deshalb enger gedeckelt (analog zum
 // 12er-Deckel bei Buttons).
 const SLIDER_LABEL_STEP_CAP = 8;
-// Der zugrundeliegende Zahlenwert der i-ten Stufe - beim Schieberegler ist die
-// gespeicherte Basis immer 0 (siehe handleHabitSaveInner), bei Buttons das frei
-// wählbare f.min.
+// Der zugrundeliegende Zahlenwert der i-ten Stufe - f.min ist bei neuen/noch leeren
+// Feldern immer 1 (siehe defaultHabitForm), bei bereits bestehenden Feldern deren
+// echtes, ggf. historisch anderes min (z.B. alte Schieberegler-Felder mit Basis 0).
 function habitFormStepValue(f, i) {
-  return f.displayStyle === 'slider' ? i : f.min + i;
+  return f.min + i;
+}
+// Deckelt die aktuelle Stufenzahl auf den je nach Darstellung/Bezeichnungen gültigen
+// Höchstwert (12 bei Buttons, 8 bei Schieberegler+Bezeichnungen, sonst 1000) - gebraucht
+// beim Wechsel der Darstellung oder beim Aktivieren von Bezeichnungen, da f.max (anders
+// als früher f.sliderSteps) jetzt zwischen beiden Darstellungen geteilt wird.
+function clampHabitFormSteps(f) {
+  const cap = f.displayStyle === 'buttons' ? 12 : (f.labelsEnabled ? SLIDER_LABEL_STEP_CAP : 1000);
+  f.max = Math.min(f.max, f.min + cap - 1);
 }
 
+// Neue (bzw. noch unbefüllte) Skala-Felder starten immer bei 1 - kein frei wählbares
+// "Von" mehr, unabhängig von Buttons/Schieberegler (siehe habitFormStepCount/-StepValue
+// unten). Wer andere Bezeichnungen will, nutzt dafür Bezeichnungen statt eines
+// verschobenen Zahlenbereichs. Bereits bestehende (ggf. historisch andere) Felder
+// behalten beim Bearbeiten ihr echtes min (siehe habitToForm) - nur Von/Bis sind bei
+// vorhandenen Daten ohnehin gesperrt (Tier 3, siehe CLAUDE.md).
 function defaultHabitForm() {
   return {
     defId: null, locked: false, kind: 'scale',
     name: '', min: 1, max: 5, labelsEnabled: false, labels: ['', '', '', '', ''], good: 'high',
-    displayStyle: 'buttons', sliderSteps: 100, sliderShowValue: true,
+    displayStyle: 'buttons', sliderShowValue: true,
     groupMembers: [],
     goalPercent: 100,
     unit: '', reminderEnabled: false, reminderMinute: state.userSettings.defaultReminderMinute,
@@ -2048,7 +2054,6 @@ function habitToForm(h) {
     // null ist, als sinnvoller Startwert falls im Formular noch auf "Skala" gewechselt wird.
     good: h.kind === 'scale' ? h.good : 'high',
     displayStyle,
-    sliderSteps: displayStyle === 'slider' ? max - min : 100,
     sliderShowValue: h.sliderShowValue ?? true,
     groupMembers: h.kind === 'group' ? [...(h.groupMembers || [])] : [],
     goalPercent: Math.round((h.goalThreshold ?? 1) * 100),
@@ -2081,19 +2086,16 @@ function syncHabitFormFromDom() {
   const nameEl = document.getElementById('habit-form-name');
   if (nameEl) f.name = nameEl.value;
   if (f.kind === 'scale') {
-    // Bereichs-Inputs unabhängig von labelsEnabled synchronisieren - Darstellung und
+    // Bereichs-Input unabhängig von labelsEnabled synchronisieren - Darstellung und
     // Bezeichnungen sind seit dem Formular-Umbau unabhängig voneinander wählbar, nicht
-    // mehr zwei sich ausschließende Modi.
+    // mehr zwei sich ausschließende Modi. Nur noch eine "Anzahl Stufen"-Eingabe für
+    // beide Darstellungen (kein "Von" mehr, siehe defaultHabitForm) - f.min bleibt bei
+    // neuen/unbefüllten Feldern unverändert bei 1.
+    const stepsEl = document.getElementById('habit-form-steps');
+    if (stepsEl) f.max = f.min + Number(stepsEl.value) - 1;
     if (f.displayStyle === 'slider') {
-      const stepsEl = document.getElementById('habit-form-slider-steps');
-      if (stepsEl) f.sliderSteps = Number(stepsEl.value);
       const showValueEl = document.getElementById('habit-form-slider-show-value');
       if (showValueEl) f.sliderShowValue = showValueEl.checked;
-    } else {
-      const minEl = document.getElementById('habit-form-min');
-      const maxEl = document.getElementById('habit-form-max');
-      if (minEl) f.min = Number(minEl.value);
-      if (maxEl) f.max = Number(maxEl.value);
     }
     const labelsToggleEl = document.getElementById('habit-form-labels-toggle');
     if (labelsToggleEl) f.labelsEnabled = labelsToggleEl.checked;
@@ -2211,41 +2213,30 @@ async function handleHabitSaveInner() {
     }
     fields = { kind: 'scale', min: original.min, max: original.max, labels: f.labelsEnabled ? f.labels : null, good: f.good, unit: null, display_style: f.displayStyle, slider_show_value: f.sliderShowValue, group_members: null, goal_threshold: goalThreshold };
   } else {
-    let min, max, displayStyle, sliderShowValue;
-    if (f.displayStyle === 'slider') {
-      const stepsEl = document.getElementById('habit-form-slider-steps');
-      const steps = Math.round(Number(stepsEl ? stepsEl.value : f.sliderSteps));
-      if (!Number.isFinite(steps) || steps < 2 || steps > 1000) {
-        state.notice = { type: 'error', text: t('habitForm.error.stepsRange') };
-        return;
-      }
-      if (f.labelsEnabled && steps > SLIDER_LABEL_STEP_CAP) {
-        state.notice = { type: 'error', text: t('habitForm.error.sliderLabelStepsRange', { cap: SLIDER_LABEL_STEP_CAP }) };
-        return;
-      }
-      min = 0; max = steps; displayStyle = 'slider';
-      const showValueEl = document.getElementById('habit-form-slider-show-value');
-      sliderShowValue = showValueEl ? showValueEl.checked : f.sliderShowValue;
-    } else {
-      min = Number(document.getElementById('habit-form-min').value);
-      max = Number(document.getElementById('habit-form-max').value);
-      if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
-        state.notice = { type: 'error', text: t('habitForm.error.maxGreaterMin') };
-        return;
-      }
-      if (max - min + 1 > 12) {
-        state.notice = { type: 'error', text: t('habitForm.error.max12Steps') };
-        return;
-      }
-      displayStyle = 'buttons';
-      sliderShowValue = true;
+    // Neue/unbefüllte Skala-Felder starten immer bei 1 (siehe defaultHabitForm) - nur
+    // noch die Stufenzahl ist für beide Darstellungen einheitlich einzugeben.
+    const min = 1;
+    const stepsEl = document.getElementById('habit-form-steps');
+    const steps = Math.round(Number(stepsEl ? stepsEl.value : habitFormStepCount(f)));
+    const isSlider = f.displayStyle === 'slider';
+    if (!Number.isFinite(steps) || steps < 2 || steps > (isSlider ? 1000 : 12)) {
+      state.notice = { type: 'error', text: t(isSlider ? 'habitForm.error.stepsRange' : 'habitForm.error.max12Steps') };
+      return;
     }
+    if (isSlider && f.labelsEnabled && steps > SLIDER_LABEL_STEP_CAP) {
+      state.notice = { type: 'error', text: t('habitForm.error.sliderLabelStepsRange', { cap: SLIDER_LABEL_STEP_CAP }) };
+      return;
+    }
+    const max = min + steps - 1;
+    const displayStyle = isSlider ? 'slider' : 'buttons';
+    const showValueEl = document.getElementById('habit-form-slider-show-value');
+    const sliderShowValue = isSlider ? (showValueEl ? showValueEl.checked : f.sliderShowValue) : true;
     let labels = null;
     if (f.labelsEnabled) {
       labels = [...document.querySelectorAll('[data-label-index]')]
         .sort((a, b) => Number(a.dataset.labelIndex) - Number(b.dataset.labelIndex))
         .map((el) => el.value.trim());
-      if (labels.length !== max - min + 1 || labels.some((l) => !l)) {
+      if (labels.length !== steps || labels.some((l) => !l)) {
         state.notice = { type: 'error', text: t('habitForm.error.fillAllLabels') };
         return;
       }
@@ -2995,8 +2986,8 @@ function renderHabitFormPreview(f) {
   const previewHabit = {
     id: 'preview',
     kind: 'scale',
-    min: isSlider ? 0 : f.min,
-    max: isSlider ? f.sliderSteps : f.max,
+    min: f.min,
+    max: f.max,
     labels: f.labelsEnabled ? resizeLabels(f.labels, stepCount) : null,
     good: f.good,
     displayStyle: f.displayStyle,
@@ -3459,31 +3450,20 @@ function renderHabitForm() {
         <button type="button" class="pill-toggle${f.displayStyle === 'slider' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="slider">${t('habitForm.slider')}</button>
       </div>
     </div>
+    <div class="auth-field">
+      <label for="habit-form-steps">${t('habitForm.numberOfSteps')}${f.displayStyle === 'slider' ? infoTip(t('habitForm.sliderRangeExplain')) : ''}</label>
+      ${f.locked
+        ? `<p class="habit-form-lock-note">${t('habitForm.rangeLocked', { min: f.min, max: f.max })}</p>`
+        : stepperInput('habit-form-steps', stepCount, 2, f.displayStyle === 'buttons' ? 12 : (f.labelsEnabled ? SLIDER_LABEL_STEP_CAP : 1000), false, 'data-action="habit-range-change"')}
+    </div>
     ${f.displayStyle === 'slider' ? `
-      <div class="auth-field">
-        <label for="habit-form-slider-steps">${t('habitForm.numberOfSteps')}${infoTip(t('habitForm.sliderRangeExplain'))}</label>
-        ${f.locked
-          ? `<p class="habit-form-lock-note">${t('habitForm.rangeLocked', { min: 0, max: f.sliderSteps })}</p>`
-          : stepperInput('habit-form-slider-steps', f.sliderSteps, 2, f.labelsEnabled ? SLIDER_LABEL_STEP_CAP : 1000, false, 'data-action="habit-range-change"')}
-      </div>
       <div class="auth-field">
         <label class="checkbox-field">
           <input type="checkbox" id="habit-form-slider-show-value" ${f.sliderShowValue ? 'checked' : ''} />
           ${t('habitForm.showValueWhileEntering')}
         </label>
       </div>
-    ` : `
-      <div class="habit-form-minmax">
-        <div class="auth-field">
-          <label for="habit-form-min">${t('habitForm.from')}</label>
-          ${stepperInput('habit-form-min', f.min, -100, 100, f.locked, 'data-action="habit-range-change"')}
-        </div>
-        <div class="auth-field">
-          <label for="habit-form-max">${t('habitForm.to')}</label>
-          ${stepperInput('habit-form-max', f.max, -100, 100, f.locked, 'data-action="habit-range-change"')}
-        </div>
-      </div>
-    `}
+    ` : ''}
     <div class="auth-field">
       <label class="checkbox-field">
         <input type="checkbox" id="habit-form-labels-toggle" data-action="habit-labels-toggle" ${f.labelsEnabled ? 'checked' : ''} ${sliderLabelsBlocked ? 'disabled' : ''} />
@@ -4075,10 +4055,7 @@ app.addEventListener('click', async (e) => {
     syncHabitFormFromDom();
     const f = state.habitForm;
     f.displayStyle = el.dataset.style;
-    if (f.displayStyle === 'slider' && f.labelsEnabled) f.sliderSteps = Math.min(f.sliderSteps, SLIDER_LABEL_STEP_CAP);
-    // Buttons (Von/Bis) und Schieberegler (Anzahl Stufen) haben unabhängige, jeweils
-    // eigene Bereichs-Werte (siehe habitFormStepCount) - beim Umschalten muss die
-    // Bezeichnungs-Liste auf die dafür jeweils andere Stufenzahl angepasst werden.
+    clampHabitFormSteps(f);
     f.labels = resizeLabels(f.labels, habitFormStepCount(f), f.labelsEnabled ? (i) => String(habitFormStepValue(f, i)) : undefined);
     render();
   } else if (action === 'stepper-inc' || action === 'stepper-dec') {
@@ -4195,8 +4172,8 @@ app.addEventListener('change', (e) => {
     syncHabitFormFromDom();
     const f = state.habitForm;
     // Deckel greift auch, wenn direkt in die Stufenzahl getippt wird (das max-Attribut
-    // des Inputs verhindert das allein nicht zuverlässig, siehe SLIDER_LABEL_STEP_CAP).
-    if (f.displayStyle === 'slider' && f.labelsEnabled) f.sliderSteps = Math.min(f.sliderSteps, SLIDER_LABEL_STEP_CAP);
+    // des Inputs verhindert das allein nicht zuverlässig, siehe clampHabitFormSteps).
+    clampHabitFormSteps(f);
     f.labels = resizeLabels(f.labels, habitFormStepCount(f), f.labelsEnabled ? (i) => String(habitFormStepValue(f, i)) : undefined);
     render();
     return;
@@ -4206,7 +4183,7 @@ app.addEventListener('change', (e) => {
     syncHabitFormFromDom();
     const f = state.habitForm;
     f.labelsEnabled = labelsToggleEl.checked;
-    if (f.displayStyle === 'slider' && f.labelsEnabled) f.sliderSteps = Math.min(f.sliderSteps, SLIDER_LABEL_STEP_CAP);
+    clampHabitFormSteps(f);
     // Beim Aktivieren bleiben die Zahlen als Startwert stehen (siehe resizeLabels) -
     // macht sichtbar, dass es weiterhin dieselbe Skala ist, bis man sie überschreibt.
     f.labels = resizeLabels(f.labels, habitFormStepCount(f), f.labelsEnabled ? (i) => String(habitFormStepValue(f, i)) : undefined);

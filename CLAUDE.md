@@ -150,30 +150,44 @@ bei `change` (Loslassen), über denselben `handleSelect`-Pfad wie bei den Button
 optionaler Text-Overlay über denselben Stufen** – vorher waren "Nummerierte Stufen" und
 "Eigene Bezeichnungen" im Formular zwei sich ausschließende Zustände (`f.mode`), obwohl
 die DB nie zwischen ihnen unterschieden hat (`labels` ist einfach `null` oder ein Array
-über demselben `min`/`max`-Bereich). Das Formular (`scaleBody` in `renderHabitForm`)
-fragt jetzt in dieser Reihenfolge: Darstellung (Buttons/Schieberegler) → Bereich (Von/Bis
-bzw. Anzahl Stufen, weiterhin gedeckelt auf 12 bei Buttons bzw. 2–1000 beim Schieberegler)
-→ Checkbox "Eigene Bezeichnungen verwenden", darunter immer eine Zeile pro Stufe (Zahl
-oder Textfeld) → Live-Vorschau (rendert `renderHabitOptions`/`renderHabitSlider` mit
-einem synthetischen Habit-Objekt aus dem Formular-Stand, `inert`/`aria-hidden`, rein
-informativ) → Bewertung/Ziel-Quote. `habitFormStepCount(f)`/`resizeLabels(labels,
-newLength)` halten die Bezeichnungs-Liste bei jeder Bereichs-/Stufenzahl-Änderung auf
-der richtigen Länge (bereits eingetippter Text an gleicher Position bleibt erhalten),
-unabhängig davon ob die Checkbox gerade an ist. Der Schieberegler kann seit diesem Umbau
-ebenfalls Bezeichnungen anzeigen (`habitSliderValueText`) – vorher eine unbeabsichtigte
-Lücke, keine bewusste Einschränkung.
+über demselben `min`/`max`-Bereich). **Neue (bzw. noch unbefüllte) Skala-Felder starten
+immer bei `min=1`** (kein frei wählbares "Von" mehr, unabhängig von Buttons/Schieberegler
+– wer andere Bezeichnungen will, nutzt dafür eigene Bezeichnungen statt eines
+verschobenen Zahlenbereichs). Das Formular (`scaleBody` in `renderHabitForm`) fragt
+jetzt in dieser Reihenfolge: Darstellung (Buttons/Schieberegler) → **eine** gemeinsame
+"Anzahl Stufen"-Eingabe (gedeckelt auf 12 bei Buttons, 2–1000 beim Schieberegler bzw. 8
+bei aktivierten Bezeichnungen, `SLIDER_LABEL_STEP_CAP`) → Checkbox "Eigene Bezeichnungen
+verwenden" (beim Schieberegler nur nutzbar, wenn die Stufenzahl im Cap liegt), darunter
+bei Buttons immer, beim Schieberegler nur bei aktivierten Bezeichnungen eine Zeile pro
+Stufe (deaktiviertes Textfeld mit der Zahl, oder editierbar mit der Zahl als Startwert)
+→ Live-Vorschau (rendert `renderHabitOptions`/`renderHabitSlider` mit einem
+synthetischen Habit-Objekt aus dem Formular-Stand, `inert`/`aria-hidden`, rein
+informativ) → Bewertung/Ziel-Quote. `habitFormStepCount(f)` (`max-min+1`) und
+`habitFormStepValue(f, i)` (`min+i`) sind seit diesem Umbau für beide Darstellungen
+identisch (kein Sonderfall mehr für den Schieberegler) – `resizeLabels(labels,
+newLength, defaultForIndex)` hält die Bezeichnungs-Liste bei jeder Änderung der
+Stufenzahl auf der richtigen Länge, unabhängig davon ob die Checkbox gerade an ist, und
+befüllt neue/leere Positionen beim Aktivieren mit der Zahl als Text statt leer. Der
+Schieberegler kann seit diesem Umbau ebenfalls Bezeichnungen anzeigen
+(`habitSliderValueText`) – vorher eine unbeabsichtigte Lücke, keine bewusste
+Einschränkung.
 
-**Bearbeiten mit vorhandenen Daten (`f.locked`, siehe `habitHasData`)**: nur Von/Bis
-bzw. die Stufenzahl bleiben gesperrt (das wäre eine rückwirkende Neuinterpretation
-bestehender Werte – bewusst NICHT gebaut, siehe unten). Darstellung, die
-Bezeichnungen-Checkbox und der Bezeichnungs-Text selbst bleiben dagegen auch mit
-vorhandenen Daten änderbar, da sich dabei nur die Beschriftung ändert, nie die
-zugrundeliegende Zahl/Position. **Bewusst nicht umgesetzt**: eine rückwirkende
-Umrechnung bei einer echten Anzahl-Änderung (z.B. 3 Stufen → 5 Stufen) eines Feldes mit
-vorhandenen Daten – mathematisch bei rein nummerierten Stufen unproblematisch (linear,
-Score/Farbe bleibt exakt erhalten), bei Text-Bezeichnungen aber riskant (ein altes "Ja"
-bei 2 Stufen bekäme nachträglich eine Intensität zugeschrieben, die so nie gemeint war).
-Für eine andere Skala bleibt der Weg: archivieren und neu anlegen.
+**Bearbeiten mit vorhandenen Daten (`f.locked`, siehe `habitHasData`)**: nur die
+Stufenzahl (bzw. das historische `min`/`max` dahinter) bleibt gesperrt (das wäre eine
+rückwirkende Neuinterpretation bestehender Werte – bewusst NICHT gebaut, siehe unten).
+Ein bereits bestehendes `min` ungleich 1 (z.B. alte Schieberegler-Felder mit historischer
+Basis 0) bleibt dabei unangetastet erhalten, die "immer Basis 1"-Regel gilt nur für neue
+Felder. Darstellung, die Bezeichnungen-Checkbox und der Bezeichnungs-Text selbst bleiben
+dagegen auch mit vorhandenen Daten änderbar, da sich dabei nur die Beschriftung ändert,
+nie die zugrundeliegende Zahl/Position. Ein bereits gesperrtes Schieberegler-Feld mit
+mehr als `SLIDER_LABEL_STEP_CAP` Stufen kann Bezeichnungen gar nicht mehr aktivieren
+(Checkbox disabled mit Erklärung) – die Stufenzahl lässt sich ja nicht mehr verkleinern.
+**Bewusst nicht umgesetzt**: eine rückwirkende Umrechnung bei einer echten
+Anzahl-Änderung (z.B. 3 Stufen → 5 Stufen) eines Feldes mit vorhandenen Daten –
+mathematisch bei rein nummerierten Stufen unproblematisch (linear, Score/Farbe bleibt
+exakt erhalten), bei Text-Bezeichnungen aber riskant (ein altes "Ja" bei 2 Stufen bekäme
+nachträglich eine Intensität zugeschrieben, die so nie gemeint war). Für eine andere
+Skala bleibt der Weg: archivieren und neu anlegen.
 
 **Skala-Felder ohne Wertung (`good = null`, seit 2026-09-18)**: `good` ist bei
 `kind='scale'` nicht mehr zwingend `'high'`/`'low'` – ein dritter Zustand "Keine
