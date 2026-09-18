@@ -87,11 +87,20 @@
   .header h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 22px; margin: 0; }
   .subpage-header-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .subpage-header-title h1 { font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; }
+  /* Deutlich kräftiger als ein reiner Umriss (gefüllter Kreis statt nur Rand), damit
+     der Rückweg aus einer Unterseite sofort ins Auge fällt. Der Pfeil selbst sitzt bei
+     "←" je nach Font nie ganz exakt in der Mitte der Zeichenbox — der kleine
+     translateY-Schubs gleicht das optisch aus. */
   .back-btn {
-    background: none; border: 1px solid var(--line); border-radius: 50%; width: 30px; height: 30px;
-    flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--ink);
-    cursor: pointer; font-size: 16px; line-height: 1;
+    background: var(--ink); border: none; border-radius: 50%; width: 34px; height: 34px;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--paper);
+    cursor: pointer; font-size: 18px; line-height: 1;
   }
+  .back-btn span { display: block; transform: translateY(-1px); }
+
+  /* Header (+ bei den Tabs auch die Tab-Leiste) bleiben beim Scrollen oben fixiert,
+     damit Menü/Zurück/Tab-Wechsel immer erreichbar sind, ohne erst hochzuscrollen. */
+  .sticky-top { position: sticky; top: 0; z-index: 6; background: var(--paper); padding-top: 20px; margin-top: -20px; }
 
   .header-menu-wrap { position: relative; }
   .menu-btn {
@@ -966,8 +975,16 @@ function closeTopLayer() {
   }
 }
 let openLayerCount = 0;
+// true zwischen einem SELBST ausgelösten history.back() (siehe syncLayerHistory) und
+// dem dadurch erst asynchron ausgelösten popstate - unterscheidet "wir korrigieren nur
+// die History-Position, der State stimmt schon" von einem echten Zurück-Druck. Ohne das
+// hätte z.B. ein direkter Wechsel zwischen zwei Unterseiten übers Menü (schließt dabei
+// nebenbei das Menü-Overlay, die Layer-Zahl sinkt also auch ohne echten Zurück-Druck)
+// fälschlich die Unterseite selbst mit geschlossen, weil das eigene Korrektur-back()
+// ebenfalls ein popstate auslöst.
 let closingLayerViaPopstate = false;
 window.addEventListener('popstate', () => {
+  if (closingLayerViaPopstate) { closingLayerViaPopstate = false; return; }
   if (currentLayerCount() === 0) return; // nichts (mehr) zu schließen - Browser navigiert normal weiter
   closingLayerViaPopstate = true;
   openLayerCount = Math.max(0, openLayerCount - 1); // History-Position ist durch den Pop bereits korrekt
@@ -988,6 +1005,7 @@ function syncLayerHistory() {
     openLayerCount = n;
   } else if (n < openLayerCount) {
     openLayerCount = n;
+    closingLayerViaPopstate = true; // siehe Kommentar an der Deklaration oben
     history.back();
   }
 }
@@ -3974,7 +3992,7 @@ function renderSubpageHeader(titleKey) {
   return `
     <div class="header subpage-header">
       <div class="subpage-header-title">
-        <button type="button" class="back-btn" data-action="subpage-back" aria-label="${esc(t('ariaLabel.back'))}">←</button>
+        <button type="button" class="back-btn" data-action="subpage-back" aria-label="${esc(t('ariaLabel.back'))}"><span>←</span></button>
         <h1 tabindex="-1">${t(titleKey)}</h1>
       </div>
       ${renderMenuButton()}
@@ -3994,25 +4012,24 @@ function renderApp() {
     state.view === 'about' ? renderAbout() : renderManage();
 
   app.innerHTML = `
-    ${subpage
-      ? `
-        ${renderSubpageHeader(state.view === 'manage' ? 'menu.manageFields' : 'about.title')}
-        ${renderInstallHint()}
-      `
-      : `
-        <div class="header">
-          <h1>Logbuch</h1>
-          ${renderMenuButton()}
-        </div>
-        ${renderInstallHint()}
-        <div class="tabs">
-          <button type="button" class="tab${state.view === 'today' ? ' tab--active' : ''}" data-action="set-view" data-view="today">${t('tabs.today')}</button>
-          <button type="button" class="tab${state.view === 'week' ? ' tab--active' : ''}" data-action="set-view" data-view="week">${t('tabs.week')}</button>
-          <button type="button" class="tab${state.view === 'month' ? ' tab--active' : ''}" data-action="set-view" data-view="month">${t('tabs.month')}</button>
-          <button type="button" class="tab${state.view === 'year' ? ' tab--active' : ''}" data-action="set-view" data-view="year">${t('tabs.year')}</button>
-          <button type="button" class="tab${state.view === 'global' ? ' tab--active' : ''}" data-action="set-view" data-view="global">${t('tabs.global')}</button>
-        </div>
-      `}
+    <div class="sticky-top">
+      ${subpage
+        ? renderSubpageHeader(state.view === 'manage' ? 'menu.manageFields' : 'about.title')
+        : `
+          <div class="header">
+            <h1>Logbuch</h1>
+            ${renderMenuButton()}
+          </div>
+          <div class="tabs">
+            <button type="button" class="tab${state.view === 'today' ? ' tab--active' : ''}" data-action="set-view" data-view="today">${t('tabs.today')}</button>
+            <button type="button" class="tab${state.view === 'week' ? ' tab--active' : ''}" data-action="set-view" data-view="week">${t('tabs.week')}</button>
+            <button type="button" class="tab${state.view === 'month' ? ' tab--active' : ''}" data-action="set-view" data-view="month">${t('tabs.month')}</button>
+            <button type="button" class="tab${state.view === 'year' ? ' tab--active' : ''}" data-action="set-view" data-view="year">${t('tabs.year')}</button>
+            <button type="button" class="tab${state.view === 'global' ? ' tab--active' : ''}" data-action="set-view" data-view="global">${t('tabs.global')}</button>
+          </div>
+        `}
+    </div>
+    ${renderInstallHint()}
     ${noticeHtml}
     ${body}
     ${state.deleteConfirm ? renderDeleteConfirm() : ''}

@@ -318,7 +318,24 @@ ersetzen Header **und** Tab-Leiste komplett durch einen eigenen `renderSubpageHe
 Highlight unter totem Header" mehr wie vorher. Der ←-Button und Android-/Browser-Zurück
 (`closeTopLayer()`, siehe unten) führen zum gemerkten `previousTabView` zurück, nie
 hart zu "Heute". Nach dem Öffnen einer Unterseite wird deren `<h1>` fokussiert
-(`tabindex="-1"`, screenreaderfreundliche Bestätigung der Navigation).
+(`tabindex="-1"`, screenreaderfreundliche Bestätigung der Navigation). Header (+ bei
+Tab-Ansichten auch die Tab-Leiste) sind über `.sticky-top` (`position: sticky`)
+angepinnt, damit Menü/Zurück/Tab-Wechsel beim Scrollen immer erreichbar bleiben.
+
+**History-Layer-Zähler statt einfacher An/Aus-Prüfung**: Overlay (z.B. Burger-Menü) und
+Unterseite können gleichzeitig offen sein (z.B. Menü öffnen innerhalb von "Verwalten"),
+`currentLayerCount()`/`syncLayerHistory()` zählen deshalb 0–2 statt nur zu schließen/
+nicht zu schließen. Eine Falle dabei: schließt eine einzelne State-Änderung **zwei**
+Dinge auf einmal (z.B. Wechsel Verwalten→Über Logbuch übers Menü schließt dabei das
+Menü-Overlay UND wechselt gleichzeitig die Unterseite — Layer-Zahl sinkt von 2 auf 1,
+ohne dass die Unterseite selbst verlassen wird), löst `syncLayerHistory()` intern ein
+korrigierendes `history.back()` aus. Das feuert asynchron ein `popstate`, das ohne
+Gegenmaßnahme vom `popstate`-Listener fälschlich als echter Zurück-Druck interpretiert
+worden wäre und dabei eine zweite Ebene mitgeschlossen hätte (die Unterseite landete
+dann fälschlich zurück beim ursprünglichen Tab). `closingLayerViaPopstate` wird deshalb
+auch vor einem selbst ausgelösten `history.back()` gesetzt, nicht nur beim echten
+Zurück-Druck, und der `popstate`-Listener konsumiert dieses "eigene" Pop-Event ohne
+weitere Aktion.
 
 **Dark Mode** (seit 2026-09-16): folgt standardmäßig `prefers-color-scheme`, im
 Burger-Menü überschreibbar (System/Hell/Dunkel als Pill-Toggle, gleiches Muster wie
