@@ -209,7 +209,14 @@
 
   .habit-row--slider { flex-direction: column; align-items: stretch; gap: 6px; }
   .slider-row { display: flex; align-items: center; gap: 10px; width: 100%; }
-  .slider-value { font-size: 12px; color: var(--sand); min-width: 2em; text-align: right; flex-shrink: 0; }
+  /* Feste statt min-width, sonst wird der Regler bei langen Bezeichnungen als Wert
+     sichtbar schmaler (der Wertetext wächst, .value-slider hat flex:1 und muss dafür
+     Platz abgeben) - fühlte sich beim Ziehen wie eine Verzerrung an. Lange Texte werden
+     stattdessen abgeschnitten (…), der volle Text bleibt im Datenmodell erhalten. */
+  .slider-value {
+    font-size: 12px; color: var(--sand); width: 70px; text-align: right; flex-shrink: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .slider-clear {
     flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line);
     background: transparent; color: var(--sand); font-size: 13px; line-height: 1; cursor: pointer;
@@ -2097,8 +2104,12 @@ function syncHabitFormFromDom() {
       const showValueEl = document.getElementById('habit-form-slider-show-value');
       if (showValueEl) f.sliderShowValue = showValueEl.checked;
     }
-    const labelsToggleEl = document.getElementById('habit-form-labels-toggle');
-    if (labelsToggleEl) f.labelsEnabled = labelsToggleEl.checked;
+    // f.labelsEnabled NICHT hier aus der Checkbox neu lesen - das wird bereits vom
+    // dedizierten 'habit-labels-toggle'-Handler gepflegt. Ein erneutes Lesen hier würde
+    // bei genau diesem Klick den NEUEN (schon umgeschalteten) Checkbox-Zustand vorzeitig
+    // übernehmen, während die Bezeichnungs-Inputs im DOM noch den ALTEN Zustand zeigen -
+    // dadurch wurden beim Zurückschalten fälschlich die (noch alten) Zahlen statt der
+    // zuvor eingetragenen Bezeichnungen eingelesen und der echte Text ging verloren.
     if (f.labelsEnabled) {
       document.querySelectorAll('[data-label-index]').forEach((el) => {
         f.labels[Number(el.dataset.labelIndex)] = el.value;
@@ -2147,6 +2158,14 @@ async function handleHabitSave() {
   } finally {
     state.habitFormSaving = false;
     render();
+    // Die Meldung erscheint oben auf der Seite (siehe renderApp) - bei einem langen
+    // Formular weiter unten sonst außerhalb des sichtbaren Bereichs, ohne dass man
+    // merkt, warum das Speichern scheinbar nichts getan hat.
+    if (state.notice) {
+      requestAnimationFrame(() => {
+        document.querySelector('.notice')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
   }
 }
 
@@ -2993,8 +3012,11 @@ function renderHabitFormPreview(f) {
     displayStyle: f.displayStyle,
     sliderShowValue: f.sliderShowValue,
   };
+  // Beim Schieberegler direkt einen Beispielwert (Mittelwert) zeigen statt des leeren
+  // "-"-Zustands - der Regler steht ohnehin schon mittig, die Werteanzeige sollte dazu
+  // passen, damit die Vorschau auch die Bezeichnung/Farbe an der Stelle zeigt.
   const widget = isSlider
-    ? renderHabitSlider(previewHabit, undefined)
+    ? renderHabitSlider(previewHabit, Math.round((f.min + f.max) / 2))
     : `<div class="habit-options">${renderHabitOptions(previewHabit, undefined)}</div>`;
   return `<div class="field-preview" inert aria-hidden="true">${widget}</div>`;
 }
@@ -3420,6 +3442,10 @@ function renderNumberCharts(visibleHabits, dateKeys) {
 function scrollToHabitForm() {
   requestAnimationFrame(() => {
     document.getElementById('habit-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Direkt den Namen fokussieren, statt erst hinscrollen und dann selbst antippen zu
+    // müssen - öffnet auf dem Handy gleich die Tastatur (funktioniert nur zuverlässig,
+    // weil scrollToHabitForm() synchron aus einem Klick-Handler heraus aufgerufen wird).
+    document.getElementById('habit-form-name')?.focus();
   });
 }
 
