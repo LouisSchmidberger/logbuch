@@ -377,6 +377,10 @@
     background: rgba(var(--moss-rgb), 0.08); border: 1px solid rgba(var(--moss-rgb), 0.3);
     border-radius: 6px; padding: 16px;
   }
+  .a11y-highlight summary.manage-section-title,
+  .mental-health-highlight summary.manage-section-title { cursor: pointer; }
+  .a11y-highlight[open] summary.manage-section-title,
+  .mental-health-highlight[open] summary.manage-section-title { margin-bottom: 8px; }
   .a11y-highlight .manage-section-title { margin-bottom: 8px; }
   .a11y-highlight > .tip-body { margin-bottom: 14px; }
   .a11y-highlight .tip:last-child { margin-bottom: 0; }
@@ -2348,6 +2352,13 @@ function resetIOSZoomOnStandaloneStart() {
 function isInstallHintDismissed() {
   try { return localStorage.getItem('installHintDismissed') === 'true'; } catch { return false; /* z.B. privater Modus */ }
 }
+
+// Merkt sich pro Gerät/Browser (nicht kontoweit), ob einer der hervorgehobenen
+// "Über Logbuch"-Bereiche (Barrierefreiheit/Psychische Gesundheit) mal zugeklappt
+// wurde - Standard bleibt offen, damit sich am üblichen Erstbesuch nichts ändert.
+function isAboutSectionCollapsed(key) {
+  try { return localStorage.getItem(key) === 'true'; } catch { return false; }
+}
 function installHintText() {
   return isIOSDevice() ? t('installHint.ios') : t('installHint.other');
 }
@@ -3107,8 +3118,8 @@ function renderA11ySection() {
     ['about.a11y.screenreader.title', 'about.a11y.screenreader.body'],
   ];
   return `
-    <div class="a11y-highlight">
-      <h3 class="manage-section-title">${t('about.a11y.title')}</h3>
+    <details class="a11y-highlight" data-collapse-key="aboutA11yCollapsed" ${isAboutSectionCollapsed('aboutA11yCollapsed') ? '' : 'open'}>
+      <summary class="manage-section-title">${t('about.a11y.title')}</summary>
       <p class="tip-body">${t('about.a11y.intro')}</p>
       ${items.map(([titleKey, bodyKey]) => `
         <div class="tip">
@@ -3117,7 +3128,7 @@ function renderA11ySection() {
         </div>
       `).join('')}
       <p class="tip-body a11y-feedback">${t('about.a11y.feedback')}</p>
-    </div>
+    </details>
   `;
 }
 
@@ -3132,8 +3143,8 @@ function renderMentalHealthSection() {
     ['about.mentalHealth.noSubstitute.title', 'about.mentalHealth.noSubstitute.body'],
   ];
   return `
-    <div class="mental-health-highlight">
-      <h3 class="manage-section-title">${t('about.mentalHealth.title')}</h3>
+    <details class="mental-health-highlight" data-collapse-key="aboutMentalHealthCollapsed" ${isAboutSectionCollapsed('aboutMentalHealthCollapsed') ? '' : 'open'}>
+      <summary class="manage-section-title">${t('about.mentalHealth.title')}</summary>
       <p class="tip-body">${t('about.mentalHealth.intro')}</p>
       ${items.map(([titleKey, bodyKey]) => `
         <div class="tip">
@@ -3146,7 +3157,7 @@ function renderMentalHealthSection() {
         <p class="tip-body">${t('about.mentalHealth.crisis.body')}</p>
       </div>
       <p class="tip-body mental-health-feedback">${t('about.mentalHealth.feedback')}</p>
-    </div>
+    </details>
   `;
 }
 
@@ -4100,6 +4111,15 @@ app.addEventListener('input', (e) => {
   slider.style.setProperty('--slider-pct', pct + '%');
   const valueEl = document.getElementById('slider-value-' + habit.id);
   if (valueEl) valueEl.textContent = String(v);
+});
+
+// Merkt sich, wenn einer der hervorgehobenen "Über Logbuch"-Bereiche zu-/aufgeklappt
+// wird (siehe isAboutSectionCollapsed) - reines DOM-natives <details>-Verhalten, kein
+// eigener Klick-Handler/Re-Render nötig, nur das Persistieren des Zustands.
+app.addEventListener('toggle', (e) => {
+  const details = e.target.closest('details[data-collapse-key]');
+  if (!details) return;
+  try { localStorage.setItem(details.dataset.collapseKey, details.open ? 'false' : 'true'); } catch { /* egal, bleibt dann halt nicht gemerkt */ }
 });
 
 // Menü schließen, wenn außerhalb davon geklickt wird.
