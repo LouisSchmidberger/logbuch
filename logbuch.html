@@ -121,8 +121,8 @@
   .menu-panel {
     position: absolute; top: 38px; right: 0; z-index: 10; width: 250px;
     display: flex; flex-direction: column; gap: 8px;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 14px;
-    box-shadow: 0 4px 14px var(--shadow);
+    background: var(--surface); border: 1px solid var(--ink); border-radius: 4px; padding: 14px;
+    box-shadow: 0 12px 32px var(--shadow);
   }
   .menu-panel .push-row { margin-bottom: 0; }
   .menu-group { display: flex; flex-direction: column; gap: 9px; }
@@ -137,12 +137,12 @@
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   .menu-item-btn {
-    font-family: inherit; font-size: 13px; padding: 8px 10px; border: none;
-    border-radius: 3px; background: transparent; color: var(--ink); cursor: pointer; text-align: left;
+    font-family: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 3px; background: var(--input-bg); color: var(--ink); cursor: pointer; text-align: left;
   }
-  .menu-item-btn:hover, .menu-item-btn:focus-visible { background: rgba(var(--moss-rgb), 0.10); }
-  .menu-item-btn--danger { color: var(--rust); }
-  .menu-item-btn--danger:hover, .menu-item-btn--danger:focus-visible { background: rgba(var(--rust-rgb), 0.08); }
+  .menu-item-btn:hover, .menu-item-btn:focus-visible { background: rgba(var(--moss-rgb), 0.14); border-color: var(--moss); }
+  .menu-item-btn--danger { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.4); }
+  .menu-item-btn--danger:hover, .menu-item-btn--danger:focus-visible { background: rgba(var(--rust-rgb), 0.12); border-color: var(--rust); }
 
   .modal-overlay {
     position: fixed; inset: 0; background: var(--scrim); z-index: 50;

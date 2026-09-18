@@ -310,9 +310,15 @@ Konto (Export/Recovery-Key/Löschen/Abmelden) unten. Jede Gruppe steckt in einem
 `.menu-group` (kleines, dezentes Caps-Label, `menu.groupNavigation`/`menu.groupSettings`/
 `menu.groupAccount`) mit `.menu-group-divider` dazwischen – seit 2026-09-19 (vorher nur
 eine dünne Trennlinie ohne Beschriftung, wirkte trotz Gruppierung noch zu wenig
-strukturiert/zu eng). `.menu-item-btn` ist bewusst randlos (nur Hover-/Fokus-Hintergrund)
-statt einzeln umrandet – einheitlicher mit den randlosen `.menu-row`-Zeilen (Sprache/
-Zeit/Darstellung/Muster), die vorher optisch aus der Reihe fielen.
+strukturiert/zu eng). `.menu-item-btn` nutzt `--input-bg` (auf Hell weiß, deutlich
+gegen `--surface`/`--paper` abgesetzt – dieselbe Fläche wie `<select>`/Textfelder in
+der App) statt randlos/transparent zu sein – ein kurzer randloser Zwischenstand am
+selben Tag wirkte nicht mehr klickbar genug, zurückgerudert. `.menu-panel` selbst hebt
+sich seitdem außerdem über einen kräftigeren Rand (`var(--ink)` statt `var(--line)`)
+und stärkeren Schlagschatten vom Hintergrund ab – `--surface` ist im Hellmodus
+bewusst identisch mit `--paper` (siehe Dark-Mode-Abschnitt, wichtig für nahtlose
+`.sticky-top`-Header), reichte für ein freischwebendes Popover wie das Menü aber nicht
+als Abgrenzung.
 
 **Unterseiten statt Tab-Swap** (seit 2026-09-18): "Felder verwalten" und "Über Logbuch"
 sind `state.view`-Werte wie die Tabs, aber keine Tabs — sie werden über
