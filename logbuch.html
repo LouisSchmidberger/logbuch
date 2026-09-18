@@ -366,6 +366,7 @@
   .manage-section-divider { border-top: 1px solid var(--line); margin: 22px 0 14px; }
   .manage-section-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 15px; margin: 0 0 4px; }
   .about-status { font-size: 13px; line-height: 1.5; color: var(--ink); font-weight: 600; margin: -8px 0 10px; }
+  .about-status--secondary { font-weight: 400; color: var(--sand); margin: 0 0 10px; }
   .about-intro { font-size: 13px; line-height: 1.5; color: var(--sand); margin: 0 0 22px; }
   .tip-group .manage-section-title { margin-bottom: 12px; }
   .tip { margin-bottom: 16px; }
@@ -1127,6 +1128,7 @@ const STRINGS = {
     'about.title': 'Über Logbuch',
     'about.intro': 'Ein paar Dinge, die sich nicht von selbst erklären — zum Nachlesen, falls du magst.',
     'about.status': 'Beta – Stand {date}. Ich baue laufend weiter, melde dich gern, falls dir etwas auffällt.',
+    'about.monetizationNote': 'Aktuell komplett kostenlos. Es ist möglich, dass ich das später in Teilen monetarisiere (z. B. über ein Abo für neue Funktionen) – falls das passiert, wird das rechtzeitig angekündigt, statt dich zu überraschen.',
     'about.group.usage': 'Bedienung',
     'about.group.fields': 'Felder & Auswertung',
     'about.group.appearance': 'Darstellung',
@@ -1406,6 +1408,7 @@ const STRINGS = {
     'about.title': 'About Logbuch',
     'about.intro': 'A few things that are not obvious at first glance — here to read up on if you are curious.',
     'about.status': 'Beta – as of {date}. I am actively continuing to build this out, feel free to reach out if you notice anything.',
+    'about.monetizationNote': 'Currently completely free. It is possible that I will monetize parts of this later (e.g. via a subscription for new features) – if that happens, it will be announced in advance instead of catching you by surprise.',
     'about.group.usage': 'Using the app',
     'about.group.fields': 'Fields & evaluation',
     'about.group.appearance': 'Appearance',
@@ -3102,6 +3105,7 @@ function renderAbout() {
       <div class="day-label"><span class="day-date">${t('about.title')}</span></div>
     </div>
     <p class="about-status">${t('about.status', { date: formatDMY(APP_STATUS_DATE) })}</p>
+    <p class="about-status about-status--secondary">${t('about.monetizationNote')}</p>
     <p class="about-intro">${t('about.intro')}</p>
     ${renderA11ySection()}
     <div class="manage-section-divider"></div>
