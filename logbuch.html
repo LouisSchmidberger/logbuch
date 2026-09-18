@@ -895,6 +895,7 @@ const STRINGS = {
     'error.db.duplicateGeneric': 'Das gibt es in dieser Form schon.',
     'error.db.notNull': 'Ein Pflichtfeld fehlt oder enthält gerade keinen gültigen Wert – bitte alle Felder prüfen und nochmal versuchen.',
     'error.db.check': 'Einer der eingegebenen Werte liegt außerhalb des erlaubten Bereichs.',
+    'error.db.accountGone': 'Dieses Konto existiert nicht mehr (z.B. von einem anderen Gerät aus gelöscht). Du wurdest ausgeloggt.',
     'error.db.foreignKey': 'Ein verknüpfter Eintrag existiert nicht mehr – bitte die Seite neu laden und nochmal versuchen.',
     'error.db.network': 'Keine Verbindung zum Server – prüfe deine Internetverbindung und versuch es nochmal.',
     'error.db.sessionExpired': 'Deine Sitzung ist abgelaufen – bitte lade die Seite neu und melde dich erneut an.',
@@ -1168,6 +1169,7 @@ const STRINGS = {
     'error.db.duplicateGeneric': 'This already exists in this form.',
     'error.db.notNull': 'A required field is missing or currently has no valid value – please check all fields and try again.',
     'error.db.check': 'One of the entered values is outside the allowed range.',
+    'error.db.accountGone': 'This account no longer exists (e.g. deleted from another device). You have been signed out.',
     'error.db.foreignKey': 'A linked entry no longer exists – please reload the page and try again.',
     'error.db.network': 'No connection to the server – check your internet connection and try again.',
     'error.db.sessionExpired': 'Your session has expired – please reload the page and sign in again.',
@@ -1608,6 +1610,15 @@ function translateDbError(message) {
   if (/violates check constraint/.test(message)) {
     return t('error.db.check');
   }
+  if (/violates foreign key constraint "\w+_user_id_fkey"/.test(message)) {
+    // Der referenzierte Account existiert serverseitig nicht mehr - z.B. von einem
+    // anderen Gerät aus gelöscht, während dieses Gerät noch einen gültigen, aber
+    // inzwischen verwaisten Access-Token hatte (Supabase kann bereits ausgestellte
+    // Access-Token nicht vorzeitig entziehen, siehe CLAUDE.md "Datenschutz &
+    // Sicherheit"). Statt des kryptischen FK-Fehlers hier lokal ausloggen.
+    forceLogoutAccountGone();
+    return t('error.db.accountGone');
+  }
   if (/violates foreign key constraint/.test(message)) {
     return t('error.db.foreignKey');
   }
@@ -1618,6 +1629,19 @@ function translateDbError(message) {
     return t('error.db.sessionExpired');
   }
   return message;
+}
+
+// Best effort, ausgelöst aus translateDbError: lokale Session sofort verwerfen
+// (scope: 'local' statt des Standard-Aufrufs, da der Server bei einem bereits
+// gelöschten Account ohnehin keinen gültigen Refresh-Token mehr kennt - der
+// Server-Roundtrip darf das lokale Ausloggen nicht blockieren). accountGoneHandled
+// verhindert, dass mehrere gleichzeitig fehlschlagende Requests das mehrfach anstoßen.
+let accountGoneHandled = false;
+async function forceLogoutAccountGone() {
+  if (accountGoneHandled) return;
+  accountGoneHandled = true;
+  currentDek = null;
+  try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* egal, wir wollen nur lokal raus */ }
 }
 
 // Text-/Passwort-Eingabe mit optionalem "×"-Button zum Leeren (nur wenn nicht leer)
@@ -2643,6 +2667,11 @@ function renderPasswordRecovery() {
         currentDek = dek;
         await cacheDek(userId, dek);
       }
+      // Supabase invalidiert andere Sessions beim Passwort-Ändern NICHT automatisch
+      // (bekannte Lücke, siehe supabase/auth#797) - sonst bliebe ein anderes Gerät mit
+      // dem alten Passwort/DEK-Stand eingeloggt. Best effort: schlägt der Aufruf fehl,
+      // ist das eigentliche Passwort-Update trotzdem schon durch, deshalb kein throw.
+      try { await supabase.auth.signOut({ scope: 'others' }); } catch { /* best effort */ }
       state.recoveryBusy = false;
       state.passwordRecovery = false;
       state.recoveryFallbackConfirm = false;
@@ -3422,7 +3451,7 @@ function renderTutorialStep1() {
         ${reminderTimeInputHtml('tutorial-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', state.pushStatus !== 'on')}
       </div>
       <button type="button" class="auth-submit" data-action="tutorial-next">${t('common.next')}</button>
-      ${!isStandaloneDisplay() ? `<button type="button" class="auth-toggle" data-action="tutorial-back">${t('common.back')}</button>` : ''}
+      ${!isStandaloneDisplay() && isMobileDevice() ? `<button type="button" class="auth-toggle" data-action="tutorial-back">${t('common.back')}</button>` : ''}
       <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${t('tutorial.skip')}</button>
     </div>
     ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
@@ -3840,7 +3869,8 @@ app.addEventListener('click', async (e) => {
     // eines offenen Formulars erscheint. Von Schritt 1 aus geht's zurück zum
     // Install-Hinweis davor (nicht Teil der Schritt-Zählung, siehe renderTutorial) —
     // der Button dafür wird nur gezeigt, wenn man diese Seite überhaupt gesehen haben
-    // kann (nicht standalone), siehe renderTutorialStep1.
+    // kann (nicht standalone UND Mobilgerät, siehe renderTutorial), siehe
+    // renderTutorialStep1.
     if (state.tutorialStep === 1) {
       state.tutorialInstallAck = false;
     } else {
@@ -4151,6 +4181,7 @@ app.addEventListener('pointerup', async (e) => {
 let authFlowInFlight = false;
 
 async function completeAuthFlow(userId, password) {
+  accountGoneHandled = false;
   await unlockEncryption(userId, password);
   state.loading = true;
   render();
