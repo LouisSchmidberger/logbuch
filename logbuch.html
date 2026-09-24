@@ -1259,7 +1259,8 @@ const STRINGS = {
     'tutorial.skipConfirm.body': 'Du kannst jederzeit später eigene Felder über „Felder verwalten" im Menü anlegen.',
     'tutorial.skipConfirm.confirmButton': 'Ja, überspringen',
     'tutorial.installGate.title': 'Bevor es losgeht',
-    'tutorial.installGate.bodyContinuation': 'Mach das am besten gleich jetzt: installiere Logbuch auf deinem Home-/Startbildschirm und öffne es danach über das neue Symbol – diese Seite hier brauchst du dann nicht mehr, es geht automatisch mit dem Tutorial weiter. Falls du dich dort nochmal kurz anmelden musst: einfach mit denselben Zugangsdaten wie gerade eben.',
+    'tutorial.installGate.action': 'Mach das am besten gleich jetzt: installiere Logbuch auf deinem Home-/Startbildschirm und öffne es danach über das neue Symbol – diese Seite hier brauchst du dann nicht mehr, es geht automatisch mit dem Tutorial weiter.',
+    'tutorial.installGate.reloginNote': 'Danach musst du dich dort einmal neu anmelden – mit denselben Zugangsdaten wie gerade eben.',
     'tutorial.installGate.browserFallbackButton': 'Stattdessen im Browser fortfahren (nicht empfohlen)',
     'tutorial.step1.title': 'Willkommen',
     'tutorial.step1.body': 'Logbuch lebt davon, dass du täglich ein paar Werte einträgst – je regelmäßiger, desto aussagekräftiger die Auswertung. Push-Erinnerungen helfen dir, das nicht zu vergessen – tippe dafür unten auf „Erinnerungen aktivieren" (nicht einfach nur „Weiter"):',
@@ -1546,7 +1547,8 @@ const STRINGS = {
     'tutorial.skipConfirm.body': 'You can always create your own fields later via "Manage fields" in the menu.',
     'tutorial.skipConfirm.confirmButton': 'Yes, skip',
     'tutorial.installGate.title': 'Before you start',
-    'tutorial.installGate.bodyContinuation': 'Best do this right now: install Logbuch to your home/start screen and then open it via the new icon – you will not need this page anymore, the tutorial continues automatically. If you need to sign in again there: just use the same credentials as just now.',
+    'tutorial.installGate.action': 'Best do this right now: install Logbuch to your home/start screen and then open it via the new icon – you will not need this page anymore, the tutorial continues automatically.',
+    'tutorial.installGate.reloginNote': 'You will then need to sign in there once more – with the same credentials as just now.',
     'tutorial.installGate.browserFallbackButton': 'Continue in the browser instead (not recommended)',
     'tutorial.step1.title': 'Welcome',
     'tutorial.step1.body': 'Logbuch works by entering a few values every day – the more regularly, the more meaningful the evaluation. Push reminders help you not to forget – tap "Enable reminders" below to do that (not just "Next"):',
@@ -3820,7 +3822,9 @@ function renderTutorialInstallGate() {
   return `
     <div class="auth-box">
       <h1>${t('tutorial.installGate.title')}</h1>
-      <p class="tutorial-text">${esc(installHintText())} ${t('tutorial.installGate.bodyContinuation')}${infoTip(installStepsText())}</p>
+      <p class="tutorial-text">${esc(installHintText())}</p>
+      <p class="tutorial-text">${t('tutorial.installGate.action')}${infoTip(installStepsText())}</p>
+      <p class="habit-form-lock-note">${t('tutorial.installGate.reloginNote')}</p>
       <button type="button" class="auth-toggle" data-action="tutorial-install-ack">${t('tutorial.installGate.browserFallbackButton')}</button>
     </div>
   `;

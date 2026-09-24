@@ -611,6 +611,15 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
   nichts an der App selbst). `RESEND_API_KEY` liegt **ausschließlich** im Supabase-
   Dashboard-Formular, nie im Repo. `supabase/config.toml` dokumentiert die
   SMTP-Konfiguration (ohne den Key selbst, per `env(RESEND_API_KEY)`-Platzhalter).
+  **Troubleshooting "Bestätigungsmail kommt nie an"**: als Erstes im Supabase-
+  Dashboard → Authentication → Emails → SMTP Settings prüfen, ob "Enable custom
+  SMTP" noch aktiv ist — der Schalter kann sich (Ursache unklar, kein Zusammenhang
+  mit einzelnen Bounces durch Tippfehler in Empfängeradressen) unabhängig von
+  Code-/Repo-Änderungen ausschalten. Ist er aus, läuft der Versand unbemerkt über
+  Supabase's eingebauten Mailer zurück (2 Mails/Stunde, siehe oben) statt über
+  Resend — genau das war am 2026-09-23 die Ursache, als zwei Test-Registrierungen
+  keine Mail bekamen. Erst danach im Resend-Dashboard ("Emails"-Tab) nachsehen,
+  ob die konkrete Adresse einen Bounce/Fehler zeigt.
 
 - **Passwort-Policy** (seit 2026-09-18): Mindestlänge auf 10 Zeichen angehoben
   (`auth.minimum_password_length` in `supabase/config.toml`, vorher 6 — bewusst
