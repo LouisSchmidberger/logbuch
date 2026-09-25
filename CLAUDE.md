@@ -105,6 +105,9 @@ Erinnerungen), im Burger-Menü der App änderbar. `onboarding_completed` (bool, 
 `false`) steuert, ob der Account noch das Onboarding-Tutorial sieht (siehe Abschnitt
 unten). `summary_notifications` (bool, Default `true`) schaltet die Wochen-/
 Monatsübersicht-Benachrichtigungen ab (siehe Erinnerungen, im Burger-Menü änderbar).
+`timezone` (IANA-Name, Default `'Europe/Berlin'`, per Trigger gegen
+`pg_timezone_names` validiert) ist die Zeitzone, in der alle Erinnerungen dieses
+Nutzers ausgewertet werden – folgt still dem Gerät (siehe Erinnerungen → Zeitzone).
 Die Zeile wird bei Registrierung automatisch angelegt (Trigger
 `on_auth_user_created_seed_settings`). RLS wie oben.
 
@@ -114,9 +117,9 @@ Abschnitt "Verschlüsselung". **Kein** automatischer Seed-Trigger bei Registrier
 (anders als `habit_definitions`/`user_settings`) — die Einrichtung passiert bewusst
 erst beim ersten echten Login, da sie das Passwort im Klartext braucht. RLS wie oben.
 
-**Der Reminder-Check** in der Edge Function fragt dafür live die aktiven (nicht
-archivierten) `habit_definitions` je Nutzer ab – keine hartkodierte Liste mehr, kein
-manuelles Synchronhalten nötig. `kind='group'`-Felder werden dabei ausgeschlossen
+**Der Reminder-Check** (SQL-Funktion `get_due_notifications`, siehe Erinnerungen)
+fragt dafür live die aktiven (nicht archivierten) `habit_definitions` je Nutzer ab –
+keine hartkodierte Liste mehr, kein manuelles Synchronhalten nötig. `kind='group'`-Felder werden dabei ausgeschlossen
 (Gruppen sind nie direkt befüllbar, tauchen nie in `filled_slugs` auf – ohne den
 Ausschluss würden sie die Sammel-Erinnerung dauerhaft fälschlich als "fehlend" auslösen).
 Erinnert wird, sobald mindestens ein zur jeweiligen Zeit fälliges aktives Feld an dem
@@ -474,10 +477,14 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 ## Erinnerungen (Web Push)
 
 Eine einzige Edge Function `send-notifications` läuft **alle 15 Minuten** (statt
-fester Zeitpunkte) und prüft pro Nutzer, ob gerade dessen Standard-Erinnerungszeit ist
-bzw. pro Feld, ob dessen eigene Zeit erreicht ist:
-- **Standard-Erinnerungszeit (`user_settings.default_reminder_minute`, Default 22:00
-  Berliner Zeit, im Menü in 15-Minuten-Schritten änderbar)**: alle aktiven Felder OHNE
+fester Zeitpunkte). Wer gerade was bekommt, entscheidet komplett die SQL-Funktion
+`public.get_due_notifications(p_now, p_after, p_limit)` (Migrationen
+`20260925150000_*`/`20260925160000_*`) – die Edge Function übersetzt deren Zeilen nur
+noch in Nachrichten (`PUSH_TEXTS`) und verschickt sie (parallel, `SEND_CONCURRENCY`).
+Alle Zeiten/Daten gelten in der **Ortszeit des jeweiligen Nutzers**
+(`user_settings.timezone`):
+- **Standard-Erinnerungszeit (`user_settings.default_reminder_minute`, Default 22:00,
+  im Menü in 15-Minuten-Schritten änderbar)**: alle aktiven Felder OHNE
   eigene `reminder_minute` – unabhängig von `kind` (Skala oder Zahlenwert) – werden
   gemeinsam geprüft. Fehlt an diesem Tag noch mindestens eines davon, gibt es EINE
   Sammel-Nachricht (nicht eine pro Feld). Zusätzlich zu dieser Zeit: sonntags
@@ -514,14 +521,31 @@ lange Nachricht). Eine Erinnerung zu einer eigenen Zeit nennt dagegen das konkre
 Feld (`Erinnerung: <Namen> noch nicht eingetragen.`), da dort meist gezielt ein
 einzelnes Feld hervorgehoben werden soll (z.B. Gewicht).
 
-**15-Minuten-Raster, DST-sicher ohne manuelles Nachjustieren**: `pg_cron` kennt keine
-Zeitzonen mit Sommerzeit-Umstellung, läuft nur in UTC. Die Function läuft deshalb
-**alle 15 Minuten** (`*/15 * * * *`, siehe `supabase/migrations/`) und bestimmt sich
-selbst per `Intl.DateTimeFormat` mit `timeZone: 'Europe/Berlin'`, welche Berliner
-Minute seit Mitternacht gerade ist – das deckt beliebige `reminder_minute`-Werte
-automatisch ab, ganz ohne feste UTC-Zeitpunkte-Liste. Der Berlin-UTC-Offset ist immer
-eine volle Stunde, daher bleibt das 15-Minuten-Raster unabhängig von Sommer-/
-Winterzeit exakt ausgerichtet (Intl-API übernimmt die Umrechnung automatisch).
+**Zeitzone pro Nutzer**: `get_due_notifications` rechnet für jeden Nutzer per `p_now
+AT TIME ZONE timezone` dessen lokales Datum ("heute") und lokalen Viertelstunden-Slot
+aus (auf 15 Minuten **abgerundet**, damit ein um ein paar Minuten verspäteter Cron-Lauf
+keine Erinnerung verpasst). Die App gleicht `timezone` still mit der Zeitzone des Geräts
+ab (`syncTimezone` in `logbuch.html`, bei jedem Laden der Einstellungen und beim
+Zurückkehren in die App per `visibilitychange`; im Menü als Hinweis unter der
+Standard-Erinnerungszeit angezeigt). Bewusste Entscheidung für "folgt dem Gerät" statt
+manueller Einstellung: die App speichert Einträge unter dem **lokalen Gerätedatum** –
+nur wenn die Erinnerung derselben Zeitzone folgt, prüfen beide garantiert denselben
+Tag. Grenzen (akzeptiert): umgestellt wird erst, wenn die App am neuen Ort einmal
+geöffnet wurde; bei zwei Geräten in verschiedenen Zeitzonen gilt das zuletzt
+geöffnete. `pg_cron` läuft nur in UTC – das 15-Minuten-Raster passt trotzdem für alle
+realen Zeitzonen, da deren Offsets immer auf Viertelstunden liegen (z.B. Indien +5:30,
+Nepal +5:45), inkl. Sommer-/Winterzeit (übernimmt Postgres automatisch).
+
+**Skalierung**: die SQL-Funktion siebt früh auf Nutzer aus, bei denen im aktuellen
+Slot überhaupt etwas fällig sein kann, und liefert nur fällige Abos zurück – die Edge
+Function lädt also nie mehr alle Nutzer. Abruf seitenweise per **Keyset-Pagination**
+(`p.id > p_after`, `PAGE_SIZE` 500), da PostgREST jede Antwort bei `api.max_rows`
+(1000) still kappt; Keyset statt Offset, damit eine zwischen zwei Seiten wegfallende
+Zeile kein Abo überspringen lässt. `p_now` wird einmal pro Lauf festgelegt (alle Seiten
+rechnen mit demselben Zeitpunkt) und macht die Funktion mit beliebigen Zeitpunkten
+testbar (`select * from get_due_notifications(timestamptz '...')` per `supabase db
+query --linked`). Die Funktion liefert Push-Endpoints aller Nutzer – deshalb nur für
+`service_role` ausführbar.
 
 Bekannte Kleinigkeit: in der einen Nacht der Zeitumstellung selbst kann ein einzelnes
 15-Minuten-Fenster je nach Richtung doppelt oder gar nicht auftreten (entspricht dem
