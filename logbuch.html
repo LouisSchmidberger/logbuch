@@ -412,6 +412,16 @@
     display: block; width: 100%; margin-top: 4px; padding: 11px; font-family: inherit; font-size: 14px; font-weight: 600;
     border: none; border-radius: 4px; background: var(--moss); color: var(--paper); cursor: pointer;
   }
+  .feedback-form textarea {
+    font-family: inherit; font-size: 14px; line-height: 1.5; padding: 9px 10px; border: 1px solid var(--line);
+    border-radius: 3px; background: var(--input-bg); color: var(--ink); width: 100%; min-height: 180px; resize: vertical;
+  }
+  .feedback-intro { margin-bottom: 14px; }
+  .feedback-form .habit-form-lock-note { margin: 0 0 14px; }
+  .link-btn {
+    font-family: inherit; font-size: inherit; padding: 0; border: none; background: none; color: var(--moss);
+    text-decoration: underline; cursor: pointer; font-style: normal; font-weight: 600;
+  }
   .manage-section-divider { border-top: 1px solid var(--line); margin: 22px 0 14px; }
   .manage-section-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 15px; margin: 0 0 4px; }
   .about-status { font-size: 13px; line-height: 1.5; color: var(--ink); font-weight: 600; margin: 0 0 10px; }
@@ -929,6 +939,7 @@ const state = {
   unlockBusy: false,
   recoveryFallbackConfirm: false, // "Recovery-Key auch verloren?" im Passwort-Reset aufgeklappt
   recoveryBusy: false,
+  feedback: { message: '', anonymous: false, busy: false }, // Unterseite "Feedback geben"
 };
 
 // currentDek (Modul-Variable statt state): der lebende Entschlüsselungs-Schlüssel darf
@@ -964,7 +975,7 @@ function restoreModalFocus() {
 // von "Verwalten") - deshalb ein Layer-Zähler statt einer reinen Boolean-Prüfung, mit
 // je einem History-Eintrag pro Layer, damit zwei Zurück-Drücke auch zwei Ebenen
 // nacheinander schließen.
-function isSubpageView(view) { return view === 'manage' || view === 'about'; }
+function isSubpageView(view) { return view === 'manage' || view === 'about' || view === 'feedback'; }
 // Merkt sich den Tab, von dem aus eine Unterseite betreten wurde (nicht überschreiben,
 // wenn man z.B. innerhalb von "Verwalten" übers Menü direkt zu "Über Logbuch"
 // wechselt - sonst würde "Zurück" dann fälschlich zu "Verwalten" statt zum
@@ -1295,6 +1306,19 @@ const STRINGS = {
     'menu.manageFields': 'Felder verwalten',
     'menu.about': 'Über Logbuch',
     'about.title': 'Über Logbuch',
+    'menu.feedback': 'Feedback geben',
+    'feedback.title': 'Feedback',
+    'feedback.intro': 'Ideen, Fehler, Lob oder Kritik – alles ist willkommen.',
+    'feedback.messageLabel': 'Deine Nachricht',
+    'feedback.anonymousLabel': 'Ohne Absender senden',
+    'feedback.anonymousNote': 'Ich sehe dann nicht, von wem die Nachricht kommt, und kann dir nicht antworten.',
+    'feedback.replyNote': 'Ich kann dir an {email} antworten.',
+    'feedback.submit': 'Absenden',
+    'feedback.sending': 'Wird gesendet …',
+    'feedback.sent': 'Danke! Dein Feedback ist angekommen.',
+    'feedback.error.empty': 'Bitte schreib zuerst eine Nachricht.',
+    'feedback.error.rateLimited': 'Du hast in den letzten 24 Stunden schon mehrere Nachrichten geschickt – bitte versuch es später noch einmal.',
+    'feedback.error.failed': 'Senden fehlgeschlagen – bitte versuch es später noch einmal.',
     'about.intro': 'Ein paar Dinge, die sich nicht von selbst erklären — zum Nachlesen, falls du magst.',
     'about.status': 'Beta – Stand {date}. Ich baue laufend weiter, melde dich gern, falls dir etwas auffällt.',
     'about.monetizationNote': 'Logbuch ist aktuell in vollem Umfang kostenlos. Es ist möglich, dass ich künftig bestimmte Funktionen kostenpflichtig mache, zum Beispiel über ein Abonnement.',
@@ -1586,6 +1610,19 @@ const STRINGS = {
     'menu.manageFields': 'Manage fields',
     'menu.about': 'About Logbuch',
     'about.title': 'About Logbuch',
+    'menu.feedback': 'Send feedback',
+    'feedback.title': 'Feedback',
+    'feedback.intro': 'Ideas, bugs, praise or criticism – everything is welcome.',
+    'feedback.messageLabel': 'Your message',
+    'feedback.anonymousLabel': 'Send without sender',
+    'feedback.anonymousNote': 'I will not see who the message is from and cannot reply to you.',
+    'feedback.replyNote': 'I can reply to you at {email}.',
+    'feedback.submit': 'Send',
+    'feedback.sending': 'Sending …',
+    'feedback.sent': 'Thank you! Your feedback has arrived.',
+    'feedback.error.empty': 'Please write a message first.',
+    'feedback.error.rateLimited': 'You have already sent several messages in the last 24 hours – please try again later.',
+    'feedback.error.failed': 'Sending failed – please try again later.',
     'about.intro': 'A few things that are not obvious at first glance — here to read up on if you are curious.',
     'about.status': 'Beta – as of {date}. I am actively continuing to build this out, feel free to reach out if you notice anything.',
     'about.monetizationNote': 'Logbuch is currently completely free. I may make certain features paid in the future, for example via a subscription.',
@@ -3439,7 +3476,7 @@ function renderA11ySection() {
           <p class="tip-body">${t(bodyKey)}</p>
         </div>
       `).join('')}
-      <p class="tip-body a11y-feedback">${t('about.a11y.feedback')}</p>
+      <p class="tip-body a11y-feedback">${t('about.a11y.feedback')} <button type="button" class="link-btn" data-action="open-feedback">${t('menu.feedback')}</button></p>
     </details>
   `;
 }
@@ -3477,7 +3514,7 @@ function renderMentalHealthSection() {
         <p class="tip-body">${t('about.mentalHealth.crisis.international')}</p>
         <p class="tip-body">${t('about.mentalHealth.crisis.closing')}</p>
       </div>
-      <p class="tip-body mental-health-feedback">${t('about.mentalHealth.feedback')}</p>
+      <p class="tip-body mental-health-feedback">${t('about.mentalHealth.feedback')} <button type="button" class="link-btn" data-action="open-feedback">${t('menu.feedback')}</button></p>
     </details>
   `;
 }
@@ -3490,7 +3527,7 @@ const APP_STATUS_DATE = '2026-09-19';
 
 function renderAbout() {
   return `
-    <p class="about-status">${t('about.status', { date: formatDMY(APP_STATUS_DATE) })}</p>
+    <p class="about-status">${t('about.status', { date: formatDMY(APP_STATUS_DATE) })} <button type="button" class="link-btn" data-action="open-feedback">${t('menu.feedback')}</button></p>
     <p class="about-status about-status--secondary">${t('about.monetizationNote')}</p>
     <p class="about-intro">${t('about.intro')}</p>
     ${renderA11ySection()}
@@ -3522,6 +3559,59 @@ function renderAbout() {
       ['about.tip.recoveryKey.title', 'about.tip.recoveryKey.body'],
     ])}
   `;
+}
+
+// Übergangslösung, bis es ggf. einen Community-Bereich gibt. Das eigentliche Limit
+// (5 pro 24h) und die Mail an den Betreiber laufen serverseitig in der Edge Function
+// submit-feedback. Der Absender-Hinweis wird beim Umschalten direkt im DOM getauscht
+// statt per render() - ein Re-Render würde den Fokus von der Checkbox wegreißen.
+// t() escaped die E-Mail-Adresse bereits - das Ergebnis ist fertiges HTML (innerHTML,
+// nie noch einmal durch esc()).
+function feedbackSenderNote(anonymous) {
+  return anonymous ? t('feedback.anonymousNote') : t('feedback.replyNote', { email: state.session?.user?.email ?? '' });
+}
+function renderFeedback() {
+  const f = state.feedback;
+  return `
+    <div class="feedback-form">
+      <p class="tip-body feedback-intro">${t('feedback.intro')}</p>
+      <div class="auth-field">
+        <label for="feedback-message">${t('feedback.messageLabel')}</label>
+        <textarea id="feedback-message" maxlength="5000" ${f.busy ? 'disabled' : ''}>${esc(f.message)}</textarea>
+      </div>
+      <label class="checkbox-field">
+        <input type="checkbox" data-action="feedback-anonymous" aria-describedby="feedback-sender-note" ${f.anonymous ? 'checked' : ''} ${f.busy ? 'disabled' : ''} />
+        ${t('feedback.anonymousLabel')}
+      </label>
+      <p class="habit-form-lock-note" id="feedback-sender-note">${feedbackSenderNote(f.anonymous)}</p>
+      <button type="button" class="manage-new-btn" data-action="feedback-submit" ${f.busy ? 'disabled' : ''}>${f.busy ? t('feedback.sending') : t('feedback.submit')}</button>
+    </div>
+  `;
+}
+
+async function handleFeedbackSubmit() {
+  const message = state.feedback.message.trim();
+  if (!message) {
+    state.notice = { type: 'error', text: t('feedback.error.empty') };
+    render();
+    return;
+  }
+  state.feedback.busy = true;
+  render();
+  const { error } = await supabase.functions.invoke('submit-feedback', {
+    body: { message, anonymous: state.feedback.anonymous, locale: currentLocale },
+  });
+  state.feedback.busy = false;
+  if (error) {
+    // Bei Nicht-2xx liefert supabase-js die eigentliche Antwort in error.context.
+    let code = null;
+    try { code = (await error.context.json()).error; } catch { /* z.B. Netzwerkfehler */ }
+    state.notice = { type: 'error', text: code === 'rate_limited' ? t('feedback.error.rateLimited') : t('feedback.error.failed') };
+  } else {
+    state.feedback = { message: '', anonymous: false, busy: false };
+    state.notice = { type: 'ok', text: t('feedback.sent') };
+  }
+  render();
 }
 
 function renderStatsRows(stats) {
@@ -3988,6 +4078,7 @@ function renderMenu() {
         <p class="menu-group-label">${t('menu.groupNavigation')}</p>
         <button type="button" class="menu-item-btn" data-action="open-manage">${t('menu.manageFields')}</button>
         <button type="button" class="menu-item-btn" data-action="open-about">${t('menu.about')}</button>
+        <button type="button" class="menu-item-btn" data-action="open-feedback">${t('menu.feedback')}</button>
       </div>
       <div class="menu-group-divider"></div>
       <div class="menu-group">
@@ -4095,12 +4186,13 @@ function renderApp() {
     state.view === 'month' ? renderMonth() :
     state.view === 'year' ? renderYear() :
     state.view === 'global' ? renderGlobal() :
-    state.view === 'about' ? renderAbout() : renderManage();
+    state.view === 'about' ? renderAbout() :
+    state.view === 'feedback' ? renderFeedback() : renderManage();
 
   app.innerHTML = `
     <div class="sticky-top">
       ${subpage
-        ? renderSubpageHeader(state.view === 'manage' ? 'menu.manageFields' : 'about.title')
+        ? renderSubpageHeader({ manage: 'menu.manageFields', about: 'about.title', feedback: 'feedback.title' }[state.view])
         : `
           <div class="header">
             <h1>Logbuch</h1>
@@ -4236,6 +4328,11 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'open-about') {
     enterSubpage('about');
     render();
+  } else if (action === 'open-feedback') {
+    enterSubpage('feedback');
+    render();
+  } else if (action === 'feedback-submit') {
+    await handleFeedbackSubmit();
   } else if (action === 'subpage-back') {
     state.view = state.previousTabView || 'today';
     render();
@@ -4464,6 +4561,13 @@ app.addEventListener('change', (e) => {
     render();
     return;
   }
+  const feedbackAnonymous = e.target.closest('[data-action="feedback-anonymous"]');
+  if (feedbackAnonymous) {
+    state.feedback.anonymous = feedbackAnonymous.checked;
+    const note = document.getElementById('feedback-sender-note');
+    if (note) note.innerHTML = feedbackSenderNote(feedbackAnonymous.checked);
+    return;
+  }
   const summaryToggle = e.target.closest('[data-action="summary-notifications-toggle"]');
   if (summaryToggle) {
     saveSummaryNotifications(summaryToggle.checked);
@@ -4500,6 +4604,9 @@ app.addEventListener('change', (e) => {
 app.addEventListener('input', (e) => {
   if (e.target.id === 'email' && !state.session) { state.authEmail = e.target.value; return; }
   if (e.target.id === 'password' && !state.session) { state.authPassword = e.target.value; return; }
+  // Kein render() beim Tippen (würde Fokus/Cursor zurücksetzen) - nur merken, damit
+  // der Text einen späteren Re-Render (z.B. Meldung beim Absenden) übersteht.
+  if (e.target.id === 'feedback-message') { state.feedback.message = e.target.value; return; }
 });
 
 // Live-Vorschau während des Ziehens am Schieberegler — nur DOM-Update, kein

@@ -309,7 +309,7 @@ nicht auf generische Tailwind-/Card-Optik wechseln.
 Tab-Leiste zeigt nur noch die Auswertungs-Ansichten (Heute/Woche/Monat/Jahr/Gesamt,
 `.tabs` bereits horizontal scrollbar für künftig weitere Views). Alles Konfigurative
 sitzt im **Burger-Menü** (☰-Button oben rechts, `renderMenu` in `logbuch.html`), intern
-in drei Gruppen unterteilt: Navigation ("Felder verwalten", "Über Logbuch") oben,
+in drei Gruppen unterteilt: Navigation ("Felder verwalten", "Über Logbuch", "Feedback geben") oben,
 Einstellungen (Push/Erinnerungszeit/Sprache/Darstellung/Streifenmuster) in der Mitte,
 Konto (Export/Recovery-Key/Löschen/Abmelden) unten. Jede Gruppe steckt in einem eigenen
 `.menu-group` (kleines, dezentes Caps-Label, `menu.groupNavigation`/`menu.groupSettings`/
@@ -337,8 +337,8 @@ Scroll-Chaining zum Hintergrund, sobald das Panel selbst an sein Scroll-Ende kom
 `window`, der window-weite Listener sieht deshalb ausschließlich echte
 Hintergrund-Scrolls und schließt dann das Menü. Keine Body-Scroll-Sperre nötig.
 
-**Unterseiten statt Tab-Swap** (seit 2026-09-18): "Felder verwalten" und "Über Logbuch"
-sind `state.view`-Werte wie die Tabs, aber keine Tabs — sie werden über
+**Unterseiten statt Tab-Swap** (seit 2026-09-18): "Felder verwalten", "Über Logbuch" und
+"Feedback geben" (seit 2026-09-25) sind `state.view`-Werte wie die Tabs, aber keine Tabs — sie werden über
 `enterSubpage(view)` betreten (merkt sich in `state.previousTabView`, von welchem Tab
 aus man kam, außer man wechselt direkt zwischen zwei Unterseiten übers Menü) und
 ersetzen Header **und** Tab-Leiste komplett durch einen eigenen `renderSubpageHeader()`
@@ -607,7 +607,28 @@ Umgesetzt:
   exportieren" im Burger-Menü (`handleExportData` in `logbuch.html`) lädt die eigenen
   Rohdaten aus allen vier Tabellen (RLS scoped automatisch auf den eigenen Nutzer) direkt
   im Browser als eine JSON-Datei herunter — kein Server-Roundtrip über eine eigene
-  Function nötig.
+  Function nötig. Feedback (siehe unten) ist bewusst **nicht** Teil des Exports
+  (Nutzer-Entscheidung 2026-09-25).
+- **Feedback an den Betreiber** (seit 2026-09-25, Übergangslösung bis zu einem
+  möglichen Community-Bereich): Unterseite "Feedback geben" (Burger-Menü + Links an den
+  "ich freue mich über Feedback"-Stellen in "Über Logbuch", `renderFeedback`/
+  `handleFeedbackSubmit` in `logbuch.html`) → Edge Function `submit-feedback` →
+  `record_feedback()` (SQL) speichert in `public.feedback`, danach Mail an den
+  Betreiber über Resend (best effort – schlägt die Mail fehl, bleibt das Feedback
+  trotzdem gespeichert). Die Tabellen `feedback`/`feedback_rate_log` sind für Nutzer
+  weder les- noch schreibbar (RLS ohne Policies, GRANTs nur an `service_role` –
+  bewusste Ausnahme von der sonstigen GRANT-Regel), einziger Weg hinein ist die
+  Function. **Limit 5 Nachrichten pro Konto in 24h**, serverseitig und atomar
+  (Advisory-Lock pro Nutzer) in `record_feedback()` – ein Client-Limit allein wäre per
+  direktem API-Aufruf umgehbar. **"Ohne Absender senden"**: `feedback.user_id` bleibt
+  NULL, das Limit läuft dann über das getrennte `feedback_rate_log` (nur Konto +
+  Zeitpunkt, kein Inhalt, Einträge nach 24h gelöscht). Bewusst nicht "anonym" genannt:
+  der DB-Owner könnte innerhalb dieser 24h theoretisch über Zeitpunkte zuordnen – der
+  App-Text verspricht deshalb nur "ich sehe dann nicht, von wem es kommt". Mit
+  Absender: die Konto-E-Mail wird als Reply-To der Mail gesetzt (Antworten geht direkt
+  an den Nutzer), der Nutzer sieht im Formular, an welche Adresse. Feedback mit
+  Absender wird bei Konto-Löschung per Cascade mitgelöscht, ohne Absender nicht (hängt
+  an keinem Konto). Mails sind reiner Text (Nutzereingabe nie als HTML).
 - Passwort-Reset-Flow: "Passwort vergessen?" im Anmelden-Formular →
   `supabase.auth.resetPasswordForEmail(email, { redirectTo: <aktuelle App-URL> })`.
   Der Rückkehr-Link löst clientseitig das Event `PASSWORD_RECOVERY` aus
@@ -692,6 +713,11 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
   Nutzer neu abgleichen (alte Subscriptions werden mit neuem Key ungültig).
 - `SUPABASE_ANON_KEY` (publishable) ist ebenfalls unkritisch öffentlich, liegt in
   `logbuch.html` und im Vault (`publishable_key`, für den Cron-Aufruf der Edge Function).
+- `RESEND_FEEDBACK_KEY` (Function Secret): eigener Resend-API-Key nur für
+  `submit-feedback` (Berechtigung "Sending access"), getrennt vom SMTP-Key, damit er
+  sich unabhängig sperren lässt. `FEEDBACK_TO_EMAIL` (Function Secret): Empfänger der
+  Feedback-Mails – bewusst nicht im Code, da das Repo öffentlich ist; änderbar per
+  `supabase secrets set FEEDBACK_TO_EMAIL=...` ohne Code-Änderung. Niemals im Repo.
 - `CRON_SECRET` (Function Secret) + Vault-Secret `cron_secret` (gleicher Wert): schützt
   `send-notifications` davor, von außen aufgerufen zu werden. Der `publishable_key`
   allein reicht der Supabase-Gateway-Prüfung (`verify_jwt`), um die Function
@@ -717,8 +743,8 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
 ## Deployment-Schritte (Referenz, siehe auch Anleitung im Chat-Verlauf)
 
 1. `logbuch.html` + `sw.js` → GitHub Pages (Root-Verzeichnis).
-2. `supabase functions deploy send-notifications` und `supabase functions deploy
-   delete-account` (Code liegt/soll liegen unter `supabase/functions/<name>/index.ts`).
+2. `supabase functions deploy <name>` für `send-notifications`, `delete-account` und
+   `submit-feedback` (Code unter `supabase/functions/<name>/index.ts`).
 3. Schema-Änderungen laufen seit 2026-09-16 über **Supabase-Migrationen**
    (`supabase/migrations/`) statt manuell per SQL-Editor-Copy-Paste. Lokaler Workflow
    braucht Docker Desktop (startet eine lokale Schatten-Datenbank zum Abgleich):
