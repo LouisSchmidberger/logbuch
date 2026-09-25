@@ -545,7 +545,14 @@ Zeile kein Abo überspringen lässt. `p_now` wird einmal pro Lauf festgelegt (al
 rechnen mit demselben Zeitpunkt) und macht die Funktion mit beliebigen Zeitpunkten
 testbar (`select * from get_due_notifications(timestamptz '...')` per `supabase db
 query --linked`). Die Funktion liefert Push-Endpoints aller Nutzer – deshalb nur für
-`service_role` ausführbar.
+`service_role` ausführbar. Versand parallel mit max. `SEND_CONCURRENCY` (25) Abos
+gleichzeitig – bei Tausenden gleichzeitig fälligen Nutzern (Ballung am 22-Uhr-Default)
+stößt aber eher das Zeit-/CPU-Limit pro Function-Aufruf an (jede Push-Nachricht wird
+einzeln verschlüsselt/signiert), nicht die Parallelität. Deshalb misst jede Antwort
+`due`/`sent`/`failed`/`duration_ms` (nachlesbar in `net._http_response`); nächster
+Schritt bei Bedarf wäre Fan-out (Cron-Lauf verteilt Pakete auf eigene Aufrufe bzw.
+`pgmq`-Queue, die Keyset-Seiten passen dafür schon) – fällig, sobald ein 22-Uhr-Lauf
+regelmäßig > 30 s braucht oder ~1.000 Push-Abos erreicht sind.
 
 Bekannte Kleinigkeit: in der einen Nacht der Zeitumstellung selbst kann ein einzelnes
 15-Minuten-Fenster je nach Richtung doppelt oder gar nicht auftreten (entspricht dem

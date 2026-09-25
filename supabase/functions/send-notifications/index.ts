@@ -125,6 +125,11 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 });
   }
 
+  // Laufzeit-Messung für die Skalierungs-Beobachtung: Edge Functions haben ein
+  // Zeit- und CPU-Limit pro Aufruf – steigen duration_ms/sent am 22-Uhr-Slot deutlich,
+  // ist es Zeit für Fan-out (siehe CLAUDE.md "Erinnerungen" → Skalierung). Nachlesbar
+  // in net._http_response (Antworten der Cron-Aufrufe).
+  const startedAt = Date.now();
   // Ein fester Zeitpunkt für alle Seiten dieses Laufs (siehe Migration
   // 20260925160000_paginate_get_due_notifications.sql).
   const now = new Date().toISOString();
@@ -176,7 +181,14 @@ Deno.serve(async (req) => {
     }
   });
 
-  return new Response(JSON.stringify({ due: rows.length, results }), {
+  const sent = results.filter((r) => r.ok).length;
+  return new Response(JSON.stringify({
+    due: rows.length,
+    sent,
+    failed: results.length - sent,
+    duration_ms: Date.now() - startedAt,
+    results,
+  }), {
     headers: { 'Content-Type': 'application/json' },
   });
 });
