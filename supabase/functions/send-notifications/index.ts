@@ -11,7 +11,11 @@
 // 2. Jedes Feld MIT eigener `reminder_minute` wird unabhängig davon genau zu dieser
 //    Zeit geprüft (z.B. Gewicht typischerweise morgens statt zur Standardzeit).
 // Zusätzlich zur Standard-Erinnerungszeit: sonntags "Wochenübersicht ist da", am
-// Monatsletzten "Monatsübersicht ist da".
+// Monatsletzten "Monatsübersicht ist da" – nur wenn der Nutzer sie nicht abgeschaltet
+// hat (`user_settings.summary_notifications`) und im jeweiligen Zeitraum überhaupt
+// mindestens ein Tag mit Eintrag existiert (eine leere Übersicht anzukündigen wäre
+// sinnlos; bewusst keine Mindestquote, die würde in schwierigen Phasen eher Druck
+// machen als helfen).
 //
 // Läuft alle 15 Minuten statt nur zu festen Zeitpunkten, weil die zuständige Zeit
 // jetzt weder auf 8/22 Uhr noch auf einen für alle Nutzer gleichen Wert beschränkt
@@ -107,6 +111,13 @@ const PUSH_TEXTS = {
 };
 type Locale = keyof typeof PUSH_TEXTS;
 
+// Verschiebt einen 'YYYY-MM-DD'-Key um n Kalendertage (rein über UTC gerechnet, damit
+// keine Zeitzone/Sommerzeit dazwischenfunkt – es geht nur um Kalenderdaten).
+function shiftDateKey(key: string, n: number): string {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
 interface HabitDef {
   user_id: string;
   slug: string;
@@ -124,6 +135,11 @@ Deno.serve(async (req) => {
   const todayKey = berlin.dateKey;
   const isSunday = berlin.weekday === 'Sun';
   const isLastDayOfMonth = new Date(berlin.year, berlin.month, 0).getDate() === berlin.day;
+  // Montag der laufenden Woche bzw. Monatserster – Anfang des Zeitraums, den eine
+  // Wochen-/Monatsübersicht zusammenfasst (Montag-zuerst wie im Frontend).
+  const daysSinceMonday = (new Date(Date.UTC(berlin.year, berlin.month - 1, berlin.day)).getUTCDay() + 6) % 7;
+  const weekStartKey = shiftDateKey(todayKey, -daysSinceMonday);
+  const monthStartKey = `${todayKey.slice(0, 8)}01`;
 
   const { data: subs, error: subErr } = await supabase
     .from('push_subscriptions')
@@ -166,15 +182,43 @@ Deno.serve(async (req) => {
 
   const { data: settings, error: settingsErr } = await supabase
     .from('user_settings')
-    .select('user_id, default_reminder_minute, locale');
+    .select('user_id, default_reminder_minute, locale, summary_notifications');
   if (settingsErr) {
     return new Response(JSON.stringify({ error: settingsErr.message }), { status: 500 });
   }
   const defaultMinuteByUser = new Map<string, number>();
   const localeByUser = new Map<string, Locale>();
+  const summariesOffForUser = new Set<string>();
   for (const s of settings ?? []) {
     defaultMinuteByUser.set(s.user_id, s.default_reminder_minute);
     localeByUser.set(s.user_id, s.locale === 'en' ? 'en' : 'de');
+    if (s.summary_notifications === false) summariesOffForUser.add(s.user_id);
+  }
+
+  // Tage mit mindestens einem befüllten Feld im Zeitraum der Wochen-/Monatsübersicht –
+  // nur an den Tagen abgefragt, an denen überhaupt eine Übersicht fällig sein kann.
+  // filled_slugs statt bloßer Zeilen-Existenz: eine Zeile kann auch nach dem Leeren
+  // aller Werte eines Tages noch mit leerer Liste bestehen bleiben.
+  const filledDaysByUser = new Map<string, string[]>();
+  if (isSunday || isLastDayOfMonth) {
+    const periodStartKey = weekStartKey < monthStartKey ? weekStartKey : monthStartKey;
+    const { data: periodEntries, error: periodErr } = await supabase
+      .from('habit_entries')
+      .select('user_id, entry_date, filled_slugs')
+      .gte('entry_date', periodStartKey)
+      .lte('entry_date', todayKey);
+    if (periodErr) {
+      return new Response(JSON.stringify({ error: periodErr.message }), { status: 500 });
+    }
+    for (const e of periodEntries ?? []) {
+      if (!(e.filled_slugs ?? []).length) continue;
+      const list = filledDaysByUser.get(e.user_id) ?? [];
+      list.push(e.entry_date);
+      filledDaysByUser.set(e.user_id, list);
+    }
+  }
+  function hasEntrySince(userId: string, startKey: string): boolean {
+    return (filledDaysByUser.get(userId) ?? []).some((d) => d >= startKey);
   }
 
   // Für einen Nutzer die Namen der heute noch fehlenden Felder aus `group`, oder null,
@@ -221,11 +265,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (berlin.minutesSinceMidnight === defaultMinute) {
-      if (isSunday) {
+    if (berlin.minutesSinceMidnight === defaultMinute && !summariesOffForUser.has(sub.user_id)) {
+      if (isSunday && hasEntrySince(sub.user_id, weekStartKey)) {
         messages.push({ title: texts.title, body: texts.weekSummary, url: deepLink('week', todayKey) });
       }
-      if (isLastDayOfMonth) {
+      if (isLastDayOfMonth && hasEntrySince(sub.user_id, monthStartKey)) {
         messages.push({ title: texts.title, body: texts.monthSummary, url: deepLink('month', todayKey) });
       }
     }

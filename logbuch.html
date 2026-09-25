@@ -915,7 +915,7 @@ const state = {
   // Standard-Erinnerungszeit (Minuten seit Mitternacht) für Felder ohne eigene reminder_minute.
   // onboardingCompleted default true, bis loadUserSettings() den echten Wert lädt – verhindert,
   // dass das Tutorial kurz aufblitzt, bevor die tatsächlichen Einstellungen geladen sind.
-  userSettings: { defaultReminderMinute: 1320, onboardingCompleted: true, locale: 'de' },
+  userSettings: { defaultReminderMinute: 1320, onboardingCompleted: true, locale: 'de', summaryNotifications: true },
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
   habitDeleteConfirm: null, // defId eines archivierten Feldes mit Daten, dessen Löschen gerade bestätigt wird
   tutorialStep: null, // 1/2/3 während das Onboarding-Tutorial für neue Accounts läuft, sonst null
@@ -1253,6 +1253,8 @@ const STRINGS = {
     'manage.groupsExplain': 'Fassen mehrere Skala-Felder zu einem live berechneten Durchschnittswert zusammen – z. B. „Sport gemacht" aus „Ausdauersport" + „Kraftsport".',
     'common.finish': 'Fertig',
     'menu.defaultReminderTime': 'Standard-Erinnerungszeit',
+    'menu.summaryNotifications': 'Wochen- und Monatsübersicht ankündigen',
+    'menu.summaryNotificationsExplain': 'Sonntags bzw. am letzten Tag des Monats kommt zur Standard-Erinnerungszeit eine Benachrichtigung, dass deine Wochen- bzw. Monatsübersicht bereit ist – aber nur, wenn du im jeweiligen Zeitraum mindestens einen Tag eingetragen hast. Ein Tipp darauf öffnet direkt die passende Übersicht.',
     'tutorial.stepLabel': 'Schritt {step} von 3',
     'tutorial.skip': 'Tutorial überspringen',
     'tutorial.skipConfirm.title': 'Tutorial überspringen?',
@@ -1541,6 +1543,8 @@ const STRINGS = {
     'manage.groupsExplain': 'Combine multiple scale fields into one live-calculated average – e.g. "exercised" from "cardio" + "strength training".',
     'common.finish': 'Done',
     'menu.defaultReminderTime': 'Default reminder time',
+    'menu.summaryNotifications': 'Announce weekly and monthly summary',
+    'menu.summaryNotificationsExplain': 'On Sundays and on the last day of the month, you get a notification at your default reminder time that your weekly or monthly summary is ready – but only if you have entered at least one day in that period. Tapping it opens the matching summary directly.',
     'tutorial.stepLabel': 'Step {step} of 3',
     'tutorial.skip': 'Skip tutorial',
     'tutorial.skipConfirm.title': 'Skip tutorial?',
@@ -1965,7 +1969,7 @@ async function loadHabits() {
 
 async function loadUserSettings() {
   const { data, error } = await supabase.from('user_settings')
-    .select('default_reminder_minute, onboarding_completed, locale').maybeSingle();
+    .select('default_reminder_minute, onboarding_completed, locale, summary_notifications').maybeSingle();
   if (error) {
     state.notice = { type: 'error', text: t('notice.loadSettingsError') + translateDbError(error.message) };
     return;
@@ -1974,6 +1978,7 @@ async function loadUserSettings() {
     defaultReminderMinute: data ? data.default_reminder_minute : 1320,
     onboardingCompleted: data ? data.onboarding_completed : true,
     locale: data && data.locale ? data.locale : detectInitialLocale(),
+    summaryNotifications: data ? data.summary_notifications : true,
   };
   applyLocale(state.userSettings.locale);
 }
@@ -1986,6 +1991,17 @@ async function saveDefaultReminderMinute(minutes) {
   render();
   const { error } = await supabase.from('user_settings')
     .upsert({ user_id: state.session.user.id, default_reminder_minute: minutes }, { onConflict: 'user_id' });
+  if (error) {
+    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+    render();
+  }
+}
+
+async function saveSummaryNotifications(enabled) {
+  state.userSettings = { ...state.userSettings, summaryNotifications: enabled };
+  render();
+  const { error } = await supabase.from('user_settings')
+    .upsert({ user_id: state.session.user.id, summary_notifications: enabled }, { onConflict: 'user_id' });
   if (error) {
     state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
     render();
@@ -3951,6 +3967,13 @@ function renderMenu() {
           ${reminderTimeInputHtml('menu-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time')}
         </div>
         <div class="menu-row">
+          <label class="checkbox-field">
+            <input type="checkbox" data-action="summary-notifications-toggle" ${state.userSettings.summaryNotifications ? 'checked' : ''} />
+            ${t('menu.summaryNotifications')}
+          </label>
+          ${infoTip(t('menu.summaryNotificationsExplain'))}
+        </div>
+        <div class="menu-row">
           <label for="menu-locale">${t('menu.language')}</label>
           <select id="menu-locale" data-action="menu-locale">
             <option value="de" ${currentLocale === 'de' ? 'selected' : ''}>Deutsch</option>
@@ -4407,6 +4430,11 @@ app.addEventListener('change', (e) => {
   if (patternToggle) {
     setPatternDisabled(!patternToggle.checked);
     render();
+    return;
+  }
+  const summaryToggle = e.target.closest('[data-action="summary-notifications-toggle"]');
+  if (summaryToggle) {
+    saveSummaryNotifications(summaryToggle.checked);
     return;
   }
   const defaultTimeEl = e.target.closest('[data-action="menu-default-time"]');

@@ -103,7 +103,9 @@ seit Mitternacht, 0–1439, 15-Minuten-Raster, Default 1320 = 22:00) ist die
 Standard-Erinnerungszeit für alle Felder ohne eigene `reminder_minute` (siehe
 Erinnerungen), im Burger-Menü der App änderbar. `onboarding_completed` (bool, Default
 `false`) steuert, ob der Account noch das Onboarding-Tutorial sieht (siehe Abschnitt
-unten) – wird bei Registrierung automatisch angelegt (Trigger
+unten). `summary_notifications` (bool, Default `true`) schaltet die Wochen-/
+Monatsübersicht-Benachrichtigungen ab (siehe Erinnerungen, im Burger-Menü änderbar).
+Die Zeile wird bei Registrierung automatisch angelegt (Trigger
 `on_auth_user_created_seed_settings`). RLS wie oben.
 
 Tabelle `user_encryption`: eine Zeile pro Nutzer, hält den zweifach "verpackten"
@@ -440,7 +442,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 210 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 288 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -479,7 +481,14 @@ bzw. pro Feld, ob dessen eigene Zeit erreicht ist:
   eigene `reminder_minute` – unabhängig von `kind` (Skala oder Zahlenwert) – werden
   gemeinsam geprüft. Fehlt an diesem Tag noch mindestens eines davon, gibt es EINE
   Sammel-Nachricht (nicht eine pro Feld). Zusätzlich zu dieser Zeit: sonntags
-  "Wochenübersicht ist da", am Monatsletzten "Monatsübersicht ist da".
+  "Wochenübersicht ist da", am Monatsletzten "Monatsübersicht ist da" – beides
+  gemeinsam per `user_settings.summary_notifications` abschaltbar (ein Schalter für
+  beide, bewusst keine getrennten) und nur, wenn im jeweiligen Zeitraum (Montag bzw.
+  Monatserster bis heute) mindestens ein Tag mit nicht-leeren `filled_slugs`
+  existiert. Bewusst **keine Mindestquote** (z.B. "≥ 3 Tage"): würde in schwierigen
+  Phasen eher Druck machen, passt nicht zum Psyche-Fokus der App. Keine eigene
+  Jahresübersicht-Benachrichtigung (in die Jahresansicht schaut man ohnehin laufend,
+  nicht nur zum Jahresende).
 - **Eigene Zeit je Feld**: jedes Feld kann über `reminder_minute` unabhängig von der
   Standardzeit eine eigene Erinnerungszeit bekommen – z.B. Gewicht typischerweise
   morgens statt zur (abendlichen) Standardzeit. In der App per Checkbox "Eigene
@@ -487,6 +496,17 @@ bzw. pro Feld, ob dessen eigene Zeit erreicht ist:
   `reminderTimeInputHtml` in `logbuch.html` – bewusst kein natives `<input
   type="time">`, dessen `step`-Attribut viele Browser/Betriebssysteme ignorieren,
   wodurch sich trotzdem jede beliebige Minute auswählen ließe), standardmäßig aus.
+
+**Deep-Links**: jede Benachrichtigung trägt ihr Ziel als URL
+(`./logbuch.html?view=today|week|month&date=YYYY-MM-DD`, `deepLink()` in der
+Function) – `date` ist der Tag, auf den sie sich bezieht, damit z.B. eine erst
+Montagmorgen angetippte Wochenübersicht trotzdem die gemeinte Woche zeigt bzw. eine
+nach Mitternacht angetippte Erinnerung den gemeinten Tag. `sw.js` öffnet die App mit
+dieser URL oder schickt einer schon offenen App das Ziel per `postMessage`
+(`logbuch-navigate`, bewusst kein Neuladen – das würde ggf. erneutes Entsperren des
+DEK erzwingen). `parseDeepLink`/`applyDeepLink` in `logbuch.html` setzen daraufhin
+Ansicht + Zeitraum (auch schon vor dem Entsperren) und entfernen die Parameter per
+`history.replaceState` wieder aus der URL.
 
 Die Sammel-Erinnerung zur Standardzeit ist bewusst generisch ("Noch nicht alle Werte
 für heute eingetragen.", keine Feldnamen – sonst bei vielen Feldern schnell eine sehr
