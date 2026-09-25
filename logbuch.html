@@ -3741,7 +3741,7 @@ function renderHabitForm() {
     ${f.displayStyle === 'slider' ? `
       <div class="auth-field">
         <label class="checkbox-field">
-          <input type="checkbox" id="habit-form-slider-show-value" ${f.sliderShowValue ? 'checked' : ''} />
+          <input type="checkbox" id="habit-form-slider-show-value" data-action="habit-slider-show-value" ${f.sliderShowValue ? 'checked' : ''} />
           ${t('habitForm.showValueWhileEntering')}
         </label>
       </div>
@@ -4536,6 +4536,14 @@ app.addEventListener('change', (e) => {
     render();
     return;
   }
+  // Nur die Vorschau austauschen statt render() - hält den Fokus auf der Checkbox.
+  const showValueEl = e.target.closest('[data-action="habit-slider-show-value"]');
+  if (showValueEl && state.habitForm) {
+    state.habitForm.sliderShowValue = showValueEl.checked;
+    const preview = document.querySelector('.field-preview');
+    if (preview) preview.outerHTML = renderHabitFormPreview(state.habitForm);
+    return;
+  }
   const labelsToggleEl = e.target.closest('[data-action="habit-labels-toggle"]');
   if (labelsToggleEl && state.habitForm) {
     syncHabitFormFromDom();
@@ -4607,6 +4615,15 @@ app.addEventListener('input', (e) => {
   // Kein render() beim Tippen (würde Fokus/Cursor zurücksetzen) - nur merken, damit
   // der Text einen späteren Re-Render (z.B. Meldung beim Absenden) übersteht.
   if (e.target.id === 'feedback-message') { state.feedback.message = e.target.value; return; }
+  // Bezeichnungen im Feld-Formular: Live-Vorschau mitziehen, ohne das ganze Formular
+  // neu zu rendern (würde Fokus/Cursor im gerade bearbeiteten Feld zurücksetzen) - nur
+  // die Vorschau selbst wird ausgetauscht, die ist inert und hält nie den Fokus.
+  const labelInput = e.target.closest('[data-label-index]');
+  if (labelInput && state.habitForm?.labelsEnabled) {
+    state.habitForm.labels[Number(labelInput.dataset.labelIndex)] = labelInput.value;
+    const preview = document.querySelector('.field-preview');
+    if (preview) preview.outerHTML = renderHabitFormPreview(state.habitForm);
+  }
 });
 
 // Live-Vorschau während des Ziehens am Schieberegler — nur DOM-Update, kein
