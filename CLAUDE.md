@@ -354,17 +354,32 @@ angepinnt, damit Menü/Zurück/Tab-Wechsel beim Scrollen immer erreichbar bleibe
 **History-Layer-Zähler statt einfacher An/Aus-Prüfung**: Overlay (z.B. Burger-Menü) und
 Unterseite können gleichzeitig offen sein (z.B. Menü öffnen innerhalb von "Verwalten"),
 `currentLayerCount()`/`syncLayerHistory()` zählen deshalb 0–2 statt nur zu schließen/
-nicht zu schließen. Eine Falle dabei: schließt eine einzelne State-Änderung **zwei**
-Dinge auf einmal (z.B. Wechsel Verwalten→Über Logbuch übers Menü schließt dabei das
-Menü-Overlay UND wechselt gleichzeitig die Unterseite — Layer-Zahl sinkt von 2 auf 1,
-ohne dass die Unterseite selbst verlassen wird), löst `syncLayerHistory()` intern ein
-korrigierendes `history.back()` aus. Das feuert asynchron ein `popstate`, das ohne
-Gegenmaßnahme vom `popstate`-Listener fälschlich als echter Zurück-Druck interpretiert
-worden wäre und dabei eine zweite Ebene mitgeschlossen hätte (die Unterseite landete
-dann fälschlich zurück beim ursprünglichen Tab). `closingLayerViaPopstate` wird deshalb
-auch vor einem selbst ausgelösten `history.back()` gesetzt, nicht nur beim echten
-Zurück-Druck, und der `popstate`-Listener konsumiert dieses "eigene" Pop-Event ohne
-weitere Aktion.
+nicht zu schließen. `syncLayerHistory()` gleicht dabei um die volle Differenz ab, nicht
+nur um einen Schritt: öffnen sich zwei Ebenen auf einmal (Shortcut "+ Neues Feld" in
+"Heute": Verwaltung + Formular), entsteht ein `pushState` pro Ebene; schließen sich
+mehrere auf einmal (z.B. Speichern im Shortcut-Formular, Deep-Link, Verlassen der
+Verwaltung mit offenem Formular), geht es per `history.go(-Differenz)` zurück – mit
+nur einem Schritt blieb sonst ein toter Eintrag stehen bzw. ging das gemeinsame
+Schließen einen Schritt zu weit (App verlassen). Eine Falle dabei: so ein selbst
+ausgelöstes `history.go()` feuert asynchron ein `popstate`, das ohne Gegenmaßnahme vom
+`popstate`-Listener fälschlich als echter Zurück-Druck interpretiert worden wäre und
+dabei eine weitere Ebene mitgeschlossen hätte. `closingLayerViaPopstate` wird deshalb
+vor jedem selbst ausgelösten `history.go()` gesetzt, und der `popstate`-Listener
+konsumiert dieses "eigene" Pop-Event ohne weitere Aktion. Schließt ein echter
+Zurück-Druck mehr als eine Ebene (Shortcut-Formular nimmt die Verwaltung mit), räumt
+das anschließende `render()` → `syncLayerHistory()` den übrigen Eintrag weg.
+**Verlassen der Verwaltung schließt deren Overlays** (`leaveSubpage`/
+`closeManageOverlays`, auch beim Wechsel zu einer anderen Unterseite übers Menü) –
+vorher blieb ein offenes Feld-Formular beim ←-Button/Wischen unsichtbar im State und
+zählte weiter als History-Ebene.
+
+**"+ Neues Feld"-Shortcut in "Heute"** (seit 2026-09-25): dezenter Text-Button unter der
+Feldliste (bewusst kein ausgefüllter Button – "Heute" ist die tägliche Eintrags-Ansicht,
+nicht die Verwaltung). Öffnet die Verwaltung mit schon offenem "Neues Feld"-Formular
+(nur Feld, keine Gruppe). Das Formular trägt dabei `returnToTab: true` im eigenen
+Zustand – `closeHabitForm()` (einziger Schließ-Weg: Speichern, Abbrechen,
+Android-Zurück) springt dann direkt zurück zum Tab statt in der Verwaltung zu bleiben,
+da die Absicht beim Shortcut "jetzt tracken" ist, nicht "verwalten".
 
 **Verwaltungsliste entschlackt** (seit 2026-09-18, `renderManage` in `logbuch.html`):
 pro Feld-Zeile steht nur noch der Name plus – falls gesetzt – die eigene

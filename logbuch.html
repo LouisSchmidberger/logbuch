@@ -231,6 +231,11 @@
   }
   .opt-btn--selected { color: var(--on-score); }
 
+  .today-new-field-btn {
+    display: block; margin: 14px auto 0; background: none; border: none; color: var(--moss);
+    font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 10px;
+  }
+  .today-new-field-btn:hover, .today-new-field-btn:focus-visible { text-decoration: underline; }
   .reset-btn {
     display: block; margin: 18px auto 0; background: none; border: none; color: var(--sand);
     font-family: inherit; font-size: 12px; cursor: pointer; text-decoration: underline;
@@ -982,8 +987,21 @@ function isSubpageView(view) { return view === 'manage' || view === 'about' || v
 // ursprünglichen Tab führen).
 function enterSubpage(view) {
   if (!isSubpageView(state.view)) state.previousTabView = state.view;
+  if (view !== 'manage') closeManageOverlays();
   state.view = view;
   state.menuOpen = false;
+}
+// Feld-Formular und Feld-Lösch-Bestätigung gehören zur Verwaltungsseite - wer sie
+// verlässt (←-Button, Wischen, Menü-Wechsel zu einer anderen Unterseite), schließt
+// sie mit. Sonst blieben sie unsichtbar im State offen und zählten weiter als
+// History-Ebene (ein wirkungsloser Android-Zurück-Druck auf der nächsten Seite).
+function closeManageOverlays() {
+  state.habitForm = null;
+  state.habitDeleteConfirm = null;
+}
+function leaveSubpage() {
+  closeManageOverlays();
+  state.view = state.previousTabView || 'today';
 }
 function isOverlayOpen() {
   return state.menuOpen || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
@@ -995,6 +1013,16 @@ function currentLayerCount() {
 // Overlays vor der Unterseite, da sie darüber liegen. In der Praxis nie mehrere
 // Overlays gleichzeitig offen, da z.B. die Menü-Aktionen state.menuOpen beim Öffnen
 // eines anderen Overlays bereits selbst auf false setzen.
+// Einziger Weg, das Feld-Formular zu schließen (Speichern, Abbrechen, Android-Zurück).
+// Wurde es über den "+ Neues Feld"-Shortcut in "Heute" geöffnet (returnToTab, lebt
+// bewusst im Formular-Zustand und verschwindet so automatisch mit ihm), geht es danach
+// direkt zurück zum Tab statt in der Verwaltung zu bleiben - die Absicht war dort
+// "jetzt tracken", nicht "verwalten".
+function closeHabitForm() {
+  const returnToTab = state.habitForm?.returnToTab;
+  state.habitForm = null;
+  if (returnToTab && state.view === 'manage') state.view = state.previousTabView || 'today';
+}
 function closeTopLayer() {
   if (state.deleteConfirm || state.tutorialSkipConfirm) {
     state.deleteConfirm = null;
@@ -1003,30 +1031,31 @@ function closeTopLayer() {
   } else if (state.menuOpen) {
     state.menuOpen = false;
   } else if (state.habitForm) {
-    state.habitForm = null;
+    closeHabitForm();
   } else if (state.habitDeleteConfirm) {
     state.habitDeleteConfirm = null;
   } else if (isSubpageView(state.view)) {
-    state.view = state.previousTabView || 'today';
+    leaveSubpage();
   }
 }
 let openLayerCount = 0;
-// true zwischen einem SELBST ausgelösten history.back() (siehe syncLayerHistory) und
+// true zwischen einem SELBST ausgelösten history.go() (siehe syncLayerHistory) und
 // dem dadurch erst asynchron ausgelösten popstate - unterscheidet "wir korrigieren nur
 // die History-Position, der State stimmt schon" von einem echten Zurück-Druck. Ohne das
 // hätte z.B. ein direkter Wechsel zwischen zwei Unterseiten übers Menü (schließt dabei
 // nebenbei das Menü-Overlay, die Layer-Zahl sinkt also auch ohne echten Zurück-Druck)
-// fälschlich die Unterseite selbst mit geschlossen, weil das eigene Korrektur-back()
+// fälschlich die Unterseite selbst mit geschlossen, weil das eigene Korrektur-go()
 // ebenfalls ein popstate auslöst.
 let closingLayerViaPopstate = false;
 window.addEventListener('popstate', () => {
   if (closingLayerViaPopstate) { closingLayerViaPopstate = false; return; }
   if (currentLayerCount() === 0) return; // nichts (mehr) zu schließen - Browser navigiert normal weiter
-  closingLayerViaPopstate = true;
   openLayerCount = Math.max(0, openLayerCount - 1); // History-Position ist durch den Pop bereits korrekt
   closeTopLayer();
+  // Schließt closeTopLayer dabei mehr als eine Ebene (z.B. Feld-Formular aus dem
+  // "Heute"-Shortcut: Formular UND Verwaltung), räumt syncLayerHistory in render() den
+  // übrigen History-Eintrag selbst weg.
   render();
-  closingLayerViaPopstate = false;
 });
 // Von render() aufgerufen: hält die History mit der Layer-Anzahl synchron, damit pro
 // geöffneter Ebene genau ein Zurück-Druck sie wieder schließt - auch wenn sie
@@ -1037,12 +1066,20 @@ function syncLayerHistory() {
   if (closingLayerViaPopstate) return;
   const n = currentLayerCount();
   if (n > openLayerCount) {
-    history.pushState({ logbuchLayer: true }, '');
+    // Ein Eintrag PRO neuer Ebene - öffnen sich zwei auf einmal (z.B. "+ Neues Feld" in
+    // "Heute": Verwaltung + Formular), muss es auch zwei geben, sonst ginge das
+    // go(-2) beim gemeinsamen Schließen unten einen Schritt zu weit (App verlassen).
+    for (let i = openLayerCount; i < n; i++) history.pushState({ logbuchLayer: true }, '');
     openLayerCount = n;
   } else if (n < openLayerCount) {
+    // go(-Differenz) statt back(): schließt eine Aktion zwei Ebenen auf einmal (z.B.
+    // Deep-Link aus einer Benachrichtigung, oder Speichern im "Heute"-Shortcut-
+    // Formular), bliebe mit back() ein toter Eintrag stehen, der einen wirkungslosen
+    // Zurück-Druck kosten würde. Eine Traversierung = genau ein popstate, egal wie weit.
+    const steps = openLayerCount - n;
     openLayerCount = n;
     closingLayerViaPopstate = true; // siehe Kommentar an der Deklaration oben
-    history.back();
+    history.go(-steps);
   }
 }
 // Scrollen NEBEN dem Menü (Hintergrund/Fenster) soll das Menü schließen, Scrollen AUF
@@ -1204,7 +1241,8 @@ const STRINGS = {
     'groupInfo.avgOf': 'Ø aus {names} ({filled}/{total} heute erfasst)',
     'numberBox.last': 'zuletzt: {value} ({date})',
     'today.jumpToday': 'Zu heute springen',
-    'today.noFields': 'Noch keine Felder angelegt – siehe Tab „Felder".',
+    'today.noFields': 'Noch keine Felder angelegt.',
+    'today.newField': '+ Neues Feld',
     'today.resetDay': 'Tag zurücksetzen',
     'common.archived': 'archiviert',
     'global.rangeNote': 'Seit {since} · {count} Tage mit Eintrag',
@@ -1508,7 +1546,8 @@ const STRINGS = {
     'groupInfo.avgOf': 'avg. of {names} ({filled}/{total} entered today)',
     'numberBox.last': 'last: {value} ({date})',
     'today.jumpToday': 'Jump to today',
-    'today.noFields': 'No fields created yet – see the "Fields" tab.',
+    'today.noFields': 'No fields created yet.',
+    'today.newField': '+ New field',
     'today.resetDay': 'Reset day',
     'common.archived': 'archived',
     'global.rangeNote': 'Since {since} · {count} days with entry',
@@ -2499,7 +2538,7 @@ async function handleHabitSaveInner() {
     state.habits = [...state.habits, habitFromRow(data)];
   }
 
-  state.habitForm = null;
+  closeHabitForm();
   // Im Tutorial (Schritt 2) gilt das erste erfolgreich angelegte Feld als Abschluss
   // des Schritts – automatischer Sprung zu Schritt 3, kein zusätzlicher Klick nötig.
   if (isInsert && state.tutorialStep === 2) state.tutorialStep = 3;
@@ -3298,6 +3337,7 @@ function renderToday() {
       }).join('')}
       ${!activeHabits().length ? `<p class="manage-meta">${t('today.noFields')}</p>` : ''}
     </div>
+    <button type="button" class="today-new-field-btn" data-action="today-new-field">${t('today.newField')}</button>
     <button type="button" class="reset-btn" data-action="reset-day">${t('today.resetDay')}</button>
   `;
 }
@@ -4334,7 +4374,7 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'feedback-submit') {
     await handleFeedbackSubmit();
   } else if (action === 'subpage-back') {
-    state.view = state.previousTabView || 'today';
+    leaveSubpage();
     render();
   } else if (action === 'export-data') {
     await handleExportData();
@@ -4387,6 +4427,11 @@ app.addEventListener('click', async (e) => {
     enablePush();
   } else if (action === 'disable-push') {
     disablePush();
+  } else if (action === 'today-new-field') {
+    enterSubpage('manage');
+    state.habitForm = { ...defaultHabitForm(), returnToTab: true };
+    render();
+    scrollToHabitForm();
   } else if (action === 'habit-new') {
     state.habitForm = defaultHabitForm();
     render();
@@ -4399,7 +4444,7 @@ app.addEventListener('click', async (e) => {
     const h = state.habits.find((x) => x.defId === el.dataset.id);
     if (h) { state.habitForm = habitToForm(h); render(); scrollToHabitForm(); }
   } else if (action === 'habit-cancel') {
-    state.habitForm = null;
+    closeHabitForm();
     render();
   } else if (action === 'habit-kind') {
     syncHabitFormFromDom();
@@ -4742,7 +4787,7 @@ app.addEventListener('touchend', (e) => {
   const dir = dx < 0 ? 1 : -1;
 
   if (subpage) {
-    if (dir === -1) { state.view = state.previousTabView || 'today'; render(); }
+    if (dir === -1) { leaveSubpage(); render(); }
     return;
   }
   if (state.view === 'today') {
