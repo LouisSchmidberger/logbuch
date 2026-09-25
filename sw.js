@@ -21,13 +21,22 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+// Die URL einer Benachrichtigung trägt ihr Ziel (?view=...&date=..., siehe
+// send-notifications). Ist die App schon offen, wird sie nur nach vorne geholt und
+// per postMessage zum Ziel geschickt (kein Neuladen - das würde ggf. ein erneutes
+// Entsperren des Verschlüsselungs-Schlüssels erzwingen), sonst mit dieser URL geöffnet.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data && event.notification.data.url ? event.notification.data.url : './logbuch.html';
+  const rawUrl = event.notification.data && event.notification.data.url ? event.notification.data.url : './logbuch.html';
+  const targetUrl = new URL(rawUrl, self.registration.scope).href;
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
       for (const client of clientList) {
-        if (client.url.includes('logbuch.html') && 'focus' in client) return client.focus();
+        if (client.url.includes('logbuch.html') && 'focus' in client) {
+          const focused = await client.focus();
+          (focused || client).postMessage({ type: 'logbuch-navigate', url: targetUrl });
+          return;
+        }
       }
       if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
     })

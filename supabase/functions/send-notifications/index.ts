@@ -78,6 +78,14 @@ interface PushMessage {
   url: string;
 }
 
+// Ziel-URL einer Benachrichtigung: Ansicht + der Tag, auf den sie sich bezieht (nicht
+// "heute zum Klick-Zeitpunkt" - eine Wochenübersicht, die erst Montagmorgen angetippt
+// wird, soll trotzdem die gemeinte, schon abgelaufene Woche zeigen). Ausgewertet von
+// sw.js (notificationclick) und parseDeepLink in logbuch.html.
+function deepLink(view: 'today' | 'week' | 'month', dateKey: string): string {
+  return `./logbuch.html?view=${view}&date=${dateKey}`;
+}
+
 // Eigene, bewusst einfachere Übersetzungstabelle als die t()-Maschinerie im Frontend
 // (logbuch.html) — anderes Laufzeit-Environment (Deno statt Browser), kein
 // gemeinsam nutzbares Modul zwischen Edge Function und Frontend, und nur 4 Texte.
@@ -196,7 +204,7 @@ Deno.serve(async (req) => {
         messages.push({
           title: texts.title,
           body: texts.defaultReminder,
-          url: './logbuch.html',
+          url: deepLink('today', todayKey),
         });
       }
     }
@@ -209,16 +217,16 @@ Deno.serve(async (req) => {
       messages.push({
         title: texts.title,
         body: texts.customReminder(missingCustom.join(', ')),
-        url: './logbuch.html',
+        url: deepLink('today', todayKey),
       });
     }
 
     if (berlin.minutesSinceMidnight === defaultMinute) {
       if (isSunday) {
-        messages.push({ title: texts.title, body: texts.weekSummary, url: './logbuch.html' });
+        messages.push({ title: texts.title, body: texts.weekSummary, url: deepLink('week', todayKey) });
       }
       if (isLastDayOfMonth) {
-        messages.push({ title: texts.title, body: texts.monthSummary, url: './logbuch.html' });
+        messages.push({ title: texts.title, body: texts.monthSummary, url: deepLink('month', todayKey) });
       }
     }
 

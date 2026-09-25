@@ -4659,6 +4659,53 @@ app.addEventListener('pointerup', async (e) => {
   await commitHabitOrder(newIds);
 });
 
+// --- Deep-Links aus Push-Benachrichtigungen --------------------------------
+// Jede Benachrichtigung trägt ihr Ziel als URL-Parameter (?view=week&date=YYYY-MM-DD,
+// siehe send-notifications) - date ist der Tag, auf den sie sich bezieht, damit ein
+// späterer Klick (z.B. Wochenübersicht erst Montagmorgen geöffnet) trotzdem den
+// gemeinten Zeitraum zeigt statt den dann aktuellen. Zwei Wege hier an: beim
+// Kaltstart über location.search, bei schon offener App per postMessage vom Service
+// Worker (sw.js, notificationclick) - dort bewusst kein Neuladen, das würde ggf. ein
+// erneutes Entsperren des Schlüssels erzwingen. Setzt nur Ansicht + Zeitraum, das
+// funktioniert unabhängig davon, ob die App gerade noch gesperrt ist.
+const DEEP_LINK_VIEWS = ['today', 'week', 'month', 'year'];
+function parseDeepLink(search) {
+  const params = new URLSearchParams(search);
+  const view = params.get('view');
+  if (!DEEP_LINK_VIEWS.includes(view)) return null;
+  const dateParam = params.get('date');
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateParam ?? '') ? parseDateKey(dateParam) : null;
+  return { view, date: date && !isNaN(date) ? date : startOfDay(new Date()) };
+}
+function applyDeepLink({ view, date }) {
+  state.view = view;
+  state.currentDate = startOfDay(date);
+  state.weekAnchor = startOfWeek(date);
+  const monthStart = startOfDay(date);
+  monthStart.setDate(1);
+  state.monthAnchor = monthStart;
+  state.yearAnchor = date.getFullYear();
+}
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data?.type !== 'logbuch-navigate') return;
+    const link = parseDeepLink(new URL(e.data.url, location.href).search);
+    if (!link) return;
+    applyDeepLink(link);
+    // Offene Overlays schließen, sonst läge das Ziel unsichtbar darunter. Während des
+    // Tutorials nichts anfassen (dort ist state.habitForm Teil des geführten Ablaufs) -
+    // die gesetzte Ansicht greift dann einfach nach dessen Abschluss.
+    if (state.userSettings.onboardingCompleted) {
+      state.menuOpen = false;
+      state.habitForm = null;
+      state.habitDeleteConfirm = null;
+      if (state.deleteConfirm) { state.deleteConfirm = null; modalTriggerSelector = null; }
+    }
+    render();
+    window.scrollTo(0, 0);
+  });
+}
+
 // --- Auth-Status & Start ---------------------------------------------------
 // authFlowInFlight: von den Login/Signup-Submit-Handlern VOR dem signUp/
 // signInWithPassword-Aufruf gesetzt (nicht erst danach — onAuthStateChange kann schon
@@ -4728,6 +4775,13 @@ try {
     if (!getThemeOverride()) applyTheme(null); // nur relevant, wenn "System" aktiv ist
   });
 } catch { /* z.B. sehr alter Browser ohne addEventListener auf MediaQueryList */ }
+
+const initialDeepLink = parseDeepLink(location.search);
+if (initialDeepLink) {
+  applyDeepLink(initialDeepLink);
+  // Parameter wieder entfernen, sonst spränge ein späteres Neuladen erneut dorthin.
+  history.replaceState(history.state, '', location.pathname + location.hash);
+}
 
 const { data: { session } } = await supabase.auth.getSession();
 state.session = session;
