@@ -136,6 +136,7 @@
   }
   .menu-group-divider { border-top: 1px solid var(--line); margin: 2px 0; }
   .menu-row { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--sand); }
+  .menu-row-note { font-size: 11px; color: var(--sand); margin: 0; }
   .menu-row select {
     font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
@@ -733,11 +734,11 @@ const REMINDER_TIME_STEP = 15; // Minuten — muss zum Cron-Intervall in send-no
 // Minute auswählen ließ, obwohl das System ohnehin nur im 15-Minuten-Raster zustellen
 // kann (unnötige Verwirrung: man konnte etwas einstellen, das stillschweigend gerundet
 // wurde). Ein <select> kann von vornherein gar nichts anderes anbieten.
-function reminderTimeInputHtml(id, minutes, dataAction, disabled) {
+function reminderTimeInputHtml(id, minutes, dataAction, disabled, describedBy) {
   const options = Array.from({ length: (24 * 60) / REMINDER_TIME_STEP }, (_, i) => i * REMINDER_TIME_STEP)
     .map((m) => `<option value="${m}" ${m === minutes ? 'selected' : ''}>${minutesToTimeStr(m)}</option>`)
     .join('');
-  return `<select id="${id}" ${dataAction ? `data-action="${dataAction}"` : ''} ${disabled ? 'disabled' : ''}>${options}</select>`;
+  return `<select id="${id}" ${dataAction ? `data-action="${dataAction}"` : ''} ${disabled ? 'disabled' : ''} ${describedBy ? `aria-describedby="${describedBy}"` : ''}>${options}</select>`;
 }
 
 // 0 = schlechtester, 1 = bester Wert
@@ -915,7 +916,7 @@ const state = {
   // Standard-Erinnerungszeit (Minuten seit Mitternacht) für Felder ohne eigene reminder_minute.
   // onboardingCompleted default true, bis loadUserSettings() den echten Wert lädt – verhindert,
   // dass das Tutorial kurz aufblitzt, bevor die tatsächlichen Einstellungen geladen sind.
-  userSettings: { defaultReminderMinute: 1320, onboardingCompleted: true, locale: 'de', summaryNotifications: true },
+  userSettings: { defaultReminderMinute: 1320, onboardingCompleted: true, locale: 'de', summaryNotifications: true, timezone: 'Europe/Berlin' },
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
   habitDeleteConfirm: null, // defId eines archivierten Feldes mit Daten, dessen Löschen gerade bestätigt wird
   tutorialStep: null, // 1/2/3 während das Onboarding-Tutorial für neue Accounts läuft, sonst null
@@ -1253,6 +1254,7 @@ const STRINGS = {
     'manage.groupsExplain': 'Fassen mehrere Skala-Felder zu einem live berechneten Durchschnittswert zusammen – z. B. „Sport gemacht" aus „Ausdauersport" + „Kraftsport".',
     'common.finish': 'Fertig',
     'menu.defaultReminderTime': 'Standard-Erinnerungszeit',
+    'menu.timezoneNote': 'Zeitzone: {tz} (folgt deinem Gerät)',
     'menu.summaryNotifications': 'Wochen- und Monatsübersicht ankündigen',
     'menu.summaryNotificationsExplain': 'Sonntags bzw. am letzten Tag des Monats kommt zur Standard-Erinnerungszeit eine Benachrichtigung, dass deine Wochen- bzw. Monatsübersicht bereit ist – aber nur, wenn du im jeweiligen Zeitraum mindestens einen Tag eingetragen hast. Ein Tipp darauf öffnet direkt die passende Übersicht.',
     'tutorial.stepLabel': 'Schritt {step} von 3',
@@ -1543,6 +1545,7 @@ const STRINGS = {
     'manage.groupsExplain': 'Combine multiple scale fields into one live-calculated average – e.g. "exercised" from "cardio" + "strength training".',
     'common.finish': 'Done',
     'menu.defaultReminderTime': 'Default reminder time',
+    'menu.timezoneNote': 'Time zone: {tz} (follows your device)',
     'menu.summaryNotifications': 'Announce weekly and monthly summary',
     'menu.summaryNotificationsExplain': 'On Sundays and on the last day of the month, you get a notification at your default reminder time that your weekly or monthly summary is ready – but only if you have entered at least one day in that period. Tapping it opens the matching summary directly.',
     'tutorial.stepLabel': 'Step {step} of 3',
@@ -1969,7 +1972,7 @@ async function loadHabits() {
 
 async function loadUserSettings() {
   const { data, error } = await supabase.from('user_settings')
-    .select('default_reminder_minute, onboarding_completed, locale, summary_notifications').maybeSingle();
+    .select('default_reminder_minute, onboarding_completed, locale, summary_notifications, timezone').maybeSingle();
   if (error) {
     state.notice = { type: 'error', text: t('notice.loadSettingsError') + translateDbError(error.message) };
     return;
@@ -1979,9 +1982,37 @@ async function loadUserSettings() {
     onboardingCompleted: data ? data.onboarding_completed : true,
     locale: data && data.locale ? data.locale : detectInitialLocale(),
     summaryNotifications: data ? data.summary_notifications : true,
+    timezone: data ? data.timezone : 'Europe/Berlin',
   };
   applyLocale(state.userSettings.locale);
+  syncTimezone();
 }
+
+// Erinnerungen richten sich nach user_settings.timezone (siehe send-notifications) -
+// die folgt still der Zeitzone des Geräts, damit Erinnerung und App immer denselben
+// "heute"-Tag meinen (Einträge speichert die App unter dem lokalen Gerätedatum).
+// Abgleich bei jedem Laden der Einstellungen und beim Zurückkehren in die App
+// (visibilitychange unten - eine installierte PWA bleibt auf Reisen oft tagelang im
+// Hintergrund offen, ohne neu zu laden). Fehler bewusst still: z.B. eine Zeitzone,
+// die Postgres (noch) nicht kennt, wird serverseitig abgelehnt - dann bleibt es
+// einfach bei der bisherigen, kein Grund für eine Fehlermeldung.
+function deviceTimezone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; }
+}
+async function syncTimezone() {
+  const tz = deviceTimezone();
+  if (!tz || !state.session || tz === state.userSettings.timezone) return;
+  const { error } = await supabase.from('user_settings')
+    .upsert({ user_id: state.session.user.id, timezone: tz }, { onConflict: 'user_id' });
+  if (error) { console.warn('Zeitzone nicht übernommen:', tz, error.message); return; }
+  state.userSettings = { ...state.userSettings, timezone: tz };
+  // Nur neu rendern, wenn die Anzeige gerade sichtbar ist - ein Hintergrund-Render
+  // könnte sonst z.B. ungespeicherte Eingaben im Feld-Formular überschreiben.
+  if (state.menuOpen) render();
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && currentDek) syncTimezone();
+});
 
 async function saveDefaultReminderMinute(minutes) {
   state.userSettings = { ...state.userSettings, defaultReminderMinute: minutes };
@@ -3964,7 +3995,8 @@ function renderMenu() {
         ${renderPushRow()}
         <div class="menu-row">
           <label for="menu-default-time">${t('menu.defaultReminderTime')}</label>
-          ${reminderTimeInputHtml('menu-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time')}
+          ${reminderTimeInputHtml('menu-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', false, 'menu-timezone-note')}
+          <p class="menu-row-note" id="menu-timezone-note">${t('menu.timezoneNote', { tz: state.userSettings.timezone.replace(/_/g, ' ') })}</p>
         </div>
         <div class="menu-row">
           <label class="checkbox-field">
