@@ -371,6 +371,9 @@
 
   .group-member-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
   .group-member-check { font-size: 13px; }
+  .group-member-check--blocked { opacity: 0.45; }
+  /* Zahlen-Gruppe: berechneter Wert ohne Bewertung - neutral statt eingefärbt. */
+  .habit-row--group .group-readout--number { color: var(--ink); border: 1px solid var(--line); background: transparent; }
 
   .number-chart-box { padding: 10px 0; border-bottom: 1px solid var(--line); }
   .number-chart-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
@@ -904,6 +907,7 @@ function habitFromParts(row, payload) {
     displayStyle: payload.displayStyle,   // 'buttons' | 'slider', nur bei kind === 'scale' + Zahlenwerte relevant
     sliderShowValue: payload.sliderShowValue,
     groupMembers: payload.groupMembers,   // nur bei kind === 'group': Array von Schlüsseln (id) der Mitglieder
+    aggregate: payload.aggregate ?? null, // nur bei Zahlen-Gruppen: 'sum'|'avg'|'min'|'max' (null = Skala-Gruppe)
     reminderMinute: row.reminder_minute, // Minuten seit Mitternacht (0-1439) oder null (= Standardzeit)
     goalThreshold: payload.goalThreshold, // nur bei kind === 'scale'/'group', 0-1 oder null (= 1 = 100%)
     sortOrder: row.sort_order,
@@ -924,6 +928,7 @@ function defPayloadFromPlainRow(row) {
     sliderShowValue: row.slider_show_value ?? true,
     groupMembers: row.group_members ?? null,
     goalThreshold: row.goal_threshold ?? null,
+    aggregate: null, // Zahlen-Gruppen gibt es erst seit der Verschlüsselung - Klartext-Zeilen sind nie welche
   };
 }
 // Klartext-Spalten einer verschlüsselten Zeile - leer bzw. auf dem neutralen Default
@@ -1006,6 +1011,46 @@ async function clearFieldNamesForPush() {
 }
 
 function isNumberKind(h) { return h.kind === 'number'; }
+// Gruppen gibt es in zwei Arten: Skala-Gruppen (Durchschnitt der normalisierten
+// Bewertungen, mit Farbe/Ziel-Quote - der ursprüngliche Fall) und seit 2026-09-27
+// Zahlen-Gruppen (fassen Zahlenwert-Felder derselben Einheit per Summe/Durchschnitt/
+// Minimum/Maximum zusammen, ohne Bewertung - verhalten sich in der Auswertung wie ein
+// Zahlenwert-Feld). Unterschieden über aggregate: gesetzt = Zahlen-Gruppe.
+function isNumberGroup(h) { return h.kind === 'group' && !!h.aggregate; }
+// Felder mit Gut/Schlecht-Score (Farben, Heatmap, Prozent-Statistik).
+function isScoredKind(h) { return h.kind === 'scale' || (h.kind === 'group' && !h.aggregate); }
+// Felder mit Zahlen-Verlauf (Graph statt Farbe).
+function hasNumericSeries(h) { return isNumberKind(h) || isNumberGroup(h); }
+function groupMemberHabits(h) {
+  return (h.groupMembers || []).map((key) => state.habits.find((x) => x.id === key)).filter(Boolean);
+}
+// Einheit einer Zahlen-Gruppe = die (gemeinsame, im Formular erzwungene) Einheit ihrer Mitglieder.
+function groupUnit(h) { return groupMemberHabits(h)[0]?.unit || null; }
+// Tageswert einer Zahlen-Gruppe aus den an dem Tag eingetragenen Mitgliedern (bei der
+// Summe zählt ein nicht eingetragenes Mitglied also als 0). Ist gar keins eingetragen,
+// gibt es keinen Wert (null) statt 0 - sonst sähe ein vergessener Tag aus wie ein Tag
+// mit echtem Wert 0.
+function numberGroupDay(h, dateKey) {
+  const members = groupMemberHabits(h);
+  const day = state.entries[dateKey] || {};
+  const values = members.map((m) => day[m.id]).filter((v) => typeof v === 'number');
+  let value = null;
+  if (values.length) {
+    if (h.aggregate === 'sum') value = values.reduce((a, b) => a + b, 0);
+    else if (h.aggregate === 'avg') value = values.reduce((a, b) => a + b, 0) / values.length;
+    else if (h.aggregate === 'min') value = Math.min(...values);
+    else if (h.aggregate === 'max') value = Math.max(...values);
+    // Rundung gegen Gleitkomma-Reste (0.1 + 0.2 = 0.30000000000000004)
+    if (value !== null) value = Math.round(value * 100) / 100;
+  }
+  return { value, filled: values.length, total: members.length };
+}
+// Zahlenwert eines Felds an einem Tag - Zahlenwert-Feld direkt, Zahlen-Gruppe berechnet.
+function habitNumericValue(h, dateKey) {
+  if (isNumberGroup(h)) return numberGroupDay(h, dateKey).value;
+  const v = state.entries[dateKey]?.[h.id];
+  return v === undefined ? null : v;
+}
 function isTextKind(h) { return h.kind === 'text'; }
 
 // --- Wiederholung (habit_definitions.schedule) ------------------------------
@@ -1112,6 +1157,7 @@ function normalize(habit, value) {
 function habitScore(h, dateKey) {
   const day = state.entries[dateKey];
   if (!day) return null;
+  if (isNumberGroup(h)) return null; // keine Bewertung, siehe isNumberGroup
   if (h.kind === 'group') {
     const memberScores = (h.groupMembers || [])
       .map((slug) => state.habits.find((x) => x.id === slug))
@@ -1128,6 +1174,7 @@ function habitScore(h, dateKey) {
 // hat — für archivierte Felder in Auswertungs-Ansichten: normale Felder prüfen direkt
 // state.entries, Gruppen (die nie selbst einen Entry-Key haben) über habitScore.
 function habitVisibleInRange(h, dateKeys) {
+  if (isNumberGroup(h)) return dateKeys.some((k) => numberGroupDay(h, k).value !== null);
   if (h.kind === 'group') return dateKeys.some((k) => habitScore(h, k) !== null);
   return dateKeys.some((k) => state.entries[k]?.[h.id] !== undefined);
 }
@@ -1207,7 +1254,7 @@ function dayOverallScore(date) {
   const dateKey = formatKey(date);
   const day = state.entries[dateKey];
   if (!day) return null;
-  const scores = state.habits.filter((h) => (h.kind === 'scale' && !isNeutralScale(h)) || h.kind === 'group')
+  const scores = state.habits.filter((h) => (h.kind === 'scale' && !isNeutralScale(h)) || (h.kind === 'group' && !isNumberGroup(h)))
     .map((h) => applyGoal(h, habitScore(h, dateKey)))
     .filter((s) => s !== null);
   if (!scores.length) return null;
@@ -1227,10 +1274,11 @@ function computeHabitStats(habits, dateKeys) {
   });
 }
 
-// Werte-Reihe + Kennzahlen eines Zahlenwert-Felds über eine Menge von Datums-Keys.
-function numberFieldStats(habitId, dateKeys) {
+// Werte-Reihe + Kennzahlen eines Zahlenwert-Felds bzw. einer Zahlen-Gruppe über eine
+// Menge von Datums-Keys.
+function numberFieldStats(habit, dateKeys) {
   const series = dateKeys
-    .map((k) => ({ key: k, value: state.entries[k]?.[habitId] }))
+    .map((k) => ({ key: k, value: habitNumericValue(habit, k) }))
     .filter((p) => p.value !== undefined && p.value !== null);
   if (!series.length) return null;
   const values = series.map((p) => p.value);
@@ -1622,6 +1670,19 @@ const STRINGS = {
     'ariaLabel.moveDown': 'Nach unten verschieben',
     'common.noData': 'keine Daten',
     'groupInfo.avgOf': 'Ø aus {names} ({filled}/{total} heute erfasst)',
+    'groupInfo.aggOf': '{agg} aus {names} ({filled}/{total} heute erfasst)',
+    'aggregate.sum': 'Summe',
+    'aggregate.avg': 'Durchschnitt',
+    'aggregate.min': 'Minimum',
+    'aggregate.max': 'Maximum',
+    'manage.groupAggregate': '{agg} aus: {names}',
+    'habitForm.groupType': 'Art der Gruppe',
+    'habitForm.groupType.scale': 'Skalen',
+    'habitForm.groupType.number': 'Zahlenwerte',
+    'habitForm.aggregate': 'Berechnung',
+    'habitForm.groupUnitNote': 'Zusammenrechnen lassen sich nur Felder mit derselben Einheit – sonst käme eine falsche Zahl heraus (z. B. km + m).',
+    'habitForm.noNumberGroupCandidates': 'Noch keine Zahlenwert-Felder vorhanden, die sich gruppieren lassen.',
+    'habitForm.error.groupUnitMismatch': 'Die ausgewählten Felder haben unterschiedliche Einheiten.',
     'numberBox.last': 'zuletzt: {value} ({date})',
     'today.jumpToday': 'Zu heute springen',
     'today.noFields': 'Noch keine Felder angelegt.',
@@ -1670,7 +1731,7 @@ const STRINGS = {
     'habitForm.noValuation': 'Keine Wertung',
     'habitForm.unit': 'Einheit (optional)',
     'habitForm.unitPlaceholder': 'z. B. kg',
-    'habitForm.members': 'Mitglieder (mind. 2 Skala-Felder)',
+    'habitForm.members': 'Mitglieder (mind. 2 Felder)',
     'habitForm.noGroupCandidates': 'Noch keine Skala-Felder vorhanden, die sich gruppieren lassen.',
     'habitForm.ownReminderTime': 'Eigene Erinnerungszeit',
     'habitForm.defaultReminderNote': 'Ohne eigene Zeit gilt die Standard-Erinnerungszeit (aktuell {time}, änderbar im Menü).',
@@ -1990,6 +2051,19 @@ const STRINGS = {
     'ariaLabel.moveDown': 'Move down',
     'common.noData': 'no data',
     'groupInfo.avgOf': 'avg. of {names} ({filled}/{total} entered today)',
+    'groupInfo.aggOf': '{agg} of {names} ({filled}/{total} entered today)',
+    'aggregate.sum': 'Sum',
+    'aggregate.avg': 'Average',
+    'aggregate.min': 'Minimum',
+    'aggregate.max': 'Maximum',
+    'manage.groupAggregate': '{agg} of: {names}',
+    'habitForm.groupType': 'Group type',
+    'habitForm.groupType.scale': 'Scales',
+    'habitForm.groupType.number': 'Number values',
+    'habitForm.aggregate': 'Calculation',
+    'habitForm.groupUnitNote': 'Only fields with the same unit can be combined – otherwise the result would be wrong (e.g. km + m).',
+    'habitForm.noNumberGroupCandidates': 'No number fields available yet that can be grouped.',
+    'habitForm.error.groupUnitMismatch': 'The selected fields have different units.',
     'numberBox.last': 'last: {value} ({date})',
     'today.jumpToday': 'Jump to today',
     'today.noFields': 'No fields created yet.',
@@ -2038,7 +2112,7 @@ const STRINGS = {
     'habitForm.noValuation': 'No valuation',
     'habitForm.unit': 'Unit (optional)',
     'habitForm.unitPlaceholder': 'e.g. kg',
-    'habitForm.members': 'Members (at least 2 scale fields)',
+    'habitForm.members': 'Members (at least 2 fields)',
     'habitForm.noGroupCandidates': 'No scale fields available yet that can be grouped.',
     'habitForm.ownReminderTime': 'Custom reminder time',
     'habitForm.defaultReminderNote': 'Without a custom time, the default reminder time applies (currently {time}, changeable in the menu).',
@@ -2888,6 +2962,7 @@ function defaultHabitForm() {
     name: '', min: 1, max: 5, labelsEnabled: false, labels: ['', '', '', '', ''], good: 'high',
     displayStyle: 'buttons', sliderShowValue: true,
     groupMembers: [],
+    groupType: 'scale', aggregate: 'sum', // nur bei kind='group', siehe isNumberGroup
     goalPercent: 100,
     unit: '', reminderEnabled: false, reminderMinute: state.userSettings.defaultReminderMinute,
     schedule: scheduleToForm(null),
@@ -2967,6 +3042,8 @@ function habitToForm(h) {
     displayStyle,
     sliderShowValue: h.sliderShowValue ?? true,
     groupMembers: h.kind === 'group' ? [...(h.groupMembers || [])] : [],
+    groupType: h.aggregate ? 'number' : 'scale',
+    aggregate: h.aggregate || 'sum',
     goalPercent: Math.round((h.goalThreshold ?? 1) * 100),
     unit: h.unit || '',
     reminderEnabled: h.reminderMinute !== null && h.reminderMinute !== undefined,
@@ -3013,6 +3090,8 @@ function syncHabitFormFromDom() {
     const reminderTimeEl = document.getElementById('habit-form-reminder-time');
     if (reminderTimeEl) f.reminderMinute = Number(reminderTimeEl.value);
   } else if (f.kind === 'group') {
+    const aggregateEl = document.getElementById('habit-form-group-aggregate');
+    if (aggregateEl) f.aggregate = aggregateEl.value;
     document.querySelectorAll('[data-group-member]').forEach((el) => {
       const slug = el.dataset.groupMember;
       if (el.checked) { if (!f.groupMembers.includes(slug)) f.groupMembers.push(slug); }
@@ -3085,7 +3164,7 @@ async function handleHabitSaveInner() {
   // Ziel-Quote ergibt bei "Keine Wertung" keinen Sinn (kein Gut/Schlecht zum Stauchen)
   // - das Formularfeld ist dann versteckt (siehe scaleBody), aber f.goalPercent könnte
   // noch einen alten Wert von vor dem Umschalten auf "Keine Wertung" tragen.
-  const goalThreshold = ((f.kind === 'scale' && f.good) || f.kind === 'group') && Number.isFinite(goalPercent) && goalPercent > 0 && goalPercent < 100
+  const goalThreshold = ((f.kind === 'scale' && f.good) || (f.kind === 'group' && f.groupType !== 'number')) && Number.isFinite(goalPercent) && goalPercent > 0 && goalPercent < 100
     ? goalPercent / 100
     : null;
 
@@ -3101,7 +3180,16 @@ async function handleHabitSaveInner() {
       state.notice = { type: 'error', text: t('habitForm.error.minGroupMembers') };
       return;
     }
-    fields = { kind: 'group', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: groupMembers, goal_threshold: goalThreshold };
+    const isNumber = f.groupType === 'number';
+    if (isNumber) {
+      // Das Formular sperrt Felder mit anderer Einheit schon - hier nur als letzte Absicherung.
+      const units = new Set(groupMembers.map((key) => (state.habits.find((h) => h.id === key)?.unit || '').trim()));
+      if (units.size > 1) {
+        state.notice = { type: 'error', text: t('habitForm.error.groupUnitMismatch') };
+        return;
+      }
+    }
+    fields = { kind: 'group', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: groupMembers, goal_threshold: goalThreshold, aggregate: isNumber ? f.aggregate : null };
   } else if (f.locked) {
     // Bereich/Anzahl bleiben unangetastet (original.min/max) – die Darstellung
     // (Buttons/Slider) und die Sichtbarkeit des Werts beim Eintragen sind reine
@@ -3187,6 +3275,7 @@ async function handleHabitSaveInner() {
     sliderShowValue: fields.slider_show_value,
     groupMembers: fields.group_members,
     goalThreshold: fields.goal_threshold,
+    aggregate: fields.aggregate ?? null,
   };
   const row = {
     kind: fields.kind,
@@ -3715,7 +3804,7 @@ async function handleExportData() {
         return {
           ...rest, slug: p.key, name: p.name, unit: p.unit, min: p.min, max: p.max, labels: p.labels,
           good: p.good, display_style: p.displayStyle, slider_show_value: p.sliderShowValue,
-          group_members: p.groupMembers, goal_threshold: p.goalThreshold,
+          group_members: p.groupMembers, goal_threshold: p.goalThreshold, aggregate: p.aggregate ?? null,
         };
       } catch {
         return { ...rest, decrypt_error: true };
@@ -4151,11 +4240,19 @@ function renderHabitFormPreview(f) {
 }
 
 // Nicht-editierbare Info-Zeile für gruppierte Felder (kind='group') — zeigt den
-// live berechneten Tages-Mittelwert seiner Mitglieder, nie einen eigenen Eintrag.
+// live berechneten Tageswert seiner Mitglieder, nie einen eigenen Eintrag. Skala-Gruppe:
+// Durchschnitt als Prozent, eingefärbt; Zahlen-Gruppe: berechneter Wert mit Einheit,
+// neutral (keine Bewertung).
 function renderGroupInfo(habit, dateKey) {
-  const members = (habit.groupMembers || [])
-    .map((slug) => state.habits.find((x) => x.id === slug))
-    .filter(Boolean);
+  const members = groupMemberHabits(habit);
+  if (isNumberGroup(habit)) {
+    const { value, filled, total } = numberGroupDay(habit, dateKey);
+    const unit = groupUnit(habit);
+    return `
+      <div class="group-readout group-readout--number">${value !== null ? esc(String(value)) + (unit ? ' ' + esc(unit) : '') : '–'}</div>
+      <span class="manage-meta">${t('groupInfo.aggOf', { agg: t('aggregate.' + habit.aggregate), names: members.map((m) => m.name).join(', '), filled, total })}</span>
+    `;
+  }
   const day = state.entries[dateKey] || {};
   const filledCount = members.filter((m) => day[m.id] !== undefined).length;
   const score = habitScore(habit, dateKey);
@@ -4382,7 +4479,7 @@ function renderWeek() {
   const visibleHabits = state.habits.filter(
     (h) => !h.archivedAt || habitVisibleInRange(h, dayKeys)
   );
-  const rows = visibleHabits.filter((h) => h.kind === 'scale' || h.kind === 'group').map((h) => {
+  const rows = visibleHabits.filter(isScoredKind).map((h) => {
     const scores = dayKeys.map((k) => habitScore(h, k));
     const valid = scores.filter((s) => s !== null);
     const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
@@ -4431,7 +4528,7 @@ function renderMonth() {
   const visibleHabits = state.habits.filter(
     (h) => !h.archivedAt || habitVisibleInRange(h, cellKeys)
   );
-  const monthStats = computeHabitStats(visibleHabits.filter((h) => h.kind === 'scale' || h.kind === 'group'), cellKeys);
+  const monthStats = computeHabitStats(visibleHabits.filter(isScoredKind), cellKeys);
 
   return `
     <div class="day-nav">
@@ -4475,7 +4572,7 @@ function renderYear() {
   const visibleHabits = state.habits.filter(
     (h) => !h.archivedAt || habitVisibleInRange(h, yearKeys)
   );
-  const yearStats = computeHabitStats(visibleHabits.filter((h) => h.kind === 'scale' || h.kind === 'group'), yearKeys);
+  const yearStats = computeHabitStats(visibleHabits.filter(isScoredKind), yearKeys);
 
   return `
     <div class="day-nav">
@@ -4493,7 +4590,7 @@ function renderYear() {
 // --- Rendering: Gesamt (alle Einträge seit Beginn) ---------------------------
 function renderGlobal() {
   const dateKeys = Object.keys(state.entries).sort();
-  const stats = computeHabitStats(state.habits.filter((h) => h.kind === 'scale' || h.kind === 'group'), dateKeys);
+  const stats = computeHabitStats(state.habits.filter(isScoredKind), dateKeys);
   const rangeNote = dateKeys.length
     ? t('global.rangeNote', { since: formatDMY(dateKeys[0]), count: dateKeys.length })
     : t('global.noEntries');
@@ -4747,8 +4844,9 @@ function trendDirection(series, range) {
 }
 
 function renderNumberChart(habit, dateKeys, interactive) {
-  const stats = numberFieldStats(habit.id, dateKeys);
-  const unitSuffix = habit.unit ? ` ${habit.unit}` : '';
+  const stats = numberFieldStats(habit, dateKeys);
+  const unit = isNumberGroup(habit) ? groupUnit(habit) : habit.unit;
+  const unitSuffix = unit ? ` ${unit}` : '';
   const head = `
     <div class="number-chart-head">
       <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
@@ -4824,7 +4922,7 @@ function renderNumberChart(habit, dateKeys, interactive) {
 // bei Jahr/Gesamt lägen bis zu 365 Punkte auf Handybreite, ~1px pro Tag, nicht mehr
 // gezielt treffbar.
 function renderNumberCharts(visibleHabits, dateKeys, interactive = false) {
-  const numberHabits = visibleHabits.filter(isNumberKind);
+  const numberHabits = visibleHabits.filter(hasNumericSeries);
   if (!numberHabits.length) return '';
   return `<div class="month-stats">${numberHabits.map((h) => renderNumberChart(h, dateKeys, interactive)).join('')}</div>`;
 }
@@ -4948,24 +5046,50 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // unbewerteten - die haben kein Gut/Schlecht zum Mitteln), plus bereits gewählte
   // Mitglieder, die inzwischen archiviert wurden (sonst würde man sie beim nächsten
   // Bearbeiten der Gruppe unsichtbar wieder verlieren).
-  const scaleCandidates = state.habits.filter(
-    (h) => h.kind === 'scale' && !isNeutralScale(h) && h.defId !== f.defId && (!h.archivedAt || f.groupMembers.includes(h.id))
-  );
+  // Zahlen-Gruppen: aktive Zahlenwert-Felder; sobald eins gewählt ist, lassen sich nur
+  // noch Felder mit derselben Einheit dazunehmen (andere erscheinen deaktiviert) - sonst
+  // käme still eine falsche Zahl heraus (5 km + 800 m).
+  const isNumberGroupForm = f.groupType === 'number';
+  const groupCandidates = state.habits.filter((h) => h.defId !== f.defId && (!h.archivedAt || f.groupMembers.includes(h.id))
+    && (isNumberGroupForm ? h.kind === 'number' : h.kind === 'scale' && !isNeutralScale(h)));
+  const chosenUnit = isNumberGroupForm
+    ? (() => { const first = groupCandidates.find((h) => f.groupMembers.includes(h.id)); return first ? (first.unit || '').trim() : null; })()
+    : null;
   const groupBody = `
     <div class="auth-field">
-      <label>${t('habitForm.members')}</label>
-      ${scaleCandidates.length ? `
-        <div class="group-member-list">
-          ${scaleCandidates.map((h) => `
-            <label class="checkbox-field group-member-check">
-              <input type="checkbox" data-group-member="${esc(h.id)}" ${f.groupMembers.includes(h.id) ? 'checked' : ''} />
-              ${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}
-            </label>
-          `).join('')}
-        </div>
-      ` : `<p class="habit-form-lock-note">${t('habitForm.noGroupCandidates')}</p>`}
+      <label id="habit-form-group-type-label">${t('habitForm.groupType')}</label>
+      <div class="pill-group" role="group" aria-labelledby="habit-form-group-type-label">
+        <button type="button" class="pill-toggle${!isNumberGroupForm ? ' pill-toggle--active' : ''}" data-action="habit-group-type" data-type="scale" aria-pressed="${!isNumberGroupForm}">${t('habitForm.groupType.scale')}</button>
+        <button type="button" class="pill-toggle${isNumberGroupForm ? ' pill-toggle--active' : ''}" data-action="habit-group-type" data-type="number" aria-pressed="${isNumberGroupForm}">${t('habitForm.groupType.number')}</button>
+      </div>
     </div>
-    ${goalField}
+    ${isNumberGroupForm ? `
+      <div class="auth-field">
+        <label for="habit-form-group-aggregate">${t('habitForm.aggregate')}</label>
+        <select id="habit-form-group-aggregate">
+          ${['sum', 'avg', 'min', 'max'].map((a) => `<option value="${a}" ${f.aggregate === a ? 'selected' : ''}>${t('aggregate.' + a)}</option>`).join('')}
+        </select>
+      </div>
+    ` : ''}
+    <div class="auth-field">
+      <label>${t('habitForm.members')}</label>
+      ${groupCandidates.length ? `
+        <div class="group-member-list">
+          ${groupCandidates.map((h) => {
+            const unit = (h.unit || '').trim();
+            const blocked = isNumberGroupForm && chosenUnit !== null && unit !== chosenUnit && !f.groupMembers.includes(h.id);
+            return `
+              <label class="checkbox-field group-member-check${blocked ? ' group-member-check--blocked' : ''}">
+                <input type="checkbox" data-group-member="${esc(h.id)}" ${f.groupMembers.includes(h.id) ? 'checked' : ''} ${blocked ? 'disabled' : ''} />
+                ${esc(h.name)}${isNumberGroupForm && unit ? ` <span class="manage-meta">(${esc(unit)})</span>` : ''}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}
+              </label>
+            `;
+          }).join('')}
+        </div>
+        ${isNumberGroupForm ? `<p class="habit-form-lock-note">${t('habitForm.groupUnitNote')}</p>` : ''}
+      ` : `<p class="habit-form-lock-note">${t(isNumberGroupForm ? 'habitForm.noNumberGroupCandidates' : 'habitForm.noGroupCandidates')}</p>`}
+    </div>
+    ${isNumberGroupForm ? '' : goalField}
   `;
 
   const reminderBody = `
@@ -5121,7 +5245,9 @@ function renderManage() {
           ${confirmingDelete
             ? `<span class="manage-delete-warning">${t('manage.deleteWarning')}</span>`
             : h.kind === 'group'
-              ? `<span class="manage-meta">${t('manage.groupMembers', { names: (h.groupMembers || []).map((slug) => state.habits.find((x) => x.id === slug)?.name || slug).join(', ') || '–' })}</span>`
+              ? `<span class="manage-meta">${isNumberGroup(h)
+                  ? t('manage.groupAggregate', { agg: t('aggregate.' + h.aggregate), names: groupMemberHabits(h).map((m) => m.name).join(', ') || '–' })
+                  : t('manage.groupMembers', { names: groupMemberHabits(h).map((m) => m.name).join(', ') || '–' })}</span>`
               : manageFieldMeta(h)}
         </div>
         <div class="manage-actions">
@@ -5737,6 +5863,19 @@ app.addEventListener('click', async (e) => {
     syncHabitFormFromDom();
     state.habitForm.kind = el.dataset.kind;
     render();
+  } else if (action === 'habit-group-type') {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    if (f.groupType !== el.dataset.type) {
+      f.groupType = el.dataset.type;
+      // Mitglieder der anderen Art passen nicht mehr - raus damit.
+      f.groupMembers = f.groupMembers.filter((key) => {
+        const h = state.habits.find((x) => x.id === key);
+        return h && (f.groupType === 'number' ? h.kind === 'number' : h.kind === 'scale');
+      });
+    }
+    render();
+    document.querySelector(`[data-action="habit-group-type"][data-type="${el.dataset.type}"]`)?.focus();
   } else if (action === 'habit-schedule-day') {
     syncHabitFormFromDom();
     const sch = state.habitForm.schedule;
@@ -5854,6 +5993,15 @@ app.addEventListener('click', async (e) => {
 
 app.addEventListener('change', (e) => {
   state.notice = null; // siehe Kommentar beim 'click'-Listener oben
+  // Zahlen-Gruppe: nach jeder Mitglieder-Änderung neu rendern, damit Felder mit anderer
+  // Einheit gesperrt bzw. wieder freigegeben werden (siehe groupBody).
+  const groupMember = e.target.closest?.('[data-group-member]');
+  if (groupMember && state.habitForm?.groupType === 'number') {
+    syncHabitFormFromDom();
+    render();
+    document.querySelector(`[data-group-member="${CSS.escape(groupMember.dataset.groupMember)}"]`)?.focus();
+    return;
+  }
   if (e.target.id === 'habit-form-schedule-type' && state.habitForm) {
     syncHabitFormFromDom();
     state.habitForm.schedule.type = e.target.value;

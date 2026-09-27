@@ -319,6 +319,22 @@ Tages-Mittelwert. `habitVisibleInRange(h, dateKeys)` ersetzt entsprechend die
 Sichtbarkeits-Prüfung archivierter Felder in den Auswertungs-Ansichten, da eine Gruppe
 nie einen eigenen Entry-Key hat.
 
+**Zahlen-Gruppen** (seit 2026-09-27): eine Gruppe kann statt Skalen auch
+`kind='number'`-Felder zusammenfassen, per Summe, Durchschnitt, Minimum oder Maximum
+(`aggregate` in der verschlüsselten payload: gesetzt = Zahlen-Gruppe, `null` = Skala-Gruppe
+wie oben – bestehende Gruppen brauchten deshalb keine Umstellung). Helfer: `isNumberGroup`,
+`isScoredKind` (Felder mit Gut/Schlecht-Score – ersetzt die frühere Prüfung
+`kind === 'scale' || kind === 'group'` in Woche/Monat/Jahr/Gesamt), `hasNumericSeries`,
+`numberGroupDay`/`habitNumericValue`. Regeln: Mitglieder nur Zahlenwert-Felder mit
+**derselben Einheit** (Formular sperrt andere, sobald eins gewählt ist, mit kurzem Hinweis;
+beim Speichern nochmal geprüft) – die Gruppe übernimmt diese Einheit (`groupUnit`).
+Gerechnet wird mit den an dem Tag eingetragenen Mitgliedern (bei der Summe zählt ein
+fehlendes also als 0), ist gar keins eingetragen, gibt es keinen Wert statt 0. Keine
+Bewertung: kein Score, keine Farbe, keine Ziel-Quote, nicht in der Tages-Gesamtwertung;
+in "Heute" eine neutrale Info-Zeile mit Wert + Einheit, in der Auswertung ein
+Verlaufsgraph wie bei Zahlenwert-Feldern. Werte werden auf 2 Nachkommastellen gerundet
+(gegen Gleitkomma-Reste).
+
 **Ziel-Quote (`goal_threshold`, `kind='scale'`/`kind='group'`)**: bei manchen Feldern ist
 eine 100%-Quote unrealistisch/gar nicht das eigentliche Ziel (z.B. "Kraftsport gemacht"
 jeden Tag). Pro Feld einstellbar (Formular "Ziel für volle Bewertung (%)", Standard 100 =
@@ -669,7 +685,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 366 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 379 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
