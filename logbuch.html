@@ -248,7 +248,6 @@
     border: 1px solid var(--line); border-radius: 4px; padding: 12px; margin-bottom: 16px;
     display: flex; align-items: center; gap: 10px;
   }
-  .number-box label { font-size: 13px; flex: 1; }
   .number-box .number-last { display: block; font-size: 11px; color: var(--sand); margin-top: 2px; }
   .number-input {
     width: 72px; font-family: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--line);
@@ -300,28 +299,25 @@
     font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 12px; color: var(--on-score);
   }
   .habit-row--group { flex-wrap: wrap; }
-  /* order: 1 schiebt die Mitglieder-Zeile hinter den ⋯-Button (steht im DOM danach),
-     damit der Button in der Kopfzeile neben dem Mittelwert bleibt. */
-  .habit-row--group .manage-meta { flex-basis: 100%; order: 1; }
+  .habit-row--group .manage-meta { flex-basis: 100%; }
 
-  /* Zeilen-Menü in "Heute" (siehe renderRowMenu). touch-callout/user-select verhindern,
-     dass iOS/Android beim Long-Press auf die Zeile stattdessen Textauswahl oder ein
-     eigenes Kontextmenü zeigen. */
+  /* Zeilen-Menü in "Heute" (siehe renderRowMenuTrigger). touch-callout/user-select
+     verhindern, dass iOS/Android beim Long-Press auf die Zeile stattdessen Textauswahl
+     oder ein eigenes Kontextmenü zeigen. */
   .habit-row, .number-box { position: relative; -webkit-touch-callout: none; }
-  .habit-name, .number-box label { -webkit-user-select: none; user-select: none; }
-  .row-head { display: flex; align-items: center; gap: 10px; }
-  .row-menu-btn {
-    position: relative; flex-shrink: 0; width: 26px; height: 26px; padding: 0;
-    display: flex; align-items: center; justify-content: center;
-    border: none; border-radius: 50%; background: transparent; color: var(--sand); cursor: pointer;
+  .habit-name, .number-box-label { -webkit-user-select: none; user-select: none; }
+  /* Der Feldname ist der Auslöser - optisch unverändert reiner Text, nur als Button
+     ausgezeichnet (Tastatur/Screenreader). Offen: dezent unterstrichen, damit sichtbar
+     bleibt, zu welcher Zeile das Menü gehört. */
+  .row-menu-trigger {
+    font: inherit; color: inherit; text-align: left; background: none; border: none;
+    padding: 0; margin: 0; cursor: pointer;
   }
-  /* Größere Tippfläche als die sichtbare, ohne das Zeilen-Layout zu verbreitern. */
-  .row-menu-btn::after { content: ''; position: absolute; inset: -6px; }
-  .row-menu-btn:hover, .row-menu-btn:focus-visible, .row-menu-btn[aria-expanded="true"] {
-    color: var(--ink); background: rgba(var(--moss-rgb), 0.14);
-  }
+  .row-menu-trigger[aria-expanded="true"] { text-decoration: underline; text-decoration-color: var(--sand); text-underline-offset: 3px; }
+  .number-box-label { flex: 1; min-width: 0; }
+  .number-box-label .row-menu-trigger { font-size: 13px; }
   .row-menu {
-    position: absolute; top: calc(100% - 4px); right: 0; z-index: 5; min-width: 170px;
+    position: absolute; top: calc(100% - 4px); left: 0; z-index: 5; min-width: 170px;
     display: flex; flex-direction: column; gap: 6px; padding: 10px;
     background: var(--popover-bg); border: 1px solid var(--ink); border-radius: 4px;
     box-shadow: 0 12px 32px var(--shadow);
@@ -1426,6 +1422,8 @@ const STRINGS = {
     'about.tip.jumpDay.body': 'Tippe in der Wochen-, Monats- oder Jahresansicht auf eine beliebige Zelle, um direkt zu diesem Tag zu springen.',
     'about.tip.toggleOff.title': 'Eine Antwort wieder löschen',
     'about.tip.toggleOff.body': 'Tippe eine bereits ausgewählte Option nochmal an, um sie zu entfernen — praktisch, falls du dich vertippt hast.',
+    'about.tip.fieldMenu.title': 'Ein Feld direkt bearbeiten',
+    'about.tip.fieldMenu.body': 'Tippe in „Heute" auf den Namen eines Feldes (oder halte die Zeile kurz gedrückt), um es direkt dort zu bearbeiten oder zu archivieren — ohne Umweg über „Felder verwalten".',
     'about.tip.reorder.title': 'Felder umsortieren',
     'about.tip.reorder.body': 'In „Felder verwalten" kannst du Felder per Ziehen am Griff-Symbol oder mit den ↑/↓-Buttons neu anordnen.',
     'about.tip.noValuation.title': 'Felder ohne Wertung',
@@ -1733,6 +1731,8 @@ const STRINGS = {
     'about.tip.jumpDay.body': 'Tap any cell in the week, month, or year view to jump directly to that day.',
     'about.tip.toggleOff.title': 'Clearing an answer',
     'about.tip.toggleOff.body': 'Tap an already-selected option again to remove it — handy if you tapped the wrong one.',
+    'about.tip.fieldMenu.title': 'Editing a field directly',
+    'about.tip.fieldMenu.body': 'In "Today", tap the name of a field (or briefly press and hold its row) to edit or archive it right there — no detour through "Manage fields".',
     'about.tip.reorder.title': 'Reordering fields',
     'about.tip.reorder.body': 'In "Manage fields" you can reorder fields by dragging the handle or using the ↑/↓ buttons.',
     'about.tip.noValuation.title': 'Fields without valuation',
@@ -3318,31 +3318,32 @@ function renderGroupInfo(habit, dateKey) {
 }
 
 // --- Rendering: Today ----------------------------------------------------
-// Zeilen-Menü (⋯) pro Feld in "Heute": Abkürzung zu Bearbeiten/Archivieren, ohne erst
-// in die Verwaltung zu wechseln. Der sichtbare ⋯-Button ist der Hauptweg (Tastatur/
-// Screenreader, und überhaupt auffindbar) - Long-Press bzw. Rechtsklick auf die Zeile
-// öffnet dasselbe Menü nur als zusätzliche Abkürzung (siehe "Zeilen-Menü per
-// Long-Press" weiter unten). Disclosure-Muster (aria-expanded + normale Buttons) statt
-// role="menu", da letzteres eine eigene Pfeiltasten-Navigation verlangen würde.
-// Das Panel ist absolut positioniert, seine Lage im DOM der Zeile daher egal.
-function renderRowMenu(h) {
+// Zeilen-Menü pro Feld in "Heute": Abkürzung zu Bearbeiten/Archivieren, ohne erst in
+// die Verwaltung zu wechseln. Auslöser ist der Feldname selbst (als Button
+// ausgezeichnet, optisch unverändert Text) statt eines eigenen ⋯-Symbols - das Menü wird
+// selten gebraucht, ein zusätzliches Element in jeder Zeile war dafür zu viel Unruhe.
+// Tastatur/Screenreader erreichen es darüber normal, Long-Press bzw. Rechtsklick auf die
+// Zeile öffnet dasselbe Menü als zusätzliche Abkürzung (siehe "Zeilen-Menü per
+// Long-Press" weiter unten); in "Über Logbuch" erklärt, da man einem Namen nicht
+// ansieht, dass er antippbar ist. Disclosure-Muster (aria-expanded + normale Buttons)
+// statt role="menu", da letzteres eine eigene Pfeiltasten-Navigation verlangen würde.
+function renderRowMenuTrigger(h, content) {
   const open = state.rowMenu === h.id;
-  const label = t('today.fieldOptions', { name: h.name });
+  return `<button type="button" class="habit-name row-menu-trigger" data-action="row-menu" data-habit="${h.id}" aria-expanded="${open}"${open ? ` aria-controls="row-menu-${h.id}"` : ''} aria-label="${t('today.fieldOptions', { name: h.name })}">${content}</button>`;
+}
+// Absolut positioniert (an der Zeile verankert), seine Lage im DOM der Zeile ist egal.
+function renderRowMenuPanel(h) {
+  if (state.rowMenu !== h.id) return '';
   return `
-    <button type="button" class="row-menu-btn" data-action="row-menu" data-habit="${h.id}" aria-expanded="${open}"${open ? ` aria-controls="row-menu-${h.id}"` : ''} aria-label="${label}">
-      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1.5" fill="currentColor"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="13" cy="8" r="1.5" fill="currentColor"/></svg>
-    </button>
-    ${open ? `
-      <div class="row-menu" id="row-menu-${h.id}" role="group" aria-label="${label}">
-        <button type="button" class="menu-item-btn" data-action="row-menu-edit" data-id="${h.defId}">${t('common.edit')}</button>
-        <button type="button" class="menu-item-btn menu-item-btn--warn" data-action="row-menu-archive" data-id="${h.defId}">${t('manage.archive')}</button>
-      </div>
-    ` : ''}
+    <div class="row-menu" id="row-menu-${h.id}" role="group" aria-label="${t('today.fieldOptions', { name: h.name })}">
+      <button type="button" class="menu-item-btn" data-action="row-menu-edit" data-id="${h.defId}">${t('common.edit')}</button>
+      <button type="button" class="menu-item-btn menu-item-btn--warn" data-action="row-menu-archive" data-id="${h.defId}">${t('manage.archive')}</button>
+    </div>
   `;
 }
 // Nach jedem Öffnen/Schließen nötig, da render() das DOM komplett neu aufbaut und den
 // Fokus dabei verwirft: beim Öffnen auf den ersten Menüpunkt, beim Schließen zurück
-// auf den ⋯-Button derselben Zeile.
+// auf den Auslöser (Feldname) derselben Zeile.
 function openRowMenu(habitId) {
   state.rowMenu = habitId;
   render();
@@ -3352,7 +3353,7 @@ function closeRowMenu() {
   const habitId = state.rowMenu;
   state.rowMenu = null;
   render();
-  document.querySelector(`.row-menu-btn[data-habit="${habitId}"]`)?.focus({ preventScroll: true });
+  document.querySelector(`.row-menu-trigger[data-habit="${habitId}"]`)?.focus({ preventScroll: true });
 }
 
 function renderNumberBox(h, dateKey, dayEntry) {
@@ -3363,11 +3364,17 @@ function renderNumberBox(h, dateKey, dayEntry) {
     last && last.dateKey !== dateKey
       ? t('numberBox.last', { value: last.value + unitSuffix, date: formatDMY(last.dateKey) })
       : '';
+  // Der Name ist hier zugleich Menü-Auslöser (siehe renderRowMenuTrigger), kann also
+  // kein <label> mehr sein - das Eingabefeld bekommt seinen Namen deshalb per aria-label.
+  const nameWithUnit = `${esc(h.name)}${h.unit ? ` (${esc(h.unit)})` : ''}`;
   return `
     <div class="number-box">
-      <label for="number-input-${h.id}">${esc(h.name)}${h.unit ? ` (${esc(h.unit)})` : ''}${lastNote ? `<span class="number-last">${lastNote}</span>` : ''}</label>
-      <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-action="number-input" data-habit="${h.id}" value="${esc(currentValue)}" />
-      ${renderRowMenu(h)}
+      <div class="number-box-label">
+        ${renderRowMenuTrigger(h, nameWithUnit)}
+        ${lastNote ? `<span class="number-last">${lastNote}</span>` : ''}
+      </div>
+      <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-action="number-input" data-habit="${h.id}" value="${esc(currentValue)}" aria-label="${nameWithUnit}" />
+      ${renderRowMenuPanel(h)}
     </div>
   `;
 }
@@ -3392,25 +3399,23 @@ function renderToday() {
         if (isNumberKind(h)) return renderNumberBox(h, dateKey, dayEntry);
         if (h.kind === 'group') return `
           <div class="habit-row habit-row--group">
-            <span class="habit-name">${esc(h.name)}</span>
+            ${renderRowMenuTrigger(h, esc(h.name))}
             ${renderGroupInfo(h, dateKey)}
-            ${renderRowMenu(h)}
+            ${renderRowMenuPanel(h)}
           </div>
         `;
         if (h.displayStyle === 'slider') return `
           <div class="habit-row habit-row--slider">
-            <div class="row-head">
-              <span class="habit-name">${esc(h.name)}</span>
-              ${renderRowMenu(h)}
-            </div>
+            ${renderRowMenuTrigger(h, esc(h.name))}
             ${renderHabitSlider(h, dayEntry[h.id])}
+            ${renderRowMenuPanel(h)}
           </div>
         `;
         return `
           <div class="habit-row">
-            <span class="habit-name">${esc(h.name)}</span>
+            ${renderRowMenuTrigger(h, esc(h.name))}
             <div class="habit-options">${renderHabitOptions(h, dayEntry[h.id])}</div>
-            ${renderRowMenu(h)}
+            ${renderRowMenuPanel(h)}
           </div>
         `;
       }).join('')}
@@ -3656,6 +3661,7 @@ function renderAbout() {
       ['about.tip.swipe.title', 'about.tip.swipe.body'],
       ['about.tip.jumpDay.title', 'about.tip.jumpDay.body'],
       ['about.tip.toggleOff.title', 'about.tip.toggleOff.body'],
+      ['about.tip.fieldMenu.title', 'about.tip.fieldMenu.body'],
       ['about.tip.reorder.title', 'about.tip.reorder.body'],
     ])}
     <div class="manage-section-divider"></div>
@@ -4815,7 +4821,7 @@ document.addEventListener('click', (e) => {
 // es schon im Klick-Handler oben, hier geht es nur um Klicks auf "leere" Fläche).
 document.addEventListener('click', (e) => {
   if (!state.rowMenu) return;
-  if (e.target.closest('.row-menu, .row-menu-btn')) return;
+  if (e.target.closest('.row-menu, .row-menu-trigger')) return;
   state.rowMenu = null;
   render();
 });
@@ -4921,11 +4927,14 @@ app.addEventListener('touchend', (e) => {
 }, { passive: true });
 
 // --- Zeilen-Menü per Long-Press/Rechtsklick (Heute) ------------------------
-// Reine Abkürzung zum ⋯-Button (siehe renderRowMenu), nie der einzige Weg. Touch/Stift
-// über einen eigenen Timer (iOS Safari feuert beim Long-Press kein 'contextmenu'), Maus
-// über den Rechtsklick ('contextmenu'). Ausgenommen sind alle Stellen, an denen
-// Gedrückthalten schon etwas anderes bedeutet: Eingabefelder (Einfügen/Cursor setzen),
-// der Schieberegler (Halten = Ziehen beginnen) und das Menü selbst.
+// Reine Abkürzung zum Feldnamen-Auslöser (siehe renderRowMenuTrigger), nie der einzige
+// Weg. Touch/Stift über einen eigenen Timer (iOS Safari feuert beim Long-Press kein
+// 'contextmenu'), Maus über den Rechtsklick ('contextmenu'). Ausgenommen sind alle
+// Stellen, an denen Gedrückthalten schon etwas anderes bedeutet: Eingabefelder
+// (Einfügen/Cursor setzen), der Schieberegler (Halten = Ziehen beginnen) und das Menü
+// selbst. Der Auslöser selbst ist bewusst NICHT ausgenommen - Android macht aus einem
+// langen Drücken keinen Klick mehr, ohne Long-Press-Behandlung passierte dort sonst gar
+// nichts.
 const LONG_PRESS_MS = 500;
 const LONG_PRESS_MOVE_TOLERANCE = 10;
 let longPress = null;
@@ -4938,8 +4947,8 @@ let lastPointerType = 'mouse';
 let suppressNextClick = false;
 
 function rowMenuHabitAt(target) {
-  if (state.view !== 'today' || target.closest('input, textarea, select, .slider-row, .row-menu, .row-menu-btn')) return null;
-  return target.closest('.habit-row, .number-box')?.querySelector('.row-menu-btn')?.dataset.habit ?? null;
+  if (state.view !== 'today' || target.closest('input, textarea, select, .slider-row, .row-menu')) return null;
+  return target.closest('.habit-row, .number-box')?.querySelector('.row-menu-trigger')?.dataset.habit ?? null;
 }
 function cancelLongPress() {
   if (!longPress) return;

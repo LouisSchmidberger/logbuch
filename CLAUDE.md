@@ -381,18 +381,23 @@ Zustand – `closeHabitForm()` (einziger Schließ-Weg: Speichern, Abbrechen,
 Android-Zurück) springt dann direkt zurück zum Tab statt in der Verwaltung zu bleiben,
 da die Absicht beim Shortcut "jetzt tracken" ist, nicht "verwalten".
 
-**Zeilen-Menü (⋯) pro Feld in "Heute"** (seit 2026-09-27, `renderRowMenu`/
-`openRowMenu`/`closeRowMenu` in `logbuch.html`, `state.rowMenu` = slug): kleines Popover
-mit "Bearbeiten" (öffnet das Feld-Formular in der Verwaltung mit `returnToTab: true`,
-gleiches Muster wie der "+ Neues Feld"-Shortcut) und "Archivieren" (danach Meldung, wo
-sich das Feld reaktivieren lässt). Soll künftig auch Notizen aufnehmen. Der sichtbare
-⋯-Button ist bewusst der Hauptweg (auffindbar, Tastatur/Screenreader,
-Disclosure-Muster mit `aria-expanded`, Escape schließt und gibt den Fokus zurück);
-Long-Press (Touch, eigener 500-ms-Timer, da iOS kein `contextmenu` feuert) bzw.
-Rechtsklick (Maus) auf die Zeile öffnet dasselbe Menü nur als Abkürzung. Ausgenommen
-davon sind Eingabefelder, der Schieberegler und das Menü selbst; der Klick beim
-Loslassen nach einem Long-Press wird verschluckt (`suppressNextClick`), sonst würde er
-auf einem Wert-Button zusätzlich den Wert setzen. Zählt als Overlay für die
+**Zeilen-Menü pro Feld in "Heute"** (seit 2026-09-27, `renderRowMenuTrigger`/
+`renderRowMenuPanel`/`openRowMenu`/`closeRowMenu` in `logbuch.html`, `state.rowMenu` =
+slug): kleines Popover mit "Bearbeiten" (öffnet das Feld-Formular in der Verwaltung mit
+`returnToTab: true`, gleiches Muster wie der "+ Neues Feld"-Shortcut) und "Archivieren"
+(danach Meldung, wo sich das Feld reaktivieren lässt). Soll künftig auch Notizen
+aufnehmen. **Auslöser ist der Feldname selbst** (Button, optisch unverändert Text,
+Disclosure-Muster mit `aria-expanded`, Escape schließt und gibt den Fokus zurück) –
+bewusst kein eigenes ⋯-Symbol pro Zeile: kurz so gebaut, wirkte bei vielen Feldern
+überladen für eine selten genutzte Aktion. Da man einem Namen nicht ansieht, dass er
+antippbar ist, erklärt ein Tipp in "Über Logbuch" (`about.tip.fieldMenu`) das.
+Zahlenwert-Felder: der Name ist dadurch kein `<label>` mehr, das Eingabefeld trägt
+seinen Namen per `aria-label`. Long-Press (Touch, eigener 500-ms-Timer, da iOS kein
+`contextmenu` feuert) bzw. Rechtsklick (Maus) auf die Zeile öffnet dasselbe Menü als
+Abkürzung. Ausgenommen davon sind Eingabefelder, der Schieberegler und das Menü selbst,
+nicht aber der Auslöser (Android macht aus langem Drücken keinen Klick mehr); der Klick
+beim Loslassen nach einem Long-Press wird verschluckt (`suppressNextClick`), sonst würde
+er auf einem Wert-Button zusätzlich den Wert setzen. Zählt als Overlay für die
 Android-Zurück-Logik; jede andere Klick-Aktion, Wischen und Deep-Links schließen es.
 
 **Verwaltungsliste entschlackt** (seit 2026-09-18, `renderManage` in `logbuch.html`):
@@ -474,7 +479,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 305 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 307 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
