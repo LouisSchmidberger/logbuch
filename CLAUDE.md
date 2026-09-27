@@ -38,6 +38,11 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
   hinzufügen" keine reine Komfortsache, sondern **Voraussetzung** dafür, dass
   Web-Push überhaupt funktioniert (Safari liefert Push sonst gar nicht aus, seit
   iOS 16.4) — Hinweistext ist deshalb iOS-spezifisch dringlicher formuliert.
+- **iOS-Zoom beim Antippen von Eingabefeldern**: Safari auf iOS/iPadOS zoomt bei Feldern mit
+  < 16px Schrift automatisch heran und nie wieder heraus – deshalb bekommen dort alle
+  Eingabefelder 16px (`@supports (-webkit-touch-callout: none)` im CSS, nur Apple-Touch-
+  Geräte). Bewusst nicht per `maximum-scale=1` gelöst (sperrt auf Android das Zoomen mit
+  zwei Fingern – schlecht für Menschen mit Sehschwäche).
 
 ## Datenmodell
 
