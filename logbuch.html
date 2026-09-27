@@ -390,10 +390,14 @@
     border-style: dashed;
     background-image: repeating-linear-gradient(-45deg, var(--sand) 0, var(--sand) 1px, transparent 1px, transparent 5px);
   }
-  /* 7 gleich breite Spalten statt umbrechender Pills - passt auch auf schmale Handys
-     in eine Zeile. */
-  .weekday-group { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }
-  .weekday-group .pill-toggle { padding-left: 0; padding-right: 0; text-align: center; }
+  /* Runde Buttons wie die Stufen-Buttons in "Heute", verteilt über höchstens 310px -
+     bleibt auch auf schmalen Handys einzeilig (Abstände schrumpfen dann), ohne sich auf
+     breiten Bildschirmen übertrieben weit zu verteilen. */
+  .weekday-group { display: flex; justify-content: space-between; gap: 0; width: min(100%, 310px); margin-top: 6px; }
+  .weekday-group .weekday-toggle {
+    width: 34px; height: 34px; padding: 0; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
   .schedule-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; }
   .auth-field .schedule-inline select, .auth-field .schedule-inline input:not([type="checkbox"]) { width: auto; }
   .auth-field .schedule-inline input[type="number"] { width: 72px; }
@@ -1235,9 +1239,11 @@ function openHabitForm(form) {
   state.habitForm = form;
   render();
   window.scrollTo(0, 0);
-  // Direkt den Namen fokussieren - öffnet auf dem Handy gleich die Tastatur
-  // (funktioniert nur zuverlässig, weil das synchron aus einem Klick-Handler kommt).
-  requestAnimationFrame(() => document.getElementById('habit-form-name')?.focus());
+  // Nur beim Neuanlegen direkt den Namen fokussieren (öffnet auf dem Handy gleich die
+  // Tastatur, funktioniert nur zuverlässig synchron aus einem Klick-Handler) - ohne
+  // Namen geht es dort nicht weiter. Beim Bearbeiten will man meist etwas anderes
+  // ändern; dort bleibt der Fokus auf der Seitenüberschrift (siehe renderApp).
+  if (!form.defId) requestAnimationFrame(() => document.getElementById('habit-form-name')?.focus());
 }
 function closeHabitForm() {
   const returnToTab = state.habitForm?.returnToTab;

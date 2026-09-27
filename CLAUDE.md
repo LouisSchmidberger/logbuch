@@ -139,7 +139,7 @@ als fehlend noch lösen sie ihre eigene Erinnerungszeit aus (`habit_scheduled_on
 ## Wiederholung (`habit_definitions.schedule`, seit 2026-09-27)
 
 Pro Feld einstellbar, an welchen Tagen es "dran" ist (Formular "Wiederholung": Typ als
-Auswahlliste, Wochentage als 7 gleich breite Buttons in einer Zeile; nicht für
+Auswahlliste, Wochentage als 7 runde Buttons in einer Zeile; nicht für
 Gruppen – die sind dran, sobald eines ihrer aktiven Mitglieder dran ist). `null` =
 täglich, sonst `{type:'weekly', days:[0..6]}` (0 = Montag), `{type:'monthly', day:1..31
 | -1}` (-1 = letzter Tag), `{type:'yearly', month, day}` oder `{type:'interval', every:
@@ -455,7 +455,8 @@ bearbeiten"/…, `habitFormTitleKey`) steht im Seitenkopf statt im Formular (im 
 bleibt er als `<h2>` im Formular, `renderHabitForm({ titleInHeader })`). ←-Button und
 Wischen führen dort zurück zur Liste statt aus der Verwaltung (`subpageBack`), bzw. zum
 Tab bei `returnToTab`. Geöffnet wird immer über `openHabitForm` (merkt sich die
-Scroll-Position), `closeHabitForm` stellt sie wieder her (`pendingScrollRestore`, am
+Scroll-Position; fokussiert nur beim Neuanlegen direkt das Namensfeld – beim Bearbeiten
+will man meist etwas anderes ändern, dort bleibt der Fokus auf der Überschrift), `closeHabitForm` stellt sie wieder her (`pendingScrollRestore`, am
 Ende von `render()` eingelöst) – man landet nach Speichern/Abbrechen wieder an der
 Stelle der Liste bzw. von "Heute", von der man kam.
 
