@@ -377,6 +377,12 @@
   .number-chart-meta { font-size: 11px; color: var(--sand); flex-shrink: 0; white-space: nowrap; }
   .number-chart-svg { display: block; width: 100%; height: 56px; }
   .number-chart-plot { position: relative; }
+  /* Kurzes Aufleuchten des Feldes nach einem Sprung aus der Auswertung (focusTodayField). */
+  @keyframes field-highlight { from { background-color: rgba(var(--moss-rgb), 0.22); } to { background-color: transparent; } }
+  .field-highlight { animation: field-highlight 1.6s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .field-highlight { animation-duration: 0.01s; animation-delay: 1.2s; background-color: rgba(var(--moss-rgb), 0.22); }
+  }
 
   /* Text-Felder (kind='text', siehe renderTextBox): Textfeld unter dem Namen statt
      daneben wie bei der Zahlen-Eingabe. field-sizing: content lässt es mit dem Text
@@ -3734,6 +3740,21 @@ function renderTextBox(h, dayEntry) {
   `;
 }
 
+// Nach einem Sprung aus der Auswertung zu einem bestimmten Feld (Text-Eintrag im
+// Rückblick, Punkt im Zahlen-Graphen, Feld-Zelle in der Woche): nicht nur zum Tag,
+// sondern auch zum Feld selbst - hinscrollen, kurz hervorheben, Fokus auf den Feldnamen
+// (bewusst nicht ins Textfeld: das würde die Tastatur öffnen, man will ja erst lesen).
+// Archivierte Felder stehen nicht in "Heute" - dann bleibt es beim Tag.
+function focusTodayField(habitId) {
+  const trigger = document.querySelector(`.row-menu-trigger[data-habit="${habitId}"]`);
+  const row = trigger?.closest('.habit-row, .number-box');
+  if (!row) return;
+  row.scrollIntoView({ block: 'center' });
+  trigger.focus({ preventScroll: true });
+  row.classList.add('field-highlight');
+  row.addEventListener('animationend', () => row.classList.remove('field-highlight'), { once: true });
+}
+
 function renderNumberBox(h, dateKey, dayEntry) {
   const currentValue = dayEntry[h.id] !== undefined ? dayEntry[h.id] : '';
   const last = findLastValue(h.id, dateKey);
@@ -3841,7 +3862,7 @@ function renderWeek() {
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
-        ${scores.map((s, i) => `<div class="grid-cell${h.kind !== 'group' && getNote(dayKeys[i], h.id) ? ' has-note' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" style="background:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
+        ${scores.map((s, i) => `<div class="grid-cell${h.kind !== 'group' && getNote(dayKeys[i], h.id) ? ' has-note' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
         <div class="grid-cell grid-cell--avg" style="background:${habitColor(h, applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
     `;
@@ -4208,7 +4229,7 @@ function renderNumberChart(habit, dateKeys, interactive) {
   // denselben Tag schon über die Wochentage bzw. Monatszellen - bis zu 31 weitere
   // Tab-Stopps hier würden nur verlängern, ohne etwas Neues zugänglich zu machen.
   const hits = interactive
-    ? stats.series.map((p, i) => `<span class="number-chart-hit" data-action="open-day" data-date="${p.key}" style="left:${((points[i][0] / w) * 100).toFixed(2)}%;width:${(100 / n).toFixed(2)}%"></span>`).join('')
+    ? stats.series.map((p, i) => `<span class="number-chart-hit" data-action="open-day" data-date="${p.key}" data-focus-habit="${habit.id}" style="left:${((points[i][0] / w) * 100).toFixed(2)}%;width:${(100 / n).toFixed(2)}%"></span>`).join('')
     : '';
   const trend = trendDirection(stats.series, range);
   const summary = t('numberChart.summary', {
@@ -4261,7 +4282,7 @@ function renderTextReviews(habits, dateKeys) {
     const list = `
       <ul class="text-review-list">
         ${entries.map((e) => `
-          <li><button type="button" class="text-review-entry" data-action="open-day" data-date="${e.key}">
+          <li><button type="button" class="text-review-entry" data-action="open-day" data-date="${e.key}" data-focus-habit="${h.id}">
             <span class="text-review-date">${formatDMY(e.key)}</span>
             <span class="text-review-text">${esc(e.text.trim())}</span>
           </button></li>
@@ -5006,6 +5027,7 @@ app.addEventListener('click', async (e) => {
     state.currentDate = parseDateKey(el.dataset.date);
     state.view = 'today';
     render();
+    if (el.dataset.focusHabit) focusTodayField(el.dataset.focusHabit);
   } else if (action === 'select') {
     const dateKey = formatKey(state.currentDate);
     const value = JSON.parse(el.dataset.value);

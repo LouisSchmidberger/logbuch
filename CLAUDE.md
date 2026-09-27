@@ -153,7 +153,12 @@ Verlassen des Feldes, beim Wechsel in eine andere App und vor dem Abmelden
 **Rückblick** (`renderTextReviews`): in Woche/Monat/Jahr/Gesamt pro Feld eine
 Liste Datum + Text (jeder Eintrag öffnet seinen Tag), überall gleich: eingeklappt
 (`<details>`, Anzahl im Titel) und neueste zuerst – eine je nach Ansicht umgekehrte
-Reihenfolge war verwirrend. Felder ohne Antwort im Zeitraum erscheinen nicht. Erklärt
+Reihenfolge war verwirrend. Felder ohne Antwort im Zeitraum erscheinen nicht.
+Sprünge aus der Auswertung zu einem bestimmten Feld (Rückblick-Eintrag, Punkt im
+Zahlen-Graphen, Feld-Zelle in der Woche; `data-focus-habit` an `open-day`) scrollen in
+"Heute" zusätzlich zum Feld, heben es kurz hervor (`.field-highlight`, bei
+`prefers-reduced-motion` ohne Animation) und fokussieren den Feldnamen
+(`focusTodayField`). Erklärt
 in "Über Logbuch" (`about.tip.textFields`). DB-Constraints `habit_definitions_kind_check`/
 `habit_definitions_kind_fields_check` erlauben `text` seit Migration
 `20260927120000_add_text_habit_kind`.
