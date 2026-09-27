@@ -383,6 +383,10 @@
     position: absolute; width: 9px; height: 9px; border-radius: 50%; transform: translate(-50%, -50%);
     border: 1.5px solid var(--ink); box-sizing: border-box; pointer-events: none;
   }
+  .number-chart-hit {
+    position: absolute; top: 0; bottom: 0; transform: translateX(-50%); cursor: pointer; border-radius: 2px;
+  }
+  .number-chart-hit:hover, .number-chart-hit:active { background: rgba(var(--moss-rgb), 0.14); }
 
   .grid-scroll { overflow-x: auto; }
   .grid-row { display: grid; grid-template-columns: minmax(58px, 80px) repeat(7, 1fr) minmax(30px, 38px); align-items: center; gap: 1px; }
@@ -3776,7 +3780,7 @@ function renderWeek() {
       </div>
       ${rows}
     </div>
-    ${renderNumberCharts(visibleHabits, days.map(formatKey))}
+    ${renderNumberCharts(visibleHabits, days.map(formatKey), true)}
   `;
 }
 
@@ -3815,7 +3819,7 @@ function renderMonth() {
       }).join('')}
     </div>
     <div class="month-stats">${renderStatsRows(monthStats)}</div>
-    ${renderNumberCharts(visibleHabits, cellKeys)}
+    ${renderNumberCharts(visibleHabits, cellKeys, true)}
   `;
 }
 
@@ -4080,7 +4084,7 @@ function trendDirection(series, range) {
   return delta > 0 ? 'up' : 'down';
 }
 
-function renderNumberChart(habit, dateKeys) {
+function renderNumberChart(habit, dateKeys, interactive) {
   const stats = numberFieldStats(habit.id, dateKeys);
   const unitSuffix = habit.unit ? ` ${habit.unit}` : '';
   const head = `
@@ -4112,6 +4116,14 @@ function renderNumberChart(habit, dateKeys) {
   const rings = noteRings
     .map(([x, y]) => `<span class="number-chart-note" style="left:${((x / w) * 100).toFixed(2)}%;top:${y.toFixed(1)}px"></span>`)
     .join('');
+  // Antippbare Spalten statt nur der winzigen Punkte: die ganze senkrechte Spalte um
+  // einen Punkt (Breite = Abstand zwischen zwei Punkten) öffnet dessen Tag. Bewusst
+  // nur für Zeige-Geräte (aria-hidden, nicht fokussierbar): per Tastatur erreicht man
+  // denselben Tag schon über die Wochentage bzw. Monatszellen - bis zu 31 weitere
+  // Tab-Stopps hier würden nur verlängern, ohne etwas Neues zugänglich zu machen.
+  const hits = interactive
+    ? stats.series.map((p, i) => `<span class="number-chart-hit" data-action="open-day" data-date="${p.key}" style="left:${((points[i][0] / w) * 100).toFixed(2)}%;width:${(100 / n).toFixed(2)}%"></span>`).join('')
+    : '';
   const trend = trendDirection(stats.series, range);
   const summary = t('numberChart.summary', {
     name: habit.name,
@@ -4131,16 +4143,20 @@ function renderNumberChart(habit, dateKeys) {
           ${dots}
         </svg>
         ${rings ? `<div aria-hidden="true">${rings}</div>` : ''}
+        ${hits ? `<div aria-hidden="true">${hits}</div>` : ''}
       </div>
       <p class="visually-hidden">${summary}${noteRings.length ? ' ' + t('numberChart.withNotes', { count: noteRings.length }) : ''}</p>
     </div>
   `;
 }
 
-function renderNumberCharts(visibleHabits, dateKeys) {
+// interactive: Datenpunkte antippbar (→ dieser Tag in "Heute"), nur in Woche/Monat -
+// bei Jahr/Gesamt lägen bis zu 365 Punkte auf Handybreite, ~1px pro Tag, nicht mehr
+// gezielt treffbar.
+function renderNumberCharts(visibleHabits, dateKeys, interactive = false) {
   const numberHabits = visibleHabits.filter(isNumberKind);
   if (!numberHabits.length) return '';
-  return `<div class="month-stats">${numberHabits.map((h) => renderNumberChart(h, dateKeys)).join('')}</div>`;
+  return `<div class="month-stats">${numberHabits.map((h) => renderNumberChart(h, dateKeys, interactive)).join('')}</div>`;
 }
 
 // --- Rendering: Felder-Verwaltung -------------------------------------------

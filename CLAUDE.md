@@ -449,6 +449,10 @@ diesem Feld) und am Wochentag (irgendeine Notiz an dem Tag, auch Tagesnotiz);
 Zahlenwert-Felder – Ring um den Datenpunkt im Verlaufsgraphen (alle Ansichten mit
 Graph; als HTML über dem SVG, da das SVG nur waagerecht gestreckt wird und ein Kreis
 darin zur Ellipse würde), plus "davon X mit Notiz" in der Screenreader-Zusammenfassung;
+in Woche/Monat sind die Datenpunkte außerdem antippbar (ganze senkrechte Spalte um den
+Punkt → dieser Tag in "Heute", `interactive` in `renderNumberCharts`; nur Zeige-Geräte,
+per Tastatur ist derselbe Tag über Wochentage/Monatszellen erreichbar; in Jahr/Gesamt
+bewusst nicht, dort läge ~1px pro Tag);
 Monat – Punkt in der Tageszelle; Jahr – bewusst keiner (Zellen zu klein). Screenreader:
 "mit Notiz" im Label der Tages-Zelle. **"Tag zurücksetzen"** löscht Werte UND Notizen
 und fragt deshalb seitdem immer nach (`renderResetConfirm`, `state.resetConfirm` =
