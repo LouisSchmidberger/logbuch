@@ -797,9 +797,18 @@ async function unwrapDek(wrappedB64, ivB64, wrappingKey) {
   );
 }
 
+// Klartext vor dem Verschlüsseln mit Leerzeichen auf ein Vielfaches von 256 Byte
+// auffüllen: die Länge des Chiffretexts verriet sonst grob, wie viel jemand an einem Tag
+// eingetragen/geschrieben hat (z.B. lange Notizen). JSON.parse ignoriert Leerzeichen am
+// Ende, decryptData braucht deshalb keine Änderung und liest alte, ungepolsterte Daten
+// genauso.
+const ENCRYPT_PAD_BLOCK = 256;
 async function encryptData(dek, obj) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, dek, new TextEncoder().encode(JSON.stringify(obj)));
+  const bytes = new TextEncoder().encode(JSON.stringify(obj));
+  const padded = new Uint8Array(Math.ceil((bytes.length + 1) / ENCRYPT_PAD_BLOCK) * ENCRYPT_PAD_BLOCK).fill(0x20);
+  padded.set(bytes);
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, dek, padded);
   return { iv: bufToBase64(iv), ciphertext: bufToBase64(ciphertext) };
 }
 
@@ -862,26 +871,128 @@ async function clearCachedDek(userId) {
 // Aktionen (bearbeiten/archivieren/löschen) gebraucht.
 // - labels === null  → Zahlenwerte (0, 1, 2, ...)
 // - labels === [...] → eigene Bezeichnungen, Länge muss max-min+1 entsprechen
-function habitFromRow(row) {
+//
+// Verschlüsselt (seit 2026-09-27): alles, was den Inhalt eines Feldes verrät, steht in
+// habit_definitions.enc (gleicher DEK wie die Einträge) - der Betreiber soll nicht sehen,
+// WORÜBER jemand Buch führt. Im Klartext bleibt nur, was get_due_notifications für die
+// Erinnerungen braucht: kind, reminder_minute, schedule, archived_at (+ sort_order).
+// "payload" = der entschlüsselte Inhalt von enc; "key" darin ist der Schlüssel in
+// habit_entries.data (früher die Klartext-Spalte slug). Die Datenbank lehnt eine
+// verschlüsselte Zeile mit Klartext-Resten ab (habit_definitions_enc_no_plaintext_check).
+function habitFromParts(row, payload) {
   return {
-    id: row.slug,
+    id: payload.key,
     defId: row.id,
-    name: row.name,
+    name: payload.name,
     kind: row.kind,          // 'scale' | 'number' | 'group' | 'text'
     schedule: row.schedule ?? null, // Wiederholung, null = täglich (siehe isScheduledOn)
-    unit: row.unit,          // nur bei kind === 'number', z.B. 'kg'
-    min: row.min,
-    max: row.max,
-    labels: row.labels,
-    good: row.good,
-    displayStyle: row.display_style,   // 'buttons' | 'slider', nur bei kind === 'scale' + Zahlenwerte relevant
-    sliderShowValue: row.slider_show_value,
-    groupMembers: row.group_members,   // nur bei kind === 'group': Array von Slugs
+    unit: payload.unit,      // nur bei kind === 'number', z.B. 'kg'
+    min: payload.min,
+    max: payload.max,
+    labels: payload.labels,
+    good: payload.good,
+    displayStyle: payload.displayStyle,   // 'buttons' | 'slider', nur bei kind === 'scale' + Zahlenwerte relevant
+    sliderShowValue: payload.sliderShowValue,
+    groupMembers: payload.groupMembers,   // nur bei kind === 'group': Array von Schlüsseln (id) der Mitglieder
     reminderMinute: row.reminder_minute, // Minuten seit Mitternacht (0-1439) oder null (= Standardzeit)
-    goalThreshold: row.goal_threshold, // nur bei kind === 'scale'/'group', 0-1 oder null (= 1 = 100%)
+    goalThreshold: payload.goalThreshold, // nur bei kind === 'scale'/'group', 0-1 oder null (= 1 = 100%)
     sortOrder: row.sort_order,
     archivedAt: row.archived_at,
   };
+}
+// Noch nicht umgestellte Zeile (Klartext-Spalten) -> dieselbe payload-Form.
+function defPayloadFromPlainRow(row) {
+  return {
+    key: row.slug,
+    name: row.name,
+    unit: row.unit ?? null,
+    min: row.min ?? null,
+    max: row.max ?? null,
+    labels: row.labels ?? null,
+    good: row.good ?? null,
+    displayStyle: row.display_style ?? 'buttons',
+    sliderShowValue: row.slider_show_value ?? true,
+    groupMembers: row.group_members ?? null,
+    goalThreshold: row.goal_threshold ?? null,
+  };
+}
+// Klartext-Spalten einer verschlüsselten Zeile - leer bzw. auf dem neutralen Default
+// (display_style/slider_show_value sind NOT NULL), genau wie die DB-Schutzregel verlangt.
+const DEF_PLAINTEXT_CLEARED = {
+  slug: null, name: null, min: null, max: null, labels: null, good: null, unit: null,
+  goal_threshold: null, group_members: null, display_style: 'buttons', slider_show_value: true,
+};
+// Neue Felder bekommen einen zufälligen Schlüssel statt eines aus dem Namen abgeleiteten
+// (der frühere slug "gekifft" verriet den Namen). Bestehende Felder behalten ihren alten
+// Schlüssel - der steht nur noch verschlüsselt (in enc und in habit_entries.data).
+function newHabitKey() {
+  const existing = new Set(state.habits.map((h) => h.id));
+  let key;
+  do {
+    key = 'f' + Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => (b % 36).toString(36)).join('');
+  } while (existing.has(key));
+  return key;
+}
+// Stellt noch unverschlüsselte Felder auf enc um (beim Laden, im Hintergrund - nur das
+// Gerät hat den Schlüssel, der Server kann das nicht selbst). Vor dem Speichern wird
+// lokal zur Kontrolle wieder entschlüsselt und verglichen - stimmt das nicht exakt,
+// bleibt die Zeile unverändert (lieber noch Klartext als ein unlesbares Feld). Nur für
+// Zeilen, die noch kein enc haben (.is('enc', null)) - läuft die Umstellung auf zwei
+// Geräten gleichzeitig, gewinnt einfach die erste.
+async function migrateHabitDefinitions(rows) {
+  for (const row of rows) {
+    try {
+      const payload = defPayloadFromPlainRow(row);
+      const enc = await encryptData(currentDek, payload);
+      const check = await decryptData(currentDek, enc);
+      if (JSON.stringify(check) !== JSON.stringify(payload)) {
+        console.error('[Logbuch] Kontroll-Entschlüsselung weicht ab, Feld bleibt vorerst unverschlüsselt', row.id);
+        continue;
+      }
+      const { error } = await supabase.from('habit_definitions')
+        .update({ enc, ...DEF_PLAINTEXT_CLEARED })
+        .eq('id', row.id)
+        .is('enc', null);
+      if (error) console.error('[Logbuch] Feld-Umstellung fehlgeschlagen, nächster Versuch beim nächsten Laden', row.id, error.message);
+    } catch (err) {
+      console.error('[Logbuch] Feld-Umstellung fehlgeschlagen', row.id, err);
+    }
+  }
+}
+// Lokale Namensliste für Erinnerungen (siehe sw.js): der Server schickt nur Feld-IDs,
+// der Service Worker setzt daraus auf dem Gerät die Namen ein. Liegt nur auf diesem
+// Gerät (wie der DEK-Cache), wird bei jeder Änderung der Felder oder der Sprache neu
+// geschrieben und bei der Konto-Löschung entfernt.
+function openPushDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('logbuch-push', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('meta');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function saveFieldNamesForPush() {
+  try {
+    const names = Object.fromEntries(state.habits.filter((h) => h.kind !== 'group').map((h) => [h.defId, h.name]));
+    const db = await openPushDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('meta', 'readwrite');
+      tx.objectStore('meta').put({ names, template: t('push.customReminder') }, 'fieldNames');
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch { /* IndexedDB nicht verfügbar - Erinnerungen bleiben dann beim allgemeinen Text */ }
+}
+async function clearFieldNamesForPush() {
+  try {
+    const db = await openPushDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('meta', 'readwrite');
+      tx.objectStore('meta').delete('fieldNames');
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch { /* egal, nur lokaler Cache */ }
 }
 
 function isNumberKind(h) { return h.kind === 'number'; }
@@ -1378,21 +1489,6 @@ function habitHasData(habitId) {
   return Object.values(state.entries).some((day) => day[habitId] !== undefined);
 }
 
-function slugify(name) {
-  const base = String(name).toLowerCase().replace(/ß/g, 'ss')
-    .normalize('NFD')
-    .replace(/[^a-z0-9]/g, '');
-  return base || 'feld';
-}
-
-function uniqueSlug(base) {
-  const existing = new Set(state.habits.map((h) => h.id));
-  if (!existing.has(base)) return base;
-  let i = 2;
-  while (existing.has(base + i)) i++;
-  return base + i;
-}
-
 const app = document.getElementById('app');
 
 function esc(str) {
@@ -1420,6 +1516,8 @@ const STRINGS = {
     'ariaLabel.increase': 'Erhöhen',
     'notice.loadEntriesError': 'Einträge konnten nicht geladen werden: ',
     'notice.loadHabitsError': 'Felder konnten nicht geladen werden: ',
+    'notice.habitsUndecryptable': '{count} Feld(er) konnten nicht entschlüsselt werden und werden nicht angezeigt.',
+    'push.customReminder': 'Erinnerung: {names} noch nicht eingetragen.',
     'notice.loadSettingsError': 'Einstellungen konnten nicht geladen werden: ',
     'notice.saveFailed': 'Speichern fehlgeschlagen: ',
     'notice.createFailed': 'Anlegen fehlgeschlagen: ',
@@ -1775,6 +1873,8 @@ const STRINGS = {
     'ariaLabel.increase': 'Increase',
     'notice.loadEntriesError': 'Could not load entries: ',
     'notice.loadHabitsError': 'Could not load fields: ',
+    'notice.habitsUndecryptable': '{count} field(s) could not be decrypted and are not shown.',
+    'push.customReminder': 'Reminder: {names} not entered yet.',
     'notice.loadSettingsError': 'Could not load settings: ',
     'notice.saveFailed': 'Save failed: ',
     'notice.createFailed': 'Creating failed: ',
@@ -2441,7 +2541,24 @@ async function loadHabits() {
     state.notice = { type: 'error', text: t('notice.loadHabitsError') + translateDbError(error.message) };
     return;
   }
-  state.habits = data.map(habitFromRow);
+  const habits = [];
+  const unencrypted = [];
+  let undecryptable = 0;
+  for (const row of data) {
+    if (row.enc) {
+      try {
+        habits.push(habitFromParts(row, await decryptData(currentDek, row.enc)));
+      } catch {
+        undecryptable++;
+      }
+    } else {
+      habits.push(habitFromParts(row, defPayloadFromPlainRow(row)));
+      unencrypted.push(row);
+    }
+  }
+  state.habits = habits;
+  if (undecryptable) state.notice = { type: 'error', text: t('notice.habitsUndecryptable', { count: undecryptable }) };
+  if (unencrypted.length) migrateHabitDefinitions(unencrypted);
 }
 
 async function loadUserSettings() {
@@ -2517,6 +2634,7 @@ async function saveLocale(locale) {
   applyLocale(locale);
   state.userSettings = { ...state.userSettings, locale };
   render();
+  saveFieldNamesForPush(); // Textvorlage der Erinnerungen in der neuen Sprache
   const { error } = await supabase.from('user_settings')
     .upsert({ user_id: state.session.user.id, locale }, { onConflict: 'user_id' });
   if (error) {
@@ -2977,36 +3095,50 @@ async function handleHabitSaveInner() {
     fields.schedule = result.schedule;
   }
 
+  // Alles Inhaltliche verschlüsselt in enc (siehe habitFromParts), im Klartext nur, was
+  // die Erinnerungen brauchen. Immer die vollständige payload - bei gesperrten Feldern
+  // enthält fields schon die unveränderten Original-Werte für min/max.
+  const key = f.defId ? state.habits.find((h) => h.defId === f.defId).id : newHabitKey();
+  const payload = {
+    key,
+    name,
+    unit: fields.unit,
+    min: fields.min,
+    max: fields.max,
+    labels: fields.labels,
+    good: fields.good,
+    displayStyle: fields.display_style,
+    sliderShowValue: fields.slider_show_value,
+    groupMembers: fields.group_members,
+    goalThreshold: fields.goal_threshold,
+  };
+  const row = {
+    kind: fields.kind,
+    schedule: fields.schedule,
+    reminder_minute: reminderMinute,
+    enc: await encryptData(currentDek, payload),
+    ...DEF_PLAINTEXT_CLEARED,
+  };
   if (f.defId) {
-    const patch = f.locked
-      ? {
-          name,
-          ...(f.kind === 'scale'
-            ? { good: f.good, goal_threshold: goalThreshold, display_style: fields.display_style, slider_show_value: fields.slider_show_value, labels: fields.labels }
-            : { unit: fields.unit }),
-          reminder_minute: reminderMinute,
-          schedule: fields.schedule,
-        }
-      : { name, ...fields, reminder_minute: reminderMinute };
-    const { data, error } = await supabase.from('habit_definitions').update(patch).eq('id', f.defId).select().single();
+    const { data, error } = await supabase.from('habit_definitions').update(row).eq('id', f.defId).select().single();
     if (error) {
       state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
       return;
     }
     const idx = state.habits.findIndex((h) => h.defId === f.defId);
-    state.habits[idx] = habitFromRow(data);
+    state.habits[idx] = habitFromParts(data, payload);
   } else {
-    const slug = uniqueSlug(slugify(name));
     const sortOrder = state.habits.length ? Math.max(...state.habits.map((h) => h.sortOrder)) + 1 : 1;
     const { data, error } = await supabase.from('habit_definitions')
-      .insert({ user_id: state.session.user.id, slug, name, ...fields, reminder_minute: reminderMinute, sort_order: sortOrder })
+      .insert({ user_id: state.session.user.id, ...row, sort_order: sortOrder })
       .select().single();
     if (error) {
       state.notice = { type: 'error', text: t('notice.createFailed') + translateDbError(error.message) };
       return;
     }
-    state.habits = [...state.habits, habitFromRow(data)];
+    state.habits = [...state.habits, habitFromParts(data, payload)];
   }
+  saveFieldNamesForPush();
 
   closeHabitForm();
   // Im Tutorial (Schritt 2) gilt das erste erfolgreich angelegte Feld als Abschluss
@@ -3083,10 +3215,12 @@ async function purgeHabitFromEntries(habitId) {
 // --- Notizen ---------------------------------------------------------------
 // Liegen verschlüsselt im selben Tagesobjekt wie die Werte, unter EINEM reservierten
 // Schlüssel: { mood: 3, _notes: { mood: "…", _day: "…" } }. Kann nie mit einem Feld
-// kollidieren, da slugify() nur a-z0-9 erzeugt. Alles mit "_" am Anfang ist dadurch
-// "kein Feldwert" - wichtig v.a. für filled_slugs (siehe saveDay): eine Notiz allein
-// zählt für die Erinnerungen nicht als eingetragen. Die Werte-Logik (Scores, Graphen,
-// habitHasData, ...) greift immer gezielt per Slug zu und sieht den Schlüssel nie.
+// kollidieren: Feld-Schlüssel bestehen nur aus a-z0-9 (alte aus dem Namen abgeleitete
+// wie "mood", neue zufällige aus newHabitKey). Alles mit "_" am Anfang ist dadurch
+// "kein Feldwert" - wichtig v.a. für filled_slugs (siehe filledFieldIds): eine Notiz
+// allein zählt für die Erinnerungen nicht als eingetragen. Die Werte-Logik (Scores,
+// Graphen, habitHasData, ...) greift immer gezielt per Feld-Schlüssel zu und sieht den
+// Notiz-Schlüssel nie.
 const NOTES_KEY = '_notes';
 const DAY_NOTE_KEY = '_day';
 function getNote(dateKey, key) {
@@ -3204,12 +3338,22 @@ function closeNoteEditor(save) {
   focusTarget?.focus({ preventScroll: true });
 }
 
+// Für filled_slugs (Erinnerungen): die IDs der Felder mit Wert an dem Tag - nicht ihre
+// Schlüssel (bei alten Feldern aus dem Namen abgeleitet, z.B. "gekifft"). Notizen
+// (_-Schlüssel) und Werte endgültig gelöschter Felder fallen weg.
+function filledFieldIds(dayData) {
+  return Object.keys(dayData)
+    .filter((k) => !k.startsWith('_'))
+    .map((k) => state.habits.find((h) => h.id === k)?.defId)
+    .filter(Boolean);
+}
+
 async function saveDay(dateKey, dayData) {
   const encrypted = await encryptData(currentDek, dayData);
   const { error } = await supabase
     .from('habit_entries')
     .upsert(
-      { user_id: state.session.user.id, entry_date: dateKey, data: encrypted, filled_slugs: Object.keys(dayData).filter((k) => !k.startsWith('_')) },
+      { user_id: state.session.user.id, entry_date: dateKey, data: encrypted, filled_slugs: filledFieldIds(dayData) },
       { onConflict: 'user_id,entry_date' }
     );
   if (error) {
@@ -3485,9 +3629,27 @@ async function handleExportData() {
     })
   );
 
+  // Feld-Definitionen ebenso: lesbare Eigenschaften statt des Chiffretexts in enc.
+  const decryptedDefs = await Promise.all(
+    defsRes.data.map(async (row) => {
+      if (!row.enc) return row;
+      const { enc, ...rest } = row;
+      try {
+        const p = await decryptData(currentDek, enc);
+        return {
+          ...rest, slug: p.key, name: p.name, unit: p.unit, min: p.min, max: p.max, labels: p.labels,
+          good: p.good, display_style: p.displayStyle, slider_show_value: p.sliderShowValue,
+          group_members: p.groupMembers, goal_threshold: p.goalThreshold,
+        };
+      } catch {
+        return { ...rest, decrypt_error: true };
+      }
+    })
+  );
+
   const exportObj = {
     exported_at: new Date().toISOString(),
-    habit_definitions: defsRes.data,
+    habit_definitions: decryptedDefs,
     habit_entries: decryptedEntries,
     user_settings: settingsRes.data,
     push_subscriptions: subsRes.data,
@@ -3534,6 +3696,7 @@ async function handleDeleteAccount() {
     if (sub) await sub.unsubscribe();
   } catch { /* ignorieren */ }
   if (userId) await clearCachedDek(userId);
+  await clearFieldNamesForPush();
   currentDek = null;
 
   state.deleteConfirm = null;
@@ -6198,6 +6361,7 @@ async function completeAuthFlow(userId, password) {
   render();
   await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
   state.loading = false;
+  saveFieldNamesForPush(); // erst nach loadUserSettings - die Textvorlage hängt an der Sprache
   checkPushStatus().then(render);
   render();
 }
@@ -6221,6 +6385,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     if (cached) {
       currentDek = cached;
       await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
+      saveFieldNamesForPush(); // siehe completeAuthFlow
       checkPushStatus().then(render);
     }
     state.loading = false;

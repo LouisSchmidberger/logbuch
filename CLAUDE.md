@@ -45,7 +45,13 @@ Tabelle `habit_definitions`: eine Zeile pro Nutzer und Feld – **ersetzt die fr
 `HABITS`-Konstante**. Jeder Nutzer verwaltet seine Felder selbst über "Felder verwalten"
 im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
 `renderManage` in `logbuch.html` – kein eigener Tab mehr, siehe Abschnitt "Design").
-- `slug` (text, Key in `habit_entries.data`), `name`, `kind` (`'scale'`, `'number'`,
+**Seit 2026-09-27 größtenteils verschlüsselt** (siehe Abschnitt "Verschlüsselung" →
+Feld-Definitionen): die folgenden Eigenschaften stehen bei umgestellten Zeilen nicht mehr
+in ihren Klartext-Spalten, sondern verschlüsselt in `enc` – im Klartext bleiben nur
+`kind`, `reminder_minute`, `schedule`, `archived_at`, `sort_order`. Die Beschreibung der
+Eigenschaften unten gilt inhaltlich unverändert (im Client heißen sie gleich).
+- `slug` (Key in `habit_entries.data`; verschlüsselt als `key`, bei neuen Feldern ein
+  zufälliger Schlüssel aus `newHabitKey` statt aus dem Namen abgeleitet), `name`, `kind` (`'scale'`, `'number'`,
   `'group'` oder `'text'`, siehe Skalen-/Farblogik unten), `min`/`max` (int, nur bei `kind='scale'`;
   bei `display_style='slider'` fix `0`/`<Stufenzahl>`), `labels` (jsonb, nur bei
   `kind='scale'`; `null` = nummerierte Stufen, sonst Array von Strings der Länge
@@ -329,10 +335,30 @@ zählt der rohe Wert des Tages, keine Quote).
 Seit 2026-09-14: `habit_entries.data` (die eigentlichen Werte — Gewicht, Stimmung,
 Sex, Drogenkonsum etc.) ist clientseitig verschlüsselt. Der Betreiber (auch über
 Supabase-Dashboard/CLI) kann diese Werte grundsätzlich nicht einsehen — RLS schützt
-nur Nutzer voreinander, das hier zusätzlich vor dem DB-Owner selbst. Bewusst **nicht**
-verschlüsselt: `habit_definitions` (Feld-Namen/Labels bleiben lesbar, dadurch bleiben
-personalisierte Push-Erinnerungen möglich) und `habit_entries.filled_slugs` (nur
-Feldnamen ohne Werte, für die Vollständigkeits-Prüfung der Reminder-Function).
+nur Nutzer voreinander, das hier zusätzlich vor dem DB-Owner selbst. Seit 2026-09-27
+zusätzlich die **Feld-Definitionen** (siehe unten) – der Betreiber soll auch nicht sehen,
+WORÜBER jemand Buch führt. Bewusst unverschlüsselt bleibt nur, was der Server für die
+Erinnerungen braucht: `habit_definitions.kind`/`reminder_minute`/`schedule`/`archived_at`
+und `habit_entries.filled_slugs` (nur Feld-IDs der befüllten Felder, keine Werte/Namen).
+Alle verschlüsselten Daten (Einträge wie Felder) werden vor dem Verschlüsseln auf ein
+Vielfaches von 256 Byte aufgefüllt (`encryptData`, Leerzeichen am JSON-Ende), damit die
+Länge nicht verrät, wie viel jemand eingetragen/geschrieben hat.
+
+**Feld-Definitionen verschlüsselt** (seit 2026-09-27): `habit_definitions.enc` =
+`{iv, ciphertext}` mit demselben DEK, Inhalt `{key, name, unit, min, max, labels, good,
+displayStyle, sliderShowValue, groupMembers, goalThreshold}` (`habitFromParts` baut
+daraus das gewohnte Feld-Objekt). Die DB-Schutzregel
+`habit_definitions_enc_no_plaintext_check` lehnt eine verschlüsselte Zeile mit
+Klartext-Resten ab (`DEF_PLAINTEXT_CLEARED` = die geleerten Spalten). Bestehende Zeilen
+stellt die App beim Laden im Hintergrund um (`migrateHabitDefinitions`: verschlüsseln,
+lokal kontroll-entschlüsseln und vergleichen, erst dann in einem Schritt speichern +
+Klartext leeren; nur wenn noch kein `enc` da ist) – Konten, die die App nicht mehr
+öffnen, behalten ihren Klartext, bis sie es tun (akzeptiert). Erinnerungen nennen
+Feldnamen trotzdem: siehe "Erinnerungen" → Name wird erst auf dem Gerät eingesetzt
+(`saveFieldNamesForPush`, lokale Liste in IndexedDB `logbuch-push`). Nicht
+zuordenbare/nicht entschlüsselbare Zeilen werden nicht angezeigt (Meldung
+`notice.habitsUndecryptable`). Migrationen `20260927180000_encrypt_habit_definitions_prep`
+und `20260927183000_normalize_filled_slugs`.
 
 **Zweistufiger Schlüssel** (Crypto-Helfer + Lebenszyklus-Funktionen in `logbuch.html`,
 alles native Web Crypto API, keine Library):
@@ -384,7 +410,8 @@ alles native Web Crypto API, keine Library):
 **Was das für Änderungen an anderer Stelle bedeutet**: `state.entries` hält nach dem
 Laden (`loadEntries`) immer schon entschlüsselte Klartext-Objekte — die gesamte
 übrige App (Scores, Graphen, Statistiken, `saveDay`, Export) arbeitet unverändert
-damit. Nur `loadEntries`/`saveDay`/`handleExportData` fassen `currentDek` direkt an.
+damit. `currentDek` fassen nur `loadEntries`/`saveDay`/`handleExportData` (Einträge) sowie
+`loadHabits`/`migrateHabitDefinitions`/`handleHabitSaveInner` (Feld-Definitionen) direkt an.
 
 ## Design
 
@@ -637,7 +664,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 353 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 355 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
