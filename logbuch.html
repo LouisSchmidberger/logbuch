@@ -1118,8 +1118,12 @@ function syncLayerHistory() {
 // Hintergrund-Scrolls. .menu-panel hat zusätzlich overscroll-behavior: contain, damit
 // ein Scroll, der dort an sein Ende kommt (z.B. durchgescrollt bis ganz unten), nicht
 // ins darunterliegende Fenster "durchreicht" und dort doch noch scrollt.
+// Das Zeilen-Menü in "Heute" schließt beim Scrollen ebenso - es hängt zwar an seiner
+// Zeile (scrollt mit), bleibt aber sonst beim Weiterscrollen unbemerkt offen und würde
+// den nächsten Tipp als Light-Dismiss verschlucken.
 window.addEventListener('scroll', () => {
   if (state.menuOpen) { state.menuOpen = false; render(); }
+  if (state.rowMenu) closeRowMenu();
 }, { passive: true });
 
 function activeHabits() {
@@ -4817,8 +4821,8 @@ document.addEventListener('click', (e) => {
   state.menuOpen = false;
   render();
 });
-// Dasselbe für das Zeilen-Menü in "Heute" (Klicks auf data-action-Elemente schließen
-// es schon im Klick-Handler oben, hier geht es nur um Klicks auf "leere" Fläche).
+// Dasselbe für das Zeilen-Menü in "Heute" bei Klicks außerhalb von #app (innerhalb
+// greift schon der Light-Dismiss-Capture-Listener, siehe "Zeilen-Menü per Long-Press").
 document.addEventListener('click', (e) => {
   if (!state.rowMenu) return;
   if (e.target.closest('.row-menu, .row-menu-trigger')) return;
@@ -4982,10 +4986,25 @@ app.addEventListener('pointerup', cancelLongPress);
 app.addEventListener('pointercancel', cancelLongPress);
 
 app.addEventListener('click', (e) => {
-  if (!suppressNextClick) return;
-  suppressNextClick = false;
-  e.stopPropagation();
-  e.preventDefault();
+  if (suppressNextClick) {
+    suppressNextClick = false;
+    e.stopPropagation();
+    e.preventDefault();
+    return;
+  }
+  // Light-Dismiss: bei offenem Zeilen-Menü schließt ein Tipp irgendwo außerhalb nur das
+  // Menü und löst sonst nichts aus - weder direkt das Menü eines anderen Feldes noch z.B.
+  // einen Wert, wenn man eigentlich nur das Menü loswerden wollte. Ausnahmen: das Menü
+  // selbst und der eigene Auslöser (normales Zuklappen). Nur für Zeige-Geräte
+  // (e.detail > 0): per Tastatur ausgelöste Klicks (detail 0) sind nach einem bewussten
+  // Wegnavigieren gemeint und laufen normal durch - die schließen das Menü dann über den
+  // Klick-Handler (state.rowMenu = null bei jeder anderen Aktion).
+  if (state.rowMenu && e.detail > 0
+      && !e.target.closest(`.row-menu, .row-menu-trigger[data-habit="${state.rowMenu}"]`)) {
+    e.stopPropagation();
+    e.preventDefault();
+    closeRowMenu();
+  }
 }, true);
 
 // Rechtsklick mit der Maus - und auf Android, wo der Long-Press zusätzlich ein

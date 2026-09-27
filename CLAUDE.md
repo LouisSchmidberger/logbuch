@@ -398,7 +398,11 @@ Abkürzung. Ausgenommen davon sind Eingabefelder, der Schieberegler und das Men�
 nicht aber der Auslöser (Android macht aus langem Drücken keinen Klick mehr); der Klick
 beim Loslassen nach einem Long-Press wird verschluckt (`suppressNextClick`), sonst würde
 er auf einem Wert-Button zusätzlich den Wert setzen. Zählt als Overlay für die
-Android-Zurück-Logik; jede andere Klick-Aktion, Wischen und Deep-Links schließen es.
+Android-Zurück-Logik. **Light-Dismiss**: bei offenem Menü schließt ein Tipp außerhalb
+davon nur das Menü und löst nichts anderes aus (kein direktes Umspringen zum Menü eines
+anderen Feldes, kein versehentlich gesetzter Wert) – nur für Zeige-Geräte
+(`e.detail > 0`), per Tastatur ausgelöste Klicks laufen nach bewusstem Wegnavigieren
+normal durch. Scrollen, Wischen und Deep-Links schließen es ebenfalls.
 
 **Verwaltungsliste entschlackt** (seit 2026-09-18, `renderManage` in `logbuch.html`):
 pro Feld-Zeile steht nur noch der Name plus – falls gesetzt – die eigene
