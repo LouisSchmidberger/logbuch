@@ -358,7 +358,9 @@ lokal kontroll-entschlüsseln und vergleichen, erst dann in einem Schritt speich
 Klartext leeren; nur wenn noch kein `enc` da ist) – Konten, die die App nicht mehr
 öffnen, behalten ihren Klartext, bis sie es tun (akzeptiert). Erinnerungen nennen
 Feldnamen trotzdem: siehe "Erinnerungen" → Name wird erst auf dem Gerät eingesetzt
-(`saveFieldNamesForPush`, lokale Liste in IndexedDB `logbuch-push`). Nicht
+(`saveFieldNamesForPush`, lokale Liste in IndexedDB `logbuch-push`). Nutzern
+erklärt in "Über Logbuch" → "Deine Daten und deine Privatsphäre" (siehe Präferenzen
+unten: muss mit der Technik übereinstimmen). Nicht
 zuordenbare/nicht entschlüsselbare Zeilen werden nicht angezeigt (Meldung
 `notice.habitsUndecryptable`). Migrationen `20260927180000_encrypt_habit_definitions_prep`
 und `20260927183000_normalize_filled_slugs`.
@@ -667,7 +669,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 355 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 366 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -1006,6 +1008,14 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
 - UI-Texte seit der i18n-Umstellung (siehe Abschnitt oben) auf Deutsch UND
   Englisch pflegen, neue Strings immer über `STRINGS`/`t()` in beiden Sprachen
   anlegen statt hartkodiert.
+- **Datenschutz-Text in "Über Logbuch" aktuell halten** (Nutzer-Wunsch 2026-09-27): der
+  Bereich "Deine Daten und deine Privatsphäre" (`renderPrivacySection`,
+  `about.privacy.*`) sagt Nutzern konkret, was der Betreiber sehen kann und was nicht.
+  Jede Änderung, die daran etwas verschiebt (neue unverschlüsselte Spalte, zusätzliches
+  Log, serverseitige Auswertung, neuer Drittanbieter o.ä.), muss diesen Text im selben
+  Zug mit anpassen – und bei Reviews gegen den tatsächlichen Stand geprüft werden. Nicht
+  hineingehören Selbstverständlichkeiten (z.B. dass der Betreiber Feedback lesen kann –
+  das ist der Zweck von Feedback).
 
 ## Noch nicht gebaut (bekannte TODOs, kein Zeitdruck)
 

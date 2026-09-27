@@ -598,6 +598,16 @@
   .mental-health-highlight .manage-section-title { margin-bottom: 8px; }
   .mental-health-highlight > .tip-body { margin-bottom: 14px; }
   .mental-health-highlight .tip:last-child { margin-bottom: 14px; }
+  .privacy-highlight {
+    background: rgba(var(--moss-rgb), 0.08); border: 1px solid rgba(var(--moss-rgb), 0.3);
+    border-radius: 6px; padding: 16px; margin-top: 16px;
+  }
+  .privacy-highlight summary.manage-section-title { cursor: pointer; }
+  .privacy-highlight[open] summary.manage-section-title { margin-bottom: 8px; }
+  .privacy-highlight > .tip-body { margin-bottom: 14px; }
+  .privacy-highlight .tip-body ul { margin: 6px 0; padding-left: 18px; }
+  .privacy-highlight .tip-body li + li { margin-top: 3px; }
+  .privacy-feedback { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(var(--moss-rgb), 0.3); font-style: italic; }
   .mental-health-crisis { background: rgba(var(--rust-rgb), 0.08); border: 1px solid rgba(var(--rust-rgb), 0.3); border-radius: 4px; padding: 10px 12px; margin-bottom: 14px; }
   .mental-health-crisis .tip-body + .tip-body { margin-top: 6px; }
   .mental-health-crisis .tip-body a { color: var(--moss); text-decoration: underline; }
@@ -1806,6 +1816,17 @@ const STRINGS = {
     'about.mentalHealth.crisis.international': 'Außerhalb Deutschlands (oder wenn dir das lieber ist) findest du auf <a href="https://findahelpline.com" target="_blank" rel="noopener">findahelpline.com</a> kostenlose Anlaufstellen nach Land.',
     'about.mentalHealth.crisis.closing': 'Du brauchst dafür keinen Notfall, ein Gespräch reicht.',
     'about.mentalHealth.feedback': 'Fehlt dir hier etwas, oder siehst du das anders? Ich freue mich über dein Feedback.',
+    'about.privacy.title': 'Deine Daten und deine Privatsphäre',
+    'about.privacy.intro': 'In Logbuch landen oft sehr persönliche Dinge: Stimmung, Schlaf, Konsum, Sexualität, Gedanken, die man sonst niemandem erzählt. Genau deshalb soll niemand außer dir sie lesen können – auch ich nicht. Nicht, weil ich dir misstrauen würde oder du mir misstrauen müsstest, sondern weil Vertrauen am besten dort funktioniert, wo man es gar nicht erst braucht: Was ich nicht sehen kann, kann ich auch nicht verlieren, weitergeben oder missbrauchen. Hier ganz ehrlich, was ich sehen kann und was nicht:',
+    'about.privacy.cannotSee.title': 'Was ich nicht sehen kann',
+    'about.privacy.cannotSee.body': 'Alles, was du einträgst, und worum es dabei geht: deine Werte, Notizen und Text-Antworten, die Namen deiner Felder und die Bezeichnungen ihrer Stufen. Das alles wird auf deinem Gerät verschlüsselt, bevor es überhaupt verschickt wird. Der Schlüssel dafür hängt an deinem Passwort, und das kennst nur du. Selbst mit vollem Zugriff auf die Datenbank sehe ich davon nur unlesbaren Zeichensalat.',
+    'about.privacy.canSee.title': 'Was ich sehen kann',
+    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>dass du Felder hast und von welcher Art (z. B. Skala oder Zahl), aber nicht, worum es geht</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokolliert der Hosting-Anbieter für kurze Zeit technische Zugriffsdaten wie IP-Adressen.',
+    'about.privacy.recoveryKey.title': 'Die Kehrseite: dein Recovery-Key',
+    'about.privacy.recoveryKey.body': 'Weil ich keinen Zugriff habe, kann ich dir auch nicht helfen, wenn du Passwort <strong>und</strong> Recovery-Key verlierst – dann sind deine Einträge unwiederbringlich weg. Bewahre ihn deshalb gut auf.',
+    'about.privacy.yourData.title': 'Deine Daten gehören dir',
+    'about.privacy.yourData.body': 'Du kannst jederzeit alles exportieren oder dein Konto löschen (im Menü unter „Konto“). Löschen heißt dabei wirklich löschen.',
+    'about.privacy.feedback': 'Hast du Fragen dazu, oder fehlt dir etwas? Schreib mir gern.',
     'about.tip.swipe.title': 'Wischen',
     'about.tip.swipe.body': 'In Tag-, Wochen-, Monats- und Jahresansicht kannst du nach links/rechts wischen, um zum vorherigen/nächsten Zeitraum zu springen — schneller als die Pfeil-Buttons. In "Felder verwalten" und "Über Logbuch" bringt dich ein Wisch nach rechts zurück.',
     'about.tip.jumpDay.title': 'Direkt zu einem Tag springen',
@@ -2163,6 +2184,17 @@ const STRINGS = {
     'about.mentalHealth.crisis.international': 'Outside Germany (or if you prefer), <a href="https://findahelpline.com" target="_blank" rel="noopener">findahelpline.com</a> lists free helplines by country.',
     'about.mentalHealth.crisis.closing': 'You do not need to be in an emergency for this — a conversation is enough.',
     'about.mentalHealth.feedback': 'Is something missing here, or do you see it differently? I would love to hear your feedback.',
+    'about.privacy.title': 'Your data and your privacy',
+    'about.privacy.intro': 'Logbuch often holds very personal things: mood, sleep, substance use, sexuality, thoughts you would not tell anyone else. That is exactly why nobody but you should be able to read them – not even me. Not because I would distrust you or you would have to distrust me, but because trust works best where you do not need it in the first place: what I cannot see, I cannot lose, pass on, or misuse. Here, honestly, is what I can see and what I cannot:',
+    'about.privacy.cannotSee.title': 'What I cannot see',
+    'about.privacy.cannotSee.body': 'Everything you enter, and what it is about: your values, notes, and text answers, the names of your fields and the labels of their steps. All of this is encrypted on your device before it is even sent. The key for it is tied to your password, and only you know that. Even with full access to the database, all I see is unreadable gibberish.',
+    'about.privacy.canSee.title': 'What I can see',
+    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>that you have fields and what kind they are (e.g. scale or number), but not what they are about</li><li>on which days you filled in which of these fields (for reminders), without the value</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the hosting provider briefly logs technical access data such as IP addresses.',
+    'about.privacy.recoveryKey.title': 'The flip side: your recovery key',
+    'about.privacy.recoveryKey.body': 'Because I have no access, I also cannot help you if you lose your password <strong>and</strong> your recovery key – your entries are then gone for good. So keep it somewhere safe.',
+    'about.privacy.yourData.title': 'Your data belongs to you',
+    'about.privacy.yourData.body': 'You can export everything or delete your account at any time (in the menu under “Account”). And deleting really means deleting.',
+    'about.privacy.feedback': 'Do you have questions about this, or is something missing? Feel free to write to me.',
     'about.tip.swipe.title': 'Swiping',
     'about.tip.swipe.body': 'In the day, week, month, and year views, you can swipe left/right to jump to the previous/next period — faster than the arrow buttons. On "Manage fields" and "About Logbuch", swiping right takes you back.',
     'about.tip.jumpDay.title': 'Jump straight to a day',
@@ -4563,11 +4595,38 @@ function renderMentalHealthSection() {
   `;
 }
 
+// Dritter hervorgehobener Bereich, gleiches Muster wie renderA11ySection: was der
+// Betreiber sehen kann und was nicht, und warum. WICHTIG: muss mit der Technik
+// übereinstimmen - ändert sich, was der Server im Klartext sieht (neue unverschlüsselte
+// Spalte, Log, Auswertung o.ä.), diesen Text mit anpassen (siehe CLAUDE.md
+// "Verschlüsselung"). Die Punkte stehen in <div> statt <p>, da einer eine Liste enthält.
+function renderPrivacySection() {
+  const items = [
+    ['about.privacy.cannotSee.title', 'about.privacy.cannotSee.body'],
+    ['about.privacy.canSee.title', 'about.privacy.canSee.body'],
+    ['about.privacy.recoveryKey.title', 'about.privacy.recoveryKey.body'],
+    ['about.privacy.yourData.title', 'about.privacy.yourData.body'],
+  ];
+  return `
+    <details class="privacy-highlight" data-collapse-key="aboutPrivacyCollapsed" ${isAboutSectionCollapsed('aboutPrivacyCollapsed') ? '' : 'open'}>
+      <summary class="manage-section-title">${t('about.privacy.title')}</summary>
+      <p class="tip-body">${t('about.privacy.intro')}</p>
+      ${items.map(([titleKey, bodyKey]) => `
+        <div class="tip">
+          <p class="tip-title">${t(titleKey)}</p>
+          <div class="tip-body">${t(bodyKey)}</div>
+        </div>
+      `).join('')}
+      <p class="tip-body privacy-feedback">${t('about.privacy.feedback')} <button type="button" class="link-btn" data-action="open-feedback">${t('menu.feedback')}</button></p>
+    </details>
+  `;
+}
+
 // Von Hand hochgezählt bei größeren Änderungen - kein Build-Step im Projekt, der das
 // automatisch aus Git ableiten könnte, und ein Datum genügt hier als Rückverfolgbarkeit
 // (siehe Diskussion in CLAUDE.md-Kontext: keine echte Versionsnummer nötig, solange es
 // keine Release-Branches/nennenswerten externen Nutzerkreis gibt).
-const APP_STATUS_DATE = '2026-09-19';
+const APP_STATUS_DATE = '2026-09-27';
 
 function renderAbout() {
   return `
@@ -4576,6 +4635,7 @@ function renderAbout() {
     <p class="about-intro">${t('about.intro')}</p>
     ${renderA11ySection()}
     ${renderMentalHealthSection()}
+    ${renderPrivacySection()}
     <div class="manage-section-divider"></div>
     ${tipGroup('about.group.usage', [
       ['about.tip.swipe.title', 'about.tip.swipe.body'],
