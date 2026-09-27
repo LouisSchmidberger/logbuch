@@ -369,7 +369,11 @@ verschiebbar; Felder einer Gruppe darin nach ihrem eigenen `sort_order` (gilt nu
 ihres Behälters). **Verwaltung**: eine Gruppe ist ein Block (Kopfzeile mit
 Bearbeiten/Löschen + eingerückte Felder), der sich wie ein Feld verschieben lässt;
 Ziehen/↑↓ jeweils innerhalb des Behälters (`commitLayoutOrder`; die Zieh-Rechnung arbeitet
-mit den echten Positionen der Geschwister, da ein Gruppen-Block höher ist als eine Zeile).
+mit den echten Positionen der Geschwister und tauscht, sobald die in Zugrichtung vordere
+Kante – nach unten die Unterkante, nach oben die Oberkante – die Mitte eines Geschwisters
+überquert; mit der Mitte des gezogenen Elements blieb ein großer Block einen Platz vor dem
+Ende hängen). Eine gezogene Gruppe wird dabei auf ihre Kopfzeile zusammengeklappt
+(`.manage-section--drag-collapsed`).
 Umhängen zwischen Gruppen bewusst nur über die Formulare, nicht per Ziehen (einfach und für
 Tastatur/Screenreader gleich gut bedienbar; Ziehen zwischen Gruppen wäre ein möglicher
 späterer Zusatz). Löschen (zweistufig) löscht keine Felder: sie rücken an die Stelle der

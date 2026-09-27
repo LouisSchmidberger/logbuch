@@ -570,6 +570,7 @@
   .manage-section-children { margin: 0 0 8px 8px; padding-left: 10px; border-left: 2px solid var(--line); }
   .manage-section-children .manage-row:last-child { border-bottom: none; }
   .manage-section-empty { margin: 4px 0 6px; }
+  .manage-section--drag-collapsed .manage-section-children { display: none; }
   /* Einklappbare Gruppen-Überschrift ("Heute" und Auswertung). */
   .section-toggle {
     display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; cursor: pointer;
@@ -6856,6 +6857,10 @@ app.addEventListener('pointerdown', (e) => {
     // die Original-Positionen aller Geschwister merken statt einer einheitlichen
     // Zeilenhöhe. slot = Platz, den das gezogene Element samt Abstand einnimmt; um genau
     // den rücken die übersprungenen Geschwister auf.
+    // Eine Gruppe wird beim Ziehen auf ihre Kopfzeile zusammengeklappt - ein großer Block
+    // ist sonst sperrig. Vor dem Messen, da sich dadurch alle Positionen verschieben; der
+    // Griff sitzt in der Kopfzeile und bleibt dabei unter dem Finger.
+    if (armed.row.classList.contains('manage-section')) armed.row.classList.add('manage-section--drag-collapsed');
     const rects = armed.rows.map((r) => r.getBoundingClientRect());
     const tops = rects.map((rc) => rc.top + window.scrollY);
     const heights = rects.map((rc) => rc.height);
@@ -6900,11 +6905,19 @@ function updateDragPosition() {
   const deltaY = Math.max(minDelta, Math.min(maxDelta, rawDelta));
   dragState.row.style.transform = `translateY(${deltaY}px)`;
 
-  // Zielplatz = Anzahl der übrigen Elemente, deren Mitte oberhalb der Mitte des
-  // gezogenen Elements liegt.
-  const center = tops[from] + heights[from] / 2 + deltaY;
-  let toIndex = 0;
-  rows.forEach((r, i) => { if (i !== from && tops[i] + heights[i] / 2 < center) toIndex++; });
+  // Zielplatz über die in Zugrichtung vorne liegende Kante: nach unten zählt die
+  // Unterkante, nach oben die Oberkante - sobald sie die Mitte eines Geschwisters
+  // überquert, tauschen beide. Nicht die Mitte des gezogenen Elements: bei einem großen
+  // Block (Gruppe) kam die wegen der Begrenzung auf die Liste nie an der Mitte des
+  // letzten/ersten kleinen Elements vorbei, er blieb einen Platz zu früh hängen.
+  const dragTop = tops[from] + deltaY;
+  const dragBottom = dragTop + heights[from];
+  let toIndex = from;
+  if (deltaY > 0) {
+    for (let i = from + 1; i < rows.length; i++) if (dragBottom > tops[i] + heights[i] / 2) toIndex = i;
+  } else if (deltaY < 0) {
+    for (let i = from - 1; i >= 0; i--) if (dragTop < tops[i] + heights[i] / 2) toIndex = i;
+  }
   if (toIndex === dragState.toIndex) return;
   dragState.toIndex = toIndex;
   rows.forEach((r, i) => {
@@ -6969,7 +6982,7 @@ app.addEventListener('pointerup', async (e) => {
   stopDragAutoScroll();
   const { row, rows, fromIndex, toIndex } = dragState;
   row.releasePointerCapture(e.pointerId);
-  row.classList.remove('manage-row--dragging');
+  row.classList.remove('manage-row--dragging', 'manage-section--drag-collapsed');
   rows.forEach((r) => { r.style.transform = ''; r.style.transition = ''; });
   dragState = null;
   if (toIndex === fromIndex) return;
