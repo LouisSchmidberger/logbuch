@@ -582,6 +582,7 @@
   .manage-section-children { margin: 0 0 8px 8px; padding-left: 10px; border-left: 2px solid var(--line); }
   .manage-section-children .manage-row:last-child { border-bottom: none; }
   .manage-section-empty { margin: 4px 0 6px; }
+  .manage-inline-check { font-size: 12px; margin-top: 4px; }
   .manage-section--drag-collapsed .manage-section-children { display: none; }
   /* Einklappbare Gruppen-Überschrift ("Heute" und Auswertung). */
   .section-toggle {
@@ -956,6 +957,7 @@ function habitFromParts(row, payload) {
     members: payload.groupMembers,        // nur bei kind === 'computed': Array von Schlüsseln (id) der Mitglieder (payload-Schlüssel heißt historisch groupMembers)
     aggregate: payload.aggregate ?? null, // nur bei berechneten Feldern aus Zahlen: 'sum'|'avg'|'min'|'max' (null = aus Skalen)
     hideInStats: !!payload.hideInStats,   // in Woche/Monat/Jahr/Gesamt ausgeblendet (nur Anzeige, siehe inStats)
+    archivedInStats: !!payload.archivedInStats, // archiviert, aber trotzdem in der Auswertung (siehe inStats)
     sectionId: row.section_id ?? null,    // Gruppe (intern "section", Klartext-Spalte, siehe layoutBlocks)
     reminderMinute: row.reminder_minute, // Minuten seit Mitternacht (0-1439) oder null (= Standardzeit)
     goalThreshold: payload.goalThreshold, // nur bei kind === 'scale'/'computed', 0-1 oder null (= 1 = 100%)
@@ -979,6 +981,7 @@ function defPayloadFromPlainRow(row) {
     goalThreshold: row.goal_threshold ?? null,
     aggregate: null, // Berechnungen aus Zahlen gibt es erst seit der Verschlüsselung - Klartext-Zeilen sind nie welche
     hideInStats: false,
+    archivedInStats: false,
   };
 }
 // Klartext-Spalten einer verschlüsselten Zeile - leer bzw. auf dem neutralen Default
@@ -1131,9 +1134,12 @@ function renderBySection(habits, scope, renderList) {
 }
 // Ob ein Feld in den Auswertungs-Ansichten (Woche/Monat/Jahr/Gesamt) auftaucht - pro Feld
 // abschaltbar ("In der Auswertung anzeigen"), z.B. wenn einem ein berechnetes Feld daraus
-// reicht. Wirkt nur auf die Anzeige: die Tages-Gesamtfarbe (dayOverallScore) und
-// berechnete Felder, in denen das Feld Mitglied ist, rechnen unverändert mit.
-function inStats(h) { return !h.hideInStats; }
+// reicht. Archivierte Felder sind dort standardmäßig ausgeblendet (seit 2026-09-27), lassen
+// sich aber in der Verwaltung einzeln wieder einblenden (archivedInStats) - z.B. um die
+// Vorgeschichte eines abgelösten Felds zu sehen (Skala ändern = archivieren + neu anlegen).
+// Wirkt nur auf die Anzeige: die Tages-Gesamtfarbe (dayOverallScore) und berechnete
+// Felder, in denen das Feld Mitglied ist, rechnen unverändert mit.
+function inStats(h) { return h.archivedAt ? h.archivedInStats : !h.hideInStats; }
 // Berechnete Felder (kind='computed', bis 2026-09-27 "Gruppen" genannt) gibt es in zwei
 // Arten: aus Skalen (Durchschnitt der normalisierten Bewertungen, mit Farbe/Ziel-Quote -
 // der ursprüngliche Fall) und aus Zahlen (fassen Zahlenwert-Felder derselben Einheit per
@@ -3471,6 +3477,7 @@ async function handleHabitSaveInner() {
     goalThreshold: fields.goal_threshold,
     aggregate: fields.aggregate ?? null,
     hideInStats: !f.showInStats,
+    archivedInStats: f.defId ? !!state.habits.find((h) => h.defId === f.defId)?.archivedInStats : false,
   };
   const sectionId = state.sections.some((sec) => sec.id === f.sectionId) ? f.sectionId : null;
   const row = {
@@ -3865,6 +3872,31 @@ function filledFieldIds(dayData) {
     .filter(Boolean);
 }
 
+// Ändert einzelne verschlüsselte Eigenschaften eines bestehenden Felds (außerhalb des
+// Feld-Formulars, z.B. "In der Auswertung anzeigen" bei archivierten Feldern): baut die
+// vollständige payload aus dem Feld-Objekt, verschlüsselt neu und speichert sie. Leert
+// dabei vorsorglich die Klartext-Spalten (falls das Feld noch unverschlüsselt war).
+async function updateHabitPayload(habit, changes) {
+  const next = { ...habit, ...changes };
+  const payload = {
+    key: next.id, name: next.name, unit: next.unit ?? null, min: next.min ?? null, max: next.max ?? null,
+    labels: next.labels ?? null, good: next.good ?? null, displayStyle: next.displayStyle ?? 'buttons',
+    sliderShowValue: next.sliderShowValue ?? true, groupMembers: next.members ?? null,
+    goalThreshold: next.goalThreshold ?? null, aggregate: next.aggregate ?? null,
+    hideInStats: !!next.hideInStats, archivedInStats: !!next.archivedInStats,
+  };
+  const enc = await encryptData(currentDek, payload);
+  const { error } = await supabase.from('habit_definitions').update({ enc, ...DEF_PLAINTEXT_CLEARED }).eq('id', habit.defId);
+  if (error) {
+    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+    render();
+    return false;
+  }
+  state.habits = state.habits.map((h) => (h.defId === habit.defId ? next : h));
+  render();
+  return true;
+}
+
 async function saveDay(dateKey, dayData) {
   const encrypted = await encryptData(currentDek, dayData);
   const { error } = await supabase
@@ -4161,7 +4193,7 @@ async function handleExportData() {
           ...rest, slug: p.key, name: p.name, unit: p.unit, min: p.min, max: p.max, labels: p.labels,
           good: p.good, display_style: p.displayStyle, slider_show_value: p.sliderShowValue,
           group_members: p.groupMembers, goal_threshold: p.goalThreshold, aggregate: p.aggregate ?? null,
-          hide_in_stats: !!p.hideInStats,
+          hide_in_stats: !!p.hideInStats, archived_in_stats: !!p.archivedInStats,
         };
       } catch {
         return { ...rest, decrypt_error: true };
@@ -5590,7 +5622,7 @@ function manageFieldMeta(h) {
   const parts = [
     scheduleSummary(h.schedule),
     h.reminderMinute !== null && h.reminderMinute !== undefined ? t('manage.reminderAt', { time: minutesToTimeStr(h.reminderMinute) }) : '',
-    h.hideInStats ? t('manage.hiddenInStats') : '',
+    h.hideInStats && !h.archivedAt ? t('manage.hiddenInStats') : '',
   ].filter(Boolean);
   return parts.length ? `<span class="manage-meta">${parts.join(' · ')}</span>` : '';
 }
@@ -5633,8 +5665,14 @@ function renderManage() {
             : h.kind === 'computed'
               ? `<span class="manage-meta"><span class="manage-tag">${t('manage.computedTag')}</span> ${isNumberComputed(h)
                   ? t('manage.computedAggregate', { agg: t('aggregate.' + h.aggregate), names: computedMemberHabits(h).map((m) => m.name).join(', ') || '–' })
-                  : t('manage.computedMembers', { names: computedMemberHabits(h).map((m) => m.name).join(', ') || '–' })}${h.hideInStats ? ' · ' + t('manage.hiddenInStats') : ''}</span>`
+                  : t('manage.computedMembers', { names: computedMemberHabits(h).map((m) => m.name).join(', ') || '–' })}${h.hideInStats && !h.archivedAt ? ' · ' + t('manage.hiddenInStats') : ''}</span>`
               : manageFieldMeta(h)}
+          ${h.archivedAt && !confirmingDelete ? `
+            <label class="checkbox-field manage-inline-check">
+              <input type="checkbox" data-action="archived-stats-toggle" data-id="${h.defId}" ${h.archivedInStats ? 'checked' : ''} />
+              ${t('habitForm.showInStats')}
+            </label>
+          ` : ''}
         </div>
         <div class="manage-actions">
           ${!h.archivedAt ? `
@@ -6436,7 +6474,7 @@ app.addEventListener('click', async (e) => {
   }
 });
 
-app.addEventListener('change', (e) => {
+app.addEventListener('change', async (e) => {
   state.notice = null; // siehe Kommentar beim 'click'-Listener oben
   // Berechnetes Feld aus Zahlen: nach jeder Mitglieder-Änderung neu rendern, damit Felder mit anderer
   // Einheit gesperrt bzw. wieder freigegeben werden (siehe computedBody).
@@ -6445,6 +6483,16 @@ app.addEventListener('change', (e) => {
     syncHabitFormFromDom();
     render();
     document.querySelector(`[data-member-key="${CSS.escape(memberBox.dataset.memberKey)}"]`)?.focus();
+    return;
+  }
+  const archivedStatsToggle = e.target.closest?.('[data-action="archived-stats-toggle"]');
+  if (archivedStatsToggle) {
+    const habit = state.habits.find((h) => h.defId === archivedStatsToggle.dataset.id);
+    if (habit) {
+      const id = habit.defId;
+      await updateHabitPayload(habit, { archivedInStats: archivedStatsToggle.checked });
+      document.querySelector(`[data-action="archived-stats-toggle"][data-id="${id}"]`)?.focus(); // render() hat das DOM ersetzt
+    }
     return;
   }
   if (e.target.id === 'habit-form-schedule-type' && state.habitForm) {

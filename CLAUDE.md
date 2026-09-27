@@ -72,8 +72,10 @@ Eigenschaften unten gilt inhaltlich unverändert (im Client heißen sie gleich).
   Wiederholung, `null` = täglich, bei `kind='computed'` immer `null` – siehe Abschnitt
   "Wiederholung" unten), `sort_order`,
   `archived_at` (Soft-Delete – archivierte Felder
-  verschwinden aus der Tageseingabe, bleiben aber in Wochen-/Monatsansicht sichtbar,
-  solange sie dort Daten haben, und lassen sich reaktivieren). Ein archiviertes Feld
+  verschwinden aus der Tageseingabe und sind seit 2026-09-27 auch in der Auswertung
+  standardmäßig ausgeblendet – pro Feld in der Verwaltung wieder einblendbar (Checkbox "In
+  der Auswertung anzeigen" an der archivierten Zeile, `archivedInStats`), dann sichtbar,
+  solange sie im Zeitraum Daten haben; lassen sich reaktivieren). Ein archiviertes Feld
   **endgültig löschen** (`habit-delete`) geht auch mit vorhandenen historischen
   Einträgen – dann aber erst nach explizitem zweiten Bestätigungsklick in der App
   (`state.habitDeleteConfirm`), da die Rohwerte danach nicht mehr auswertbar sind.
@@ -393,7 +395,12 @@ ungegliedert. Ein Sprung zu einem Feld in einer eingeklappten Gruppe klappt sie 
 
 **"In der Auswertung anzeigen"** (seit 2026-09-27, `hideInStats` in der verschlüsselten
 payload, Checkbox in jedem Feld-Formular, standardmäßig an): ausgeblendete Felder
-erscheinen nur in "Heute", nicht in Woche/Monat/Jahr/Gesamt (`inStats`). Wirkt nur auf die
+erscheinen nur in "Heute", nicht in Woche/Monat/Jahr/Gesamt (`inStats`). **Archivierte
+Felder** sind dort standardmäßig ausgeblendet (Nutzer-Entscheidung, Übersicht aufgeräumt),
+lassen sich aber einzeln wieder einblenden (`archivedInStats`, Checkbox an der archivierten
+Zeile in der Verwaltung, gespeichert über `updateHabitPayload`) – damit die Vorgeschichte
+eines abgelösten Felds (Skala ändern = archivieren + neu anlegen) nicht verloren ist.
+Verworfen: archivierte Felder komplett und ohne Ausnahme ausblenden. Wirkt nur auf die
 Anzeige – Tagesfarbe (`dayOverallScore`) und berechnete Felder, in denen das Feld Mitglied
 ist, rechnen unverändert mit (Nutzer-Entscheidung).
 
