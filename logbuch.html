@@ -2,7 +2,11 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- interactive-widget=resizes-content: die Bildschirmtastatur verkleinert auf Android den
+     Layout-Viewport statt ihn nur zu überdecken - dadurch halten Browser und
+     ensureNoteEditorVisible() Eingabefelder zuverlässig über der Tastatur (iOS ignoriert
+     das Attribut, dort bleibt die visualViewport-Rechnung zuständig). -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
 <title>Logbuch</title>
 <link rel="manifest" href="./manifest.json" />
 <link rel="apple-touch-icon" href="./icon-192.png" />
@@ -268,6 +272,10 @@
     flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line);
     background: transparent; color: var(--sand); font-size: 13px; line-height: 1; cursor: pointer;
   }
+  /* Ohne Wert: unsichtbarer Platzhalter in exakt derselben Größe statt gar nichts - sonst
+     würde der Regler beim ersten Eintragen um die Breite des × schmaler (gleicher Grund
+     wie die feste Breite von .slider-value oben). */
+  .slider-clear--placeholder { visibility: hidden; }
 
   /* Eigens gestylter Regler statt native OS-Optik (wirkte "klobig") — die farbige
      Füllung kommt über einen Gradient auf dem Track, gesteuert durch --slider-color/
@@ -368,6 +376,13 @@
   .number-chart-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
   .number-chart-meta { font-size: 11px; color: var(--sand); flex-shrink: 0; white-space: nowrap; }
   .number-chart-svg { display: block; width: 100%; height: 56px; }
+  .number-chart-plot { position: relative; }
+  /* Ring um Datenpunkte mit Notiz (siehe renderNumberChart) - gleiche Idee wie der
+     Notiz-Punkt in Woche/Monat. */
+  .number-chart-note {
+    position: absolute; width: 9px; height: 9px; border-radius: 50%; transform: translate(-50%, -50%);
+    border: 1.5px solid var(--ink); box-sizing: border-box; pointer-events: none;
+  }
 
   .grid-scroll { overflow-x: auto; }
   .grid-row { display: grid; grid-template-columns: minmax(58px, 80px) repeat(7, 1fr) minmax(30px, 38px); align-items: center; gap: 1px; }
@@ -1082,8 +1097,13 @@ function isOverlayOpen() {
 // Der Notiz-Editor gehört zu einem bestimmten Tag in "Heute" und ist nur offen, solange
 // er dort auch sichtbar ist - wechselt man Tag/Tab, speichert render() den Entwurf und
 // schließt ihn (siehe commitPendingNoteDraft).
+// Zusätzlich muss das Feld selbst noch in "Heute" stehen - wird es z.B. über das
+// Zeilen-Menü archiviert, während seine Notiz offen ist, wäre der Editor sonst
+// unsichtbar, zählte aber weiter als offene Ebene.
 function isNoteEditorOpen() {
-  return !!state.noteEditor && state.view === 'today' && state.noteEditor.dateKey === formatKey(state.currentDate);
+  const ed = state.noteEditor;
+  if (!ed || state.view !== 'today' || ed.dateKey !== formatKey(state.currentDate)) return false;
+  return ed.key === DAY_NOTE_KEY || activeHabits().some((h) => h.id === ed.key && h.kind !== 'group');
 }
 function currentLayerCount() {
   return (isSubpageView(state.view) ? 1 : 0) + (isOverlayOpen() ? 1 : 0);
@@ -1353,6 +1373,7 @@ const STRINGS = {
     'numberChart.trend.down': 'fallend',
     'numberChart.trend.flat': 'gleichbleibend',
     'numberChart.summary': '{name}: {count} Einträge, zuletzt {last}, Durchschnitt {avg}, Spanne {min} bis {max}, Trend {trend}.',
+    'numberChart.withNotes': 'Davon {count} mit Notiz.',
     'habitForm.goalLabel': 'Ab wann als voll erreicht gilt (%)',
     'habitForm.goalExplain': 'Bei unter 100%: schon eine niedrigere Quote/Wert zählt farblich als voll erreicht (grün) – z. B. bei "Kraftsport gemacht" reichen vielleicht schon 3 von 7 Tagen die Woche als Ziel. Ändert nur die Farbe, nie die angezeigte Prozentzahl. Wirkt sich nicht auf „Heute" aus. Standard 100% = nur der Maximalwert zählt als voll erreicht.',
     'habitForm.ownLabels': 'Eigene Bezeichnungen verwenden',
@@ -1435,6 +1456,7 @@ const STRINGS = {
     'theme.light': 'Hell',
     'theme.dark': 'Dunkel',
     'pattern.enableLabel': 'Muster zusätzlich zur Farbe anzeigen',
+    'haptics.enableLabel': 'Beim Eintragen vibrieren',
     'pattern.explain': 'Etwa 1 von 12 Männern und 1 von 200 Frauen hat eine Rot-Grün-Sehschwäche – oft unbemerkt, da sie selten diagnostiziert wird. Damit Bewertungen (rot bis grün) nicht ausschließlich über die Farbe erkennbar sind, zeigt Logbuch standardmäßig zusätzlich ein feines Streifenmuster: je dichter, desto besser der Wert. Rein optisch abschaltbar, falls du es nicht brauchst und nicht magst.',
     'menu.groupNavigation': 'Navigation',
     'menu.groupSettings': 'Einstellungen',
@@ -1672,6 +1694,7 @@ const STRINGS = {
     'numberChart.trend.down': 'falling',
     'numberChart.trend.flat': 'steady',
     'numberChart.summary': '{name}: {count} entries, last {last}, average {avg}, range {min} to {max}, trend {trend}.',
+    'numberChart.withNotes': '{count} of them with a note.',
     'habitForm.goalLabel': 'Counts as fully reached from (%)',
     'habitForm.goalExplain': 'Below 100%: even a lower ratio/value already counts as fully reached (green) in terms of color – e.g. for "did strength training", maybe 3 out of 7 days a week is already the goal. Only changes the color, never the displayed percentage. Has no effect on "Today". Default 100% = only the maximum value counts as fully reached.',
     'habitForm.ownLabels': 'Use custom labels',
@@ -1754,6 +1777,7 @@ const STRINGS = {
     'theme.light': 'Light',
     'theme.dark': 'Dark',
     'pattern.enableLabel': 'Show pattern in addition to color',
+    'haptics.enableLabel': 'Vibrate when entering values',
     'pattern.explain': 'About 1 in 12 men and 1 in 200 women has red-green color vision deficiency – often unnoticed, since it is rarely diagnosed. So that ratings (red to green) are not recognizable through color alone, Logbuch shows a subtle stripe pattern in addition by default: the denser it is, the better the value. Purely a visual choice, switch it off if you do not need or want it.',
     'menu.groupNavigation': 'Navigation',
     'menu.groupSettings': 'Settings',
@@ -1963,6 +1987,29 @@ function setPatternDisabled(disabled) {
     if (disabled) localStorage.setItem('scorePatternDisabled', 'true');
     else localStorage.removeItem('scorePatternDisabled');
   } catch { /* z.B. privater Modus — wirkt dann nur für die laufende Sitzung */ }
+}
+
+// Haptisches Feedback beim Setzen/Entfernen eines Werts - damit ein versehentlich
+// eingetragener oder verstellter Wert (z.B. ein beim Scrollen gestreifter
+// Schieberegler) eher auffällt. Standardmäßig an, aber abschaltbar: Vibration kann für
+// manche unangenehm sein (z.B. bei sensorischer Empfindlichkeit). Geräte-lokal wie
+// Theme/Streifenmuster. Nur Android: Safari auf iOS bietet Webseiten keine
+// Vibration-API an - der Schalter erscheint dort deshalb gar nicht erst.
+function hapticsSupported() {
+  return typeof navigator.vibrate === 'function';
+}
+function isHapticsDisabled() {
+  try { return localStorage.getItem('hapticsDisabled') === 'true'; } catch { return false; }
+}
+function setHapticsDisabled(disabled) {
+  try {
+    if (disabled) localStorage.setItem('hapticsDisabled', 'true');
+    else localStorage.removeItem('hapticsDisabled');
+  } catch { /* z.B. privater Modus — wirkt dann nur für die laufende Sitzung */ }
+}
+function haptic() {
+  if (!hapticsSupported() || isHapticsDisabled()) return;
+  try { navigator.vibrate(12); } catch { /* nicht erlaubt (z.B. ohne vorherige Nutzer-Geste) - egal */ }
 }
 
 // --- Datum/Zeit: locale-abhängige Formatierung -----------------------------
@@ -2784,10 +2831,13 @@ function discardNoteDraft() {
 }
 function openNoteEditor(key) {
   const dateKey = formatKey(state.currentDate);
-  if (state.noteEditor?.dateKey === dateKey && state.noteEditor.key === key) return;
-  commitPendingNoteDraft();
-  const original = getNote(dateKey, key);
-  state.noteEditor = { dateKey, key, draft: original, original };
+  // Schon offen (z.B. erneut über das Zeilen-Menü gewählt, während man darin schreibt):
+  // nichts neu anlegen, nur zurück ins Textfeld - sonst passierte scheinbar gar nichts.
+  if (!(state.noteEditor?.dateKey === dateKey && state.noteEditor.key === key)) {
+    commitPendingNoteDraft();
+    const original = getNote(dateKey, key);
+    state.noteEditor = { dateKey, key, draft: original, original };
+  }
   render();
   const input = document.getElementById('note-input');
   if (input) {
@@ -2814,7 +2864,17 @@ function ensureNoteEditorVisible() {
   if (r.bottom + margin > viewBottom) window.scrollBy(0, Math.min(r.bottom + margin - viewBottom, r.top - viewTop - margin));
   else if (r.top - margin < viewTop) window.scrollBy(0, r.top - margin - viewTop);
 }
-window.visualViewport?.addEventListener('resize', ensureNoteEditorVisible);
+// Die Tastatur fährt animiert auf und feuert dabei mehrere resize-Events - beim ersten
+// ist sie oft erst halb offen. Deshalb sofort UND nach dem Ende der Animation (kein
+// weiteres resize mehr für 250ms) nachrechnen, sonst blieb ein Teil verdeckt.
+let noteEditorSettleTimer = null;
+function onViewportResize() {
+  ensureNoteEditorVisible();
+  clearTimeout(noteEditorSettleTimer);
+  noteEditorSettleTimer = setTimeout(ensureNoteEditorVisible, 250);
+}
+window.visualViewport?.addEventListener('resize', onViewportResize);
+window.addEventListener('resize', onViewportResize);
 // Beim Wechsel in eine andere App (oder Sperren des Handys) den Entwurf schon mal
 // sichern - der Browser kann die Seite im Hintergrund jederzeit verwerfen. Der Editor
 // bleibt dabei offen, man schreibt nach der Rückkehr einfach weiter.
@@ -2854,6 +2914,7 @@ function handleSelect(dateKey, habitId, value) {
   if (day[habitId] === value) delete day[habitId];
   else day[habitId] = value;
   state.entries = { ...state.entries, [dateKey]: day };
+  haptic();
   render();
   saveDay(dateKey, day);
 }
@@ -2867,6 +2928,7 @@ function handleSetValue(dateKey, habitId, value) {
   if (day[habitId] === value) return;
   day[habitId] = value;
   state.entries = { ...state.entries, [dateKey]: day };
+  haptic();
   render();
   saveDay(dateKey, day);
 }
@@ -2887,6 +2949,7 @@ function handleClearValue(dateKey, habitId) {
   const day = { ...(state.entries[dateKey] || {}) };
   delete day[habitId];
   state.entries = { ...state.entries, [dateKey]: day };
+  haptic();
   render();
   saveDay(dateKey, day);
 }
@@ -3476,7 +3539,9 @@ function renderHabitSlider(habit, value) {
         data-habit="${habit.id}" min="${habit.min}" max="${habit.max}" step="1" value="${v}"
         style="--slider-color:${color};--slider-pct:${pct}%;" />
       ${habit.sliderShowValue ? `<span class="slider-value" id="slider-value-${habit.id}">${hasValue ? esc(habitSliderValueText(habit, v)) : '–'}</span>` : ''}
-      ${hasValue ? `<button type="button" class="slider-clear" data-action="clear-value" data-habit="${habit.id}" aria-label="${esc(t('ariaLabel.deleteEntry'))}">×</button>` : ''}
+      ${hasValue
+        ? `<button type="button" class="slider-clear" data-action="clear-value" data-habit="${habit.id}" aria-label="${esc(t('ariaLabel.deleteEntry'))}">×</button>`
+        : '<span class="slider-clear slider-clear--placeholder" aria-hidden="true"></span>'}
     </div>
   `;
 }
@@ -4037,6 +4102,16 @@ function renderNumberChart(habit, dateKeys) {
   });
   const pointsAttr = points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
   const dots = points.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.6" style="fill:var(--ink)" />`).join('');
+  // Tage mit Notiz zu diesem Feld: Ring um den Datenpunkt. Als HTML über dem SVG statt
+  // als <circle> darin - das SVG wird per preserveAspectRatio="none" nur waagerecht
+  // gestreckt, ein Kreis darin würde zur Ellipse. Senkrecht entspricht 1 Einheit genau
+  // 1px (Höhe fest 56px, siehe .number-chart-svg), waagerecht wird in % umgerechnet.
+  const noteRings = stats.series
+    .map((p, i) => (getNote(p.key, habit.id) ? points[i] : null))
+    .filter(Boolean);
+  const rings = noteRings
+    .map(([x, y]) => `<span class="number-chart-note" style="left:${((x / w) * 100).toFixed(2)}%;top:${y.toFixed(1)}px"></span>`)
+    .join('');
   const trend = trendDirection(stats.series, range);
   const summary = t('numberChart.summary', {
     name: habit.name,
@@ -4050,11 +4125,14 @@ function renderNumberChart(habit, dateKeys) {
   return `
     <div class="number-chart-box">
       ${head}
-      <svg viewBox="0 0 ${w} ${h}" class="number-chart-svg" preserveAspectRatio="none" aria-hidden="true">
-        <polyline points="${pointsAttr}" fill="none" style="stroke:var(--moss);stroke-width:1.5" />
-        ${dots}
-      </svg>
-      <p class="visually-hidden">${summary}</p>
+      <div class="number-chart-plot">
+        <svg viewBox="0 0 ${w} ${h}" class="number-chart-svg" preserveAspectRatio="none" aria-hidden="true">
+          <polyline points="${pointsAttr}" fill="none" style="stroke:var(--moss);stroke-width:1.5" />
+          ${dots}
+        </svg>
+        ${rings ? `<div aria-hidden="true">${rings}</div>` : ''}
+      </div>
+      <p class="visually-hidden">${summary}${noteRings.length ? ' ' + t('numberChart.withNotes', { count: noteRings.length }) : ''}</p>
     </div>
   `;
 }
@@ -4493,6 +4571,14 @@ function renderMenu() {
           </label>
           ${infoTip(t('pattern.explain'))}
         </div>
+        ${hapticsSupported() ? `
+          <div class="menu-row">
+            <label class="checkbox-field">
+              <input type="checkbox" data-action="haptics-toggle" ${isHapticsDisabled() ? '' : 'checked'} />
+              ${t('haptics.enableLabel')}
+            </label>
+          </div>
+        ` : ''}
       </div>
       <div class="menu-group-divider"></div>
       <div class="menu-group">
@@ -5020,6 +5106,14 @@ app.addEventListener('change', (e) => {
     render();
     return;
   }
+  // Kein render() nötig (nichts Sichtbares ändert sich) - so bleibt auch der Fokus auf
+  // der Checkbox. Beim Einschalten einmal vibrieren, als direkte Rückmeldung.
+  const hapticsToggle = e.target.closest('[data-action="haptics-toggle"]');
+  if (hapticsToggle) {
+    setHapticsDisabled(!hapticsToggle.checked);
+    haptic();
+    return;
+  }
   const feedbackAnonymous = e.target.closest('[data-action="feedback-anonymous"]');
   if (feedbackAnonymous) {
     state.feedback.anonymous = feedbackAnonymous.checked;
@@ -5289,7 +5383,7 @@ app.addEventListener('pointerdown', (e) => {
     timer: setTimeout(() => {
       longPress = null;
       suppressNextClick = true;
-      try { navigator.vibrate?.(10); } catch { /* kein Vibrationsmotor/nicht erlaubt - egal */ }
+      haptic();
       openRowMenu(habitId);
     }, LONG_PRESS_MS),
   };

@@ -435,16 +435,34 @@ offen). Nur "Abbrechen" und Android-Zurück verwerfen bewusst (`discardNoteDraft
 stellt dabei `original` wieder her, falls zwischendurch schon gesichert wurde). Beim
 Abmelden wird ein offener Editor verworfen (sonst sähe ihn das nächste Konto auf dem
 Gerät). Ein Re-Render beim Tippen behält Fokus/Cursor (`renderApp`).
-`ensureNoteEditorVisible` hält den Editor beim Öffnen der Bildschirmtastatur sichtbar –
-rechnet gegen `window.visualViewport` (die Tastatur verkleinert nur den visuellen
-Viewport, `scrollIntoView` allein ließ den Editor darunter) und den angepinnten Header. Endgültiges Löschen eines Feldes räumt auch dessen Notizen weg
+`ensureNoteEditorVisible` hält den Editor beim Öffnen der Bildschirmtastatur sichtbar:
+auf Android verkleinert die Tastatur dank `interactive-widget=resizes-content` (Meta-
+Viewport) den Layout-Viewport statt ihn nur zu überdecken; zusätzlich wird gegen
+`window.visualViewport` (iOS ignoriert das Attribut) und den angepinnten Header
+gerechnet – sofort und nochmal nach Ende der Tastatur-Animation. Wählt man über das
+Zeilen-Menü die Notiz eines Feldes, deren Editor schon offen ist, springt der Fokus
+zurück ins Textfeld. Ein Feld, das mit offener Notiz archiviert wird, speichert und
+schließt deren Editor (`isNoteEditorOpen` prüft auch, ob das Feld noch in "Heute"
+steht). Endgültiges Löschen eines Feldes räumt auch dessen Notizen weg
 (`purgeHabitFromEntries`). **Übersicht**: Woche – Punkt in der Feld-Zelle (Notiz zu
-diesem Feld) und am Wochentag (irgendeine Notiz an dem Tag, deckt auch Tagesnotiz und
-Zahlenwert-Felder ab, die in der Woche keine Zelle haben); Monat – Punkt in der
-Tageszelle; Jahr – bewusst keiner (Zellen zu klein). Screenreader: "mit Notiz" im Label
-der Tages-Zelle. **"Tag zurücksetzen"** löscht Werte UND Notizen und fragt deshalb
-seitdem immer nach (`renderResetConfirm`, `state.resetConfirm` = dateKey), auch ohne
-vorhandene Notizen.
+diesem Feld) und am Wochentag (irgendeine Notiz an dem Tag, auch Tagesnotiz);
+Zahlenwert-Felder – Ring um den Datenpunkt im Verlaufsgraphen (alle Ansichten mit
+Graph; als HTML über dem SVG, da das SVG nur waagerecht gestreckt wird und ein Kreis
+darin zur Ellipse würde), plus "davon X mit Notiz" in der Screenreader-Zusammenfassung;
+Monat – Punkt in der Tageszelle; Jahr – bewusst keiner (Zellen zu klein). Screenreader:
+"mit Notiz" im Label der Tages-Zelle. **"Tag zurücksetzen"** löscht Werte UND Notizen
+und fragt deshalb seitdem immer nach (`renderResetConfirm`, `state.resetConfirm` =
+dateKey), auch ohne vorhandene Notizen.
+
+**Haptisches Feedback** (seit 2026-09-27, `haptic()` in `logbuch.html`): kurzes
+Vibrieren beim Setzen/Entfernen eines Werts (Buttons, Schieberegler erst beim
+Loslassen – nicht bei jedem Schritt, das wären bei 100 Stufen zu viele – und ×) sowie
+beim Long-Press-Menü, damit versehentliche Eingaben eher auffallen. Im Menü
+abschaltbar ("Beim Eintragen vibrieren", geräte-lokal per `localStorage`
+`hapticsDisabled` wie Theme/Streifenmuster), standardmäßig an – abschaltbar, weil
+Vibration für manche unangenehm ist (z.B. sensorische Empfindlichkeit). **Nur
+Android**: Safari auf iOS bietet Webseiten keine Vibration-API, der Schalter wird dort
+gar nicht erst angezeigt (`hapticsSupported`).
 
 **Verwaltungsliste entschlackt** (seit 2026-09-18, `renderManage` in `logbuch.html`):
 pro Feld-Zeile steht nur noch der Name plus – falls gesetzt – die eigene
@@ -525,7 +543,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 317 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 319 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
