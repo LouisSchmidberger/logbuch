@@ -303,11 +303,11 @@
     border: 2px solid var(--paper); box-shadow: 0 0 0 1px var(--line);
   }
 
-  .habit-row--group .group-readout {
+  .habit-row--computed .computed-readout {
     font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 12px; color: var(--on-score);
   }
-  .habit-row--group { flex-wrap: wrap; }
-  .habit-row--group .manage-meta { flex-basis: 100%; }
+  .habit-row--computed { flex-wrap: wrap; }
+  .habit-row--computed .manage-meta { flex-basis: 100%; }
 
   /* Zeilen-Menü in "Heute" (siehe renderRowMenuTrigger). touch-callout/user-select
      verhindern, dass iOS/Android beim Long-Press auf die Zeile stattdessen Textauswahl
@@ -369,11 +369,11 @@
   }
   .month-cell.has-note::after { top: auto; bottom: 3px; right: 3px; }
 
-  .group-member-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
-  .group-member-check { font-size: 13px; }
-  .group-member-check--blocked { opacity: 0.45; }
-  /* Zahlen-Gruppe: berechneter Wert ohne Bewertung - neutral statt eingefärbt. */
-  .habit-row--group .group-readout--number { color: var(--ink); border: 1px solid var(--line); background: transparent; }
+  .member-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+  .member-check { font-size: 13px; }
+  .member-check--blocked { opacity: 0.45; }
+  /* Berechnetes Zahlen-Feld: Wert ohne Bewertung - neutral statt eingefärbt. */
+  .habit-row--computed .computed-readout--number { color: var(--ink); border: 1px solid var(--line); background: transparent; }
 
   .number-chart-box { padding: 10px 0; border-bottom: 1px solid var(--line); }
   .number-chart-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
@@ -563,20 +563,14 @@
   }
   /* "+ Neues Feld" bleibt die primäre Aktion, "+ Neue Gruppe" daneben als zweite. */
   .manage-new-row { display: flex; gap: 8px; margin-top: 4px; }
-  /* Bereiche (siehe layoutBlocks): Verwaltung - Kopfzeile + eingerückte Felder. */
+  /* Gruppen (intern "sections", siehe layoutBlocks): Verwaltung - Kopfzeile + eingerückte Felder. */
   .manage-section { border-bottom: 1px solid var(--line); }
   .manage-section-head { border-bottom: none; }
   .manage-section-name { font-weight: 600; }
   .manage-section-children { margin: 0 0 8px 8px; padding-left: 10px; border-left: 2px solid var(--line); }
   .manage-section-children .manage-row:last-child { border-bottom: none; }
   .manage-section-empty { margin: 4px 0 6px; }
-  .section-editor { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
-  .section-editor input {
-    flex: 1; min-width: 0; font-family: inherit; font-size: 14px; padding: 7px 9px;
-    border: 1px solid var(--line); border-radius: 3px; background: var(--input-bg); color: var(--ink);
-  }
-  .manage-new-section { margin-top: 8px; }
-  /* Einklappbare Bereichs-Überschrift ("Heute" und Auswertung). */
+  /* Einklappbare Gruppen-Überschrift ("Heute" und Auswertung). */
   .section-toggle {
     display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; cursor: pointer;
     font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 15px; color: var(--ink);
@@ -588,7 +582,7 @@
   .section-block--stats > .section-toggle { font-size: 13px; padding-top: 10px; }
   .manage-new-row .manage-new-btn { flex: 1; }
   .manage-new-btn--secondary { background: transparent; color: var(--moss); border: 1px solid var(--moss); }
-  .manage-group-tag {
+  .manage-tag {
     display: inline-block; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
     padding: 1px 5px; border: 1px solid var(--line); border-radius: 3px; color: var(--sand);
   }
@@ -928,7 +922,7 @@ function habitFromParts(row, payload) {
     id: payload.key,
     defId: row.id,
     name: payload.name,
-    kind: row.kind,          // 'scale' | 'number' | 'group' | 'text'
+    kind: row.kind,          // 'scale' | 'number' | 'computed' | 'text'
     schedule: row.schedule ?? null, // Wiederholung, null = täglich (siehe isScheduledOn)
     unit: payload.unit,      // nur bei kind === 'number', z.B. 'kg'
     min: payload.min,
@@ -937,12 +931,12 @@ function habitFromParts(row, payload) {
     good: payload.good,
     displayStyle: payload.displayStyle,   // 'buttons' | 'slider', nur bei kind === 'scale' + Zahlenwerte relevant
     sliderShowValue: payload.sliderShowValue,
-    groupMembers: payload.groupMembers,   // nur bei kind === 'group': Array von Schlüsseln (id) der Mitglieder
-    aggregate: payload.aggregate ?? null, // nur bei Zahlen-Gruppen: 'sum'|'avg'|'min'|'max' (null = Skala-Gruppe)
+    members: payload.groupMembers,        // nur bei kind === 'computed': Array von Schlüsseln (id) der Mitglieder (payload-Schlüssel heißt historisch groupMembers)
+    aggregate: payload.aggregate ?? null, // nur bei berechneten Feldern aus Zahlen: 'sum'|'avg'|'min'|'max' (null = aus Skalen)
     hideInStats: !!payload.hideInStats,   // in Woche/Monat/Jahr/Gesamt ausgeblendet (nur Anzeige, siehe inStats)
-    sectionId: row.section_id ?? null,    // Bereich (Klartext-Spalte, siehe layoutBlocks)
+    sectionId: row.section_id ?? null,    // Gruppe (intern "section", Klartext-Spalte, siehe layoutBlocks)
     reminderMinute: row.reminder_minute, // Minuten seit Mitternacht (0-1439) oder null (= Standardzeit)
-    goalThreshold: payload.goalThreshold, // nur bei kind === 'scale'/'group', 0-1 oder null (= 1 = 100%)
+    goalThreshold: payload.goalThreshold, // nur bei kind === 'scale'/'computed', 0-1 oder null (= 1 = 100%)
     sortOrder: row.sort_order,
     archivedAt: row.archived_at,
   };
@@ -961,7 +955,7 @@ function defPayloadFromPlainRow(row) {
     sliderShowValue: row.slider_show_value ?? true,
     groupMembers: row.group_members ?? null,
     goalThreshold: row.goal_threshold ?? null,
-    aggregate: null, // Zahlen-Gruppen gibt es erst seit der Verschlüsselung - Klartext-Zeilen sind nie welche
+    aggregate: null, // Berechnungen aus Zahlen gibt es erst seit der Verschlüsselung - Klartext-Zeilen sind nie welche
     hideInStats: false,
   };
 }
@@ -1022,7 +1016,7 @@ function openPushDb() {
 }
 async function saveFieldNamesForPush() {
   try {
-    const names = Object.fromEntries(state.habits.filter((h) => h.kind !== 'group').map((h) => [h.defId, h.name]));
+    const names = Object.fromEntries(state.habits.filter((h) => h.kind !== 'computed').map((h) => [h.defId, h.name]));
     const db = await openPushDb();
     await new Promise((resolve, reject) => {
       const tx = db.transaction('meta', 'readwrite');
@@ -1046,11 +1040,13 @@ async function clearFieldNamesForPush() {
 
 function isNumberKind(h) { return h.kind === 'number'; }
 
-// --- Bereiche: Anordnung ----------------------------------------------------
-// Oberste Ebene: Felder ohne Bereich und Bereiche gemeinsam nach sort_order (frei
-// untereinander anordenbar), die Felder eines Bereichs darin nach ihrem eigenen
-// sort_order (gilt nur innerhalb ihres Behälters). Ein Feld mit unbekanntem Bereich
-// (sollte nicht vorkommen) gilt als "ohne Bereich". Leere Bereiche werden mitgeliefert,
+// --- Gruppen (intern: sections): Anordnung -------------------------------------
+// "Gruppe" in der App = "section" im Code/in der DB (habit_sections) - NICHT zu
+// verwechseln mit berechneten Feldern (kind='computed'), die bis 2026-09-27 "Gruppen"
+// hießen. Oberste Ebene: Felder ohne Gruppe und Gruppen gemeinsam nach sort_order (frei
+// untereinander anordenbar), die Felder einer Gruppe darin nach ihrem eigenen
+// sort_order (gilt nur innerhalb ihres Behälters). Ein Feld mit unbekannter Gruppe
+// (sollte nicht vorkommen) gilt als "ohne Gruppe". Leere Gruppen werden mitgeliefert,
 // die Aufrufer entscheiden, ob sie sie zeigen.
 function layoutBlocks(habits) {
   const sectionIds = new Set(state.sections.map((sec) => sec.id));
@@ -1064,8 +1060,8 @@ function layoutBlocks(habits) {
   ];
   return blocks.sort((a, b) => a.sortOrder - b.sortOrder || (a.type === b.type ? 0 : a.type === 'section' ? 1 : -1));
 }
-// Höchster sort_order in einem Behälter (Bereich bzw. oberste Ebene) - neue oder in
-// einen anderen Bereich verschobene Felder kommen ans Ende.
+// Höchster sort_order in einem Behälter (Gruppe bzw. oberste Ebene) - neue oder in
+// eine andere Gruppe verschobene Felder kommen ans Ende.
 function containerMaxSortOrder(sectionId) {
   const active = state.habits.filter((h) => !h.archivedAt);
   if (sectionId) return Math.max(0, ...active.filter((h) => h.sectionId === sectionId).map((h) => h.sortOrder));
@@ -1094,8 +1090,8 @@ function renderSectionToggle(section, scope, collapsed) {
     </button>
   `;
 }
-// Rendert Felder nach Bereichen gruppiert, in der Reihenfolge der Verwaltung:
-// aufeinanderfolgende Felder ohne Bereich als ein Stück, jeder (nicht leere) Bereich
+// Rendert Felder nach Gruppen geordnet, in der Reihenfolge der Verwaltung:
+// aufeinanderfolgende Felder ohne Gruppe als ein Stück, jede (nicht leere) Gruppe
 // mit einklappbarer Überschrift. renderList bekommt jeweils ein Array von Feldern.
 function renderBySection(habits, scope, renderList) {
   const out = [];
@@ -1112,31 +1108,31 @@ function renderBySection(habits, scope, renderList) {
   return out.join('');
 }
 // Ob ein Feld in den Auswertungs-Ansichten (Woche/Monat/Jahr/Gesamt) auftaucht - pro Feld
-// abschaltbar ("In der Auswertung anzeigen"), z.B. wenn einem die Gruppe daraus reicht.
-// Wirkt nur auf die Anzeige: die Tages-Gesamtfarbe (dayOverallScore) und Gruppen, in
-// denen das Feld Mitglied ist, rechnen unverändert mit.
+// abschaltbar ("In der Auswertung anzeigen"), z.B. wenn einem ein berechnetes Feld daraus
+// reicht. Wirkt nur auf die Anzeige: die Tages-Gesamtfarbe (dayOverallScore) und
+// berechnete Felder, in denen das Feld Mitglied ist, rechnen unverändert mit.
 function inStats(h) { return !h.hideInStats; }
-// Gruppen gibt es in zwei Arten: Skala-Gruppen (Durchschnitt der normalisierten
-// Bewertungen, mit Farbe/Ziel-Quote - der ursprüngliche Fall) und seit 2026-09-27
-// Zahlen-Gruppen (fassen Zahlenwert-Felder derselben Einheit per Summe/Durchschnitt/
-// Minimum/Maximum zusammen, ohne Bewertung - verhalten sich in der Auswertung wie ein
-// Zahlenwert-Feld). Unterschieden über aggregate: gesetzt = Zahlen-Gruppe.
-function isNumberGroup(h) { return h.kind === 'group' && !!h.aggregate; }
+// Berechnete Felder (kind='computed', bis 2026-09-27 "Gruppen" genannt) gibt es in zwei
+// Arten: aus Skalen (Durchschnitt der normalisierten Bewertungen, mit Farbe/Ziel-Quote -
+// der ursprüngliche Fall) und aus Zahlen (fassen Zahlenwert-Felder derselben Einheit per
+// Summe/Durchschnitt/Minimum/Maximum zusammen, ohne Bewertung - verhalten sich in der
+// Auswertung wie ein Zahlenwert-Feld). Unterschieden über aggregate: gesetzt = aus Zahlen.
+function isNumberComputed(h) { return h.kind === 'computed' && !!h.aggregate; }
 // Felder mit Gut/Schlecht-Score (Farben, Heatmap, Prozent-Statistik).
-function isScoredKind(h) { return h.kind === 'scale' || (h.kind === 'group' && !h.aggregate); }
+function isScoredKind(h) { return h.kind === 'scale' || (h.kind === 'computed' && !h.aggregate); }
 // Felder mit Zahlen-Verlauf (Graph statt Farbe).
-function hasNumericSeries(h) { return isNumberKind(h) || isNumberGroup(h); }
-function groupMemberHabits(h) {
-  return (h.groupMembers || []).map((key) => state.habits.find((x) => x.id === key)).filter(Boolean);
+function hasNumericSeries(h) { return isNumberKind(h) || isNumberComputed(h); }
+function computedMemberHabits(h) {
+  return (h.members || []).map((key) => state.habits.find((x) => x.id === key)).filter(Boolean);
 }
-// Einheit einer Zahlen-Gruppe = die (gemeinsame, im Formular erzwungene) Einheit ihrer Mitglieder.
-function groupUnit(h) { return groupMemberHabits(h)[0]?.unit || null; }
-// Tageswert einer Zahlen-Gruppe aus den an dem Tag eingetragenen Mitgliedern (bei der
+// Einheit eines berechneten Zahlen-Felds = die (gemeinsame, im Formular erzwungene) Einheit seiner Mitglieder.
+function computedUnit(h) { return computedMemberHabits(h)[0]?.unit || null; }
+// Tageswert eines berechneten Zahlen-Felds aus den an dem Tag eingetragenen Mitgliedern (bei der
 // Summe zählt ein nicht eingetragenes Mitglied also als 0). Ist gar keins eingetragen,
 // gibt es keinen Wert (null) statt 0 - sonst sähe ein vergessener Tag aus wie ein Tag
 // mit echtem Wert 0.
-function numberGroupDay(h, dateKey) {
-  const members = groupMemberHabits(h);
+function numberComputedDay(h, dateKey) {
+  const members = computedMemberHabits(h);
   const day = state.entries[dateKey] || {};
   const values = members.map((m) => day[m.id]).filter((v) => typeof v === 'number');
   let value = null;
@@ -1150,9 +1146,9 @@ function numberGroupDay(h, dateKey) {
   }
   return { value, filled: values.length, total: members.length };
 }
-// Zahlenwert eines Felds an einem Tag - Zahlenwert-Feld direkt, Zahlen-Gruppe berechnet.
+// Zahlenwert eines Felds an einem Tag - Zahlenwert-Feld direkt, berechnetes Zahlen-Feld berechnet.
 function habitNumericValue(h, dateKey) {
-  if (isNumberGroup(h)) return numberGroupDay(h, dateKey).value;
+  if (isNumberComputed(h)) return numberComputedDay(h, dateKey).value;
   const v = state.entries[dateKey]?.[h.id];
   return v === undefined ? null : v;
 }
@@ -1182,11 +1178,11 @@ function isScheduledOn(schedule, date) {
     default: return true;
   }
 }
-// Ob ein Feld an einem Tag "dran" ist. Gruppen haben keinen eigenen Plan: dran, sobald
+// Ob ein Feld an einem Tag "dran" ist. Berechnete Felder haben keinen eigenen Plan: dran, sobald
 // eines ihrer aktiven Mitglieder dran ist.
 function isPlannedOn(h, date) {
-  if (h.kind !== 'group') return isScheduledOn(h.schedule, date);
-  return (h.groupMembers || []).some((slug) => {
+  if (h.kind !== 'computed') return isScheduledOn(h.schedule, date);
+  return (h.members || []).some((slug) => {
     const m = state.habits.find((x) => x.id === slug);
     return m && !m.archivedAt && isScheduledOn(m.schedule, date);
   });
@@ -1253,18 +1249,18 @@ function normalize(habit, value) {
 }
 
 // Normalisierter Score (0-1) eines Feldes an einem bestimmten Tag. Bei normalen
-// Skala-Feldern der direkt eingetragene Wert; bei gruppierten Feldern (kind='group')
+// Skala-Feldern der direkt eingetragene Wert; bei berechneten Feldern (kind='computed')
 // der Durchschnitt der normalisierten Werte seiner Mitglieder an dem Tag (null, wenn
-// an dem Tag kein Mitglied befüllt ist — eine Gruppe hält nie einen eigenen Eintrag,
+// an dem Tag kein Mitglied befüllt ist — ein berechnetes Feld hält nie einen eigenen Eintrag,
 // ihr Slug taucht nie als Key in state.entries auf). Ändert man die Mitgliederliste
-// einer Gruppe, wirkt sich das rückwirkend auf die gesamte Historie aus, da hier bei
+// eines berechneten Felds, wirkt sich das rückwirkend auf die gesamte Historie aus, da hier bei
 // jedem Aufruf live neu gerechnet wird — beabsichtigt, siehe CLAUDE.md.
 function habitScore(h, dateKey) {
   const day = state.entries[dateKey];
   if (!day) return null;
-  if (isNumberGroup(h)) return null; // keine Bewertung, siehe isNumberGroup
-  if (h.kind === 'group') {
-    const memberScores = (h.groupMembers || [])
+  if (isNumberComputed(h)) return null; // keine Bewertung, siehe isNumberComputed
+  if (h.kind === 'computed') {
+    const memberScores = (h.members || [])
       .map((slug) => state.habits.find((x) => x.id === slug))
       .filter((m) => m && !isNeutralScale(m)) // unbewertete Mitglieder haben kein Gut/Schlecht zum Mitteln
       .map((m) => normalize(m, day[m.id]))
@@ -1277,10 +1273,10 @@ function habitScore(h, dateKey) {
 
 // Ob ein Feld irgendwo in den übergebenen Datums-Keys einen (ggf. errechneten) Score
 // hat — für archivierte Felder in Auswertungs-Ansichten: normale Felder prüfen direkt
-// state.entries, Gruppen (die nie selbst einen Entry-Key haben) über habitScore.
+// state.entries, berechnete Felder (die nie selbst einen Entry-Key haben) über habitScore.
 function habitVisibleInRange(h, dateKeys) {
-  if (isNumberGroup(h)) return dateKeys.some((k) => numberGroupDay(h, k).value !== null);
-  if (h.kind === 'group') return dateKeys.some((k) => habitScore(h, k) !== null);
+  if (isNumberComputed(h)) return dateKeys.some((k) => numberComputedDay(h, k).value !== null);
+  if (h.kind === 'computed') return dateKeys.some((k) => habitScore(h, k) !== null);
   return dateKeys.some((k) => state.entries[k]?.[h.id] !== undefined);
 }
 
@@ -1305,7 +1301,7 @@ function neutralColor(score) {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
 // Zentrale Weiche für jede farbliche Score-Darstellung eines konkreten Feldes -
-// scoreColor() für bewertete Felder/Gruppen, neutralColor() für unbewertete.
+// scoreColor() für bewertete (auch berechnete) Felder, neutralColor() für unbewertete.
 function habitColor(habit, score) {
   return isNeutralScale(habit) ? neutralColor(score) : scoreColor(score);
 }
@@ -1354,7 +1350,7 @@ function applyGoal(habit, score) {
 // Gesamt-Score eines Tages über alle bewerteten Skala-Felder gemittelt (für Monats-/
 // Jahres-Heatmap). Zahlenwert-Felder (kind='number') UND unbewertete Skala-Felder
 // (isNeutralScale) fließen bewusst nicht ein — beide haben kein Gut/Schlecht, würden
-// die Tages-Gesamtwertung sonst verfälschen. Gruppen ebenfalls nicht: ihre Mitglieder
+// die Tages-Gesamtwertung sonst verfälschen. Berechnete Felder ebenfalls nicht: ihre Mitglieder
 // sind schon als eigene Felder drin, sonst zählte jedes Mitglied doppelt (bis
 // 2026-09-27 so, unbeabsichtigt). Unabhängig davon, ob ein Feld in der Auswertung
 // ausgeblendet ist - das betrifft nur die Anzeige.
@@ -1369,7 +1365,7 @@ function dayOverallScore(date) {
   return scores.reduce((a, b) => a + b, 0) / scores.length;
 }
 
-// Durchschnitt + Anzahl je Skala-/Gruppen-Feld über eine Menge von Datums-Keys
+// Durchschnitt + Anzahl je Skala-/berechnetem Feld über eine Menge von Datums-Keys
 // ('YYYY-MM-DD').
 function computeHabitStats(habits, dateKeys) {
   return habits.map((h) => {
@@ -1382,7 +1378,7 @@ function computeHabitStats(habits, dateKeys) {
   });
 }
 
-// Werte-Reihe + Kennzahlen eines Zahlenwert-Felds bzw. einer Zahlen-Gruppe über eine
+// Werte-Reihe + Kennzahlen eines Zahlenwert-Felds bzw. berechneten Zahlen-Felds über eine
 // Menge von Datums-Keys.
 function numberFieldStats(habit, dateKeys) {
   const series = dateKeys
@@ -1420,9 +1416,9 @@ const state = {
   passwordRecovery: false, // true zwischen Klick auf den Passwort-Reset-Link und neuem Passwort
   pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy'
   habits: [],         // alle Felder des Nutzers (aktiv + archiviert), sort_order-sortiert
-  sections: [],       // Bereiche: { id, name, sortOrder } (siehe layoutBlocks)
-  sectionEditor: null, // { id: null (neu) | Bereichs-ID, name } - offenes Eingabefeld in der Verwaltung
-  sectionDeleteConfirm: null, // Bereichs-ID, deren Löschen gerade bestätigt wird
+  sections: [],       // Gruppen (intern "sections"): { id, name, sortOrder } (siehe layoutBlocks)
+  sectionForm: null,  // { id: null (neu) | Gruppen-ID, name, members: [defId] } - offenes Gruppen-Formular
+  sectionDeleteConfirm: null, // Gruppen-ID, deren Löschen gerade bestätigt wird
   habitForm: null,    // { defId, locked, name, mode: 'numeric'|'labels', min, max, steps, labels, good }
   habitFormSaving: false, // true während handleHabitSave() läuft, verhindert Doppel-Submits
   menuOpen: false,
@@ -1509,7 +1505,7 @@ function closeManageOverlays() {
   state.habitForm = null;
   habitFormReturnScrollY = null;
   state.habitDeleteConfirm = null;
-  state.sectionEditor = null;
+  state.sectionForm = null;
   state.sectionDeleteConfirm = null;
 }
 function leaveSubpage() {
@@ -1517,7 +1513,7 @@ function leaveSubpage() {
   state.view = state.previousTabView || 'today';
 }
 function isOverlayOpen() {
-  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionEditor || !!state.resetConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
+  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
 }
 // Der Notiz-Editor gehört zu einem bestimmten Tag in "Heute" und ist nur offen, solange
 // er dort auch sichtbar ist - wechselt man Tag/Tab, speichert render() den Entwurf und
@@ -1528,7 +1524,7 @@ function isOverlayOpen() {
 function isNoteEditorOpen() {
   const ed = state.noteEditor;
   if (!ed || state.view !== 'today' || ed.dateKey !== formatKey(state.currentDate)) return false;
-  return ed.key === DAY_NOTE_KEY || activeHabits().some((h) => h.id === ed.key && h.kind !== 'group' && !isTextKind(h));
+  return ed.key === DAY_NOTE_KEY || activeHabits().some((h) => h.id === ed.key && h.kind !== 'computed' && !isTextKind(h));
 }
 function currentLayerCount() {
   return (isSubpageView(state.view) ? 1 : 0) + (isOverlayOpen() ? 1 : 0);
@@ -1567,6 +1563,7 @@ function closeHabitForm() {
 // Liste (bzw. zum Tab, siehe returnToTab), sonst die Unterseite verlassen.
 function subpageBack() {
   if (state.view === 'manage' && state.habitForm) closeHabitForm();
+  else if (state.view === 'manage' && state.sectionForm) closeSectionForm();
   else leaveSubpage();
 }
 // Schließt jeweils nur die "oberste" Ebene (analog zur bestehenden Escape-Logik) -
@@ -1583,8 +1580,8 @@ function closeTopLayer() {
     state.rowMenu = null;
   } else if (isNoteEditorOpen()) {
     discardNoteDraft(); // wie "Abbrechen"
-  } else if (state.sectionEditor) {
-    state.sectionEditor = null;
+  } else if (state.sectionForm) {
+    closeSectionForm();
   } else if (state.habitForm) {
     closeHabitForm();
   } else if (state.habitDeleteConfirm) {
@@ -1699,7 +1696,7 @@ const STRINGS = {
     'notice.deleteFailed': 'Löschen fehlgeschlagen: ',
     'notice.invalidNumber': 'Das ist keine gültige Zahl.',
     'notice.recoveryKeySaveError': 'Neuer Recovery-Key konnte nicht gespeichert werden: ',
-    'habitForm.error.minGroupMembers': 'Bitte mindestens 2 Felder zum Gruppieren auswählen.',
+    'habitForm.error.minComputedMembers': 'Bitte mindestens 2 Felder auswählen.',
     'habitForm.error.stepsRange': 'Anzahl Stufen muss zwischen 2 und 1000 liegen.',
     'habitForm.error.sliderLabelStepsRange': 'Mit eigenen Bezeichnungen sind beim Schieberegler maximal {cap} Stufen möglich.',
     'habitForm.error.max12Steps': 'Bitte maximal 12 Stufen.',
@@ -1784,20 +1781,20 @@ const STRINGS = {
     'ariaLabel.moveUp': 'Nach oben verschieben',
     'ariaLabel.moveDown': 'Nach unten verschieben',
     'common.noData': 'keine Daten',
-    'groupInfo.avgOf': 'Ø aus {names} ({filled}/{total} heute erfasst)',
-    'groupInfo.aggOf': '{agg} aus {names} ({filled}/{total} heute erfasst)',
+    'computedInfo.avgOf': 'Ø aus {names} ({filled}/{total} heute erfasst)',
+    'computedInfo.aggOf': '{agg} aus {names} ({filled}/{total} heute erfasst)',
     'aggregate.sum': 'Summe',
     'aggregate.avg': 'Durchschnitt',
     'aggregate.min': 'Minimum',
     'aggregate.max': 'Maximum',
-    'manage.groupAggregate': '{agg} aus: {names}',
-    'habitForm.groupType': 'Art der Gruppe',
-    'habitForm.groupType.scale': 'Skalen',
-    'habitForm.groupType.number': 'Zahlenwerte',
+    'manage.computedAggregate': '{agg} aus: {names}',
+    'habitForm.computedType': 'Art der Mitglieder',
+    'habitForm.computedType.scale': 'Skalen',
+    'habitForm.computedType.number': 'Zahlenwerte',
     'habitForm.aggregate': 'Berechnung',
-    'habitForm.groupUnitNote': 'Zusammenrechnen lassen sich nur Felder mit derselben Einheit – sonst käme eine falsche Zahl heraus (z. B. km + m).',
-    'habitForm.noNumberGroupCandidates': 'Noch keine Zahlenwert-Felder vorhanden, die sich gruppieren lassen.',
-    'habitForm.error.groupUnitMismatch': 'Die ausgewählten Felder haben unterschiedliche Einheiten.',
+    'habitForm.computedUnitNote': 'Zusammenrechnen lassen sich nur Felder mit derselben Einheit – sonst käme eine falsche Zahl heraus (z. B. km + m).',
+    'habitForm.noNumberComputedCandidates': 'Noch keine Zahlenwert-Felder vorhanden, die sich zusammenrechnen lassen.',
+    'habitForm.error.computedUnitMismatch': 'Die ausgewählten Felder haben unterschiedliche Einheiten.',
     'numberBox.last': 'zuletzt: {value} ({date})',
     'today.jumpToday': 'Zu heute springen',
     'today.noFields': 'Noch keine Felder angelegt.',
@@ -1847,7 +1844,7 @@ const STRINGS = {
     'habitForm.unit': 'Einheit (optional)',
     'habitForm.unitPlaceholder': 'z. B. kg',
     'habitForm.members': 'Mitglieder (mind. 2 Felder)',
-    'habitForm.noGroupCandidates': 'Noch keine Skala-Felder vorhanden, die sich gruppieren lassen.',
+    'habitForm.noComputedCandidates': 'Noch keine Skala-Felder vorhanden, die sich zusammenfassen lassen.',
     'habitForm.ownReminderTime': 'Eigene Erinnerungszeit',
     'habitForm.defaultReminderNote': 'Ohne eigene Zeit gilt die Standard-Erinnerungszeit (aktuell {time}, änderbar im Menü).',
     'habitForm.title.editGroup': 'Gruppe bearbeiten',
@@ -1858,8 +1855,9 @@ const STRINGS = {
     'habitForm.name': 'Name',
     'habitForm.fieldType': 'Feld-Typ',
     'habitForm.kindScale': 'Skala',
-    'habitForm.kindNumber': 'Freier Zahlenwert',
-    'habitForm.kindText': 'Freier Text',
+    'habitForm.kindNumber': 'Zahl',
+    'habitForm.kindText': 'Text',
+    'habitForm.kindComputed': 'Berechnet',
     'habitForm.schedule': 'Wiederholung',
     'habitForm.schedule.daily': 'Täglich',
     'habitForm.schedule.weekly': 'Wöchentlich',
@@ -1899,25 +1897,27 @@ const STRINGS = {
     'manage.deleteConfirmFinal': 'Ja, endgültig löschen',
     'manage.deleteWarning': 'Es gibt historische Einträge – nach dem Löschen in der App nicht mehr nutzbar.',
     'manage.reminderAt': 'Erinnerung {time}',
-    'manage.groupMembers': 'Ø aus: {names}',
+    'manage.computedMembers': 'Ø aus: {names}',
     'manage.archive': 'Archivieren',
     'manage.reactivate': 'Reaktivieren',
     'manage.archivedSectionLabel': 'Archiviert',
-    'manage.groupTag': 'Gruppe',
-    'manage.sectionTag': 'Bereich',
-    'manage.newSection': '+ Neuer Bereich',
-    'manage.rename': 'Umbenennen',
-    'manage.sectionName': 'Name des Bereichs',
+    'manage.computedTag': 'Berechnet',
+    'manage.sectionTag': 'Gruppe',
+    'sectionForm.explain': 'Eine Gruppe ordnet Felder unter einer einklappbaren Überschrift – in „Heute“ und in der Auswertung. Jedes Feld kann in höchstens einer Gruppe sein.',
+    'sectionForm.members': 'Felder in dieser Gruppe',
+    'sectionForm.inOtherGroup': '(in „{name}“)',
+    'sectionForm.noFields': 'Noch keine Felder vorhanden.',
+    'manage.sectionName': 'Name der Gruppe',
     'manage.sectionNamePlaceholder': 'z. B. Gesundheit',
-    'manage.sectionEmpty': 'Noch leer – ordne Felder über „Bearbeiten“ → „Bereich“ zu.',
-    'manage.sectionDeleteWarning': 'Bereich löschen? Die Felder darin bleiben erhalten.',
-    'manage.error.sectionNameRequired': 'Bitte einen Namen für den Bereich eingeben.',
-    'habitForm.section': 'Bereich',
-    'habitForm.sectionNone': 'Kein Bereich',
+    'manage.sectionEmpty': 'Noch leer – über „Bearbeiten“ Felder hinzufügen.',
+    'manage.sectionDeleteWarning': 'Gruppe löschen? Die Felder darin bleiben erhalten.',
+    'manage.error.sectionNameRequired': 'Bitte einen Namen für die Gruppe eingeben.',
+    'habitForm.section': 'Gruppe',
+    'habitForm.sectionNone': 'Keine Gruppe',
     'manage.hiddenInStats': 'in der Auswertung ausgeblendet',
     'habitForm.showInStats': 'In der Auswertung anzeigen',
-    'habitForm.showInStatsNote': 'Aus: erscheint nur in „Heute“, nicht in Woche, Monat, Jahr und Gesamt – z. B. wenn dir eine Gruppe daraus reicht. Die Tagesfarbe rechnet es trotzdem mit ein.',
-    'habitForm.groupExplain': 'Eine Gruppe fasst mehrere Felder zu einem live berechneten Wert zusammen – Skalen als Durchschnitt, Zahlenwerte z. B. als Summe. Sie hat keinen eigenen Eintrag.',
+    'habitForm.showInStatsNote': 'Aus: erscheint nur in „Heute“, nicht in Woche, Monat, Jahr und Gesamt – z. B. wenn dir ein berechnetes Feld daraus reicht. Die Tagesfarbe rechnet es trotzdem mit ein.',
+    'habitForm.computedExplain': 'Ein berechnetes Feld fasst mehrere Felder zu einem live berechneten Wert zusammen – Skalen als Durchschnitt, Zahlenwerte z. B. als Summe. Selbst ausfüllen kann man es nicht.',
     'common.finish': 'Fertig',
     'menu.defaultReminderTime': 'Standard-Erinnerungszeit',
     'menu.timezoneNote': 'Zeitzone: {tz} (folgt deinem Gerät)',
@@ -2010,7 +2010,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'Was ich nicht sehen kann',
     'about.privacy.cannotSee.body': 'Alles, was du einträgst, und worum es dabei geht: deine Werte, Notizen und Text-Antworten, die Namen deiner Felder und die Bezeichnungen ihrer Stufen. Das alles wird auf deinem Gerät verschlüsselt, bevor es überhaupt verschickt wird. Der Schlüssel dafür hängt an deinem Passwort, und das kennst nur du. Selbst mit vollem Zugriff auf die Datenbank sehe ich davon nur unlesbaren Zeichensalat.',
     'about.privacy.canSee.title': 'Was ich sehen kann',
-    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>dass du Felder hast, von welcher Art (z. B. Skala oder Zahl) und ob du sie in Bereiche sortiert hast – aber nicht, worum es geht oder wie Felder und Bereiche heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokolliert der Hosting-Anbieter für kurze Zeit technische Zugriffsdaten wie IP-Adressen.',
+    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>dass du Felder hast, von welcher Art (z. B. Skala oder Zahl) und ob du sie in Gruppen sortiert hast – aber nicht, worum es geht oder wie Felder und Gruppen heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokolliert der Hosting-Anbieter für kurze Zeit technische Zugriffsdaten wie IP-Adressen.',
     'about.privacy.recoveryKey.title': 'Die Kehrseite: dein Recovery-Key',
     'about.privacy.recoveryKey.body': 'Weil ich keinen Zugriff habe, kann ich dir auch nicht helfen, wenn du Passwort <strong>und</strong> Recovery-Key verlierst – dann sind deine Einträge unwiederbringlich weg. Bewahre ihn deshalb gut auf.',
     'about.privacy.yourData.title': 'Deine Daten gehören dir',
@@ -2030,8 +2030,8 @@ const STRINGS = {
     'about.tip.reorder.body': 'In „Felder verwalten" kannst du Felder per Ziehen am Griff-Symbol oder mit den ↑/↓-Buttons neu anordnen.',
     'about.tip.noValuation.title': 'Felder ohne Wertung',
     'about.tip.noValuation.body': 'Nicht alles muss gut oder schlecht sein. Bei „Keine Wertung" (statt „Hohe/Niedrige Werte erstrebenswert") wird ein Feld einfach nur getrackt, ohne Rot-Grün-Färbung — dafür in der Auswertung mit einer eigenen, neutralen Graustufen-Skala statt der üblichen Farben.',
-    'about.tip.groups.title': 'Gruppierte Felder',
-    'about.tip.groups.body': 'Fassen mehrere Felder zu einem gemeinsamen Wert zusammen: Skala-Felder zu einem Durchschnitt, z. B. „Sport gemacht" aus „Ausdauersport" + „Kraftsport" — oder Zahlenwert-Felder mit derselben Einheit als Summe, Durchschnitt, Minimum oder Maximum, z. B. „Bewegung gesamt (km)" aus „Laufen" + „Radfahren". Kein eigener Eintrag — der Wert berechnet sich immer live aus den Mitgliedern.',
+    'about.tip.computed.title': 'Berechnete Felder',
+    'about.tip.computed.body': 'Ein Feld vom Typ „Berechnet“ fasst mehrere Felder zu einem Wert zusammen: Skala-Felder zu einem Durchschnitt, z. B. „Sport gemacht“ aus „Ausdauersport“ + „Kraftsport“ – oder Zahlenwert-Felder mit derselben Einheit als Summe, Durchschnitt, Minimum oder Maximum, z. B. „Bewegung gesamt (km)“ aus „Laufen“ + „Radfahren“. Selbst ausfüllen kann man es nicht – der Wert berechnet sich immer live aus den anderen Feldern.',
     'about.tip.goalThreshold.title': 'Ziel-Quote statt 100 %',
     'about.tip.goalThreshold.body': 'Bei manchen Feldern ist täglich 100 % unrealistisch. Stell im Feld-Formular eine niedrigere Quote ein, ab der ein Tag farblich schon als voll erreicht gilt.',
     'about.tip.slider.title': 'Schieberegler statt Buttons',
@@ -2093,7 +2093,7 @@ const STRINGS = {
     'notice.deleteFailed': 'Delete failed: ',
     'notice.invalidNumber': 'That is not a valid number.',
     'notice.recoveryKeySaveError': 'New recovery key could not be saved: ',
-    'habitForm.error.minGroupMembers': 'Please select at least 2 fields to group.',
+    'habitForm.error.minComputedMembers': 'Please select at least 2 fields.',
     'habitForm.error.stepsRange': 'Number of steps must be between 2 and 1000.',
     'habitForm.error.sliderLabelStepsRange': 'With custom labels, a slider can have at most {cap} steps.',
     'habitForm.error.max12Steps': 'Please use at most 12 steps.',
@@ -2178,20 +2178,20 @@ const STRINGS = {
     'ariaLabel.moveUp': 'Move up',
     'ariaLabel.moveDown': 'Move down',
     'common.noData': 'no data',
-    'groupInfo.avgOf': 'avg. of {names} ({filled}/{total} entered today)',
-    'groupInfo.aggOf': '{agg} of {names} ({filled}/{total} entered today)',
+    'computedInfo.avgOf': 'avg. of {names} ({filled}/{total} entered today)',
+    'computedInfo.aggOf': '{agg} of {names} ({filled}/{total} entered today)',
     'aggregate.sum': 'Sum',
     'aggregate.avg': 'Average',
     'aggregate.min': 'Minimum',
     'aggregate.max': 'Maximum',
-    'manage.groupAggregate': '{agg} of: {names}',
-    'habitForm.groupType': 'Group type',
-    'habitForm.groupType.scale': 'Scales',
-    'habitForm.groupType.number': 'Number values',
+    'manage.computedAggregate': '{agg} of: {names}',
+    'habitForm.computedType': 'Member type',
+    'habitForm.computedType.scale': 'Scales',
+    'habitForm.computedType.number': 'Number values',
     'habitForm.aggregate': 'Calculation',
-    'habitForm.groupUnitNote': 'Only fields with the same unit can be combined – otherwise the result would be wrong (e.g. km + m).',
-    'habitForm.noNumberGroupCandidates': 'No number fields available yet that can be grouped.',
-    'habitForm.error.groupUnitMismatch': 'The selected fields have different units.',
+    'habitForm.computedUnitNote': 'Only fields with the same unit can be combined – otherwise the result would be wrong (e.g. km + m).',
+    'habitForm.noNumberComputedCandidates': 'No number fields available yet that can be combined.',
+    'habitForm.error.computedUnitMismatch': 'The selected fields have different units.',
     'numberBox.last': 'last: {value} ({date})',
     'today.jumpToday': 'Jump to today',
     'today.noFields': 'No fields created yet.',
@@ -2241,7 +2241,7 @@ const STRINGS = {
     'habitForm.unit': 'Unit (optional)',
     'habitForm.unitPlaceholder': 'e.g. kg',
     'habitForm.members': 'Members (at least 2 fields)',
-    'habitForm.noGroupCandidates': 'No scale fields available yet that can be grouped.',
+    'habitForm.noComputedCandidates': 'No scale fields available yet that can be combined.',
     'habitForm.ownReminderTime': 'Custom reminder time',
     'habitForm.defaultReminderNote': 'Without a custom time, the default reminder time applies (currently {time}, changeable in the menu).',
     'habitForm.title.editGroup': 'Edit group',
@@ -2252,8 +2252,9 @@ const STRINGS = {
     'habitForm.name': 'Name',
     'habitForm.fieldType': 'Field type',
     'habitForm.kindScale': 'Scale',
-    'habitForm.kindNumber': 'Free number value',
-    'habitForm.kindText': 'Free text',
+    'habitForm.kindNumber': 'Number',
+    'habitForm.kindText': 'Text',
+    'habitForm.kindComputed': 'Calculated',
     'habitForm.schedule': 'Repeats',
     'habitForm.schedule.daily': 'Daily',
     'habitForm.schedule.weekly': 'Weekly',
@@ -2293,25 +2294,27 @@ const STRINGS = {
     'manage.deleteConfirmFinal': 'Yes, delete permanently',
     'manage.deleteWarning': 'There are historical entries – no longer usable in the app after deletion.',
     'manage.reminderAt': 'Reminder {time}',
-    'manage.groupMembers': 'avg. of: {names}',
+    'manage.computedMembers': 'avg. of: {names}',
     'manage.archive': 'Archive',
     'manage.reactivate': 'Reactivate',
     'manage.archivedSectionLabel': 'Archived',
-    'manage.groupTag': 'Group',
-    'manage.sectionTag': 'Section',
-    'manage.newSection': '+ New section',
-    'manage.rename': 'Rename',
-    'manage.sectionName': 'Section name',
+    'manage.computedTag': 'Calculated',
+    'manage.sectionTag': 'Group',
+    'sectionForm.explain': 'A group arranges fields under a collapsible heading – in “Today” and in the statistics. Each field can be in at most one group.',
+    'sectionForm.members': 'Fields in this group',
+    'sectionForm.inOtherGroup': '(in “{name}”)',
+    'sectionForm.noFields': 'No fields yet.',
+    'manage.sectionName': 'Group name',
     'manage.sectionNamePlaceholder': 'e.g. Health',
-    'manage.sectionEmpty': 'Still empty – assign fields via “Edit” → “Section”.',
-    'manage.sectionDeleteWarning': 'Delete section? The fields in it are kept.',
-    'manage.error.sectionNameRequired': 'Please enter a name for the section.',
-    'habitForm.section': 'Section',
-    'habitForm.sectionNone': 'No section',
+    'manage.sectionEmpty': 'Still empty – add fields via “Edit”.',
+    'manage.sectionDeleteWarning': 'Delete group? The fields in it are kept.',
+    'manage.error.sectionNameRequired': 'Please enter a name for the group.',
+    'habitForm.section': 'Group',
+    'habitForm.sectionNone': 'No group',
     'manage.hiddenInStats': 'hidden in statistics',
     'habitForm.showInStats': 'Show in statistics',
-    'habitForm.showInStatsNote': 'Off: only appears in “Today”, not in the week, month, year, and overall views – e.g. if a group made from it is enough for you. It still counts towards the day’s color.',
-    'habitForm.groupExplain': 'A group combines multiple fields into one live-calculated value – scales as an average, number fields e.g. as a sum. It has no entry of its own.',
+    'habitForm.showInStatsNote': 'Off: only appears in “Today”, not in the week, month, year, and overall views – e.g. if a calculated field made from it is enough for you. It still counts towards the day’s color.',
+    'habitForm.computedExplain': 'A calculated field combines multiple fields into one live-calculated value – scales as an average, number fields e.g. as a sum. You cannot fill it in yourself.',
     'common.finish': 'Done',
     'menu.defaultReminderTime': 'Default reminder time',
     'menu.timezoneNote': 'Time zone: {tz} (follows your device)',
@@ -2404,7 +2407,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'What I cannot see',
     'about.privacy.cannotSee.body': 'Everything you enter, and what it is about: your values, notes, and text answers, the names of your fields and the labels of their steps. All of this is encrypted on your device before it is even sent. The key for it is tied to your password, and only you know that. Even with full access to the database, all I see is unreadable gibberish.',
     'about.privacy.canSee.title': 'What I can see',
-    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>that you have fields, what kind they are (e.g. scale or number), and whether you sorted them into sections – but not what they are about or what your fields and sections are called</li><li>on which days you filled in which of these fields (for reminders), without the value</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the hosting provider briefly logs technical access data such as IP addresses.',
+    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>that you have fields, what kind they are (e.g. scale or number), and whether you sorted them into groups – but not what they are about or what your fields and groups are called</li><li>on which days you filled in which of these fields (for reminders), without the value</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the hosting provider briefly logs technical access data such as IP addresses.',
     'about.privacy.recoveryKey.title': 'The flip side: your recovery key',
     'about.privacy.recoveryKey.body': 'Because I have no access, I also cannot help you if you lose your password <strong>and</strong> your recovery key – your entries are then gone for good. So keep it somewhere safe.',
     'about.privacy.yourData.title': 'Your data belongs to you',
@@ -2424,8 +2427,8 @@ const STRINGS = {
     'about.tip.reorder.body': 'In "Manage fields" you can reorder fields by dragging the handle or using the ↑/↓ buttons.',
     'about.tip.noValuation.title': 'Fields without valuation',
     'about.tip.noValuation.body': 'Not everything has to be good or bad. With "No valuation" (instead of "High/Low values desirable"), a field is simply tracked without red/green coloring — shown in the evaluation views with its own neutral grayscale instead of the usual colors.',
-    'about.tip.groups.title': 'Grouped fields',
-    'about.tip.groups.body': 'Combine multiple fields into one shared value: scale fields into an average, e.g. "exercised" from "cardio" + "strength training" — or number fields with the same unit as a sum, average, minimum, or maximum, e.g. "total movement (km)" from "running" + "cycling". No entry of its own — the value is always calculated live from its members.',
+    'about.tip.computed.title': 'Calculated fields',
+    'about.tip.computed.body': 'A field of type “Calculated” combines multiple fields into one value: scale fields into an average, e.g. “exercised” from “cardio” + “strength training” – or number fields with the same unit as a sum, average, minimum, or maximum, e.g. “total movement (km)” from “running” + “cycling”. You cannot fill it in yourself – the value is always calculated live from the other fields.',
     'about.tip.goalThreshold.title': 'Goal threshold instead of 100%',
     'about.tip.goalThreshold.body': 'For some fields, 100% every day is unrealistic. Set a lower threshold in the field form, from which a day already counts as fully reached in color.',
     'about.tip.slider.title': 'Slider instead of buttons',
@@ -2852,9 +2855,9 @@ async function loadHabits() {
   if (unencrypted.length) migrateHabitDefinitions(unencrypted);
 }
 
-// Bereiche (habit_sections): nur der Name ist verschlüsselt ({name} in enc, gleicher
-// DEK). Die Zuordnung Feld -> Bereich steht als Klartext-Spalte habit_definitions.
-// section_id (nur zwei zufällige IDs) - so löst die DB sie beim Löschen eines Bereichs
+// Gruppen (habit_sections): nur der Name ist verschlüsselt ({name} in enc, gleicher
+// DEK). Die Zuordnung Feld -> Gruppe steht als Klartext-Spalte habit_definitions.
+// section_id (nur zwei zufällige IDs) - so löst die DB sie beim Löschen einer Gruppe
 // selbst (ON DELETE SET NULL) und Umhängen braucht kein Neu-Verschlüsseln des Felds.
 async function loadSections() {
   const { data, error } = await supabase.from('habit_sections').select('*').order('sort_order');
@@ -3121,8 +3124,8 @@ function defaultHabitForm() {
     defId: null, locked: false, kind: 'scale',
     name: '', min: 1, max: 5, labelsEnabled: false, labels: ['', '', '', '', ''], good: 'high',
     displayStyle: 'buttons', sliderShowValue: true,
-    groupMembers: [],
-    groupType: 'scale', aggregate: 'sum', // nur bei kind='group', siehe isNumberGroup
+    members: [],
+    computedType: 'scale', aggregate: 'sum', // nur bei kind='computed', siehe isNumberComputed
     showInStats: true,
     sectionId: null,
     goalPercent: 100,
@@ -3198,13 +3201,13 @@ function habitToForm(h) {
     labelsEnabled: !!h.labels,
     labels: h.labels ? [...h.labels] : Array.from({ length: stepCount }, () => ''),
     // Bei Skala-Feldern h.good unverändert übernehmen (kann null = "Keine Wertung" sein)
-    // - der "|| 'high'"-Fallback gilt nur für number/group, deren h.good in der DB immer
+    // - der "|| 'high'"-Fallback gilt nur für number/computed, deren h.good in der DB immer
     // null ist, als sinnvoller Startwert falls im Formular noch auf "Skala" gewechselt wird.
     good: h.kind === 'scale' ? h.good : 'high',
     displayStyle,
     sliderShowValue: h.sliderShowValue ?? true,
-    groupMembers: h.kind === 'group' ? [...(h.groupMembers || [])] : [],
-    groupType: h.aggregate ? 'number' : 'scale',
+    members: h.kind === 'computed' ? [...(h.members || [])] : [],
+    computedType: h.aggregate ? 'number' : 'scale',
     aggregate: h.aggregate || 'sum',
     showInStats: !h.hideInStats,
     sectionId: h.sectionId,
@@ -3253,13 +3256,13 @@ function syncHabitFormFromDom() {
     if (reminderEnabledEl) f.reminderEnabled = reminderEnabledEl.checked;
     const reminderTimeEl = document.getElementById('habit-form-reminder-time');
     if (reminderTimeEl) f.reminderMinute = Number(reminderTimeEl.value);
-  } else if (f.kind === 'group') {
-    const aggregateEl = document.getElementById('habit-form-group-aggregate');
+  } else if (f.kind === 'computed') {
+    const aggregateEl = document.getElementById('habit-form-computed-aggregate');
     if (aggregateEl) f.aggregate = aggregateEl.value;
-    document.querySelectorAll('[data-group-member]').forEach((el) => {
-      const slug = el.dataset.groupMember;
-      if (el.checked) { if (!f.groupMembers.includes(slug)) f.groupMembers.push(slug); }
-      else { f.groupMembers = f.groupMembers.filter((s) => s !== slug); }
+    document.querySelectorAll('[data-member-key]').forEach((el) => {
+      const slug = el.dataset.memberKey;
+      if (el.checked) { if (!f.members.includes(slug)) f.members.push(slug); }
+      else { f.members = f.members.filter((s) => s !== slug); }
     });
     const goalEl = document.getElementById('habit-form-goal');
     if (goalEl) f.goalPercent = Number(goalEl.value);
@@ -3271,7 +3274,7 @@ function syncHabitFormFromDom() {
     const reminderTimeEl = document.getElementById('habit-form-reminder-time');
     if (reminderTimeEl) f.reminderMinute = Number(reminderTimeEl.value);
   }
-  if (f.kind !== 'group') readScheduleFromDom(f);
+  if (f.kind !== 'computed') readScheduleFromDom(f);
   const showInStatsEl = document.getElementById('habit-form-show-in-stats');
   if (showInStatsEl) f.showInStats = showInStatsEl.checked;
   const sectionEl = document.getElementById('habit-form-section');
@@ -3332,7 +3335,7 @@ async function handleHabitSaveInner() {
   // Ziel-Quote ergibt bei "Keine Wertung" keinen Sinn (kein Gut/Schlecht zum Stauchen)
   // - das Formularfeld ist dann versteckt (siehe scaleBody), aber f.goalPercent könnte
   // noch einen alten Wert von vor dem Umschalten auf "Keine Wertung" tragen.
-  const goalThreshold = ((f.kind === 'scale' && f.good) || (f.kind === 'group' && f.groupType !== 'number')) && Number.isFinite(goalPercent) && goalPercent > 0 && goalPercent < 100
+  const goalThreshold = ((f.kind === 'scale' && f.good) || (f.kind === 'computed' && f.computedType !== 'number')) && Number.isFinite(goalPercent) && goalPercent > 0 && goalPercent < 100
     ? goalPercent / 100
     : null;
 
@@ -3342,22 +3345,22 @@ async function handleHabitSaveInner() {
   } else if (f.kind === 'number') {
     const unit = (document.getElementById('habit-form-unit')?.value || '').trim();
     fields = { kind: 'number', min: null, max: null, labels: null, good: null, unit: unit || null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
-  } else if (f.kind === 'group') {
-    const groupMembers = [...document.querySelectorAll('[data-group-member]:checked')].map((el) => el.dataset.groupMember);
-    if (groupMembers.length < 2) {
-      state.notice = { type: 'error', text: t('habitForm.error.minGroupMembers') };
+  } else if (f.kind === 'computed') {
+    const memberKeys = [...document.querySelectorAll('[data-member-key]:checked')].map((el) => el.dataset.memberKey);
+    if (memberKeys.length < 2) {
+      state.notice = { type: 'error', text: t('habitForm.error.minComputedMembers') };
       return;
     }
-    const isNumber = f.groupType === 'number';
+    const isNumber = f.computedType === 'number';
     if (isNumber) {
       // Das Formular sperrt Felder mit anderer Einheit schon - hier nur als letzte Absicherung.
-      const units = new Set(groupMembers.map((key) => (state.habits.find((h) => h.id === key)?.unit || '').trim()));
+      const units = new Set(memberKeys.map((key) => (state.habits.find((h) => h.id === key)?.unit || '').trim()));
       if (units.size > 1) {
-        state.notice = { type: 'error', text: t('habitForm.error.groupUnitMismatch') };
+        state.notice = { type: 'error', text: t('habitForm.error.computedUnitMismatch') };
         return;
       }
     }
-    fields = { kind: 'group', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: groupMembers, goal_threshold: goalThreshold, aggregate: isNumber ? f.aggregate : null };
+    fields = { kind: 'computed', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: memberKeys, goal_threshold: goalThreshold, aggregate: isNumber ? f.aggregate : null };
   } else if (f.locked) {
     // Bereich/Anzahl bleiben unangetastet (original.min/max) – die Darstellung
     // (Buttons/Slider) und die Sichtbarkeit des Werts beim Eintragen sind reine
@@ -3413,10 +3416,10 @@ async function handleHabitSaveInner() {
     fields = { kind: 'scale', min, max, labels, good: f.good, unit: null, display_style: displayStyle, slider_show_value: sliderShowValue, group_members: null, goal_threshold: goalThreshold };
   }
 
-  // Wiederholung - Gruppen haben keinen eigenen Plan (DB-Check erzwingt das ebenfalls).
+  // Wiederholung - berechnete Felder haben keinen eigenen Plan (DB-Check erzwingt das ebenfalls).
   // Auch bei gesperrten Feldern änderbar: ändert nur, an welchen Tagen das Feld dran ist,
   // deutet keine vorhandenen Werte um.
-  if (f.kind === 'group') {
+  if (f.kind === 'computed') {
     fields.schedule = null;
   } else {
     const result = formToSchedule(f.schedule);
@@ -3455,7 +3458,7 @@ async function handleHabitSaveInner() {
     enc: await encryptData(currentDek, payload),
     ...DEF_PLAINTEXT_CLEARED,
   };
-  // Neues oder in einen anderen Bereich verschobenes Feld: ans Ende seines Behälters.
+  // Neues oder in eine andere Gruppe verschobenes Feld: ans Ende seines Behälters.
   const original = f.defId ? state.habits.find((h) => h.defId === f.defId) : null;
   if (!original || (original.sectionId || null) !== sectionId) row.sort_order = containerMaxSortOrder(sectionId) + 1;
   if (f.defId) {
@@ -3499,10 +3502,10 @@ async function handleHabitArchive(defId, archive) {
   return true;
 }
 
-// Persistiert die neue Reihenfolge EINES Behälters (oberste Ebene oder ein Bereich) -
+// Persistiert die neue Reihenfolge EINES Behälters (oberste Ebene oder eine Gruppe) -
 // items = alle Elemente des Behälters in der gewünschten Reihenfolge, je { type:
-// 'habit'|'section', id, moveOut? }. moveOut: Feld verlässt dabei seinen Bereich (beim
-// Löschen eines Bereichs). Gemeinsamer Pfad für Ziehen UND die ↑/↓-Buttons, damit beide
+// 'habit'|'section', id, moveOut? }. moveOut: Feld verlässt dabei seine Gruppe (beim
+// Löschen einer Gruppe). Gemeinsamer Pfad für Ziehen UND die ↑/↓-Buttons, damit beide
 // exakt gleich speichern.
 async function commitLayoutOrder(items) {
   const order = new Map(items.map((it, i) => [it.id, i + 1]));
@@ -3525,24 +3528,56 @@ async function commitLayoutOrder(items) {
   }
 }
 
-async function saveSection() {
-  const ed = state.sectionEditor;
-  if (!ed) return;
-  const name = (document.getElementById('section-name-input')?.value ?? ed.name).trim();
+// --- Gruppen (intern: sections) - Formular -------------------------------------
+// Eigene Ebene der Verwaltung wie das Feld-Formular (openHabitForm): Name + Liste aller
+// aktiven Felder zum Ankreuzen, beliebig gemischt. Ein Feld kann nur in EINER Gruppe
+// sein - Felder aus einer anderen Gruppe erscheinen ausgegraut mit deren Namen. Scroll-
+// Position und Rückweg teilen sich den Mechanismus des Feld-Formulars.
+function openSectionForm(id) {
+  habitFormReturnScrollY = window.scrollY;
+  const sec = id ? state.sections.find((x) => x.id === id) : null;
+  state.sectionForm = {
+    id: sec ? sec.id : null,
+    name: sec ? sec.name : '',
+    members: sec ? state.habits.filter((h) => !h.archivedAt && h.sectionId === sec.id).map((h) => h.defId) : [],
+  };
+  state.sectionDeleteConfirm = null;
+  render();
+  window.scrollTo(0, 0);
+  if (!sec) requestAnimationFrame(() => document.getElementById('section-form-name')?.focus());
+}
+function closeSectionForm() {
+  state.sectionForm = null;
+  pendingScrollRestore = habitFormReturnScrollY;
+  habitFormReturnScrollY = null;
+}
+function readSectionFormFromDom() {
+  const sf = state.sectionForm;
+  const nameEl = document.getElementById('section-form-name');
+  if (nameEl) sf.name = nameEl.value;
+  const boxes = [...document.querySelectorAll('[data-section-member]')];
+  if (boxes.length) sf.members = boxes.filter((b) => b.checked && !b.disabled).map((b) => b.dataset.sectionMember);
+}
+async function saveSectionForm() {
+  const sf = state.sectionForm;
+  if (!sf) return;
+  readSectionFormFromDom();
+  const name = sf.name.trim();
   if (!name) {
     state.notice = { type: 'error', text: t('manage.error.sectionNameRequired') };
     render();
     return;
   }
   const enc = await encryptData(currentDek, { name });
-  if (ed.id) {
-    const { error } = await supabase.from('habit_sections').update({ enc }).eq('id', ed.id);
+  let id = sf.id;
+  if (id) {
+    const { error } = await supabase.from('habit_sections').update({ enc }).eq('id', id);
     if (error) {
       state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
       render();
       return;
     }
-    state.sections = state.sections.map((sec) => (sec.id === ed.id ? { ...sec, name } : sec));
+    state.sections = state.sections.map((sec) => (sec.id === id ? { ...sec, name } : sec));
   } else {
     const sortOrder = containerMaxSortOrder(null) + 1;
     const { data, error } = await supabase.from('habit_sections')
@@ -3553,13 +3588,72 @@ async function saveSection() {
       render();
       return;
     }
-    state.sections = [...state.sections, { id: data.id, name, sortOrder }];
+    id = data.id;
+    state.sections = [...state.sections, { id, name, sortOrder }];
   }
-  state.sectionEditor = null;
+  // Mitgliedschaft abgleichen: neu angekreuzte Felder ans Ende der Gruppe (in der
+  // Reihenfolge, in der sie in der Verwaltung stehen), abgewählte ans Ende der obersten
+  // Ebene. Bestehende Mitglieder behalten ihren Platz.
+  const active = state.habits.filter((h) => !h.archivedAt);
+  const layoutOrder = layoutBlocks(active).flatMap((b) => (b.type === 'habit' ? [b.habit.defId] : b.habits.map((h) => h.defId)));
+  const current = active.filter((h) => h.sectionId === id).map((h) => h.defId);
+  const added = sf.members.filter((d) => !current.includes(d)).sort((a, b) => layoutOrder.indexOf(a) - layoutOrder.indexOf(b));
+  const removed = current.filter((d) => !sf.members.includes(d));
+  let nextInGroup = containerMaxSortOrder(id);
+  let nextTop = containerMaxSortOrder(null);
+  const updates = [
+    ...added.map((defId) => ({ defId, section_id: id, sort_order: ++nextInGroup })),
+    ...removed.map((defId) => ({ defId, section_id: null, sort_order: ++nextTop })),
+  ];
+  const results = await Promise.all(updates.map((u) =>
+    supabase.from('habit_definitions').update({ section_id: u.section_id, sort_order: u.sort_order }).eq('id', u.defId)));
+  const failed = results.find((r) => r.error);
+  const applied = new Map(updates.filter((u, i) => !results[i].error).map((u) => [u.defId, u]));
+  state.habits = state.habits
+    .map((h) => (applied.has(h.defId) ? { ...h, sectionId: applied.get(h.defId).section_id, sortOrder: applied.get(h.defId).sort_order } : h))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  if (failed) {
+    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(failed.error.message) };
+  }
+  closeSectionForm();
   render();
 }
-// Löschen eines Bereichs löscht keine Felder: seine (aktiven) Felder rücken auf der
-// obersten Ebene genau an die Stelle, an der der Bereich stand. Archivierte Felder
+function renderSectionForm() {
+  const sf = state.sectionForm;
+  const active = state.habits.filter((h) => !h.archivedAt);
+  const candidates = layoutBlocks(active).flatMap((b) => (b.type === 'habit' ? [b.habit] : b.habits));
+  return `
+    <div class="habit-form" id="section-form">
+      <p class="habit-form-lock-note">${t('sectionForm.explain')}</p>
+      <div class="auth-field">
+        <label for="section-form-name">${t('manage.sectionName')}</label>
+        <input type="text" id="section-form-name" maxlength="40" value="${esc(sf.name)}" placeholder="${esc(t('manage.sectionNamePlaceholder'))}" />
+      </div>
+      <div class="auth-field">
+        <label>${t('sectionForm.members')}</label>
+        ${candidates.length ? `
+          <div class="member-list">
+            ${candidates.map((h) => {
+              const other = h.sectionId && h.sectionId !== sf.id ? state.sections.find((sec) => sec.id === h.sectionId) : null;
+              return `
+                <label class="checkbox-field member-check${other ? ' member-check--blocked' : ''}">
+                  <input type="checkbox" data-section-member="${h.defId}" ${sf.members.includes(h.defId) ? 'checked' : ''} ${other ? 'disabled' : ''} />
+                  ${esc(h.name)}${other ? ` <span class="manage-meta">${t('sectionForm.inOtherGroup', { name: other.name })}</span>` : ''}
+                </label>
+              `;
+            }).join('')}
+          </div>
+        ` : `<p class="habit-form-lock-note">${t('sectionForm.noFields')}</p>`}
+      </div>
+      <div class="habit-form-actions">
+        <button type="button" class="auth-submit" data-action="section-form-save">${t('common.save')}</button>
+        <button type="button" class="habit-form-cancel" data-action="section-form-cancel">${t('common.cancel')}</button>
+      </div>
+    </div>
+  `;
+}
+// Löschen einer Gruppe löscht keine Felder: ihre (aktiven) Felder rücken auf der
+// obersten Ebene genau an die Stelle, an der die Gruppe stand. Archivierte Felder
 // darin verlieren ihre Zuordnung per ON DELETE SET NULL.
 async function deleteSection(id) {
   const items = [];
@@ -4479,26 +4573,26 @@ function renderHabitFormPreview(f) {
   return `<div class="field-preview" inert aria-hidden="true">${widget}</div>`;
 }
 
-// Nicht-editierbare Info-Zeile für gruppierte Felder (kind='group') — zeigt den
-// live berechneten Tageswert seiner Mitglieder, nie einen eigenen Eintrag. Skala-Gruppe:
-// Durchschnitt als Prozent, eingefärbt; Zahlen-Gruppe: berechneter Wert mit Einheit,
+// Nicht-editierbare Info-Zeile für berechnete Felder (kind='computed') — zeigt den
+// live berechneten Tageswert seiner Mitglieder, nie einen eigenen Eintrag. Aus Skalen:
+// Durchschnitt als Prozent, eingefärbt; aus Zahlen: berechneter Wert mit Einheit,
 // neutral (keine Bewertung).
-function renderGroupInfo(habit, dateKey) {
-  const members = groupMemberHabits(habit);
-  if (isNumberGroup(habit)) {
-    const { value, filled, total } = numberGroupDay(habit, dateKey);
-    const unit = groupUnit(habit);
+function renderComputedInfo(habit, dateKey) {
+  const members = computedMemberHabits(habit);
+  if (isNumberComputed(habit)) {
+    const { value, filled, total } = numberComputedDay(habit, dateKey);
+    const unit = computedUnit(habit);
     return `
-      <div class="group-readout group-readout--number">${value !== null ? esc(String(value)) + (unit ? ' ' + esc(unit) : '') : '–'}</div>
-      <span class="manage-meta">${t('groupInfo.aggOf', { agg: t('aggregate.' + habit.aggregate), names: members.map((m) => m.name).join(', '), filled, total })}</span>
+      <div class="computed-readout computed-readout--number">${value !== null ? esc(String(value)) + (unit ? ' ' + esc(unit) : '') : '–'}</div>
+      <span class="manage-meta">${t('computedInfo.aggOf', { agg: t('aggregate.' + habit.aggregate), names: members.map((m) => m.name).join(', '), filled, total })}</span>
     `;
   }
   const day = state.entries[dateKey] || {};
   const filledCount = members.filter((m) => day[m.id] !== undefined).length;
   const score = habitScore(habit, dateKey);
   return `
-    <div class="group-readout" style="background:${scoreColor(score)}">${score !== null ? Math.round(score * 100) + '%' : '–'}</div>
-    <span class="manage-meta">${t('groupInfo.avgOf', { names: members.map((m) => m.name).join(', '), filled: filledCount, total: members.length })}</span>
+    <div class="computed-readout" style="background:${scoreColor(score)}">${score !== null ? Math.round(score * 100) + '%' : '–'}</div>
+    <span class="manage-meta">${t('computedInfo.avgOf', { names: members.map((m) => m.name).join(', '), filled: filledCount, total: members.length })}</span>
   `;
 }
 
@@ -4521,7 +4615,7 @@ function renderRowMenuPanel(h) {
   if (state.rowMenu !== h.id) return '';
   return `
     <div class="row-menu" id="row-menu-${h.id}" role="group" aria-label="${t('today.fieldOptions', { name: h.name })}">
-      ${h.kind !== 'group' && !isTextKind(h) ? `<button type="button" class="menu-item-btn" data-action="note-edit" data-note="${h.id}">${getNote(formatKey(state.currentDate), h.id) ? t('note.edit') : t('note.add')}</button>` : ''}
+      ${h.kind !== 'computed' && !isTextKind(h) ? `<button type="button" class="menu-item-btn" data-action="note-edit" data-note="${h.id}">${getNote(formatKey(state.currentDate), h.id) ? t('note.edit') : t('note.add')}</button>` : ''}
       <button type="button" class="menu-item-btn" data-action="row-menu-edit" data-id="${h.defId}">${t('common.edit')}</button>
       <button type="button" class="menu-item-btn menu-item-btn--warn" data-action="row-menu-archive" data-id="${h.defId}">${t('manage.archive')}</button>
     </div>
@@ -4583,7 +4677,7 @@ function renderTextBox(h, dayEntry) {
 // (bewusst nicht ins Textfeld: das würde die Tastatur öffnen, man will ja erst lesen).
 // Archivierte Felder stehen nicht in "Heute" - dann bleibt es beim Tag.
 function focusTodayField(habitId) {
-  // Liegt das Feld in einem eingeklappten Bereich, erst aufklappen.
+  // Liegt das Feld in einer eingeklappten Gruppe, erst aufklappen.
   const target = state.habits.find((h) => h.id === habitId);
   if (target?.sectionId && isSectionCollapsed('today', target.sectionId)) {
     setSectionCollapsed('today', target.sectionId, false);
@@ -4633,10 +4727,10 @@ function renderNumberBox(h, dateKey, dayEntry) {
 function renderTodayHabitRow(h, dateKey, dayEntry) {
   if (isNumberKind(h)) return renderNumberBox(h, dateKey, dayEntry);
   if (isTextKind(h)) return renderTextBox(h, dayEntry);
-  if (h.kind === 'group') return `
-    <div class="habit-row habit-row--group">
+  if (h.kind === 'computed') return `
+    <div class="habit-row habit-row--computed">
       ${renderRowMenuTrigger(h, esc(h.name))}
-      ${renderGroupInfo(h, dateKey)}
+      ${renderComputedInfo(h, dateKey)}
       ${renderRowMenuPanel(h)}
     </div>
   `;
@@ -4732,7 +4826,7 @@ function renderWeek() {
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
-        ${scores.map((s, i) => `<div class="grid-cell${h.kind !== 'group' && getNote(dayKeys[i], h.id) ? ' has-note' : ''}${s === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background-color:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
+        ${scores.map((s, i) => `<div class="grid-cell${h.kind !== 'computed' && getNote(dayKeys[i], h.id) ? ' has-note' : ''}${s === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background-color:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
         <div class="grid-cell grid-cell--avg" style="background:${habitColor(h, applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
     `;
@@ -4992,7 +5086,7 @@ function renderAbout() {
     <div class="manage-section-divider"></div>
     ${tipGroup('about.group.fields', [
       ['about.tip.noValuation.title', 'about.tip.noValuation.body'],
-      ['about.tip.groups.title', 'about.tip.groups.body'],
+      ['about.tip.computed.title', 'about.tip.computed.body'],
       ['about.tip.goalThreshold.title', 'about.tip.goalThreshold.body'],
       ['about.tip.slider.title', 'about.tip.slider.body'],
       ['about.tip.textFields.title', 'about.tip.textFields.body'],
@@ -5093,7 +5187,7 @@ function trendDirection(series, range) {
 
 function renderNumberChart(habit, dateKeys, interactive) {
   const stats = numberFieldStats(habit, dateKeys);
-  const unit = isNumberGroup(habit) ? groupUnit(habit) : habit.unit;
+  const unit = isNumberComputed(habit) ? computedUnit(habit) : habit.unit;
   const unitSuffix = unit ? ` ${unit}` : '';
   const head = `
     <div class="number-chart-head">
@@ -5210,7 +5304,6 @@ function renderTextReviews(habits, dateKeys) {
 // Titel des Formulars - in der Verwaltung steht er im Seitenkopf (titleInHeader),
 // im Tutorial als eigene Überschrift im Formular.
 function habitFormTitleKey(f) {
-  if (f.kind === 'group') return f.defId ? 'habitForm.title.editGroup' : 'habitForm.title.newGroup';
   return f.defId ? 'habitForm.title.editField' : 'habitForm.title.newField';
 }
 function renderHabitForm({ titleInHeader = false } = {}) {
@@ -5295,52 +5388,52 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // Mitglieder-Auswahl: aktive, bewertete Skala-Felder (nicht sich selbst, keine
   // unbewerteten - die haben kein Gut/Schlecht zum Mitteln), plus bereits gewählte
   // Mitglieder, die inzwischen archiviert wurden (sonst würde man sie beim nächsten
-  // Bearbeiten der Gruppe unsichtbar wieder verlieren).
-  // Zahlen-Gruppen: aktive Zahlenwert-Felder; sobald eins gewählt ist, lassen sich nur
+  // Bearbeiten des berechneten Felds unsichtbar wieder verlieren).
+  // Aus Zahlen: aktive Zahlenwert-Felder; sobald eins gewählt ist, lassen sich nur
   // noch Felder mit derselben Einheit dazunehmen (andere erscheinen deaktiviert) - sonst
   // käme still eine falsche Zahl heraus (5 km + 800 m).
-  const isNumberGroupForm = f.groupType === 'number';
-  const groupCandidates = state.habits.filter((h) => h.defId !== f.defId && (!h.archivedAt || f.groupMembers.includes(h.id))
-    && (isNumberGroupForm ? h.kind === 'number' : h.kind === 'scale' && !isNeutralScale(h)));
-  const chosenUnit = isNumberGroupForm
-    ? (() => { const first = groupCandidates.find((h) => f.groupMembers.includes(h.id)); return first ? (first.unit || '').trim() : null; })()
+  const isNumberComputedForm = f.computedType === 'number';
+  const memberCandidates = state.habits.filter((h) => h.defId !== f.defId && (!h.archivedAt || f.members.includes(h.id))
+    && (isNumberComputedForm ? h.kind === 'number' : h.kind === 'scale' && !isNeutralScale(h)));
+  const chosenUnit = isNumberComputedForm
+    ? (() => { const first = memberCandidates.find((h) => f.members.includes(h.id)); return first ? (first.unit || '').trim() : null; })()
     : null;
-  const groupBody = `
-    <p class="habit-form-lock-note">${t('habitForm.groupExplain')}</p>
+  const computedBody = `
+    <p class="habit-form-lock-note">${t('habitForm.computedExplain')}</p>
     <div class="auth-field">
-      <label id="habit-form-group-type-label">${t('habitForm.groupType')}</label>
-      <div class="pill-group" role="group" aria-labelledby="habit-form-group-type-label">
-        <button type="button" class="pill-toggle${!isNumberGroupForm ? ' pill-toggle--active' : ''}" data-action="habit-group-type" data-type="scale" aria-pressed="${!isNumberGroupForm}">${t('habitForm.groupType.scale')}</button>
-        <button type="button" class="pill-toggle${isNumberGroupForm ? ' pill-toggle--active' : ''}" data-action="habit-group-type" data-type="number" aria-pressed="${isNumberGroupForm}">${t('habitForm.groupType.number')}</button>
+      <label id="habit-form-computed-type-label">${t('habitForm.computedType')}</label>
+      <div class="pill-group" role="group" aria-labelledby="habit-form-computed-type-label">
+        <button type="button" class="pill-toggle${!isNumberComputedForm ? ' pill-toggle--active' : ''}" data-action="computed-type" data-type="scale" aria-pressed="${!isNumberComputedForm}">${t('habitForm.computedType.scale')}</button>
+        <button type="button" class="pill-toggle${isNumberComputedForm ? ' pill-toggle--active' : ''}" data-action="computed-type" data-type="number" aria-pressed="${isNumberComputedForm}">${t('habitForm.computedType.number')}</button>
       </div>
     </div>
-    ${isNumberGroupForm ? `
+    ${isNumberComputedForm ? `
       <div class="auth-field">
-        <label for="habit-form-group-aggregate">${t('habitForm.aggregate')}</label>
-        <select id="habit-form-group-aggregate">
+        <label for="habit-form-computed-aggregate">${t('habitForm.aggregate')}</label>
+        <select id="habit-form-computed-aggregate">
           ${['sum', 'avg', 'min', 'max'].map((a) => `<option value="${a}" ${f.aggregate === a ? 'selected' : ''}>${t('aggregate.' + a)}</option>`).join('')}
         </select>
       </div>
     ` : ''}
     <div class="auth-field">
       <label>${t('habitForm.members')}</label>
-      ${groupCandidates.length ? `
-        <div class="group-member-list">
-          ${groupCandidates.map((h) => {
+      ${memberCandidates.length ? `
+        <div class="member-list">
+          ${memberCandidates.map((h) => {
             const unit = (h.unit || '').trim();
-            const blocked = isNumberGroupForm && chosenUnit !== null && unit !== chosenUnit && !f.groupMembers.includes(h.id);
+            const blocked = isNumberComputedForm && chosenUnit !== null && unit !== chosenUnit && !f.members.includes(h.id);
             return `
-              <label class="checkbox-field group-member-check${blocked ? ' group-member-check--blocked' : ''}">
-                <input type="checkbox" data-group-member="${esc(h.id)}" ${f.groupMembers.includes(h.id) ? 'checked' : ''} ${blocked ? 'disabled' : ''} />
-                ${esc(h.name)}${isNumberGroupForm && unit ? ` <span class="manage-meta">(${esc(unit)})</span>` : ''}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}
+              <label class="checkbox-field member-check${blocked ? ' member-check--blocked' : ''}">
+                <input type="checkbox" data-member-key="${esc(h.id)}" ${f.members.includes(h.id) ? 'checked' : ''} ${blocked ? 'disabled' : ''} />
+                ${esc(h.name)}${isNumberComputedForm && unit ? ` <span class="manage-meta">(${esc(unit)})</span>` : ''}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}
               </label>
             `;
           }).join('')}
         </div>
-        ${isNumberGroupForm ? `<p class="habit-form-lock-note">${t('habitForm.groupUnitNote')}</p>` : ''}
-      ` : `<p class="habit-form-lock-note">${t(isNumberGroupForm ? 'habitForm.noNumberGroupCandidates' : 'habitForm.noGroupCandidates')}</p>`}
+        ${isNumberComputedForm ? `<p class="habit-form-lock-note">${t('habitForm.computedUnitNote')}</p>` : ''}
+      ` : `<p class="habit-form-lock-note">${t(isNumberComputedForm ? 'habitForm.noNumberComputedCandidates' : 'habitForm.noComputedCandidates')}</p>`}
     </div>
-    ${isNumberGroupForm ? '' : goalField}
+    ${isNumberComputedForm ? '' : goalField}
   `;
 
   const reminderBody = `
@@ -5422,7 +5515,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     </div>
   `;
 
-  const isGroup = f.kind === 'group';
+  const isComputed = f.kind === 'computed';
   return `
     <div class="habit-form" id="habit-form">
       ${titleInHeader ? '' : `<h2>${t(habitFormTitleKey(f))}</h2>`}
@@ -5431,18 +5524,16 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         <label for="habit-form-name">${t('habitForm.name')}</label>
         <input type="text" id="habit-form-name" value="${esc(f.name)}" maxlength="40" />
       </div>
-      ${!isGroup ? `
-        <div class="auth-field">
-          <label>${t('habitForm.fieldType')}</label>
-          <div class="pill-group">
-            <button type="button" class="pill-toggle${f.kind === 'scale' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="scale" ${f.locked ? 'disabled' : ''}>${t('habitForm.kindScale')}</button>
-            <button type="button" class="pill-toggle${f.kind === 'number' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="number" ${f.locked ? 'disabled' : ''}>${t('habitForm.kindNumber')}</button>
-            <button type="button" class="pill-toggle${f.kind === 'text' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="text" ${f.locked ? 'disabled' : ''}>${t('habitForm.kindText')}</button>
-          </div>
+      <div class="auth-field">
+        <label id="habit-form-kind-label">${t('habitForm.fieldType')}</label>
+        <div class="pill-group" role="group" aria-labelledby="habit-form-kind-label">
+          ${[['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber'], ['text', 'habitForm.kindText'], ['computed', 'habitForm.kindComputed']].map(([kind, key]) => `
+            <button type="button" class="pill-toggle${f.kind === kind ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="${kind}" aria-pressed="${f.kind === kind}" ${f.locked ? 'disabled' : ''}>${t(key)}</button>
+          `).join('')}
         </div>
-      ` : ''}
-      ${isGroup ? groupBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : numberBody}
-      ${!isGroup ? scheduleBody + reminderBody : ''}
+      </div>
+      ${isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : numberBody}
+      ${!isComputed ? scheduleBody + reminderBody : ''}
       ${state.sections.length ? `
         <div class="auth-field">
           <label for="habit-form-section">${t('habitForm.section')}</label>
@@ -5478,10 +5569,9 @@ function manageFieldMeta(h) {
   return parts.length ? `<span class="manage-meta">${parts.join(' · ')}</span>` : '';
 }
 
-// Felder und Gruppen stehen in EINER gemeinsamen, frei sortierbaren Liste (seit
-// 2026-09-27; vorher hatten Gruppen einen eigenen Bereich ganz unten und ließen sich
-// nicht zwischen die übrigen Felder einsortieren). Gruppen erkennt man an ihrer
-// Mitglieder-Zeile ("Ø aus …"/"Summe aus …").
+// Alle Felder (auch berechnete, erkennbar an ihrer Mitglieder-Zeile "Ø aus …"/"Summe
+// aus …") stehen in EINER frei sortierbaren Liste, dazwischen Gruppen als Blöcke (intern
+// "sections", siehe layoutBlocks).
 function renderManage() {
   const active = state.habits.filter((h) => !h.archivedAt);
   const archived = state.habits.filter((h) => h.archivedAt);
@@ -5514,10 +5604,10 @@ function renderManage() {
           <span class="manage-name">${esc(h.name)}</span>
           ${confirmingDelete
             ? `<span class="manage-delete-warning">${t('manage.deleteWarning')}</span>`
-            : h.kind === 'group'
-              ? `<span class="manage-meta"><span class="manage-group-tag">${t('manage.groupTag')}</span> ${isNumberGroup(h)
-                  ? t('manage.groupAggregate', { agg: t('aggregate.' + h.aggregate), names: groupMemberHabits(h).map((m) => m.name).join(', ') || '–' })
-                  : t('manage.groupMembers', { names: groupMemberHabits(h).map((m) => m.name).join(', ') || '–' })}${h.hideInStats ? ' · ' + t('manage.hiddenInStats') : ''}</span>`
+            : h.kind === 'computed'
+              ? `<span class="manage-meta"><span class="manage-tag">${t('manage.computedTag')}</span> ${isNumberComputed(h)
+                  ? t('manage.computedAggregate', { agg: t('aggregate.' + h.aggregate), names: computedMemberHabits(h).map((m) => m.name).join(', ') || '–' })
+                  : t('manage.computedMembers', { names: computedMemberHabits(h).map((m) => m.name).join(', ') || '–' })}${h.hideInStats ? ' · ' + t('manage.hiddenInStats') : ''}</span>`
               : manageFieldMeta(h)}
         </div>
         <div class="manage-actions">
@@ -5535,22 +5625,15 @@ function renderManage() {
 
   // Offenes Formular = eigene Ebene, ohne die Liste darunter (siehe openHabitForm).
   if (state.habitForm) return renderHabitForm({ titleInHeader: true });
+  if (state.sectionForm) return renderSectionForm();
 
-  const sectionEditorHtml = () => `
-    <div class="section-editor">
-      <label class="visually-hidden" for="section-name-input">${t('manage.sectionName')}</label>
-      <input type="text" id="section-name-input" maxlength="40" value="${esc(state.sectionEditor.name)}" placeholder="${esc(t('manage.sectionNamePlaceholder'))}" />
-      <button type="button" class="manage-btn" data-action="section-save">${t('common.save')}</button>
-      <button type="button" class="manage-btn" data-action="section-cancel">${t('common.cancel')}</button>
-    </div>
-  `;
-  // Ein Bereich ist in der Liste ein Block (Kopfzeile + eingerückte Felder), der sich auf
+  // Eine Gruppe ist in der Liste ein Block (Kopfzeile + eingerückte Felder), der sich auf
   // oberster Ebene wie ein Feld verschieben lässt; seine Felder verschiebt man innerhalb.
-  // Umhängen zwischen Bereichen läuft bewusst über "Bearbeiten" -> "Bereich" (einfach und
-  // für Tastatur/Screenreader gleich gut bedienbar, siehe CLAUDE.md).
+  // Umhängen zwischen Gruppen läuft bewusst über die Formulare (Gruppe bearbeiten bzw.
+  // "Gruppe" im Feld-Formular) statt per Ziehen - einfach und für Tastatur/Screenreader
+  // gleich gut bedienbar, siehe CLAUDE.md.
   const sectionBlock = (b, idx, list) => {
     const sec = b.section;
-    const editing = state.sectionEditor?.id === sec.id;
     const confirmingDelete = state.sectionDeleteConfirm === sec.id;
     return `
       <div class="manage-item manage-section" data-order-type="section" data-order-id="${sec.id}">
@@ -5560,19 +5643,19 @@ function renderManage() {
             <button type="button" class="move-btn" data-action="habit-move" data-dir="up" ${idx === 0 ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.moveUp'))}">↑</button>
             <button type="button" class="move-btn" data-action="habit-move" data-dir="down" ${idx === list.length - 1 ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.moveDown'))}">↓</button>
           </span>
-          ${editing ? sectionEditorHtml() : `
+          ${`
             <div class="manage-info">
               <span class="manage-name manage-section-name">${esc(sec.name)}</span>
               ${confirmingDelete
                 ? `<span class="manage-delete-warning">${t('manage.sectionDeleteWarning')}</span>`
-                : `<span class="manage-meta"><span class="manage-group-tag">${t('manage.sectionTag')}</span></span>`}
+                : `<span class="manage-meta"><span class="manage-tag">${t('manage.sectionTag')}</span></span>`}
             </div>
             <div class="manage-actions">
               ${confirmingDelete ? `
                 <button type="button" class="manage-btn manage-btn--danger" data-action="section-delete" data-id="${sec.id}">${t('manage.deleteConfirmFinal')}</button>
                 <button type="button" class="manage-btn" data-action="section-delete-cancel">${t('common.cancel')}</button>
               ` : `
-                <button type="button" class="manage-btn" data-action="section-rename" data-id="${sec.id}">${t('manage.rename')}</button>
+                <button type="button" class="manage-btn" data-action="section-edit" data-id="${sec.id}">${t('common.edit')}</button>
                 <button type="button" class="manage-btn manage-btn--danger" data-action="section-delete-arm" data-id="${sec.id}">${t('common.delete')}</button>
               `}
             </div>
@@ -5587,12 +5670,10 @@ function renderManage() {
   const activeBlocks = layoutBlocks(active);
 
   return `
-    <button type="button" class="manage-new-btn" data-action="habit-new">+ ${t('habitForm.title.newField')}</button>
     <div class="manage-new-row">
+      <button type="button" class="manage-new-btn" data-action="habit-new">+ ${t('habitForm.title.newField')}</button>
       <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="group-new">+ ${t('habitForm.title.newGroup')}</button>
-      <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="section-new">${t('manage.newSection')}</button>
     </div>
-    ${state.sectionEditor && !state.sectionEditor.id ? `<div class="manage-row manage-new-section">${sectionEditorHtml()}</div>` : ''}
     <div class="manage-list">${activeBlocks.map((b, i) => (b.type === 'habit' ? row(b.habit, i, activeBlocks) : sectionBlock(b, i, activeBlocks))).join('')}</div>
     ${archived.length ? `
       <p class="habit-form-lock-note">${t('manage.archivedSectionLabel')}</p>
@@ -5905,7 +5986,9 @@ function renderApp() {
       ${subpage
         ? renderSubpageHeader(state.view === 'manage' && state.habitForm
           ? habitFormTitleKey(state.habitForm)
-          : { manage: 'menu.manageFields', about: 'about.title', feedback: 'feedback.title' }[state.view])
+          : state.view === 'manage' && state.sectionForm
+            ? (state.sectionForm.id ? 'habitForm.title.editGroup' : 'habitForm.title.newGroup')
+            : { manage: 'menu.manageFields', about: 'about.title', feedback: 'feedback.title' }[state.view])
         : `
           <div class="header">
             <h1>Logbuch</h1>
@@ -5932,7 +6015,7 @@ function renderApp() {
   // Überschrift nur beim Betreten einer Unterseite bzw. Wechsel ihrer Ebene (Liste ↔
   // Feld-Formular) fokussieren - vorher bei JEDEM render(), wodurch z.B. jede
   // Umschaltung im Feld-Formular den Tastatur-Fokus wieder ganz nach oben warf.
-  const subpageLevel = subpage ? state.view + (state.view === 'manage' && state.habitForm ? ':form' : '') : null;
+  const subpageLevel = subpage ? state.view + (state.view === 'manage' && state.habitForm ? ':form' : state.view === 'manage' && state.sectionForm ? ':section-form' : '') : null;
   if (subpageLevel && subpageLevel !== lastFocusedSubpageLevel) document.querySelector('.subpage-header h1')?.focus({ preventScroll: true });
   lastFocusedSubpageLevel = subpageLevel;
   const caretInput = caret && document.getElementById(caret.id);
@@ -6167,7 +6250,14 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'habit-new') {
     openHabitForm(defaultHabitForm());
   } else if (action === 'group-new') {
-    openHabitForm({ ...defaultHabitForm(), kind: 'group' });
+    openSectionForm(null);
+  } else if (action === 'section-edit') {
+    openSectionForm(el.dataset.id);
+  } else if (action === 'section-form-save') {
+    await saveSectionForm();
+  } else if (action === 'section-form-cancel') {
+    closeSectionForm();
+    render();
   } else if (action === 'habit-edit') {
     const h = state.habits.find((x) => x.defId === el.dataset.id);
     if (h) openHabitForm(habitToForm(h));
@@ -6183,17 +6273,6 @@ app.addEventListener('click', async (e) => {
     setSectionCollapsed(scope, section, !isSectionCollapsed(scope, section));
     render();
     document.querySelector(`[data-action="section-toggle"][data-section="${section}"][data-scope="${scope}"]`)?.focus();
-  } else if (action === 'section-new' || action === 'section-rename') {
-    const sec = action === 'section-rename' ? state.sections.find((x) => x.id === el.dataset.id) : null;
-    state.sectionEditor = { id: sec ? sec.id : null, name: sec ? sec.name : '' };
-    state.sectionDeleteConfirm = null;
-    render();
-    document.getElementById('section-name-input')?.focus();
-  } else if (action === 'section-save') {
-    await saveSection();
-  } else if (action === 'section-cancel') {
-    state.sectionEditor = null;
-    render();
   } else if (action === 'section-delete-arm') {
     state.sectionDeleteConfirm = el.dataset.id;
     render();
@@ -6202,19 +6281,19 @@ app.addEventListener('click', async (e) => {
     render();
   } else if (action === 'section-delete') {
     await deleteSection(el.dataset.id);
-  } else if (action === 'habit-group-type') {
+  } else if (action === 'computed-type') {
     syncHabitFormFromDom();
     const f = state.habitForm;
-    if (f.groupType !== el.dataset.type) {
-      f.groupType = el.dataset.type;
+    if (f.computedType !== el.dataset.type) {
+      f.computedType = el.dataset.type;
       // Mitglieder der anderen Art passen nicht mehr - raus damit.
-      f.groupMembers = f.groupMembers.filter((key) => {
+      f.members = f.members.filter((key) => {
         const h = state.habits.find((x) => x.id === key);
-        return h && (f.groupType === 'number' ? h.kind === 'number' : h.kind === 'scale');
+        return h && (f.computedType === 'number' ? h.kind === 'number' : h.kind === 'scale');
       });
     }
     render();
-    document.querySelector(`[data-action="habit-group-type"][data-type="${el.dataset.type}"]`)?.focus();
+    document.querySelector(`[data-action="computed-type"][data-type="${el.dataset.type}"]`)?.focus();
   } else if (action === 'habit-schedule-day') {
     syncHabitFormFromDom();
     const sch = state.habitForm.schedule;
@@ -6333,13 +6412,13 @@ app.addEventListener('click', async (e) => {
 
 app.addEventListener('change', (e) => {
   state.notice = null; // siehe Kommentar beim 'click'-Listener oben
-  // Zahlen-Gruppe: nach jeder Mitglieder-Änderung neu rendern, damit Felder mit anderer
-  // Einheit gesperrt bzw. wieder freigegeben werden (siehe groupBody).
-  const groupMember = e.target.closest?.('[data-group-member]');
-  if (groupMember && state.habitForm?.groupType === 'number') {
+  // Berechnetes Feld aus Zahlen: nach jeder Mitglieder-Änderung neu rendern, damit Felder mit anderer
+  // Einheit gesperrt bzw. wieder freigegeben werden (siehe computedBody).
+  const memberBox = e.target.closest?.('[data-member-key]');
+  if (memberBox && state.habitForm?.computedType === 'number') {
     syncHabitFormFromDom();
     render();
-    document.querySelector(`[data-group-member="${CSS.escape(groupMember.dataset.groupMember)}"]`)?.focus();
+    document.querySelector(`[data-member-key="${CSS.escape(memberBox.dataset.memberKey)}"]`)?.focus();
     return;
   }
   if (e.target.id === 'habit-form-schedule-type' && state.habitForm) {
@@ -6464,7 +6543,7 @@ app.addEventListener('input', (e) => {
   // der Text einen späteren Re-Render (z.B. Meldung beim Absenden) übersteht.
   if (e.target.id === 'feedback-message') { state.feedback.message = e.target.value; return; }
   if (e.target.id === 'note-input' && state.noteEditor) { state.noteEditor.draft = e.target.value; return; }
-  if (e.target.id === 'section-name-input' && state.sectionEditor) { state.sectionEditor.name = e.target.value; return; }
+  if (e.target.id === 'section-form-name' && state.sectionForm) { state.sectionForm.name = e.target.value; return; }
   if (e.target.classList.contains('text-field-input')) { updateTextValue(formatKey(state.currentDate), e.target.dataset.habit, e.target.value); return; }
   // Bezeichnungen im Feld-Formular: Live-Vorschau mitziehen, ohne das ganze Formular
   // neu zu rendern (würde Fokus/Cursor im gerade bearbeiteten Feld zurücksetzen) - nur
@@ -6557,10 +6636,6 @@ app.addEventListener('keydown', (e) => {
     e.preventDefault();
     handleSaveNumber(formatKey(state.currentDate), e.target.dataset.habit, e.target.value);
     return;
-  }
-  if (e.target?.id === 'section-name-input') {
-    if (e.key === 'Enter') { e.preventDefault(); saveSection(); return; }
-    if (e.key === 'Escape') { state.sectionEditor = null; render(); return; }
   }
   if (e.key === 'Escape' && state.rowMenu) {
     closeRowMenu();
@@ -6766,8 +6841,8 @@ const DRAG_ARM_MOVE_TOLERANCE = 16;
 app.addEventListener('pointerdown', (e) => {
   const handle = e.target.closest('[data-action="drag-handle"]');
   if (!handle) return;
-  // Gezogen wird ein .manage-item: ein Feld oder (auf oberster Ebene) ein ganzer Bereich
-  // als Block - innerhalb seines Behälters (oberste Ebene bzw. Felder eines Bereichs).
+  // Gezogen wird ein .manage-item: ein Feld oder (auf oberster Ebene) eine ganze Gruppe
+  // als Block - innerhalb ihres Behälters (oberste Ebene bzw. Felder einer Gruppe).
   const row = handle.closest('.manage-item');
   const rows = [...row.parentElement.children].filter((r) => r.classList.contains('manage-item'));
   const fromIndex = rows.indexOf(row);
@@ -6777,7 +6852,7 @@ app.addEventListener('pointerdown', (e) => {
     if (!dragArm) return;
     const armed = dragArm;
     dragArm = null;
-    // Elemente sind unterschiedlich hoch (ein Bereich-Block vs. eine Feld-Zeile) - deshalb
+    // Elemente sind unterschiedlich hoch (ein Gruppen-Block vs. eine Feld-Zeile) - deshalb
     // die Original-Positionen aller Geschwister merken statt einer einheitlichen
     // Zeilenhöhe. slot = Platz, den das gezogene Element samt Abstand einnimmt; um genau
     // den rücken die übersprungenen Geschwister auf.
@@ -6961,7 +7036,7 @@ if ('serviceWorker' in navigator) {
       state.rowMenu = null;
       state.habitForm = null;
       state.habitDeleteConfirm = null;
-      state.sectionEditor = null;
+      state.sectionForm = null;
       if (state.deleteConfirm || state.resetConfirm) { state.deleteConfirm = null; state.resetConfirm = null; modalTriggerSelector = null; }
     }
     window.scrollTo(0, 0); // vor render() - das scrollt ggf. danach zum Feld (consumePendingFieldFocus)
@@ -7026,7 +7101,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     state.rowMenu = null;
     state.resetConfirm = null;
     state.sections = [];
-    state.sectionEditor = null;
+    state.sectionForm = null;
     currentDek = null;
     state.tutorialStep = null;
     state.tutorialSkipConfirm = false;
