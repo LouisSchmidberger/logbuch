@@ -377,6 +377,22 @@
   .number-chart-meta { font-size: 11px; color: var(--sand); flex-shrink: 0; white-space: nowrap; }
   .number-chart-svg { display: block; width: 100%; height: 56px; }
   .number-chart-plot { position: relative; }
+
+  /* Wiederholung: eingeklappter Bereich "Heute nicht geplant" (renderToday), Zellen an
+     nicht geplanten Tagen in der Woche (schraffiert statt leer, damit "nicht dran"
+     nicht wie "vergessen" aussieht), Formular-Bausteine. */
+  .unplanned { margin-top: 14px; }
+  .unplanned > summary { font-size: 12px; color: var(--sand); cursor: pointer; padding: 6px 0; }
+  .unplanned > .habit-list { margin-top: 6px; }
+  .grid-cell--unplanned {
+    border-style: dashed;
+    background-image: repeating-linear-gradient(-45deg, var(--line) 0, var(--line) 1px, transparent 1px, transparent 5px);
+  }
+  .weekday-toggle { min-width: 40px; }
+  .schedule-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; }
+  .auth-field .schedule-inline select, .auth-field .schedule-inline input:not([type="checkbox"]) { width: auto; }
+  .auth-field .schedule-inline input[type="number"] { width: 72px; }
+  .schedule-inline label, .schedule-inline span { font-size: 13px; color: var(--ink); }
   /* Kurzes Aufleuchten des Feldes nach einem Sprung aus der Auswertung (focusTodayField). */
   @keyframes field-highlight { from { background-color: rgba(var(--moss-rgb), 0.22); } to { background-color: transparent; } }
   .field-highlight { animation: field-highlight 1.6s ease-out; }
@@ -810,6 +826,7 @@ function habitFromRow(row) {
     defId: row.id,
     name: row.name,
     kind: row.kind,          // 'scale' | 'number' | 'group' | 'text'
+    schedule: row.schedule ?? null, // Wiederholung, null = täglich (siehe isScheduledOn)
     unit: row.unit,          // nur bei kind === 'number', z.B. 'kg'
     min: row.min,
     max: row.max,
@@ -827,6 +844,54 @@ function habitFromRow(row) {
 
 function isNumberKind(h) { return h.kind === 'number'; }
 function isTextKind(h) { return h.kind === 'text'; }
+
+// --- Wiederholung (habit_definitions.schedule) ------------------------------
+// null = täglich, sonst {type:'weekly', days:[0..6]} (0 = Montag), {type:'monthly',
+// day:1..31|-1 (letzter Tag)}, {type:'yearly', month:1..12, day}, {type:'interval',
+// every, unit:'day'|'week', start:'YYYY-MM-DD'}. Gegenstück zur SQL-Funktion
+// public.habit_scheduled_on (Erinnerungen) - beide müssen dieselben Regeln umsetzen:
+// ein Tag, den es im Monat nicht gibt (31.4., 29.2. außerhalb von Schaltjahren), fällt
+// auf den Monatsletzten; unbekannte Pläne gelten als "dran".
+function lastDayOfMonth(year, monthIndex) { return new Date(year, monthIndex + 1, 0).getDate(); }
+function isScheduledOn(schedule, date) {
+  if (!schedule) return true;
+  const day = date.getDate(), month = date.getMonth(), year = date.getFullYear();
+  switch (schedule.type) {
+    case 'weekly': return Array.isArray(schedule.days) ? schedule.days.includes((date.getDay() + 6) % 7) : true;
+    case 'monthly': return day === Math.min(schedule.day === -1 ? 31 : schedule.day, lastDayOfMonth(year, month));
+    case 'yearly': return month + 1 === schedule.month && day === Math.min(schedule.day, lastDayOfMonth(year, month));
+    case 'interval': {
+      // Math.round statt Abrunden: über eine Zeitumstellung hinweg ist ein Tag 23/25h lang.
+      const diff = Math.round((startOfDay(date) - parseDateKey(schedule.start)) / 86400000);
+      const period = schedule.every * (schedule.unit === 'week' ? 7 : 1);
+      return diff >= 0 && diff % period === 0;
+    }
+    default: return true;
+  }
+}
+// Ob ein Feld an einem Tag "dran" ist. Gruppen haben keinen eigenen Plan: dran, sobald
+// eines ihrer aktiven Mitglieder dran ist.
+function isPlannedOn(h, date) {
+  if (h.kind !== 'group') return isScheduledOn(h.schedule, date);
+  return (h.groupMembers || []).some((slug) => {
+    const m = state.habits.find((x) => x.id === slug);
+    return m && !m.archivedAt && isScheduledOn(m.schedule, date);
+  });
+}
+// Kurzbeschreibung für die Verwaltungsliste ('' bei täglich).
+function scheduleSummary(schedule) {
+  if (!schedule) return '';
+  switch (schedule.type) {
+    case 'weekly': {
+      const names = mondayFirstWeekdayShortNames();
+      return schedule.days.map((d) => names[d]).join(', ');
+    }
+    case 'monthly': return schedule.day === -1 ? t('schedule.summary.monthlyLast') : t('schedule.summary.monthly', { day: schedule.day });
+    case 'yearly': return t('schedule.summary.yearly', { date: dtf({ day: 'numeric', month: 'long' }).format(new Date(2024, schedule.month - 1, schedule.day)) });
+    case 'interval': return t(schedule.unit === 'week' ? 'schedule.summary.everyWeeks' : 'schedule.summary.everyDays', { n: schedule.every });
+    default: return '';
+  }
+}
 
 // --- Datum-Helfer ----------------------------------------------------------
 function formatKey(date) {
@@ -1042,6 +1107,7 @@ const state = {
   rowMenu: null,      // slug des Feldes, dessen Zeilen-Menü in "Heute" gerade offen ist
   noteEditor: null,   // { dateKey, key, draft } - offener Notiz-Editor (key = slug oder DAY_NOTE_KEY)
   resetConfirm: null, // dateKey, während die Rückfrage "Tag zurücksetzen?" offen ist
+  unplannedOpenFor: null, // dateKey, an dem "Heute nicht geplant" aufgeklappt wurde
   // Standard-Erinnerungszeit (Minuten seit Mitternacht) für Felder ohne eigene reminder_minute.
   // onboardingCompleted default true, bis loadUserSettings() den echten Wert lädt – verhindert,
   // dass das Tutorial kurz aufblitzt, bevor die tatsächlichen Einstellungen geladen sind.
@@ -1466,6 +1532,34 @@ const STRINGS = {
     'habitForm.kindScale': 'Skala',
     'habitForm.kindNumber': 'Freier Zahlenwert',
     'habitForm.kindText': 'Freier Text',
+    'habitForm.schedule': 'Wiederholung',
+    'habitForm.schedule.daily': 'Täglich',
+    'habitForm.schedule.weekly': 'Wöchentlich',
+    'habitForm.schedule.monthly': 'Monatlich',
+    'habitForm.schedule.yearly': 'Jährlich',
+    'habitForm.schedule.interval': 'Alle X Tage',
+    'habitForm.schedule.weekdaysLabel': 'Wochentage',
+    'habitForm.schedule.monthDayLabel': 'Am',
+    'habitForm.schedule.lastDay': 'Letzter Tag',
+    'habitForm.schedule.yearDateLabel': 'Am',
+    'habitForm.schedule.dayAria': 'Tag',
+    'habitForm.schedule.monthAria': 'Monat',
+    'habitForm.schedule.every': 'Alle',
+    'habitForm.schedule.unitAria': 'Einheit',
+    'habitForm.schedule.unitDays': 'Tage',
+    'habitForm.schedule.unitWeeks': 'Wochen',
+    'habitForm.schedule.start': 'ab',
+    'habitForm.schedule.shortMonthNote': 'Gibt es den Tag in einem Monat nicht (z.B. den 31.), ist das Feld am Monatsletzten dran.',
+    'habitForm.schedule.explain': 'An anderen Tagen steht das Feld in „Heute“ eingeklappt unter „Heute nicht geplant“ – eintragen geht dort trotzdem – und löst keine Erinnerung aus.',
+    'habitForm.error.scheduleNoDays': 'Bitte mindestens einen Wochentag auswählen.',
+    'habitForm.error.scheduleInterval': 'Bitte eine Anzahl von 1 bis 365 und ein Startdatum angeben.',
+    'today.unplanned': 'Heute nicht geplant ({count})',
+    'today.nothingPlanned': 'Für heute ist kein Feld geplant.',
+    'schedule.summary.monthly': 'monatlich am {day}.',
+    'schedule.summary.monthlyLast': 'monatlich am Monatsletzten',
+    'schedule.summary.yearly': 'jährlich am {date}',
+    'schedule.summary.everyDays': 'alle {n} Tage',
+    'schedule.summary.everyWeeks': 'alle {n} Wochen',
     'habitForm.textNote': 'Für Fragen wie „Wofür bin ich heute dankbar?“: in „Heute“ steht dafür ein Textfeld, das automatisch speichert. Fließt nicht in die Auswertung ein, erscheint dort aber als Liste zum Nachlesen.',
     'textReview.countOne': '1 Eintrag',
     'textReview.countMany': '{count} Einträge',
@@ -1793,6 +1887,34 @@ const STRINGS = {
     'habitForm.kindScale': 'Scale',
     'habitForm.kindNumber': 'Free number value',
     'habitForm.kindText': 'Free text',
+    'habitForm.schedule': 'Repeats',
+    'habitForm.schedule.daily': 'Daily',
+    'habitForm.schedule.weekly': 'Weekly',
+    'habitForm.schedule.monthly': 'Monthly',
+    'habitForm.schedule.yearly': 'Yearly',
+    'habitForm.schedule.interval': 'Every X days',
+    'habitForm.schedule.weekdaysLabel': 'Weekdays',
+    'habitForm.schedule.monthDayLabel': 'On the',
+    'habitForm.schedule.lastDay': 'Last day',
+    'habitForm.schedule.yearDateLabel': 'On',
+    'habitForm.schedule.dayAria': 'Day',
+    'habitForm.schedule.monthAria': 'Month',
+    'habitForm.schedule.every': 'Every',
+    'habitForm.schedule.unitAria': 'Unit',
+    'habitForm.schedule.unitDays': 'days',
+    'habitForm.schedule.unitWeeks': 'weeks',
+    'habitForm.schedule.start': 'starting',
+    'habitForm.schedule.shortMonthNote': 'If a month does not have that day (e.g. the 31st), the field is due on the last day of that month.',
+    'habitForm.schedule.explain': 'On other days the field is tucked away in “Today” under “Not planned today” – you can still fill it in there – and does not trigger reminders.',
+    'habitForm.error.scheduleNoDays': 'Please select at least one weekday.',
+    'habitForm.error.scheduleInterval': 'Please enter a number from 1 to 365 and a start date.',
+    'today.unplanned': 'Not planned today ({count})',
+    'today.nothingPlanned': 'No fields are planned for today.',
+    'schedule.summary.monthly': 'monthly on day {day}',
+    'schedule.summary.monthlyLast': 'monthly on the last day',
+    'schedule.summary.yearly': 'yearly on {date}',
+    'schedule.summary.everyDays': 'every {n} days',
+    'schedule.summary.everyWeeks': 'every {n} weeks',
     'habitForm.textNote': 'For questions like “What am I grateful for today?”: “Today” shows a text box for it that saves automatically. Not part of the statistics, but shown there as a list to read back.',
     'textReview.countOne': '1 entry',
     'textReview.countMany': '{count} entries',
@@ -2530,7 +2652,60 @@ function defaultHabitForm() {
     groupMembers: [],
     goalPercent: 100,
     unit: '', reminderEnabled: false, reminderMinute: state.userSettings.defaultReminderMinute,
+    schedule: scheduleToForm(null),
   };
+}
+
+// Formular-Zustand der Wiederholung: hält die Werte ALLER Typen gleichzeitig, damit
+// beim Durchklicken der Typen nichts verloren geht - erst formToSchedule() macht daraus
+// den gespeicherten Plan. Vorbelegung: Wochentage Mo–Fr, Monats-/Jahrestag und Start
+// = heute.
+function scheduleToForm(schedule) {
+  const now = new Date();
+  const base = {
+    type: 'daily', days: [0, 1, 2, 3, 4], monthDay: now.getDate(),
+    yearMonth: now.getMonth() + 1, yearDay: now.getDate(),
+    every: 2, unit: 'week', start: formatKey(now),
+  };
+  switch (schedule?.type) {
+    case 'weekly': return { ...base, type: 'weekly', days: [...schedule.days] };
+    case 'monthly': return { ...base, type: 'monthly', monthDay: schedule.day };
+    case 'yearly': return { ...base, type: 'yearly', yearMonth: schedule.month, yearDay: schedule.day };
+    case 'interval': return { ...base, type: 'interval', every: schedule.every, unit: schedule.unit, start: schedule.start };
+    default: return base;
+  }
+}
+// -> { schedule } oder { error: <i18n-Key> }. Alle 7 Wochentage bzw. "alle 1 Tage"
+// werden als null (= täglich) gespeichert, damit es nur EINE Darstellung von täglich gibt.
+function formToSchedule(fs) {
+  switch (fs.type) {
+    case 'weekly': {
+      const days = [...new Set(fs.days)].sort((a, b) => a - b);
+      if (!days.length) return { error: 'habitForm.error.scheduleNoDays' };
+      return { schedule: days.length === 7 ? null : { type: 'weekly', days } };
+    }
+    case 'monthly': return { schedule: { type: 'monthly', day: fs.monthDay } };
+    case 'yearly': return { schedule: { type: 'yearly', month: fs.yearMonth, day: fs.yearDay } };
+    case 'interval': {
+      const every = Number(fs.every);
+      if (!Number.isInteger(every) || every < 1 || every > 365 || !/^\d{4}-\d{2}-\d{2}$/.test(fs.start) || isNaN(parseDateKey(fs.start))) {
+        return { error: 'habitForm.error.scheduleInterval' };
+      }
+      if (every === 1 && fs.unit === 'day') return { schedule: null };
+      return { schedule: { type: 'interval', every, unit: fs.unit === 'week' ? 'week' : 'day', start: fs.start } };
+    }
+    default: return { schedule: null };
+  }
+}
+function readScheduleFromDom(f) {
+  const val = (id) => document.getElementById(id)?.value;
+  const sch = f.schedule;
+  if (val('habit-form-schedule-monthday') !== undefined) sch.monthDay = Number(val('habit-form-schedule-monthday'));
+  if (val('habit-form-schedule-yearmonth') !== undefined) sch.yearMonth = Number(val('habit-form-schedule-yearmonth'));
+  if (val('habit-form-schedule-yearday') !== undefined) sch.yearDay = Number(val('habit-form-schedule-yearday'));
+  if (val('habit-form-schedule-every') !== undefined) sch.every = val('habit-form-schedule-every');
+  if (val('habit-form-schedule-unit') !== undefined) sch.unit = val('habit-form-schedule-unit');
+  if (val('habit-form-schedule-start') !== undefined) sch.start = val('habit-form-schedule-start');
 }
 
 function habitToForm(h) {
@@ -2558,6 +2733,7 @@ function habitToForm(h) {
     unit: h.unit || '',
     reminderEnabled: h.reminderMinute !== null && h.reminderMinute !== undefined,
     reminderMinute: h.reminderMinute ?? state.userSettings.defaultReminderMinute,
+    schedule: scheduleToForm(h.schedule),
   };
 }
 
@@ -2614,6 +2790,7 @@ function syncHabitFormFromDom() {
     const reminderTimeEl = document.getElementById('habit-form-reminder-time');
     if (reminderTimeEl) f.reminderMinute = Number(reminderTimeEl.value);
   }
+  if (f.kind !== 'group') readScheduleFromDom(f);
 }
 
 async function handleHabitSave() {
@@ -2742,6 +2919,20 @@ async function handleHabitSaveInner() {
     fields = { kind: 'scale', min, max, labels, good: f.good, unit: null, display_style: displayStyle, slider_show_value: sliderShowValue, group_members: null, goal_threshold: goalThreshold };
   }
 
+  // Wiederholung - Gruppen haben keinen eigenen Plan (DB-Check erzwingt das ebenfalls).
+  // Auch bei gesperrten Feldern änderbar: ändert nur, an welchen Tagen das Feld dran ist,
+  // deutet keine vorhandenen Werte um.
+  if (f.kind === 'group') {
+    fields.schedule = null;
+  } else {
+    const result = formToSchedule(f.schedule);
+    if (result.error) {
+      state.notice = { type: 'error', text: t(result.error) };
+      return;
+    }
+    fields.schedule = result.schedule;
+  }
+
   if (f.defId) {
     const patch = f.locked
       ? {
@@ -2750,6 +2941,7 @@ async function handleHabitSaveInner() {
             ? { good: f.good, goal_threshold: goalThreshold, display_style: fields.display_style, slider_show_value: fields.slider_show_value, labels: fields.labels }
             : { unit: fields.unit }),
           reminder_minute: reminderMinute,
+          schedule: fields.schedule,
         }
       : { name, ...fields, reminder_minute: reminderMinute };
     const { data, error } = await supabase.from('habit_definitions').update(patch).eq('id', f.defId).select().single();
@@ -3771,7 +3963,13 @@ function renderTextBox(h, dayEntry) {
 // (bewusst nicht ins Textfeld: das würde die Tastatur öffnen, man will ja erst lesen).
 // Archivierte Felder stehen nicht in "Heute" - dann bleibt es beim Tag.
 function focusTodayField(habitId) {
-  const trigger = document.querySelector(`.row-menu-trigger[data-habit="${habitId}"]`);
+  let trigger = document.querySelector(`.row-menu-trigger[data-habit="${habitId}"]`);
+  // Liegt das Feld im eingeklappten "Heute nicht geplant", erst aufklappen.
+  if (trigger?.closest('details.unplanned:not([open])')) {
+    state.unplannedOpenFor = formatKey(state.currentDate);
+    render();
+    trigger = document.querySelector(`.row-menu-trigger[data-habit="${habitId}"]`);
+  }
   const row = trigger?.closest('.habit-row, .number-box');
   if (!row) return;
   row.scrollIntoView({ block: 'center' });
@@ -3804,6 +4002,36 @@ function renderNumberBox(h, dateKey, dayEntry) {
   `;
 }
 
+// Eine Feld-Zeile in "Heute" - gemeinsam für geplante Felder und den eingeklappten
+// Bereich "Heute nicht geplant".
+function renderTodayHabitRow(h, dateKey, dayEntry) {
+  if (isNumberKind(h)) return renderNumberBox(h, dateKey, dayEntry);
+  if (isTextKind(h)) return renderTextBox(h, dayEntry);
+  if (h.kind === 'group') return `
+    <div class="habit-row habit-row--group">
+      ${renderRowMenuTrigger(h, esc(h.name))}
+      ${renderGroupInfo(h, dateKey)}
+      ${renderRowMenuPanel(h)}
+    </div>
+  `;
+  if (h.displayStyle === 'slider') return `
+    <div class="habit-row habit-row--slider">
+      ${renderRowMenuTrigger(h, esc(h.name))}
+      ${renderHabitSlider(h, dayEntry[h.id])}
+      ${renderNote(dateKey, h.id, noteLabel(h))}
+      ${renderRowMenuPanel(h)}
+    </div>
+  `;
+  return `
+    <div class="habit-row">
+      ${renderRowMenuTrigger(h, esc(h.name))}
+      <div class="habit-options">${renderHabitOptions(h, dayEntry[h.id])}</div>
+      ${renderNote(dateKey, h.id, noteLabel(h))}
+      ${renderRowMenuPanel(h)}
+    </div>
+  `;
+}
+
 function noteLabel(h) {
   return t('note.labelField', { name: h.name });
 }
@@ -3824,6 +4052,17 @@ function renderToday() {
   const dateKey = formatKey(state.currentDate);
   const isToday = dateKey === formatKey(new Date());
   const dayEntry = state.entries[dateKey] || {};
+  // Felder, die heute laut Wiederholung nicht dran sind, stehen eingeklappt unter
+  // "Heute nicht geplant" - ausnahmsweise eintragen geht so trotzdem. Die Einteilung
+  // richtet sich nur nach dem Plan, nicht nach vorhandenen Werten (sonst spränge ein
+  // Feld beim ersten Antippen aus dem Bereich heraus); stattdessen ist der Bereich
+  // automatisch offen, sobald dort an diesem Tag etwas eingetragen ist.
+  const habits = activeHabits();
+  const planned = habits.filter((h) => isPlannedOn(h, state.currentDate));
+  const unplanned = habits.filter((h) => !isPlannedOn(h, state.currentDate));
+  const unplannedOpen = state.unplannedOpenFor === dateKey
+    || unplanned.some((h) => dayEntry[h.id] !== undefined || getNote(dateKey, h.id));
+  const renderTodayRow = (h) => renderTodayHabitRow(h, dateKey, dayEntry);
 
   return `
     <div class="day-nav">
@@ -3836,35 +4075,15 @@ function renderToday() {
     </div>
     ${!isToday ? `<button type="button" class="today-jump" data-action="jump-today">${t('today.jumpToday')}</button>` : ''}
     <div class="habit-list">
-      ${activeHabits().map((h) => {
-        if (isNumberKind(h)) return renderNumberBox(h, dateKey, dayEntry);
-        if (isTextKind(h)) return renderTextBox(h, dayEntry);
-        if (h.kind === 'group') return `
-          <div class="habit-row habit-row--group">
-            ${renderRowMenuTrigger(h, esc(h.name))}
-            ${renderGroupInfo(h, dateKey)}
-            ${renderRowMenuPanel(h)}
-          </div>
-        `;
-        if (h.displayStyle === 'slider') return `
-          <div class="habit-row habit-row--slider">
-            ${renderRowMenuTrigger(h, esc(h.name))}
-            ${renderHabitSlider(h, dayEntry[h.id])}
-            ${renderNote(dateKey, h.id, noteLabel(h))}
-            ${renderRowMenuPanel(h)}
-          </div>
-        `;
-        return `
-          <div class="habit-row">
-            ${renderRowMenuTrigger(h, esc(h.name))}
-            <div class="habit-options">${renderHabitOptions(h, dayEntry[h.id])}</div>
-            ${renderNote(dateKey, h.id, noteLabel(h))}
-            ${renderRowMenuPanel(h)}
-          </div>
-        `;
-      }).join('')}
-      ${!activeHabits().length ? `<p class="manage-meta">${t('today.noFields')}</p>` : ''}
+      ${planned.map(renderTodayRow).join('')}
+      ${!habits.length ? `<p class="manage-meta">${t('today.noFields')}</p>` : !planned.length ? `<p class="manage-meta">${t('today.nothingPlanned')}</p>` : ''}
     </div>
+    ${unplanned.length ? `
+      <details class="unplanned"${unplannedOpen ? ' open' : ''}>
+        <summary>${t('today.unplanned', { count: unplanned.length })}</summary>
+        <div class="habit-list">${unplanned.map(renderTodayRow).join('')}</div>
+      </details>
+    ` : ''}
     ${renderDayNote(dateKey)}
     <button type="button" class="today-new-field-btn" data-action="today-new-field">${t('today.newField')}</button>
     <button type="button" class="reset-btn" data-action="reset-day-arm">${t('today.resetDay')}</button>
@@ -3887,7 +4106,7 @@ function renderWeek() {
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
-        ${scores.map((s, i) => `<div class="grid-cell${h.kind !== 'group' && getNote(dayKeys[i], h.id) ? ' has-note' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
+        ${scores.map((s, i) => `<div class="grid-cell${h.kind !== 'group' && getNote(dayKeys[i], h.id) ? ' has-note' : ''}${s === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
         <div class="grid-cell grid-cell--avg" style="background:${habitColor(h, applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
     `;
@@ -4442,6 +4661,72 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     </div>
   `;
 
+  // Wiederholung: an welchen Tagen das Feld dran ist (Details siehe isScheduledOn).
+  const sch = f.schedule;
+  const scheduleTypePill = (type, key) => `<button type="button" class="pill-toggle${sch.type === type ? ' pill-toggle--active' : ''}" data-action="habit-schedule-type" data-type="${type}" aria-pressed="${sch.type === type}">${t(key)}</button>`;
+  const dayOptions = (selected) => Array.from({ length: 31 }, (_, i) => i + 1)
+    .map((d) => `<option value="${d}" ${d === selected ? 'selected' : ''}>${d}.</option>`).join('');
+  let scheduleDetail = '';
+  if (sch.type === 'weekly') {
+    const shortNames = mondayFirstWeekdayShortNames();
+    scheduleDetail = `
+      <div class="pill-group" role="group" aria-label="${esc(t('habitForm.schedule.weekdaysLabel'))}">
+        ${shortNames.map((name, i) => {
+          const on = sch.days.includes(i);
+          return `<button type="button" class="pill-toggle weekday-toggle${on ? ' pill-toggle--active' : ''}" data-action="habit-schedule-day" data-day="${i}" aria-pressed="${on}" aria-label="${esc(weekdayLong(new Date(2024, 0, 1 + i)))}">${esc(name)}</button>`;
+        }).join('')}
+      </div>
+    `;
+  } else if (sch.type === 'monthly') {
+    scheduleDetail = `
+      <div class="schedule-inline">
+        <label for="habit-form-schedule-monthday">${t('habitForm.schedule.monthDayLabel')}</label>
+        <select id="habit-form-schedule-monthday">${dayOptions(sch.monthDay)}<option value="-1" ${sch.monthDay === -1 ? 'selected' : ''}>${t('habitForm.schedule.lastDay')}</option></select>
+      </div>
+      <p class="habit-form-lock-note">${t('habitForm.schedule.shortMonthNote')}</p>
+    `;
+  } else if (sch.type === 'yearly') {
+    scheduleDetail = `
+      <div class="schedule-inline">
+        <span>${t('habitForm.schedule.yearDateLabel')}</span>
+        <select id="habit-form-schedule-yearday" aria-label="${esc(t('habitForm.schedule.dayAria'))}">${dayOptions(sch.yearDay)}</select>
+        <select id="habit-form-schedule-yearmonth" aria-label="${esc(t('habitForm.schedule.monthAria'))}">
+          ${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${i + 1 === sch.yearMonth ? 'selected' : ''}>${esc(monthName(new Date(2024, i, 1)))}</option>`).join('')}
+        </select>
+      </div>
+      <p class="habit-form-lock-note">${t('habitForm.schedule.shortMonthNote')}</p>
+    `;
+  } else if (sch.type === 'interval') {
+    scheduleDetail = `
+      <div class="schedule-inline">
+        <label for="habit-form-schedule-every">${t('habitForm.schedule.every')}</label>
+        <input type="number" id="habit-form-schedule-every" min="1" max="365" step="1" inputmode="numeric" value="${esc(sch.every)}" />
+        <select id="habit-form-schedule-unit" aria-label="${esc(t('habitForm.schedule.unitAria'))}">
+          <option value="day" ${sch.unit === 'day' ? 'selected' : ''}>${t('habitForm.schedule.unitDays')}</option>
+          <option value="week" ${sch.unit === 'week' ? 'selected' : ''}>${t('habitForm.schedule.unitWeeks')}</option>
+        </select>
+      </div>
+      <div class="schedule-inline">
+        <label for="habit-form-schedule-start">${t('habitForm.schedule.start')}</label>
+        <input type="date" id="habit-form-schedule-start" value="${esc(sch.start)}" />
+      </div>
+    `;
+  }
+  const scheduleBody = `
+    <div class="auth-field">
+      <label id="habit-form-schedule-label">${t('habitForm.schedule')}</label>
+      <div class="pill-group" role="group" aria-labelledby="habit-form-schedule-label">
+        ${scheduleTypePill('daily', 'habitForm.schedule.daily')}
+        ${scheduleTypePill('weekly', 'habitForm.schedule.weekly')}
+        ${scheduleTypePill('monthly', 'habitForm.schedule.monthly')}
+        ${scheduleTypePill('yearly', 'habitForm.schedule.yearly')}
+        ${scheduleTypePill('interval', 'habitForm.schedule.interval')}
+      </div>
+      ${scheduleDetail}
+      ${sch.type !== 'daily' ? `<p class="habit-form-lock-note">${t('habitForm.schedule.explain')}</p>` : ''}
+    </div>
+  `;
+
   const isGroup = f.kind === 'group';
   return `
     <div class="habit-form" id="habit-form">
@@ -4462,13 +4747,23 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         </div>
       ` : ''}
       ${isGroup ? groupBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : numberBody}
-      ${!isGroup ? reminderBody : ''}
+      ${!isGroup ? scheduleBody + reminderBody : ''}
       <div class="habit-form-actions">
         <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t('common.save')}</button>
         <button type="button" class="habit-form-cancel" data-action="habit-cancel" ${state.habitFormSaving ? 'disabled' : ''}>${t('common.cancel')}</button>
       </div>
     </div>
   `;
+}
+
+// Zusatzinfo pro Feld in der Verwaltungsliste: nur, was vom Standard abweicht
+// (Wiederholung, eigene Erinnerungszeit) - siehe "Verwaltungsliste entschlackt".
+function manageFieldMeta(h) {
+  const parts = [
+    scheduleSummary(h.schedule),
+    h.reminderMinute !== null && h.reminderMinute !== undefined ? t('manage.reminderAt', { time: minutesToTimeStr(h.reminderMinute) }) : '',
+  ].filter(Boolean);
+  return parts.length ? `<span class="manage-meta">${parts.join(' · ')}</span>` : '';
 }
 
 function renderManage() {
@@ -4507,7 +4802,7 @@ function renderManage() {
             ? `<span class="manage-delete-warning">${t('manage.deleteWarning')}</span>`
             : h.kind === 'group'
               ? `<span class="manage-meta">${t('manage.groupMembers', { names: (h.groupMembers || []).map((slug) => state.habits.find((x) => x.id === slug)?.name || slug).join(', ') || '–' })}</span>`
-              : (h.reminderMinute !== null && h.reminderMinute !== undefined ? `<span class="manage-meta">${t('manage.reminderAt', { time: minutesToTimeStr(h.reminderMinute) })}</span>` : '')}
+              : manageFieldMeta(h)}
         </div>
         <div class="manage-actions">
           ${!h.archivedAt ? `
@@ -5121,6 +5416,21 @@ app.addEventListener('click', async (e) => {
     syncHabitFormFromDom();
     state.habitForm.kind = el.dataset.kind;
     render();
+  } else if (action === 'habit-schedule-type' || action === 'habit-schedule-day') {
+    syncHabitFormFromDom();
+    const sch = state.habitForm.schedule;
+    if (action === 'habit-schedule-type') {
+      sch.type = el.dataset.type;
+    } else {
+      const day = Number(el.dataset.day);
+      sch.days = sch.days.includes(day) ? sch.days.filter((d) => d !== day) : [...sch.days, day];
+    }
+    render();
+    // render() baut das Formular neu auf - Fokus zurück auf denselben Button, sonst
+    // landet man per Tastatur nach jedem Umschalten wieder am Seitenanfang.
+    document.querySelector(action === 'habit-schedule-type'
+      ? `[data-action="habit-schedule-type"][data-type="${el.dataset.type}"]`
+      : `[data-action="habit-schedule-day"][data-day="${el.dataset.day}"]`)?.focus();
   } else if (action === 'habit-good') {
     syncHabitFormFromDom();
     state.habitForm.good = el.dataset.good || null;
@@ -5404,6 +5714,12 @@ document.addEventListener('pointercancel', () => { sliderPointerTarget = null; }
 // Capture-Phase läuft dagegen unabhängig vom bubbles-Flag immer von oben nach unten
 // durch den ganzen Baum, deshalb funktioniert die Delegation so zuverlässig überall.
 app.addEventListener('toggle', (e) => {
+  // "Heute nicht geplant": offen/zu übersteht so einen Re-Render (z.B. nach dem
+  // Eintragen eines Werts), gilt aber nur für den jeweiligen Tag.
+  if (e.target.matches?.('details.unplanned')) {
+    state.unplannedOpenFor = e.target.open ? formatKey(state.currentDate) : null;
+    return;
+  }
   const details = e.target.closest('details[data-collapse-key]');
   if (!details) return;
   try { localStorage.setItem(details.dataset.collapseKey, details.open ? 'false' : 'true'); } catch { /* egal, bleibt dann halt nicht gemerkt */ }

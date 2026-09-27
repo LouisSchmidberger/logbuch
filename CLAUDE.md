@@ -50,7 +50,9 @@ im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
   `group_members` (jsonb, nur bei `kind='group'`: Array von Slugs anderer
   `kind='scale'`-Felder dieses Nutzers), `reminder_minute` (Minuten seit Mitternacht,
   0–1439, 15-Minuten-Raster, oder `null` = Standardzeit, siehe Erinnerungen – bei
-  `kind='group'` immer `null`, eine Gruppe kann nie "fehlen"), `sort_order`,
+  `kind='group'` immer `null`, eine Gruppe kann nie "fehlen"), `schedule` (jsonb,
+  Wiederholung, `null` = täglich, bei `kind='group'` immer `null` – siehe Abschnitt
+  "Wiederholung" unten), `sort_order`,
   `archived_at` (Soft-Delete – archivierte Felder
   verschwinden aus der Tageseingabe, bleiben aber in Wochen-/Monatsansicht sichtbar,
   solange sie dort Daten haben, und lassen sich reaktivieren). Ein archiviertes Feld
@@ -131,6 +133,39 @@ keine hartkodierte Liste mehr, kein manuelles Synchronhalten nötig. `kind='grou
 Ausschluss würden sie die Sammel-Erinnerung dauerhaft fälschlich als "fehlend" auslösen).
 Erinnert wird, sobald mindestens ein zur jeweiligen Zeit fälliges aktives Feld an dem
 Tag noch fehlt, nicht erst wenn alles leer ist (Details siehe Abschnitt "Erinnerungen").
+Felder, die an dem (lokalen) Tag laut Wiederholung nicht dran sind, zählen dabei weder
+als fehlend noch lösen sie ihre eigene Erinnerungszeit aus (`habit_scheduled_on`).
+
+## Wiederholung (`habit_definitions.schedule`, seit 2026-09-27)
+
+Pro Feld einstellbar, an welchen Tagen es "dran" ist (Formular "Wiederholung", nicht für
+Gruppen – die sind dran, sobald eines ihrer aktiven Mitglieder dran ist). `null` =
+täglich, sonst `{type:'weekly', days:[0..6]}` (0 = Montag), `{type:'monthly', day:1..31
+| -1}` (-1 = letzter Tag), `{type:'yearly', month, day}` oder `{type:'interval', every:
+1..365, unit:'day'|'week', start:'YYYY-MM-DD'}` (alle X Tage/Wochen ab Start, davor nie
+dran). Einen Tag, den es im Monat nicht gibt (31.4., 29.2. außerhalb von Schaltjahren),
+behandeln beide Seiten als Monatsletzten statt ihn ausfallen zu lassen; unbekannte Pläne
+gelten als dran. Alle 7 Wochentage bzw. "alle 1 Tage" werden als `null` gespeichert
+(eine einzige Darstellung von täglich). **Zwei Implementierungen derselben Regeln, die
+synchron bleiben müssen**: `isScheduledOn`/`isPlannedOn` in `logbuch.html` und die
+SQL-Funktion `public.habit_scheduled_on(schedule, date)` (Migration
+`20260927140000_add_habit_schedule`, von `get_due_notifications` genutzt). Bewusst **nicht**
+unterstützt: Kalender-Regeln wie "jeder erste Montag im Monat" (Nutzer: unübersichtlich
+und eher irrelevant) und Häufigkeits-Ziele ohne feste Tage ("3x pro Woche" – anderes
+Konzept, eher Richtung Ziel-Quote).
+
+- **"Heute"**: nicht geplante Felder stehen eingeklappt unter "Heute nicht geplant (N)"
+  (`<details class="unplanned">`) – ausnahmsweise eintragen geht dort trotzdem. Die
+  Einteilung richtet sich nur nach dem Plan, nicht nach vorhandenen Werten (sonst spränge
+  ein Feld beim ersten Antippen heraus); dafür ist der Bereich automatisch offen, sobald
+  dort an dem Tag ein Wert oder eine Notiz steht. Offen/zu übersteht einen Re-Render
+  über `state.unplannedOpenFor` (dateKey). Ein Sprung aus der Auswertung zu einem Feld
+  darin klappt ihn auf (`focusTodayField`).
+- **Woche**: Zellen an nicht geplanten Tagen ohne Wert sind gestrichelt schraffiert
+  (`.grid-cell--unplanned`), damit "nicht dran" nicht wie "vergessen" aussieht.
+  Durchschnitte/Quoten sind unberührt – die rechnen ohnehin nur mit eingetragenen Werten.
+- **Verwaltungsliste**: Kurzform des Plans neben einer ggf. eigenen Erinnerungszeit
+  (`manageFieldMeta`/`scheduleSummary`, z.B. "Mo, Mi, Fr · Erinnerung 08:00").
 
 ## Skalen-/Farblogik
 
@@ -505,8 +540,8 @@ Android**: Safari auf iOS bietet Webseiten keine Vibration-API, der Schalter wir
 gar nicht erst angezeigt (`hapticsSupported`).
 
 **Verwaltungsliste entschlackt** (seit 2026-09-18, `renderManage` in `logbuch.html`):
-pro Feld-Zeile steht nur noch der Name plus – falls gesetzt – die eigene
-Erinnerungszeit (`manage.reminderAt`); Skala/Bereich, Bezeichnungen, Gut/Schlecht-
+pro Feld-Zeile steht nur noch der Name plus – falls abweichend – Wiederholung und eigene
+Erinnerungszeit (`manageFieldMeta`); Skala/Bereich, Bezeichnungen, Gut/Schlecht-
 Richtung und Ziel-Quote werden dort nicht mehr aufgeführt (`formatScale` entfernt,
 keine andere Stelle nutzte es). Begründung: der Nutzer befüllt seine Felder täglich
 und kennt ihre Bedeutung bereits, eine Zusammenfassung pro Zeile ist redundant –
@@ -583,7 +618,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 325 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 353 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
