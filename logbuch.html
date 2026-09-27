@@ -1494,6 +1494,7 @@ function isSubpageView(view) { return view === 'manage' || view === 'about' || v
 // ursprünglichen Tab führen).
 function enterSubpage(view) {
   if (!isSubpageView(state.view)) state.previousTabView = state.view;
+  if (view === 'about') openAboutSections = new Set(); // bei jedem Öffnen alles zugeklappt
   if (view !== 'manage') closeManageOverlays();
   state.view = view;
   state.menuOpen = false;
@@ -3987,11 +3988,14 @@ function isInstallHintDismissed() {
   try { return localStorage.getItem('installHintDismissed') === 'true'; } catch { return false; /* z.B. privater Modus */ }
 }
 
-// Merkt sich pro Gerät/Browser (nicht kontoweit), ob einer der hervorgehobenen
-// "Über Logbuch"-Bereiche (Barrierefreiheit/Psychische Gesundheit) mal zugeklappt
-// wurde - Standard bleibt offen, damit sich am üblichen Erstbesuch nichts ändert.
+// Alle aufklappbaren Abschnitte in "Über Logbuch" (hervorgehobene Bereiche und
+// Tipp-Gruppen) sind bei JEDEM Öffnen der Seite zugeklappt (Nutzer-Wunsch 2026-09-27) -
+// kein dauerhaftes Merken mehr. Was man während eines Besuchs aufklappt, bleibt nur so
+// lange offen, wie man auf der Seite ist (übersteht einen Re-Render), enterSubpage
+// setzt es beim nächsten Öffnen zurück.
+let openAboutSections = new Set();
 function isAboutSectionCollapsed(key) {
-  try { return localStorage.getItem(key) === 'true'; } catch { return false; }
+  return !openAboutSections.has(key);
 }
 function installHintText() {
   return isIOSDevice() ? t('installHint.ios') : t('installHint.other');
@@ -6596,9 +6600,9 @@ document.addEventListener('pointerup', () => {
 });
 document.addEventListener('pointercancel', () => { sliderPointerTarget = null; });
 
-// Merkt sich, wenn einer der hervorgehobenen "Über Logbuch"-Bereiche zu-/aufgeklappt
-// wird (siehe isAboutSectionCollapsed) - reines DOM-natives <details>-Verhalten, kein
-// eigener Klick-Handler/Re-Render nötig, nur das Persistieren des Zustands.
+// Merkt sich, wenn einer der "Über Logbuch"-Abschnitte zu-/aufgeklappt wird (siehe
+// isAboutSectionCollapsed, nur für die Dauer des Besuchs) - reines DOM-natives
+// <details>-Verhalten, kein eigener Klick-Handler/Re-Render nötig.
 // capture:true, da der native 'toggle'-Event bei <details> in vielen Browsern noch
 // nicht bubbled (erst seit jüngeren Chrome/Firefox-Versionen standardisiert) - eine
 // normale (bubble-basierte) Delegation auf app hätte hier nie gefeuert. Die
@@ -6613,7 +6617,8 @@ app.addEventListener('toggle', (e) => {
   }
   const details = e.target.closest('details[data-collapse-key]');
   if (!details) return;
-  try { localStorage.setItem(details.dataset.collapseKey, details.open ? 'false' : 'true'); } catch { /* egal, bleibt dann halt nicht gemerkt */ }
+  if (details.open) openAboutSections.add(details.dataset.collapseKey);
+  else openAboutSections.delete(details.dataset.collapseKey);
 }, true);
 
 // Menü schließen, wenn außerhalb davon geklickt wird.
