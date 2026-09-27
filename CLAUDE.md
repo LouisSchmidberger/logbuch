@@ -600,7 +600,9 @@ haben `role="dialog"`/Fokus-Trap/Escape-Schließen/Fokus-Rückgabe (siehe
 zentral über `renderNotice()` (Fehler `role="alert"`/assertive, Erfolg
 `role="status"`/polite) statt über 6 duplizierte Inline-Fragmente. Das Feld-Umsortieren
 hat mit Hoch/Runter-Buttons (`commitHabitOrder()`, gemeinsamer Persistenz-Pfad mit dem
-Pointer-Drag) eine Tastatur-Alternative. Der Zahlenwert-Verlaufsgraph hat eine
+Pointer-Drag) eine Tastatur-Alternative. Beim Ziehen scrollt die Liste am oberen/unteren
+Bildschirmrand von selbst weiter (`updateDragAutoScroll`, schneller je näher am Rand), damit
+sich ein Feld in einem Zug weit verschieben lässt. Der Zahlenwert-Verlaufsgraph hat eine
 `.visually-hidden`-Textzusammenfassung (Anzahl/letzter Wert/Durchschnitt/Spanne/Trend)
 statt eines reinen `aria-label`.
 
