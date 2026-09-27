@@ -525,9 +525,15 @@
   .manage-delete-warning { font-size: 11px; color: var(--rust); }
   .manage-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
   .drag-handle {
-    display: flex; flex-direction: column; justify-content: center; gap: 3px; width: 16px; height: 22px;
+    position: relative; display: flex; flex-direction: column; justify-content: center; gap: 3px; width: 16px; height: 22px;
     flex-shrink: 0; cursor: grab; touch-action: none;
   }
+  /* Unsichtbar größere Tippfläche - der sichtbare Griff ist für einen Finger zu klein
+     (verfehlt = gar nichts passiert, da er das Scrollen bewusst blockiert). Vor allem
+     nach oben/unten und links in den Seitenrand; rechts nur knapp, damit sie nicht mit
+     den ↑↓-Buttons daneben (eigene erweiterte Fläche, siehe .move-btn::after)
+     überlappt. */
+  .drag-handle::after { content: ''; position: absolute; top: -8px; bottom: -8px; left: -14px; right: -4px; }
   .drag-handle span { display: block; width: 12px; height: 2px; background: var(--sand); border-radius: 1px; }
   /* Tastatur-/Tipp-Alternative zum Drag-Handle (der rein per Pointer-Events
      funktioniert) — nebeneinander statt gestapelt, damit sie nicht die
@@ -5992,7 +5998,9 @@ let dragState = null;
 // wird tatsächlich gezogen – ein normaler Scroll-Wisch bricht das vorher ab.
 let dragArm = null;
 const DRAG_ARM_DELAY_MS = 150;
-const DRAG_ARM_MOVE_TOLERANCE = 10;
+// 16 statt vorher 10: ein aufsetzender Finger wackelt leicht, mit 10px brach das
+// Greifen oft ab und man musste 2-3 Mal ansetzen.
+const DRAG_ARM_MOVE_TOLERANCE = 16;
 
 app.addEventListener('pointerdown', (e) => {
   const handle = e.target.closest('[data-action="drag-handle"]');
@@ -6012,6 +6020,7 @@ app.addEventListener('pointerdown', (e) => {
     dragState = { pointerId: armed.pointerId, row: armed.row, rows: armed.rows, fromIndex: armed.fromIndex, toIndex: armed.fromIndex, startY: armed.startY, startScrollY: window.scrollY, lastClientY: armed.startY, rowHeight: armed.rowHeight };
     dragState.row.setPointerCapture(dragState.pointerId);
     dragState.row.classList.add('manage-row--dragging');
+    haptic(); // spürbare Rückmeldung, dass das Feld jetzt "in der Hand" ist
   }, DRAG_ARM_DELAY_MS);
 });
 
@@ -6065,7 +6074,7 @@ function updateDragPosition() {
 // Läuft per requestAnimationFrame, damit es auch weiterscrollt, wenn der Finger still
 // am Rand steht (dann kommen keine pointermove-Events).
 const DRAG_SCROLL_ZONE = 90;
-const DRAG_SCROLL_MAX_SPEED = 8; // px pro Frame
+const DRAG_SCROLL_MAX_SPEED = 10; // px pro Frame
 let dragScrollFrame = null;
 function dragScrollSpeed() {
   const top = document.querySelector('.sticky-top')?.getBoundingClientRect().bottom ?? 0;
