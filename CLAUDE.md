@@ -1008,6 +1008,11 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
 - UI-Texte seit der i18n-Umstellung (siehe Abschnitt oben) auf Deutsch UND
   Englisch pflegen, neue Strings immer über `STRINGS`/`t()` in beiden Sprachen
   anlegen statt hartkodiert.
+- **Stand-Datum in "Über Logbuch" mitziehen** (Nutzer-Wunsch 2026-09-27): der Hinweis
+  "Beta – Stand …" oben auf der Seite kommt aus `APP_STATUS_DATE` in `logbuch.html` (kein
+  Build-Step, der es automatisch setzen könnte). Bei jeder für Nutzer sichtbaren Änderung
+  von mindestens mittlerer Größe im selben Commit auf das aktuelle Datum setzen – nicht erst
+  am Session-Ende gesammelt. Reine Interna, Doku oder winzige Textkorrekturen zählen nicht.
 - **Datenschutz-Text in "Über Logbuch" aktuell halten** (Nutzer-Wunsch 2026-09-27): der
   Bereich "Deine Daten und deine Privatsphäre" (`renderPrivacySection`,
   `about.privacy.*`) sagt Nutzern konkret, was der Betreiber sehen kann und was nicht.
