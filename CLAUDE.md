@@ -22,6 +22,13 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
   Caching gebaut).
 - **Backend**: Supabase (Projekt-Ref `qdadoqcnqmrauhshvcts`, Region Europe) – Postgres-Tabellen,
   Auth (E-Mail/Passwort), Edge Function für Push-Versand.
+  **Bekannter Supabase-Fehler "JWT issued at future" (PGRST303)**: PostgREST lehnt ein
+  frisch ausgestelltes Token gelegentlich ab (Uhren-Abweichung Auth↔PostgREST bzw.
+  Zeit-Cache-Bug, behoben erst in PostgREST 14.18/16.3 – Projekt am 2026-09-27 auf v14.5,
+  Version prüfbar per `npx supabase services`). Trat v.a. beim Öffnen der App auf.
+  Abgefangen zentral im Supabase-Client (`fetchWithJwtFutureRetry` in `logbuch.html`:
+  REST-Anfragen mit genau diesem Fehler werden bis zu zweimal nach 1 s/2 s wiederholt –
+  sicher auch für Schreibzugriffe, da PostgREST sie vor der Ausführung abweist).
 - **Hosting**: GitHub Pages, statisch. `logbuch.html` und `sw.js` müssen im selben
   Wurzelverzeichnis des gehosteten Pfads liegen.
 - **PWA-Installationshinweis** (`renderInstallHint` in `logbuch.html`): erscheint direkt

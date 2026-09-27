@@ -438,14 +438,14 @@
     border: 1.5px solid var(--ink); box-sizing: border-box; pointer-events: none;
   }
   .number-chart-hit {
-    position: absolute; top: 0; bottom: 0; transform: translateX(-50%); cursor: pointer; border-radius: 2px;
+    position: absolute; top: 0; bottom: 0; cursor: pointer; border-radius: 2px;
   }
   .number-chart-hit:hover, .number-chart-hit:active { background: rgba(var(--moss-rgb), 0.14); }
 
   .grid-scroll { overflow-x: auto; }
   .grid-row { display: grid; grid-template-columns: minmax(58px, 80px) repeat(7, 1fr) minmax(30px, 38px); align-items: center; gap: 1px; }
   .grid-row--header { padding-bottom: 6px; }
-  .grid-label { font-size: 10px; padding-right: 3px; line-height: 1.2; }
+  .grid-label { font-size: 10px; padding-right: 3px; line-height: 1.2; overflow-wrap: anywhere; }
   .grid-col-header { display: flex; flex-direction: column; align-items: center; font-size: 9px; color: var(--sand); cursor: pointer; }
   .grid-col-date { font-size: 10px; color: var(--ink); }
   .grid-col-header--avg { font-family: 'Fraunces', serif; font-style: italic; color: var(--ink); cursor: default; }
@@ -686,7 +686,30 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = 'https://qdadoqcnqmrauhshvcts.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_c8VJ-dqy-WD_y01aQy1Dzw_LJE-Ornr';
 const VAPID_PUBLIC_KEY = 'BDsrR2NV5vEE4Ati-Dda7tNom6GTtWmKvzytspTc7x1LP6ur1np90oAPphhIAoCtnaw3nGELgBXxYNyiSkLVEEY';
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Supabase-seitiger Fehler (nicht unserer): PostgREST lehnt ein gerade frisch
+// ausgestelltes Token gelegentlich als "JWT issued at future" (PGRST303) ab - Uhren-
+// Abweichung zwischen Auth und PostgREST bzw. ein bekannter Zeit-Cache-Bug, behoben
+// erst in PostgREST 14.18/16.3 (Projekt lief am 2026-09-27 auf v14.5). Trifft v.a. das
+// erste Laden nach dem Öffnen (Token wird dann erneuert) - und hätte genauso gut ein
+// Speichern treffen können, dann wäre der Wert verloren gewesen. Deshalb zentral hier
+// statt an jeder Abfrage: bei genau diesem Fehler bis zu zweimal nach kurzer Pause neu
+// versuchen. Sicher auch für Schreibzugriffe, da PostgREST die Anfrage dann vor der
+// Ausführung abgewiesen hat. Nur REST-Aufrufe (Edge Functions laufen nicht über
+// PostgREST). supabase-js übergibt den Body als String, der sich erneut senden lässt.
+const JWT_FUTURE_RETRY_DELAYS_MS = [1000, 2000];
+async function fetchWithJwtFutureRetry(input, init) {
+  let res = await fetch(input, init);
+  const isRest = String(input instanceof Request ? input.url : input).includes('/rest/v1/');
+  for (const delay of isRest ? JWT_FUTURE_RETRY_DELAYS_MS : []) {
+    if (res.status !== 401) break;
+    const body = await res.clone().json().catch(() => null);
+    if (body?.code !== 'PGRST303') break;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    res = await fetch(input, init);
+  }
+  return res;
+}
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { fetch: fetchWithJwtFutureRetry } });
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -4488,7 +4511,15 @@ function renderNumberChart(habit, dateKeys, interactive) {
   // denselben Tag schon über die Wochentage bzw. Monatszellen - bis zu 31 weitere
   // Tab-Stopps hier würden nur verlängern, ohne etwas Neues zugänglich zu machen.
   const hits = interactive
-    ? stats.series.map((p, i) => `<span class="number-chart-hit" data-action="open-day" data-date="${p.key}" data-focus-habit="${habit.id}" style="left:${((points[i][0] / w) * 100).toFixed(2)}%;width:${(100 / n).toFixed(2)}%"></span>`).join('')
+    ? stats.series.map((p, i) => {
+      // Am Rand abgeschnitten statt um den Punkt zentriert - die äußeren Spalten ragten
+      // sonst zur Hälfte über den Graphen hinaus und machten die ganze Seite waagerecht
+      // scrollbar.
+      const center = (points[i][0] / w) * 100;
+      const left = Math.max(0, center - 50 / n);
+      const right = Math.min(100, center + 50 / n);
+      return `<span class="number-chart-hit" data-action="open-day" data-date="${p.key}" data-focus-habit="${habit.id}" style="left:${left.toFixed(2)}%;width:${(right - left).toFixed(2)}%"></span>`;
+    }).join('')
     : '';
   const trend = trendDirection(stats.series, range);
   const summary = t('numberChart.summary', {
