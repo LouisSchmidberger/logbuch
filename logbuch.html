@@ -5480,6 +5480,7 @@ function render() {
     window.scrollTo(0, pendingScrollRestore);
     pendingScrollRestore = null;
   }
+  if (pendingFieldFocus) consumePendingFieldFocus();
 }
 
 // --- Event-Delegation ----------------------------------------------------
@@ -6355,9 +6356,24 @@ function parseDeepLink(search) {
   if (!DEEP_LINK_VIEWS.includes(view)) return null;
   const dateParam = params.get('date');
   const date = /^\d{4}-\d{2}-\d{2}$/.test(dateParam ?? '') ? parseDateKey(dateParam) : null;
-  return { view, date: date && !isNaN(date) ? date : startOfDay(new Date()) };
+  // field: Feld-ID bei Erinnerungen an ein bestimmtes Feld - "Heute" scrollt dann dorthin.
+  const fieldParam = params.get('field');
+  const field = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(fieldParam ?? '') ? fieldParam : null;
+  return { view, date: date && !isNaN(date) ? date : startOfDay(new Date()), field };
 }
-function applyDeepLink({ view, date }) {
+// Feld-ID aus einem Deep-Link, zu der gescrollt werden soll, sobald "Heute" mit geladenen
+// Feldern wirklich angezeigt wird - beim Kaltstart kann davor noch Entsperren/Laden liegen,
+// deshalb von render() aus eingelöst statt direkt beim Öffnen des Links.
+let pendingFieldFocus = null;
+function consumePendingFieldFocus() {
+  if (!pendingFieldFocus || !state.session || !currentDek || state.loading || state.passwordRecovery
+      || state.recoveryKeyToShow || !state.userSettings.onboardingCompleted || state.view !== 'today') return;
+  const habit = state.habits.find((h) => h.defId === pendingFieldFocus);
+  pendingFieldFocus = null;
+  if (habit && !habit.archivedAt) focusTodayField(habit.id);
+}
+function applyDeepLink({ view, date, field }) {
+  pendingFieldFocus = view === 'today' ? field : null;
   state.view = view;
   state.currentDate = startOfDay(date);
   state.weekAnchor = startOfWeek(date);
@@ -6382,8 +6398,8 @@ if ('serviceWorker' in navigator) {
       state.habitDeleteConfirm = null;
       if (state.deleteConfirm || state.resetConfirm) { state.deleteConfirm = null; state.resetConfirm = null; modalTriggerSelector = null; }
     }
+    window.scrollTo(0, 0); // vor render() - das scrollt ggf. danach zum Feld (consumePendingFieldFocus)
     render();
-    window.scrollTo(0, 0);
   });
 }
 

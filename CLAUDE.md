@@ -735,7 +735,10 @@ dieser URL oder schickt einer schon offenen App das Ziel per `postMessage`
 (`logbuch-navigate`, bewusst kein Neuladen – das würde ggf. erneutes Entsperren des
 DEK erzwingen). `parseDeepLink`/`applyDeepLink` in `logbuch.html` setzen daraufhin
 Ansicht + Zeitraum (auch schon vor dem Entsperren) und entfernen die Parameter per
-`history.replaceState` wieder aus der URL.
+`history.replaceState` wieder aus der URL. Erinnerungen an ein bestimmtes Feld tragen zusätzlich
+`&field=<Feld-ID>` (bei mehreren das erste): "Heute" scrollt dann zum Feld und hebt es
+hervor (`pendingFieldFocus`, eingelöst am Ende von `render()` sobald "Heute" mit geladenen
+Feldern angezeigt wird – beim Kaltstart kann davor noch Entsperren/Laden liegen).
 
 Die Sammel-Erinnerung zur Standardzeit ist bewusst generisch ("Noch nicht alle Werte
 für heute eingetragen.", keine Feldnamen – sonst bei vielen Feldern schnell eine sehr

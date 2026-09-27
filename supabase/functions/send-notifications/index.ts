@@ -72,8 +72,9 @@ interface DueRow {
 // "heute zum Klick-Zeitpunkt" - eine Wochenübersicht, die erst Montagmorgen angetippt
 // wird, soll trotzdem die gemeinte, schon abgelaufene Woche zeigen). Ausgewertet von
 // sw.js (notificationclick) und parseDeepLink in logbuch.html.
-function deepLink(view: 'today' | 'week' | 'month', dateKey: string): string {
-  return `./logbuch.html?view=${view}&date=${dateKey}`;
+// fieldId (optional): bei Erinnerungen an ein bestimmtes Feld scrollt "Heute" dorthin.
+function deepLink(view: 'today' | 'week' | 'month', dateKey: string, fieldId?: string): string {
+  return `./logbuch.html?view=${view}&date=${dateKey}${fieldId ? `&field=${fieldId}` : ''}`;
 }
 
 // Eigene, bewusst einfachere Übersetzungstabelle als die t()-Maschinerie im Frontend
@@ -112,7 +113,7 @@ function messagesFor(row: DueRow): PushMessage[] {
       kind: 'custom',
       title: texts.title,
       body: texts.customReminder(row.custom_missing.length),
-      url: deepLink('today', date),
+      url: deepLink('today', date, row.custom_missing[0]),
       fieldIds: row.custom_missing,
     });
   }
