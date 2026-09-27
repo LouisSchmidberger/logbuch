@@ -38,8 +38,8 @@ Tabelle `habit_definitions`: eine Zeile pro Nutzer und Feld – **ersetzt die fr
 `HABITS`-Konstante**. Jeder Nutzer verwaltet seine Felder selbst über "Felder verwalten"
 im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
 `renderManage` in `logbuch.html` – kein eigener Tab mehr, siehe Abschnitt "Design").
-- `slug` (text, Key in `habit_entries.data`), `name`, `kind` (`'scale'`, `'number'` oder
-  `'group'`, siehe Skalen-/Farblogik unten), `min`/`max` (int, nur bei `kind='scale'`;
+- `slug` (text, Key in `habit_entries.data`), `name`, `kind` (`'scale'`, `'number'`,
+  `'group'` oder `'text'`, siehe Skalen-/Farblogik unten), `min`/`max` (int, nur bei `kind='scale'`;
   bei `display_style='slider'` fix `0`/`<Stufenzahl>`), `labels` (jsonb, nur bei
   `kind='scale'`; `null` = nummerierte Stufen, sonst Array von Strings der Länge
   `max-min+1`), `good` (`'high'`/`'low'`, nur bei `kind='scale'`), `unit` (text, nur bei
@@ -134,10 +134,28 @@ Tag noch fehlt, nicht erst wenn alles leer ist (Details siehe Abschnitt "Erinner
 
 ## Skalen-/Farblogik
 
-Drei Feld-Typen: `kind='scale'` (Stufen mit Gut/Schlecht-Bewertung – der Normalfall),
+Vier Feld-Typen: `kind='scale'` (Stufen mit Gut/Schlecht-Bewertung – der Normalfall),
 `kind='number'` (freier Zahlenwert wie Gewicht, bewusst **ohne** Gut/Schlecht-Bewertung,
-dafür mit optionaler Einheit) und `kind='group'` (nicht direkt befüllbar, zeigt den live
-berechneten Durchschnitt seiner Mitglieder-Felder – siehe `habitScore` unten).
+dafür mit optionaler Einheit), `kind='group'` (nicht direkt befüllbar, zeigt den live
+berechneten Durchschnitt seiner Mitglieder-Felder – siehe `habitScore` unten) und
+`kind='text'` (freie Text-Antwort, siehe unten).
+
+**Text-Felder (`kind='text'`, seit 2026-09-27)**: für Fragen wie "Wofür bin ich heute
+dankbar?". Der Wert ist ein String unter dem Slug im verschlüsselten Tagesobjekt, zählt
+normal für `filled_slugs`/Erinnerungen (auch eigene Erinnerungszeit möglich) und fließt
+nie in Scores/Heatmaps ein. In "Heute" bewusst ein **immer offenes Textfeld**
+(`renderTextBox`, Nutzer-Entscheidung: wer so ein Feld anlegt, will täglich
+hineinschreiben – anders als die Notizen, die Ausnahme bleiben). Speichert automatisch:
+jeder Tastendruck aktualisiert sofort `state.entries` (ohne `render()`), der verschlüsselte
+Upsert läuft erst nach 1 s Tipp-Pause (`updateTextValue`/`TEXT_SAVE_DELAY_MS`), sofort beim
+Verlassen des Feldes, beim Wechsel in eine andere App und vor dem Abmelden
+(`flushAllDaySaves`). Keine Notizen im Zeilen-Menü (wären doppelt), kein Gruppen-Mitglied.
+**Rückblick** (`renderTextReviews`, vorerst testweise gebaut): in Woche/Monat pro Feld
+eine offene, chronologische Liste Datum + Text (jeder Eintrag öffnet seinen Tag), in
+Jahr/Gesamt eingeklappt (`<details>`, Anzahl im Titel) und neueste zuerst; Felder ohne
+Antwort im Zeitraum erscheinen nicht. DB-Constraints `habit_definitions_kind_check`/
+`habit_definitions_kind_fields_check` erlauben `text` seit Migration
+`20260927120000_add_text_habit_kind`.
 
 `normalize(habit, value)` bildet den Wert eines `scale`-Felds auf 0 (schlecht) bis 1 (gut)
 ab, unabhängig von der Richtung (`good: 'high'` vs. `good: 'low'`, z.B. bei
@@ -547,7 +565,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 319 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 323 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

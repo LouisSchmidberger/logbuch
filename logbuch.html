@@ -377,6 +377,29 @@
   .number-chart-meta { font-size: 11px; color: var(--sand); flex-shrink: 0; white-space: nowrap; }
   .number-chart-svg { display: block; width: 100%; height: 56px; }
   .number-chart-plot { position: relative; }
+
+  /* Text-Felder (kind='text', siehe renderTextBox): Textfeld unter dem Namen statt
+     daneben wie bei der Zahlen-Eingabe. field-sizing: content lässt es mit dem Text
+     mitwachsen (wo unterstützt, sonst rows="2" + manuell vergrößerbar). */
+  .text-box { flex-direction: column; align-items: stretch; gap: 8px; }
+  .text-field-input {
+    box-sizing: border-box; width: 100%; font-family: inherit; font-size: 14px; line-height: 1.45;
+    padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px;
+    background: var(--input-bg); color: var(--ink); resize: vertical;
+    field-sizing: content; min-height: 3.6em; max-height: 50vh;
+  }
+  /* Rückblick-Listen (siehe renderTextReviews) - gleiche Abstände wie die Zahlen-Graphen. */
+  .text-review { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .text-review-title { font-size: 13px; font-weight: 400; line-height: 1.35; margin: 0; }
+  summary.text-review-title { cursor: pointer; }
+  .text-review-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .text-review-entry {
+    display: flex; gap: 10px; width: 100%; text-align: left; font: inherit; color: var(--ink);
+    background: none; border: none; border-radius: 3px; padding: 6px 4px; cursor: pointer;
+  }
+  .text-review-entry:hover, .text-review-entry:focus-visible { background: rgba(var(--moss-rgb), 0.10); }
+  .text-review-date { flex-shrink: 0; width: 78px; font-size: 11px; color: var(--sand); padding-top: 2px; }
+  .text-review-text { font-size: 13px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
   /* Ring um Datenpunkte mit Notiz (siehe renderNumberChart) - gleiche Idee wie der
      Notiz-Punkt in Woche/Monat. */
   .number-chart-note {
@@ -780,7 +803,7 @@ function habitFromRow(row) {
     id: row.slug,
     defId: row.id,
     name: row.name,
-    kind: row.kind,          // 'scale' | 'number' | 'group'
+    kind: row.kind,          // 'scale' | 'number' | 'group' | 'text'
     unit: row.unit,          // nur bei kind === 'number', z.B. 'kg'
     min: row.min,
     max: row.max,
@@ -797,6 +820,7 @@ function habitFromRow(row) {
 }
 
 function isNumberKind(h) { return h.kind === 'number'; }
+function isTextKind(h) { return h.kind === 'text'; }
 
 // --- Datum-Helfer ----------------------------------------------------------
 function formatKey(date) {
@@ -1107,7 +1131,7 @@ function isOverlayOpen() {
 function isNoteEditorOpen() {
   const ed = state.noteEditor;
   if (!ed || state.view !== 'today' || ed.dateKey !== formatKey(state.currentDate)) return false;
-  return ed.key === DAY_NOTE_KEY || activeHabits().some((h) => h.id === ed.key && h.kind !== 'group');
+  return ed.key === DAY_NOTE_KEY || activeHabits().some((h) => h.id === ed.key && h.kind !== 'group' && !isTextKind(h));
 }
 function currentLayerCount() {
   return (isSubpageView(state.view) ? 1 : 0) + (isOverlayOpen() ? 1 : 0);
@@ -1410,6 +1434,10 @@ const STRINGS = {
     'habitForm.fieldType': 'Feld-Typ',
     'habitForm.kindScale': 'Skala',
     'habitForm.kindNumber': 'Freier Zahlenwert',
+    'habitForm.kindText': 'Freier Text',
+    'habitForm.textNote': 'Für Fragen wie „Wofür bin ich heute dankbar?“: in „Heute“ steht dafür ein Textfeld, das automatisch speichert. Fließt nicht in die Auswertung ein, erscheint dort aber als Liste zum Nachlesen.',
+    'textReview.countOne': '1 Eintrag',
+    'textReview.countMany': '{count} Einträge',
     'common.saving': 'Wird gespeichert …',
     'common.save': 'Speichern',
     'common.cancel': 'Abbrechen',
@@ -1731,6 +1759,10 @@ const STRINGS = {
     'habitForm.fieldType': 'Field type',
     'habitForm.kindScale': 'Scale',
     'habitForm.kindNumber': 'Free number value',
+    'habitForm.kindText': 'Free text',
+    'habitForm.textNote': 'For questions like “What am I grateful for today?”: “Today” shows a text box for it that saves automatically. Not part of the statistics, but shown there as a list to read back.',
+    'textReview.countOne': '1 entry',
+    'textReview.countMany': '{count} entries',
     'common.saving': 'Saving…',
     'common.save': 'Save',
     'common.cancel': 'Cancel',
@@ -2608,7 +2640,9 @@ async function handleHabitSaveInner() {
     : null;
 
   let fields; // { kind, min, max, labels, good, unit, display_style, slider_show_value, group_members, goal_threshold }
-  if (f.kind === 'number') {
+  if (f.kind === 'text') {
+    fields = { kind: 'text', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
+  } else if (f.kind === 'number') {
     const unit = (document.getElementById('habit-form-unit')?.value || '').trim();
     fields = { kind: 'number', min: null, max: null, labels: null, good: null, unit: unit || null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
   } else if (f.kind === 'group') {
@@ -2883,7 +2917,7 @@ window.addEventListener('resize', onViewportResize);
 // sichern - der Browser kann die Seite im Hintergrund jederzeit verwerfen. Der Editor
 // bleibt dabei offen, man schreibt nach der Rückkehr einfach weiter.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') persistNoteDraft();
+  if (document.visibilityState === 'hidden') { persistNoteDraft(); flushAllDaySaves(); }
 });
 // Speichern UND Abbrechen: danach zurück auf das Element, von dem aus man gekommen ist
 // (Feldname bzw. der Tagesnotiz-Bereich), da render() den Fokus sonst verwirft.
@@ -2935,6 +2969,33 @@ function handleSetValue(dateKey, habitId, value) {
   haptic();
   render();
   saveDay(dateKey, day);
+}
+
+// Text-Felder (kind='text'): jeder Tastendruck aktualisiert sofort state.entries (ohne
+// render() - das würde Fokus/Cursor stören; ein anderweitig ausgelöster Re-Render zeigt
+// so trotzdem immer den aktuellen Text), gespeichert wird aber erst, wenn eine Sekunde
+// lang nicht mehr getippt wurde - sonst ein verschlüsselter Upsert pro Buchstabe.
+// Sofort gespeichert wird zusätzlich beim Verlassen des Feldes ('change'), beim
+// Wechsel in eine andere App und beim Abmelden (flushAllDaySaves).
+const TEXT_SAVE_DELAY_MS = 1000;
+const pendingDaySaves = new Map(); // dateKey -> Timer
+function updateTextValue(dateKey, habitId, raw) {
+  const day = { ...(state.entries[dateKey] || {}) };
+  if (raw.trim()) day[habitId] = raw.slice(0, NOTE_MAX_LENGTH);
+  else delete day[habitId];
+  state.entries = { ...state.entries, [dateKey]: day };
+  clearTimeout(pendingDaySaves.get(dateKey));
+  pendingDaySaves.set(dateKey, setTimeout(() => flushDaySave(dateKey), TEXT_SAVE_DELAY_MS));
+}
+function flushDaySave(dateKey) {
+  if (!pendingDaySaves.has(dateKey)) return;
+  clearTimeout(pendingDaySaves.get(dateKey));
+  pendingDaySaves.delete(dateKey);
+  if (!currentDek || !state.session) return;
+  saveDay(dateKey, state.entries[dateKey] || {});
+}
+function flushAllDaySaves() {
+  [...pendingDaySaves.keys()].forEach(flushDaySave);
 }
 
 // Löscht Werte UND Notizen des Tages - deshalb immer erst nach Rückfrage
@@ -3613,7 +3674,7 @@ function renderRowMenuPanel(h) {
   if (state.rowMenu !== h.id) return '';
   return `
     <div class="row-menu" id="row-menu-${h.id}" role="group" aria-label="${t('today.fieldOptions', { name: h.name })}">
-      ${h.kind !== 'group' ? `<button type="button" class="menu-item-btn" data-action="note-edit" data-note="${h.id}">${getNote(formatKey(state.currentDate), h.id) ? t('note.edit') : t('note.add')}</button>` : ''}
+      ${h.kind !== 'group' && !isTextKind(h) ? `<button type="button" class="menu-item-btn" data-action="note-edit" data-note="${h.id}">${getNote(formatKey(state.currentDate), h.id) ? t('note.edit') : t('note.add')}</button>` : ''}
       <button type="button" class="menu-item-btn" data-action="row-menu-edit" data-id="${h.defId}">${t('common.edit')}</button>
       <button type="button" class="menu-item-btn menu-item-btn--warn" data-action="row-menu-archive" data-id="${h.defId}">${t('manage.archive')}</button>
     </div>
@@ -3652,6 +3713,21 @@ function renderNote(dateKey, key, label) {
   const text = getNote(dateKey, key);
   if (!text) return '';
   return `<button type="button" class="row-note" data-action="note-edit" data-note="${key}"><span class="visually-hidden">${t('note.editPrefix')} </span>${esc(text)}</button>`;
+}
+
+// Freies Text-Feld (kind='text'): bewusst immer offenes Textfeld statt Antippen-zum-
+// Bearbeiten wie bei Notizen - wer so ein Feld anlegt, will täglich hineinschreiben.
+// Gespeichert wird automatisch (siehe updateTextValue), kein Speichern-Button. Keine
+// Notizen (wären doppelt zum Freitext).
+function renderTextBox(h, dayEntry) {
+  const value = typeof dayEntry[h.id] === 'string' ? dayEntry[h.id] : '';
+  return `
+    <div class="number-box text-box">
+      <div class="number-box-label">${renderRowMenuTrigger(h, esc(h.name))}</div>
+      <textarea id="text-input-${h.id}" class="text-field-input" data-habit="${h.id}" rows="2" maxlength="${NOTE_MAX_LENGTH}" aria-label="${esc(h.name)}">${esc(value)}</textarea>
+      ${renderRowMenuPanel(h)}
+    </div>
+  `;
 }
 
 function renderNumberBox(h, dateKey, dayEntry) {
@@ -3712,6 +3788,7 @@ function renderToday() {
     <div class="habit-list">
       ${activeHabits().map((h) => {
         if (isNumberKind(h)) return renderNumberBox(h, dateKey, dayEntry);
+        if (isTextKind(h)) return renderTextBox(h, dayEntry);
         if (h.kind === 'group') return `
           <div class="habit-row habit-row--group">
             ${renderRowMenuTrigger(h, esc(h.name))}
@@ -3781,6 +3858,7 @@ function renderWeek() {
       ${rows}
     </div>
     ${renderNumberCharts(visibleHabits, days.map(formatKey), true)}
+    ${renderTextReviews(visibleHabits, days.map(formatKey), false)}
   `;
 }
 
@@ -3820,6 +3898,7 @@ function renderMonth() {
     </div>
     <div class="month-stats">${renderStatsRows(monthStats)}</div>
     ${renderNumberCharts(visibleHabits, cellKeys, true)}
+    ${renderTextReviews(visibleHabits, cellKeys, false)}
   `;
 }
 
@@ -3855,6 +3934,7 @@ function renderYear() {
     <div class="year-grid">${monthsGrid}</div>
     <div class="month-stats">${renderStatsRows(yearStats)}</div>
     ${renderNumberCharts(visibleHabits, yearKeys)}
+    ${renderTextReviews(visibleHabits, yearKeys, true)}
   `;
 }
 
@@ -3873,6 +3953,7 @@ function renderGlobal() {
     <p class="manage-meta" style="margin: -8px 0 14px;">${rangeNote}</p>
     <div class="month-stats">${renderStatsRows(stats)}</div>
     ${renderNumberCharts(state.habits, dateKeys)}
+    ${renderTextReviews(state.habits, dateKeys, true)}
   `;
 }
 
@@ -4159,6 +4240,36 @@ function renderNumberCharts(visibleHabits, dateKeys, interactive = false) {
   return `<div class="month-stats">${numberHabits.map((h) => renderNumberChart(h, dateKeys, interactive)).join('')}</div>`;
 }
 
+// Rückblick für Text-Felder: pro Feld eine Liste der Antworten im Zeitraum, jeder
+// Eintrag öffnet seinen Tag. Woche/Monat: offen und chronologisch (liest sich wie der
+// Kalender). Jahr/Gesamt (long=true): eingeklappt mit Anzahl im Titel und neueste
+// zuerst - aufgeklappt eine Art Tagebuch-Rückblick, eingeklappt würde die Liste sonst
+// die ganze Seite füllen. Felder ohne Antwort im Zeitraum erscheinen gar nicht.
+function renderTextReviews(habits, dateKeys, long) {
+  const blocks = habits.filter(isTextKind).map((h) => {
+    const entries = dateKeys
+      .map((k) => ({ key: k, text: state.entries[k]?.[h.id] }))
+      .filter((e) => typeof e.text === 'string' && e.text.trim());
+    if (!entries.length) return '';
+    if (long) entries.reverse();
+    const title = `${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}`;
+    const list = `
+      <ul class="text-review-list">
+        ${entries.map((e) => `
+          <li><button type="button" class="text-review-entry" data-action="open-day" data-date="${e.key}">
+            <span class="text-review-date">${formatDMY(e.key)}</span>
+            <span class="text-review-text">${esc(e.text.trim())}</span>
+          </button></li>
+        `).join('')}
+      </ul>
+    `;
+    if (!long) return `<div class="text-review"><div class="text-review-title">${title}</div>${list}</div>`;
+    const count = t(entries.length === 1 ? 'textReview.countOne' : 'textReview.countMany', { count: entries.length });
+    return `<details class="text-review"><summary class="text-review-title">${title} <span class="manage-meta">· ${count}</span></summary>${list}</details>`;
+  }).join('');
+  return blocks ? `<div class="month-stats">${blocks}</div>` : '';
+}
+
 // --- Rendering: Felder-Verwaltung -------------------------------------------
 // Springt zum gerade geöffneten Feld-/Gruppen-Formular — bei einer langen Liste war
 // sonst nach "Bearbeiten" nicht sichtbar, dass sich oben etwas geöffnet hat, wenn man
@@ -4244,6 +4355,8 @@ function renderHabitForm() {
     ${f.good ? goalField : ''}
   `;
 
+  const textBody = `<p class="habit-form-lock-note">${t('habitForm.textNote')}</p>`;
+
   const numberBody = `
     <div class="auth-field">
       <label for="habit-form-unit">${t('habitForm.unit')}</label>
@@ -4302,10 +4415,11 @@ function renderHabitForm() {
           <div class="pill-group">
             <button type="button" class="pill-toggle${f.kind === 'scale' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="scale" ${f.locked ? 'disabled' : ''}>${t('habitForm.kindScale')}</button>
             <button type="button" class="pill-toggle${f.kind === 'number' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="number" ${f.locked ? 'disabled' : ''}>${t('habitForm.kindNumber')}</button>
+            <button type="button" class="pill-toggle${f.kind === 'text' ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="text" ${f.locked ? 'disabled' : ''}>${t('habitForm.kindText')}</button>
           </div>
         </div>
       ` : ''}
-      ${isGroup ? groupBody : f.kind === 'scale' ? scaleBody : numberBody}
+      ${isGroup ? groupBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : numberBody}
       ${!isGroup ? reminderBody : ''}
       <div class="habit-form-actions">
         <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t('common.save')}</button>
@@ -4670,11 +4784,12 @@ function renderSubpageHeader(titleKey) {
 }
 
 function renderApp() {
-  // Ein Re-Render, während im Notiz-Editor getippt wird (z.B. ein im Hintergrund
-  // fertig werdender Push-Status-Check), ersetzt die Textarea - der Entwurf selbst
-  // überlebt über state.noteEditor.draft, Fokus und Cursor-Position hier.
+  // Ein Re-Render, während in einer Textarea getippt wird (Notiz-Editor oder Text-Feld,
+  // z.B. durch einen im Hintergrund fertig werdenden Push-Status-Check), ersetzt sie -
+  // der Text selbst überlebt über state (noteEditor.draft bzw. state.entries, siehe
+  // updateTextValue), Fokus und Cursor-Position hier.
   const active = document.activeElement;
-  const noteCaret = active?.id === 'note-input' ? [active.selectionStart, active.selectionEnd] : null;
+  const caret = active?.tagName === 'TEXTAREA' && active.id ? { id: active.id, range: [active.selectionStart, active.selectionEnd] } : null;
   const noticeHtml = renderNotice();
   const subpage = isSubpageView(state.view);
   const body = state.loading ? `<div class="loading">${t('common.loading')}</div>` :
@@ -4714,10 +4829,10 @@ function renderApp() {
   // Scroll-in-View-Effekt beim Fokussieren kennt "position: sticky" nicht und hat
   // dadurch leicht falsch/zu weit gescrollt (Header wirkte oben angeschnitten).
   if (subpage) document.querySelector('.subpage-header h1')?.focus({ preventScroll: true });
-  const noteInput = noteCaret && document.getElementById('note-input');
-  if (noteInput) {
-    noteInput.focus({ preventScroll: true });
-    noteInput.setSelectionRange(...noteCaret);
+  const caretInput = caret && document.getElementById(caret.id);
+  if (caretInput) {
+    caretInput.focus({ preventScroll: true });
+    caretInput.setSelectionRange(...caret.range);
   }
 }
 
@@ -4819,6 +4934,7 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'regenerate-recovery-key') {
     await regenerateRecoveryKey();
   } else if (action === 'logout') {
+    flushAllDaySaves(); // ausstehende Text-Feld-Speicherungen noch mit dem Schlüssel verschicken
     currentDek = null;
     state.authEmail = '';
     state.authPassword = '';
@@ -5066,6 +5182,10 @@ app.addEventListener('click', async (e) => {
 
 app.addEventListener('change', (e) => {
   state.notice = null; // siehe Kommentar beim 'click'-Listener oben
+  if (e.target.classList?.contains('text-field-input')) {
+    flushDaySave(formatKey(state.currentDate)); // Feld verlassen: nicht erst auf den Timer warten
+    return;
+  }
   const numberInput = e.target.closest('[data-action="number-input"]');
   if (numberInput) {
     // Speichert beim Verlassen des Feldes (Blur/Tab-Wechsel) statt über einen
@@ -5177,6 +5297,7 @@ app.addEventListener('input', (e) => {
   // der Text einen späteren Re-Render (z.B. Meldung beim Absenden) übersteht.
   if (e.target.id === 'feedback-message') { state.feedback.message = e.target.value; return; }
   if (e.target.id === 'note-input' && state.noteEditor) { state.noteEditor.draft = e.target.value; return; }
+  if (e.target.classList.contains('text-field-input')) { updateTextValue(formatKey(state.currentDate), e.target.dataset.habit, e.target.value); return; }
   // Bezeichnungen im Feld-Formular: Live-Vorschau mitziehen, ohne das ganze Formular
   // neu zu rendern (würde Fokus/Cursor im gerade bearbeiteten Feld zurücksetzen) - nur
   // die Vorschau selbst wird ausgetauscht, die ist inert und hält nie den Fokus.
