@@ -562,7 +562,30 @@
     border: none; border-radius: 4px; background: var(--moss); color: var(--paper); cursor: pointer;
   }
   /* "+ Neues Feld" bleibt die primäre Aktion, "+ Neue Gruppe" daneben als zweite. */
-  .manage-new-row { display: flex; gap: 8px; }
+  .manage-new-row { display: flex; gap: 8px; margin-top: 4px; }
+  /* Bereiche (siehe layoutBlocks): Verwaltung - Kopfzeile + eingerückte Felder. */
+  .manage-section { border-bottom: 1px solid var(--line); }
+  .manage-section-head { border-bottom: none; }
+  .manage-section-name { font-weight: 600; }
+  .manage-section-children { margin: 0 0 8px 8px; padding-left: 10px; border-left: 2px solid var(--line); }
+  .manage-section-children .manage-row:last-child { border-bottom: none; }
+  .manage-section-empty { margin: 4px 0 6px; }
+  .section-editor { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+  .section-editor input {
+    flex: 1; min-width: 0; font-family: inherit; font-size: 14px; padding: 7px 9px;
+    border: 1px solid var(--line); border-radius: 3px; background: var(--input-bg); color: var(--ink);
+  }
+  .manage-new-section { margin-top: 8px; }
+  /* Einklappbare Bereichs-Überschrift ("Heute" und Auswertung). */
+  .section-toggle {
+    display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; cursor: pointer;
+    font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 15px; color: var(--ink);
+    background: none; border: none; border-bottom: 1px solid var(--line); padding: 12px 0 6px;
+  }
+  .section-chevron { flex-shrink: 0; color: var(--sand); transition: transform 0.15s ease; }
+  .section-toggle[aria-expanded="true"] .section-chevron { transform: rotate(90deg); }
+  @media (prefers-reduced-motion: reduce) { .section-chevron { transition: none; } }
+  .section-block--stats > .section-toggle { font-size: 13px; padding-top: 10px; }
   .manage-new-row .manage-new-btn { flex: 1; }
   .manage-new-btn--secondary { background: transparent; color: var(--moss); border: 1px solid var(--moss); }
   .manage-group-tag {
@@ -917,6 +940,7 @@ function habitFromParts(row, payload) {
     groupMembers: payload.groupMembers,   // nur bei kind === 'group': Array von Schlüsseln (id) der Mitglieder
     aggregate: payload.aggregate ?? null, // nur bei Zahlen-Gruppen: 'sum'|'avg'|'min'|'max' (null = Skala-Gruppe)
     hideInStats: !!payload.hideInStats,   // in Woche/Monat/Jahr/Gesamt ausgeblendet (nur Anzeige, siehe inStats)
+    sectionId: row.section_id ?? null,    // Bereich (Klartext-Spalte, siehe layoutBlocks)
     reminderMinute: row.reminder_minute, // Minuten seit Mitternacht (0-1439) oder null (= Standardzeit)
     goalThreshold: payload.goalThreshold, // nur bei kind === 'scale'/'group', 0-1 oder null (= 1 = 100%)
     sortOrder: row.sort_order,
@@ -1021,6 +1045,72 @@ async function clearFieldNamesForPush() {
 }
 
 function isNumberKind(h) { return h.kind === 'number'; }
+
+// --- Bereiche: Anordnung ----------------------------------------------------
+// Oberste Ebene: Felder ohne Bereich und Bereiche gemeinsam nach sort_order (frei
+// untereinander anordenbar), die Felder eines Bereichs darin nach ihrem eigenen
+// sort_order (gilt nur innerhalb ihres Behälters). Ein Feld mit unbekanntem Bereich
+// (sollte nicht vorkommen) gilt als "ohne Bereich". Leere Bereiche werden mitgeliefert,
+// die Aufrufer entscheiden, ob sie sie zeigen.
+function layoutBlocks(habits) {
+  const sectionIds = new Set(state.sections.map((sec) => sec.id));
+  const blocks = [
+    ...habits.filter((h) => !h.sectionId || !sectionIds.has(h.sectionId))
+      .map((h) => ({ type: 'habit', habit: h, sortOrder: h.sortOrder })),
+    ...state.sections.map((sec) => ({
+      type: 'section', section: sec, sortOrder: sec.sortOrder,
+      habits: habits.filter((h) => h.sectionId === sec.id).sort((a, b) => a.sortOrder - b.sortOrder),
+    })),
+  ];
+  return blocks.sort((a, b) => a.sortOrder - b.sortOrder || (a.type === b.type ? 0 : a.type === 'section' ? 1 : -1));
+}
+// Höchster sort_order in einem Behälter (Bereich bzw. oberste Ebene) - neue oder in
+// einen anderen Bereich verschobene Felder kommen ans Ende.
+function containerMaxSortOrder(sectionId) {
+  const active = state.habits.filter((h) => !h.archivedAt);
+  if (sectionId) return Math.max(0, ...active.filter((h) => h.sectionId === sectionId).map((h) => h.sortOrder));
+  const sectionIds = new Set(state.sections.map((sec) => sec.id));
+  return Math.max(0,
+    ...active.filter((h) => !h.sectionId || !sectionIds.has(h.sectionId)).map((h) => h.sortOrder),
+    ...state.sections.map((sec) => sec.sortOrder));
+}
+// Eingeklappt-Zustand pro Gerät, getrennt für "Heute" (scope 'today') und die
+// Auswertungs-Ansichten (scope 'stats') - in "Heute" klappt man eher Seltenes weg, in
+// der Auswertung will man es trotzdem sehen können.
+function isSectionCollapsed(scope, id) {
+  try { return localStorage.getItem(`sectionCollapsed:${scope}:${id}`) === '1'; } catch { return false; }
+}
+function setSectionCollapsed(scope, id, collapsed) {
+  try {
+    if (collapsed) localStorage.setItem(`sectionCollapsed:${scope}:${id}`, '1');
+    else localStorage.removeItem(`sectionCollapsed:${scope}:${id}`);
+  } catch { /* privater Modus o.ä. - wirkt dann nur bis zum nächsten Neuladen nicht */ }
+}
+function renderSectionToggle(section, scope, collapsed) {
+  return `
+    <button type="button" class="section-toggle section-toggle--${scope}" data-action="section-toggle" data-section="${section.id}" data-scope="${scope}" aria-expanded="${!collapsed}">
+      <svg class="section-chevron" width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>${esc(section.name)}</span>
+    </button>
+  `;
+}
+// Rendert Felder nach Bereichen gruppiert, in der Reihenfolge der Verwaltung:
+// aufeinanderfolgende Felder ohne Bereich als ein Stück, jeder (nicht leere) Bereich
+// mit einklappbarer Überschrift. renderList bekommt jeweils ein Array von Feldern.
+function renderBySection(habits, scope, renderList) {
+  const out = [];
+  let run = [];
+  const flush = () => { if (run.length) { out.push(renderList(run)); run = []; } };
+  for (const block of layoutBlocks(habits)) {
+    if (block.type === 'habit') { run.push(block.habit); continue; }
+    if (!block.habits.length) continue;
+    flush();
+    const collapsed = isSectionCollapsed(scope, block.section.id);
+    out.push(`<div class="section-block section-block--${scope}">${renderSectionToggle(block.section, scope, collapsed)}${collapsed ? '' : renderList(block.habits)}</div>`);
+  }
+  flush();
+  return out.join('');
+}
 // Ob ein Feld in den Auswertungs-Ansichten (Woche/Monat/Jahr/Gesamt) auftaucht - pro Feld
 // abschaltbar ("In der Auswertung anzeigen"), z.B. wenn einem die Gruppe daraus reicht.
 // Wirkt nur auf die Anzeige: die Tages-Gesamtfarbe (dayOverallScore) und Gruppen, in
@@ -1330,6 +1420,9 @@ const state = {
   passwordRecovery: false, // true zwischen Klick auf den Passwort-Reset-Link und neuem Passwort
   pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy'
   habits: [],         // alle Felder des Nutzers (aktiv + archiviert), sort_order-sortiert
+  sections: [],       // Bereiche: { id, name, sortOrder } (siehe layoutBlocks)
+  sectionEditor: null, // { id: null (neu) | Bereichs-ID, name } - offenes Eingabefeld in der Verwaltung
+  sectionDeleteConfirm: null, // Bereichs-ID, deren Löschen gerade bestätigt wird
   habitForm: null,    // { defId, locked, name, mode: 'numeric'|'labels', min, max, steps, labels, good }
   habitFormSaving: false, // true während handleHabitSave() läuft, verhindert Doppel-Submits
   menuOpen: false,
@@ -1416,13 +1509,15 @@ function closeManageOverlays() {
   state.habitForm = null;
   habitFormReturnScrollY = null;
   state.habitDeleteConfirm = null;
+  state.sectionEditor = null;
+  state.sectionDeleteConfirm = null;
 }
 function leaveSubpage() {
   closeManageOverlays();
   state.view = state.previousTabView || 'today';
 }
 function isOverlayOpen() {
-  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.resetConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
+  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionEditor || !!state.resetConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
 }
 // Der Notiz-Editor gehört zu einem bestimmten Tag in "Heute" und ist nur offen, solange
 // er dort auch sichtbar ist - wechselt man Tag/Tab, speichert render() den Entwurf und
@@ -1488,6 +1583,8 @@ function closeTopLayer() {
     state.rowMenu = null;
   } else if (isNoteEditorOpen()) {
     discardNoteDraft(); // wie "Abbrechen"
+  } else if (state.sectionEditor) {
+    state.sectionEditor = null;
   } else if (state.habitForm) {
     closeHabitForm();
   } else if (state.habitDeleteConfirm) {
@@ -1807,6 +1904,16 @@ const STRINGS = {
     'manage.reactivate': 'Reaktivieren',
     'manage.archivedSectionLabel': 'Archiviert',
     'manage.groupTag': 'Gruppe',
+    'manage.sectionTag': 'Bereich',
+    'manage.newSection': '+ Neuer Bereich',
+    'manage.rename': 'Umbenennen',
+    'manage.sectionName': 'Name des Bereichs',
+    'manage.sectionNamePlaceholder': 'z. B. Gesundheit',
+    'manage.sectionEmpty': 'Noch leer – ordne Felder über „Bearbeiten“ → „Bereich“ zu.',
+    'manage.sectionDeleteWarning': 'Bereich löschen? Die Felder darin bleiben erhalten.',
+    'manage.error.sectionNameRequired': 'Bitte einen Namen für den Bereich eingeben.',
+    'habitForm.section': 'Bereich',
+    'habitForm.sectionNone': 'Kein Bereich',
     'manage.hiddenInStats': 'in der Auswertung ausgeblendet',
     'habitForm.showInStats': 'In der Auswertung anzeigen',
     'habitForm.showInStatsNote': 'Aus: erscheint nur in „Heute“, nicht in Woche, Monat, Jahr und Gesamt – z. B. wenn dir eine Gruppe daraus reicht. Die Tagesfarbe rechnet es trotzdem mit ein.',
@@ -1903,7 +2010,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'Was ich nicht sehen kann',
     'about.privacy.cannotSee.body': 'Alles, was du einträgst, und worum es dabei geht: deine Werte, Notizen und Text-Antworten, die Namen deiner Felder und die Bezeichnungen ihrer Stufen. Das alles wird auf deinem Gerät verschlüsselt, bevor es überhaupt verschickt wird. Der Schlüssel dafür hängt an deinem Passwort, und das kennst nur du. Selbst mit vollem Zugriff auf die Datenbank sehe ich davon nur unlesbaren Zeichensalat.',
     'about.privacy.canSee.title': 'Was ich sehen kann',
-    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>dass du Felder hast und von welcher Art (z. B. Skala oder Zahl), aber nicht, worum es geht</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokolliert der Hosting-Anbieter für kurze Zeit technische Zugriffsdaten wie IP-Adressen.',
+    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>dass du Felder hast, von welcher Art (z. B. Skala oder Zahl) und ob du sie in Bereiche sortiert hast – aber nicht, worum es geht oder wie Felder und Bereiche heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokolliert der Hosting-Anbieter für kurze Zeit technische Zugriffsdaten wie IP-Adressen.',
     'about.privacy.recoveryKey.title': 'Die Kehrseite: dein Recovery-Key',
     'about.privacy.recoveryKey.body': 'Weil ich keinen Zugriff habe, kann ich dir auch nicht helfen, wenn du Passwort <strong>und</strong> Recovery-Key verlierst – dann sind deine Einträge unwiederbringlich weg. Bewahre ihn deshalb gut auf.',
     'about.privacy.yourData.title': 'Deine Daten gehören dir',
@@ -2191,6 +2298,16 @@ const STRINGS = {
     'manage.reactivate': 'Reactivate',
     'manage.archivedSectionLabel': 'Archived',
     'manage.groupTag': 'Group',
+    'manage.sectionTag': 'Section',
+    'manage.newSection': '+ New section',
+    'manage.rename': 'Rename',
+    'manage.sectionName': 'Section name',
+    'manage.sectionNamePlaceholder': 'e.g. Health',
+    'manage.sectionEmpty': 'Still empty – assign fields via “Edit” → “Section”.',
+    'manage.sectionDeleteWarning': 'Delete section? The fields in it are kept.',
+    'manage.error.sectionNameRequired': 'Please enter a name for the section.',
+    'habitForm.section': 'Section',
+    'habitForm.sectionNone': 'No section',
     'manage.hiddenInStats': 'hidden in statistics',
     'habitForm.showInStats': 'Show in statistics',
     'habitForm.showInStatsNote': 'Off: only appears in “Today”, not in the week, month, year, and overall views – e.g. if a group made from it is enough for you. It still counts towards the day’s color.',
@@ -2287,7 +2404,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'What I cannot see',
     'about.privacy.cannotSee.body': 'Everything you enter, and what it is about: your values, notes, and text answers, the names of your fields and the labels of their steps. All of this is encrypted on your device before it is even sent. The key for it is tied to your password, and only you know that. Even with full access to the database, all I see is unreadable gibberish.',
     'about.privacy.canSee.title': 'What I can see',
-    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>that you have fields and what kind they are (e.g. scale or number), but not what they are about</li><li>on which days you filled in which of these fields (for reminders), without the value</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the hosting provider briefly logs technical access data such as IP addresses.',
+    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>that you have fields, what kind they are (e.g. scale or number), and whether you sorted them into sections – but not what they are about or what your fields and sections are called</li><li>on which days you filled in which of these fields (for reminders), without the value</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the hosting provider briefly logs technical access data such as IP addresses.',
     'about.privacy.recoveryKey.title': 'The flip side: your recovery key',
     'about.privacy.recoveryKey.body': 'Because I have no access, I also cannot help you if you lose your password <strong>and</strong> your recovery key – your entries are then gone for good. So keep it somewhere safe.',
     'about.privacy.yourData.title': 'Your data belongs to you',
@@ -2735,6 +2852,25 @@ async function loadHabits() {
   if (unencrypted.length) migrateHabitDefinitions(unencrypted);
 }
 
+// Bereiche (habit_sections): nur der Name ist verschlüsselt ({name} in enc, gleicher
+// DEK). Die Zuordnung Feld -> Bereich steht als Klartext-Spalte habit_definitions.
+// section_id (nur zwei zufällige IDs) - so löst die DB sie beim Löschen eines Bereichs
+// selbst (ON DELETE SET NULL) und Umhängen braucht kein Neu-Verschlüsseln des Felds.
+async function loadSections() {
+  const { data, error } = await supabase.from('habit_sections').select('*').order('sort_order');
+  if (error) {
+    state.notice = { type: 'error', text: t('notice.loadHabitsError') + translateDbError(error.message) };
+    return;
+  }
+  const sections = [];
+  for (const row of data) {
+    let name = '?';
+    try { name = (await decryptData(currentDek, row.enc)).name; } catch { /* unlesbar - Platzhalter statt Absturz */ }
+    sections.push({ id: row.id, name, sortOrder: row.sort_order });
+  }
+  state.sections = sections;
+}
+
 async function loadUserSettings() {
   const { data, error } = await supabase.from('user_settings')
     .select('default_reminder_minute, onboarding_completed, locale, summary_notifications, timezone').maybeSingle();
@@ -2988,6 +3124,7 @@ function defaultHabitForm() {
     groupMembers: [],
     groupType: 'scale', aggregate: 'sum', // nur bei kind='group', siehe isNumberGroup
     showInStats: true,
+    sectionId: null,
     goalPercent: 100,
     unit: '', reminderEnabled: false, reminderMinute: state.userSettings.defaultReminderMinute,
     schedule: scheduleToForm(null),
@@ -3070,6 +3207,7 @@ function habitToForm(h) {
     groupType: h.aggregate ? 'number' : 'scale',
     aggregate: h.aggregate || 'sum',
     showInStats: !h.hideInStats,
+    sectionId: h.sectionId,
     goalPercent: Math.round((h.goalThreshold ?? 1) * 100),
     unit: h.unit || '',
     reminderEnabled: h.reminderMinute !== null && h.reminderMinute !== undefined,
@@ -3136,6 +3274,8 @@ function syncHabitFormFromDom() {
   if (f.kind !== 'group') readScheduleFromDom(f);
   const showInStatsEl = document.getElementById('habit-form-show-in-stats');
   if (showInStatsEl) f.showInStats = showInStatsEl.checked;
+  const sectionEl = document.getElementById('habit-form-section');
+  if (sectionEl) f.sectionId = sectionEl.value || null;
 }
 
 async function handleHabitSave() {
@@ -3306,13 +3446,18 @@ async function handleHabitSaveInner() {
     aggregate: fields.aggregate ?? null,
     hideInStats: !f.showInStats,
   };
+  const sectionId = state.sections.some((sec) => sec.id === f.sectionId) ? f.sectionId : null;
   const row = {
     kind: fields.kind,
     schedule: fields.schedule,
     reminder_minute: reminderMinute,
+    section_id: sectionId,
     enc: await encryptData(currentDek, payload),
     ...DEF_PLAINTEXT_CLEARED,
   };
+  // Neues oder in einen anderen Bereich verschobenes Feld: ans Ende seines Behälters.
+  const original = f.defId ? state.habits.find((h) => h.defId === f.defId) : null;
+  if (!original || (original.sectionId || null) !== sectionId) row.sort_order = containerMaxSortOrder(sectionId) + 1;
   if (f.defId) {
     const { data, error } = await supabase.from('habit_definitions').update(row).eq('id', f.defId).select().single();
     if (error) {
@@ -3322,9 +3467,8 @@ async function handleHabitSaveInner() {
     const idx = state.habits.findIndex((h) => h.defId === f.defId);
     state.habits[idx] = habitFromParts(data, payload);
   } else {
-    const sortOrder = state.habits.length ? Math.max(...state.habits.map((h) => h.sortOrder)) + 1 : 1;
     const { data, error } = await supabase.from('habit_definitions')
-      .insert({ user_id: state.session.user.id, ...row, sort_order: sortOrder })
+      .insert({ user_id: state.session.user.id, ...row })
       .select().single();
     if (error) {
       state.notice = { type: 'error', text: t('notice.createFailed') + translateDbError(error.message) };
@@ -3355,24 +3499,86 @@ async function handleHabitArchive(defId, archive) {
   return true;
 }
 
-// Persistiert eine neue Reihenfolge der (nicht-archivierten) Felder — newIds ist
-// die vollständige defId-Liste in der gewünschten neuen Reihenfolge. Gemeinsamer
-// Pfad für Drag-Reordering (Pointer-Events) UND die Tastatur-Alternative
-// (Hoch/Runter-Buttons in renderManage), damit beide exakt gleich persistieren.
-async function commitHabitOrder(newIds) {
-  const activeInOrder = newIds.map((id, i) => ({ ...state.habits.find((h) => h.defId === id), sortOrder: i + 1 }));
-  const others = state.habits.filter((h) => !newIds.includes(h.defId));
-  state.habits = [...activeInOrder, ...others];
+// Persistiert die neue Reihenfolge EINES Behälters (oberste Ebene oder ein Bereich) -
+// items = alle Elemente des Behälters in der gewünschten Reihenfolge, je { type:
+// 'habit'|'section', id, moveOut? }. moveOut: Feld verlässt dabei seinen Bereich (beim
+// Löschen eines Bereichs). Gemeinsamer Pfad für Ziehen UND die ↑/↓-Buttons, damit beide
+// exakt gleich speichern.
+async function commitLayoutOrder(items) {
+  const order = new Map(items.map((it, i) => [it.id, i + 1]));
+  const movedOut = new Set(items.filter((it) => it.moveOut).map((it) => it.id));
+  state.habits = state.habits
+    .map((h) => (order.has(h.defId) ? { ...h, sortOrder: order.get(h.defId), sectionId: movedOut.has(h.defId) ? null : h.sectionId } : h))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  state.sections = state.sections
+    .map((sec) => (order.has(sec.id) ? { ...sec, sortOrder: order.get(sec.id) } : sec))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
   render();
 
-  const results = await Promise.all(
-    activeInOrder.map((h) => supabase.from('habit_definitions').update({ sort_order: h.sortOrder }).eq('id', h.defId))
-  );
+  const results = await Promise.all(items.map((it, i) => (it.type === 'section'
+    ? supabase.from('habit_sections').update({ sort_order: i + 1 }).eq('id', it.id)
+    : supabase.from('habit_definitions').update({ sort_order: i + 1, ...(it.moveOut ? { section_id: null } : {}) }).eq('id', it.id))));
   const failed = results.find((r) => r.error);
   if (failed) {
     state.notice = { type: 'error', text: t('notice.reorderFailed') + translateDbError(failed.error.message) };
     render();
   }
+}
+
+async function saveSection() {
+  const ed = state.sectionEditor;
+  if (!ed) return;
+  const name = (document.getElementById('section-name-input')?.value ?? ed.name).trim();
+  if (!name) {
+    state.notice = { type: 'error', text: t('manage.error.sectionNameRequired') };
+    render();
+    return;
+  }
+  const enc = await encryptData(currentDek, { name });
+  if (ed.id) {
+    const { error } = await supabase.from('habit_sections').update({ enc }).eq('id', ed.id);
+    if (error) {
+      state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+      render();
+      return;
+    }
+    state.sections = state.sections.map((sec) => (sec.id === ed.id ? { ...sec, name } : sec));
+  } else {
+    const sortOrder = containerMaxSortOrder(null) + 1;
+    const { data, error } = await supabase.from('habit_sections')
+      .insert({ user_id: state.session.user.id, enc, sort_order: sortOrder })
+      .select().single();
+    if (error) {
+      state.notice = { type: 'error', text: t('notice.createFailed') + translateDbError(error.message) };
+      render();
+      return;
+    }
+    state.sections = [...state.sections, { id: data.id, name, sortOrder }];
+  }
+  state.sectionEditor = null;
+  render();
+}
+// Löschen eines Bereichs löscht keine Felder: seine (aktiven) Felder rücken auf der
+// obersten Ebene genau an die Stelle, an der der Bereich stand. Archivierte Felder
+// darin verlieren ihre Zuordnung per ON DELETE SET NULL.
+async function deleteSection(id) {
+  const items = [];
+  for (const b of layoutBlocks(state.habits.filter((h) => !h.archivedAt))) {
+    if (b.type === 'habit') items.push({ type: 'habit', id: b.habit.defId });
+    else if (b.section.id === id) b.habits.forEach((h) => items.push({ type: 'habit', id: h.defId, moveOut: true }));
+    else items.push({ type: 'section', id: b.section.id });
+  }
+  state.sectionDeleteConfirm = null;
+  await commitLayoutOrder(items);
+  const { error } = await supabase.from('habit_sections').delete().eq('id', id);
+  if (error) {
+    state.notice = { type: 'error', text: t('notice.deleteFailed') + translateDbError(error.message) };
+    render();
+    return;
+  }
+  state.sections = state.sections.filter((sec) => sec.id !== id);
+  state.habits = state.habits.map((h) => (h.sectionId === id ? { ...h, sectionId: null } : h));
+  render();
 }
 
 async function handleHabitDelete(defId) {
@@ -3798,13 +4004,14 @@ async function disablePush() {
 // Server-Roundtrip über eine eigene Function nötig.
 async function handleExportData() {
   state.menuOpen = false;
-  const [defsRes, entriesRes, settingsRes, subsRes] = await Promise.all([
+  const [defsRes, entriesRes, settingsRes, subsRes, sectionsRes] = await Promise.all([
     supabase.from('habit_definitions').select('*'),
     supabase.from('habit_entries').select('*'),
     supabase.from('user_settings').select('*'),
     supabase.from('push_subscriptions').select('*'),
+    supabase.from('habit_sections').select('*'),
   ]);
-  const err = defsRes.error || entriesRes.error || settingsRes.error || subsRes.error;
+  const err = defsRes.error || entriesRes.error || settingsRes.error || subsRes.error || sectionsRes.error;
   if (err) {
     state.notice = { type: 'error', text: t('notice.exportFailed') + err.message };
     render();
@@ -3845,6 +4052,9 @@ async function handleExportData() {
   const exportObj = {
     exported_at: new Date().toISOString(),
     habit_definitions: decryptedDefs,
+    habit_sections: await Promise.all(sectionsRes.data.map(async ({ enc, ...rest }) => {
+      try { return { ...rest, name: (await decryptData(currentDek, enc)).name }; } catch { return { ...rest, decrypt_error: true }; }
+    })),
     habit_entries: decryptedEntries,
     user_settings: settingsRes.data,
     push_subscriptions: subsRes.data,
@@ -4373,6 +4583,12 @@ function renderTextBox(h, dayEntry) {
 // (bewusst nicht ins Textfeld: das würde die Tastatur öffnen, man will ja erst lesen).
 // Archivierte Felder stehen nicht in "Heute" - dann bleibt es beim Tag.
 function focusTodayField(habitId) {
+  // Liegt das Feld in einem eingeklappten Bereich, erst aufklappen.
+  const target = state.habits.find((h) => h.id === habitId);
+  if (target?.sectionId && isSectionCollapsed('today', target.sectionId)) {
+    setSectionCollapsed('today', target.sectionId, false);
+    render();
+  }
   let trigger = document.querySelector(`.row-menu-trigger[data-habit="${habitId}"]`);
   // Liegt das Feld im eingeklappten "Heute nicht geplant", erst aufklappen.
   if (trigger?.closest('details.unplanned:not([open])')) {
@@ -4485,7 +4701,7 @@ function renderToday() {
     </div>
     ${!isToday ? `<button type="button" class="today-jump" data-action="jump-today">${t('today.jumpToday')}</button>` : ''}
     <div class="habit-list">
-      ${planned.map(renderTodayRow).join('')}
+      ${renderBySection(planned, 'today', (list) => list.map(renderTodayRow).join(''))}
       ${!habits.length ? `<p class="manage-meta">${t('today.noFields')}</p>` : !planned.length ? `<p class="manage-meta">${t('today.nothingPlanned')}</p>` : ''}
     </div>
     ${unplanned.length ? `
@@ -4509,7 +4725,7 @@ function renderWeek() {
   const visibleHabits = state.habits.filter(
     (h) => inStats(h) && (!h.archivedAt || habitVisibleInRange(h, dayKeys))
   );
-  const rows = visibleHabits.filter(isScoredKind).map((h) => {
+  const weekRow = (h) => {
     const scores = dayKeys.map((k) => habitScore(h, k));
     const valid = scores.filter((s) => s !== null);
     const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
@@ -4520,7 +4736,8 @@ function renderWeek() {
         <div class="grid-cell grid-cell--avg" style="background:${habitColor(h, applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
     `;
-  }).join('');
+  };
+  const rows = renderBySection(visibleHabits.filter(isScoredKind), 'stats', (list) => list.map(weekRow).join(''));
 
   return `
     <div class="day-nav">
@@ -4575,7 +4792,7 @@ function renderMonth() {
         return `<div class="month-cell${hasNote ? ' has-note' : ''}" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(s)};${scorePatternStyle(s)}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(d, s) + (hasNote ? t('ariaLabel.withNote') : ''))}"><span class="month-cell-num">${d.getDate()}</span></div>`;
       }).join('')}
     </div>
-    <div class="month-stats">${renderStatsRows(monthStats)}</div>
+    <div class="month-stats">${renderBySection(monthStats.map((st) => st.habit), 'stats', (list) => renderStatsRows(monthStats.filter((st) => list.includes(st.habit))))}</div>
     ${renderNumberCharts(visibleHabits, cellKeys, true)}
     ${renderTextReviews(visibleHabits, cellKeys)}
   `;
@@ -4611,7 +4828,7 @@ function renderYear() {
       <button type="button" class="nav-btn" data-action="nav-year" data-dir="1" aria-label="${esc(t('ariaLabel.nextYear'))}">›</button>
     </div>
     <div class="year-grid">${monthsGrid}</div>
-    <div class="month-stats">${renderStatsRows(yearStats)}</div>
+    <div class="month-stats">${renderBySection(yearStats.map((st) => st.habit), 'stats', (list) => renderStatsRows(yearStats.filter((st) => list.includes(st.habit))))}</div>
     ${renderNumberCharts(visibleHabits, yearKeys)}
     ${renderTextReviews(visibleHabits, yearKeys)}
   `;
@@ -4631,7 +4848,7 @@ function renderGlobal() {
       <div class="day-label"><span class="day-date">${t('global.title')}</span></div>
     </div>
     <p class="manage-meta" style="margin: -8px 0 14px;">${rangeNote}</p>
-    <div class="month-stats">${renderStatsRows(stats)}</div>
+    <div class="month-stats">${renderBySection(stats.map((st) => st.habit), 'stats', (list) => renderStatsRows(stats.filter((st) => list.includes(st.habit))))}</div>
     ${renderNumberCharts(statsHabits, dateKeys)}
     ${renderTextReviews(statsHabits, dateKeys)}
   `;
@@ -4955,7 +5172,7 @@ function renderNumberChart(habit, dateKeys, interactive) {
 function renderNumberCharts(visibleHabits, dateKeys, interactive = false) {
   const numberHabits = visibleHabits.filter(hasNumericSeries);
   if (!numberHabits.length) return '';
-  return `<div class="month-stats">${numberHabits.map((h) => renderNumberChart(h, dateKeys, interactive)).join('')}</div>`;
+  return `<div class="month-stats">${renderBySection(numberHabits, 'stats', (list) => list.map((h) => renderNumberChart(h, dateKeys, interactive)).join(''))}</div>`;
 }
 
 // Rückblick für Text-Felder: pro Feld eine Liste der Antworten im Zeitraum, jeder
@@ -4964,7 +5181,7 @@ function renderNumberCharts(visibleHabits, dateKeys, interactive = false) {
 // je nach Ansicht umgekehrte Reihenfolge war verwirrend). Felder ohne Antwort im
 // Zeitraum erscheinen gar nicht.
 function renderTextReviews(habits, dateKeys) {
-  const blocks = habits.filter(isTextKind).map((h) => {
+  const renderOne = (h) => {
     const entries = dateKeys
       .map((k) => ({ key: k, text: state.entries[k]?.[h.id] }))
       .filter((e) => typeof e.text === 'string' && e.text.trim());
@@ -4983,8 +5200,10 @@ function renderTextReviews(habits, dateKeys) {
     `;
     const count = t(entries.length === 1 ? 'textReview.countOne' : 'textReview.countMany', { count: entries.length });
     return `<details class="text-review"><summary class="text-review-title">${title} <span class="manage-meta">· ${count}</span></summary>${list}</details>`;
-  }).join('');
-  return blocks ? `<div class="month-stats">${blocks}</div>` : '';
+  };
+  const withEntries = habits.filter(isTextKind).filter((h) => renderOne(h));
+  if (!withEntries.length) return '';
+  return `<div class="month-stats">${renderBySection(withEntries, 'stats', (list) => list.map(renderOne).join(''))}</div>`;
 }
 
 // --- Rendering: Felder-Verwaltung -------------------------------------------
@@ -5224,6 +5443,15 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       ` : ''}
       ${isGroup ? groupBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : numberBody}
       ${!isGroup ? scheduleBody + reminderBody : ''}
+      ${state.sections.length ? `
+        <div class="auth-field">
+          <label for="habit-form-section">${t('habitForm.section')}</label>
+          <select id="habit-form-section">
+            <option value="">${t('habitForm.sectionNone')}</option>
+            ${[...state.sections].sort((a, b) => a.sortOrder - b.sortOrder).map((sec) => `<option value="${sec.id}" ${f.sectionId === sec.id ? 'selected' : ''}>${esc(sec.name)}</option>`).join('')}
+          </select>
+        </div>
+      ` : ''}
       <div class="auth-field">
         <label class="checkbox-field">
           <input type="checkbox" id="habit-form-show-in-stats" aria-describedby="habit-form-show-in-stats-note" ${f.showInStats ? 'checked' : ''} />
@@ -5274,7 +5502,7 @@ function renderManage() {
         `
         : `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete-arm" data-id="${h.defId}">${t('common.delete')}</button>`;
     return `
-      <div class="manage-row${h.archivedAt ? ' manage-row--archived' : ''}${confirmingDelete ? ' manage-row--confirm-delete' : ''}" data-def-id="${h.defId}">
+      <div class="manage-row manage-item${h.archivedAt ? ' manage-row--archived' : ''}${confirmingDelete ? ' manage-row--confirm-delete' : ''}" data-def-id="${h.defId}" data-order-type="habit" data-order-id="${h.defId}">
         ${!h.archivedAt ? `
           <span class="drag-handle" data-action="drag-handle" aria-label="${esc(t('ariaLabel.reorder'))}"><span></span><span></span></span>
           <span class="move-buttons">
@@ -5308,12 +5536,64 @@ function renderManage() {
   // Offenes Formular = eigene Ebene, ohne die Liste darunter (siehe openHabitForm).
   if (state.habitForm) return renderHabitForm({ titleInHeader: true });
 
-  return `
-    <div class="manage-new-row">
-      <button type="button" class="manage-new-btn" data-action="habit-new">+ ${t('habitForm.title.newField')}</button>
-      <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="group-new">+ ${t('habitForm.title.newGroup')}</button>
+  const sectionEditorHtml = () => `
+    <div class="section-editor">
+      <label class="visually-hidden" for="section-name-input">${t('manage.sectionName')}</label>
+      <input type="text" id="section-name-input" maxlength="40" value="${esc(state.sectionEditor.name)}" placeholder="${esc(t('manage.sectionNamePlaceholder'))}" />
+      <button type="button" class="manage-btn" data-action="section-save">${t('common.save')}</button>
+      <button type="button" class="manage-btn" data-action="section-cancel">${t('common.cancel')}</button>
     </div>
-    <div class="manage-list">${active.map(row).join('')}</div>
+  `;
+  // Ein Bereich ist in der Liste ein Block (Kopfzeile + eingerückte Felder), der sich auf
+  // oberster Ebene wie ein Feld verschieben lässt; seine Felder verschiebt man innerhalb.
+  // Umhängen zwischen Bereichen läuft bewusst über "Bearbeiten" -> "Bereich" (einfach und
+  // für Tastatur/Screenreader gleich gut bedienbar, siehe CLAUDE.md).
+  const sectionBlock = (b, idx, list) => {
+    const sec = b.section;
+    const editing = state.sectionEditor?.id === sec.id;
+    const confirmingDelete = state.sectionDeleteConfirm === sec.id;
+    return `
+      <div class="manage-item manage-section" data-order-type="section" data-order-id="${sec.id}">
+        <div class="manage-row manage-section-head">
+          <span class="drag-handle" data-action="drag-handle" aria-label="${esc(t('ariaLabel.reorder'))}"><span></span><span></span></span>
+          <span class="move-buttons">
+            <button type="button" class="move-btn" data-action="habit-move" data-dir="up" ${idx === 0 ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.moveUp'))}">↑</button>
+            <button type="button" class="move-btn" data-action="habit-move" data-dir="down" ${idx === list.length - 1 ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.moveDown'))}">↓</button>
+          </span>
+          ${editing ? sectionEditorHtml() : `
+            <div class="manage-info">
+              <span class="manage-name manage-section-name">${esc(sec.name)}</span>
+              ${confirmingDelete
+                ? `<span class="manage-delete-warning">${t('manage.sectionDeleteWarning')}</span>`
+                : `<span class="manage-meta"><span class="manage-group-tag">${t('manage.sectionTag')}</span></span>`}
+            </div>
+            <div class="manage-actions">
+              ${confirmingDelete ? `
+                <button type="button" class="manage-btn manage-btn--danger" data-action="section-delete" data-id="${sec.id}">${t('manage.deleteConfirmFinal')}</button>
+                <button type="button" class="manage-btn" data-action="section-delete-cancel">${t('common.cancel')}</button>
+              ` : `
+                <button type="button" class="manage-btn" data-action="section-rename" data-id="${sec.id}">${t('manage.rename')}</button>
+                <button type="button" class="manage-btn manage-btn--danger" data-action="section-delete-arm" data-id="${sec.id}">${t('common.delete')}</button>
+              `}
+            </div>
+          `}
+        </div>
+        <div class="manage-section-children">
+          ${b.habits.length ? b.habits.map((h, i) => row(h, i, b.habits)).join('') : `<p class="habit-form-lock-note manage-section-empty">${t('manage.sectionEmpty')}</p>`}
+        </div>
+      </div>
+    `;
+  };
+  const activeBlocks = layoutBlocks(active);
+
+  return `
+    <button type="button" class="manage-new-btn" data-action="habit-new">+ ${t('habitForm.title.newField')}</button>
+    <div class="manage-new-row">
+      <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="group-new">+ ${t('habitForm.title.newGroup')}</button>
+      <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="section-new">${t('manage.newSection')}</button>
+    </div>
+    ${state.sectionEditor && !state.sectionEditor.id ? `<div class="manage-row manage-new-section">${sectionEditorHtml()}</div>` : ''}
+    <div class="manage-list">${activeBlocks.map((b, i) => (b.type === 'habit' ? row(b.habit, i, activeBlocks) : sectionBlock(b, i, activeBlocks))).join('')}</div>
     ${archived.length ? `
       <p class="habit-form-lock-note">${t('manage.archivedSectionLabel')}</p>
       <div class="manage-list">${archived.map(row).join('')}</div>
@@ -5898,6 +6178,30 @@ app.addEventListener('click', async (e) => {
     syncHabitFormFromDom();
     state.habitForm.kind = el.dataset.kind;
     render();
+  } else if (action === 'section-toggle') {
+    const { section, scope } = el.dataset;
+    setSectionCollapsed(scope, section, !isSectionCollapsed(scope, section));
+    render();
+    document.querySelector(`[data-action="section-toggle"][data-section="${section}"][data-scope="${scope}"]`)?.focus();
+  } else if (action === 'section-new' || action === 'section-rename') {
+    const sec = action === 'section-rename' ? state.sections.find((x) => x.id === el.dataset.id) : null;
+    state.sectionEditor = { id: sec ? sec.id : null, name: sec ? sec.name : '' };
+    state.sectionDeleteConfirm = null;
+    render();
+    document.getElementById('section-name-input')?.focus();
+  } else if (action === 'section-save') {
+    await saveSection();
+  } else if (action === 'section-cancel') {
+    state.sectionEditor = null;
+    render();
+  } else if (action === 'section-delete-arm') {
+    state.sectionDeleteConfirm = el.dataset.id;
+    render();
+  } else if (action === 'section-delete-cancel') {
+    state.sectionDeleteConfirm = null;
+    render();
+  } else if (action === 'section-delete') {
+    await deleteSection(el.dataset.id);
   } else if (action === 'habit-group-type') {
     syncHabitFormFromDom();
     const f = state.habitForm;
@@ -5959,17 +6263,18 @@ app.addEventListener('click', async (e) => {
     // Tastatur-/Klick-Alternative zum Pointer-Drag — liest wie der Drag-Handler die
     // aktuellen Geschwister-Zeilen direkt aus dem DOM (derselbe Container-Scope,
     // row.parentElement.children), damit beide Wege exakt dieselbe Reihenfolge
-    // berechnen und über commitHabitOrder() denselben Persistenz-Pfad nutzen.
-    const rowEl = el.closest('.manage-row');
-    const rows = [...rowEl.parentElement.children];
+    // berechnen und über commitLayoutOrder() denselben Persistenz-Pfad nutzen.
+    const rowEl = el.closest('.manage-item');
+    const rows = [...rowEl.parentElement.children].filter((r) => r.classList.contains('manage-item'));
     const fromIndex = rows.indexOf(rowEl);
     const toIndex = el.dataset.dir === 'up' ? fromIndex - 1 : fromIndex + 1;
     if (toIndex < 0 || toIndex >= rows.length) return;
     const reordered = [...rows];
     const [movedEl] = reordered.splice(fromIndex, 1);
     reordered.splice(toIndex, 0, movedEl);
-    const newIds = reordered.map((r) => r.dataset.defId);
-    await commitHabitOrder(newIds);
+    await commitLayoutOrder(reordered.map((r) => ({ type: r.dataset.orderType, id: r.dataset.orderId })));
+    // Fokus auf denselben Button am neuen Platz (render() hat das DOM ersetzt).
+    document.querySelector(`.manage-item[data-order-id="${rowEl.dataset.orderId}"] [data-action="habit-move"][data-dir="${el.dataset.dir}"]`)?.focus();
   } else if (action === 'tutorial-install-ack') {
     state.tutorialInstallAck = true;
     render();
@@ -6159,6 +6464,7 @@ app.addEventListener('input', (e) => {
   // der Text einen späteren Re-Render (z.B. Meldung beim Absenden) übersteht.
   if (e.target.id === 'feedback-message') { state.feedback.message = e.target.value; return; }
   if (e.target.id === 'note-input' && state.noteEditor) { state.noteEditor.draft = e.target.value; return; }
+  if (e.target.id === 'section-name-input' && state.sectionEditor) { state.sectionEditor.name = e.target.value; return; }
   if (e.target.classList.contains('text-field-input')) { updateTextValue(formatKey(state.currentDate), e.target.dataset.habit, e.target.value); return; }
   // Bezeichnungen im Feld-Formular: Live-Vorschau mitziehen, ohne das ganze Formular
   // neu zu rendern (würde Fokus/Cursor im gerade bearbeiteten Feld zurücksetzen) - nur
@@ -6251,6 +6557,10 @@ app.addEventListener('keydown', (e) => {
     e.preventDefault();
     handleSaveNumber(formatKey(state.currentDate), e.target.dataset.habit, e.target.value);
     return;
+  }
+  if (e.target?.id === 'section-name-input') {
+    if (e.key === 'Enter') { e.preventDefault(); saveSection(); return; }
+    if (e.key === 'Escape') { state.sectionEditor = null; render(); return; }
   }
   if (e.key === 'Escape' && state.rowMenu) {
     closeRowMenu();
@@ -6456,19 +6766,27 @@ const DRAG_ARM_MOVE_TOLERANCE = 16;
 app.addEventListener('pointerdown', (e) => {
   const handle = e.target.closest('[data-action="drag-handle"]');
   if (!handle) return;
-  const row = handle.closest('.manage-row');
-  const rows = [...row.parentElement.children];
+  // Gezogen wird ein .manage-item: ein Feld oder (auf oberster Ebene) ein ganzer Bereich
+  // als Block - innerhalb seines Behälters (oberste Ebene bzw. Felder eines Bereichs).
+  const row = handle.closest('.manage-item');
+  const rows = [...row.parentElement.children].filter((r) => r.classList.contains('manage-item'));
   const fromIndex = rows.indexOf(row);
-  const first = rows[0].getBoundingClientRect();
-  const last = rows[rows.length - 1].getBoundingClientRect();
-  const rowHeight = rows.length > 1 ? (last.top - first.top) / (rows.length - 1) : first.height;
 
-  dragArm = { pointerId: e.pointerId, row, rows, fromIndex, rowHeight, startY: e.clientY, startX: e.clientX };
+  dragArm = { pointerId: e.pointerId, row, rows, fromIndex, startY: e.clientY, startX: e.clientX };
   dragArm.timer = setTimeout(() => {
     if (!dragArm) return;
     const armed = dragArm;
     dragArm = null;
-    dragState = { pointerId: armed.pointerId, row: armed.row, rows: armed.rows, fromIndex: armed.fromIndex, toIndex: armed.fromIndex, startY: armed.startY, startScrollY: window.scrollY, lastClientY: armed.startY, rowHeight: armed.rowHeight };
+    // Elemente sind unterschiedlich hoch (ein Bereich-Block vs. eine Feld-Zeile) - deshalb
+    // die Original-Positionen aller Geschwister merken statt einer einheitlichen
+    // Zeilenhöhe. slot = Platz, den das gezogene Element samt Abstand einnimmt; um genau
+    // den rücken die übersprungenen Geschwister auf.
+    const rects = armed.rows.map((r) => r.getBoundingClientRect());
+    const tops = rects.map((rc) => rc.top + window.scrollY);
+    const heights = rects.map((rc) => rc.height);
+    const i = armed.fromIndex;
+    const slot = i < armed.rows.length - 1 ? tops[i + 1] - tops[i] : i > 0 ? tops[i] + heights[i] - (tops[i - 1] + heights[i - 1]) : heights[i];
+    dragState = { pointerId: armed.pointerId, row: armed.row, rows: armed.rows, fromIndex: i, toIndex: i, startY: armed.startY, startScrollY: window.scrollY, lastClientY: armed.startY, tops, heights, slot };
     dragState.row.setPointerCapture(dragState.pointerId);
     dragState.row.classList.add('manage-row--dragging');
     haptic(); // spürbare Rückmeldung, dass das Feld jetzt "in der Hand" ist
@@ -6499,21 +6817,26 @@ function updateDragPosition() {
   // Auf die Liste begrenzt: weiter als bis zum ersten/letzten Platz lässt sich die Zeile
   // nicht ziehen (vorher schoss sie beliebig weit darüber hinaus und sprang erst beim
   // Loslassen zurück).
-  const minDelta = -dragState.fromIndex * dragState.rowHeight;
-  const maxDelta = (dragState.rows.length - 1 - dragState.fromIndex) * dragState.rowHeight;
+  const { tops, heights, fromIndex: from, rows } = dragState;
+  const last = rows.length - 1;
+  const minDelta = tops[0] - tops[from];
+  const maxDelta = tops[last] + heights[last] - (tops[from] + heights[from]);
   const rawDelta = dragState.lastClientY - dragState.startY + (window.scrollY - dragState.startScrollY);
   const deltaY = Math.max(minDelta, Math.min(maxDelta, rawDelta));
   dragState.row.style.transform = `translateY(${deltaY}px)`;
 
-  let toIndex = dragState.fromIndex + Math.round(deltaY / dragState.rowHeight);
-  toIndex = Math.max(0, Math.min(dragState.rows.length - 1, toIndex));
+  // Zielplatz = Anzahl der übrigen Elemente, deren Mitte oberhalb der Mitte des
+  // gezogenen Elements liegt.
+  const center = tops[from] + heights[from] / 2 + deltaY;
+  let toIndex = 0;
+  rows.forEach((r, i) => { if (i !== from && tops[i] + heights[i] / 2 < center) toIndex++; });
   if (toIndex === dragState.toIndex) return;
   dragState.toIndex = toIndex;
-  dragState.rows.forEach((r, i) => {
+  rows.forEach((r, i) => {
     if (r === dragState.row) return;
     let shift = 0;
-    if (toIndex > dragState.fromIndex && i > dragState.fromIndex && i <= toIndex) shift = -dragState.rowHeight;
-    else if (toIndex < dragState.fromIndex && i < dragState.fromIndex && i >= toIndex) shift = dragState.rowHeight;
+    if (toIndex > from && i > from && i <= toIndex) shift = -dragState.slot;
+    else if (toIndex < from && i < from && i >= toIndex) shift = dragState.slot;
     r.style.transition = 'transform 150ms ease';
     r.style.transform = shift ? `translateY(${shift}px)` : '';
   });
@@ -6579,8 +6902,7 @@ app.addEventListener('pointerup', async (e) => {
   const reordered = [...rows];
   const [movedEl] = reordered.splice(fromIndex, 1);
   reordered.splice(toIndex, 0, movedEl);
-  const newIds = reordered.map((r) => r.dataset.defId);
-  await commitHabitOrder(newIds);
+  await commitLayoutOrder(reordered.map((r) => ({ type: r.dataset.orderType, id: r.dataset.orderId })));
 });
 
 // --- Deep-Links aus Push-Benachrichtigungen --------------------------------
@@ -6639,6 +6961,7 @@ if ('serviceWorker' in navigator) {
       state.rowMenu = null;
       state.habitForm = null;
       state.habitDeleteConfirm = null;
+      state.sectionEditor = null;
       if (state.deleteConfirm || state.resetConfirm) { state.deleteConfirm = null; state.resetConfirm = null; modalTriggerSelector = null; }
     }
     window.scrollTo(0, 0); // vor render() - das scrollt ggf. danach zum Feld (consumePendingFieldFocus)
@@ -6662,7 +6985,7 @@ async function completeAuthFlow(userId, password) {
   await unlockEncryption(userId, password);
   state.loading = true;
   render();
-  await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
+  await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections()]);
   state.loading = false;
   saveFieldNamesForPush(); // erst nach loadUserSettings - die Textvorlage hängt an der Sprache
   repadOldEntries();
@@ -6688,7 +7011,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     const cached = await loadCachedDek(session.user.id).catch(() => null);
     if (cached) {
       currentDek = cached;
-      await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
+      await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections()]);
       saveFieldNamesForPush(); // siehe completeAuthFlow
       repadOldEntries();
       checkPushStatus().then(render);
@@ -6702,6 +7025,8 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     state.noteEditor = null;
     state.rowMenu = null;
     state.resetConfirm = null;
+    state.sections = [];
+    state.sectionEditor = null;
     currentDek = null;
     state.tutorialStep = null;
     state.tutorialSkipConfirm = false;

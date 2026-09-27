@@ -320,6 +320,32 @@ Tages-Mittelwert. `habitVisibleInRange(h, dateKeys)` ersetzt entsprechend die
 Sichtbarkeits-Prüfung archivierter Felder in den Auswertungs-Ansichten, da eine Gruppe
 nie einen eigenen Entry-Key hat.
 
+**Bereiche** (seit 2026-09-27, Tabelle `habit_sections`: `id`, `user_id`, `enc` =
+verschlüsselter `{name}`, `sort_order`; Zuordnung über die Klartext-Spalte
+`habit_definitions.section_id` → FK `ON DELETE SET NULL`, Trigger
+`habit_definitions_check_section_owner` erzwingt einen Bereich desselben Nutzers):
+einklappbare Abschnitte zum Sortieren von Feldern und Gruppen – reine Anordnung, bewusst
+**keine eigene Berechnung** (wer einen Wert will, kombiniert Bereich + Gruppe). Die
+Zuordnung ist absichtlich unverschlüsselt (nur zwei zufällige IDs): die DB löst sie beim
+Löschen selbst, Umhängen braucht kein Neu-Verschlüsseln – steht so auch im
+Datenschutz-Text ("ob du sie in Bereiche sortiert hast"). **Anordnung** (`layoutBlocks`):
+auf oberster Ebene Felder ohne Bereich und Bereiche gemeinsam nach `sort_order`, frei
+untereinander verschiebbar; Felder eines Bereichs darin nach ihrem eigenen `sort_order`
+(gilt nur innerhalb ihres Behälters). **Verwaltung**: ein Bereich ist ein Block
+(Kopfzeile mit Umbenennen/Löschen + eingerückte Felder), der sich wie ein Feld verschieben
+lässt; Ziehen/↑↓ jeweils innerhalb des Behälters (`commitLayoutOrder`; die Zieh-Rechnung
+arbeitet mit den echten Positionen der Geschwister, da ein Bereich-Block höher ist als eine
+Zeile). **Umhängen zwischen Bereichen bewusst über das Feld-Formular** (Auswahl "Bereich",
+nur wenn es Bereiche gibt; landet am Ende des Ziel-Behälters) statt per Ziehen – einfach und
+für Tastatur/Screenreader gleich gut bedienbar; Ziehen zwischen Bereichen wäre ein
+möglicher späterer Zusatz. Löschen (zweistufig) löscht keine Felder: sie rücken an die
+Stelle des Bereichs. **Anzeige überall** (Nutzer-Entscheidung): "Heute" und alle
+Auswertungs-Ansichten gruppieren nach Bereichen (`renderBySection`, leere Bereiche werden
+ausgelassen), jeweils mit einklappbarer Überschrift (`section-toggle`, `aria-expanded`);
+der Eingeklappt-Zustand gilt pro Gerät und getrennt für "Heute" und die Auswertung
+(`localStorage` `sectionCollapsed:<today|stats>:<id>`). Der Bereich "Heute nicht geplant"
+bleibt ungegliedert. Ein Sprung zu einem Feld in einem eingeklappten Bereich klappt ihn auf.
+
 **"In der Auswertung anzeigen"** (seit 2026-09-27, `hideInStats` in der verschlüsselten
 payload, Checkbox im Formular für Felder und Gruppen, standardmäßig an): ausgeblendete
 Felder erscheinen nur in "Heute", nicht in Woche/Monat/Jahr/Gesamt (`inStats`). Wirkt nur
@@ -623,7 +649,7 @@ Mitglieder (`manage.groupMembers`, "Ø aus: ..."), da das die einzige Stelle in 
 Liste ist, an der das sichtbar wird (nicht Teil des Entschlackens, sondern
 weiterhin nötige Identifikationsinformation), mit kleinem "Gruppe"-Kennzeichen.
 **Felder und Gruppen stehen seit 2026-09-27 in EINER gemeinsamen, frei sortierbaren
-Liste** (vorher eigener Gruppen-Bereich ganz unten – Gruppen ließen sich nicht zwischen
+Liste** (samt Bereichen, siehe "Bereiche" unten) (vorher eigener Gruppen-Bereich ganz unten – Gruppen ließen sich nicht zwischen
 die übrigen Felder einsortieren). "+ Neues Feld" (ausgefüllt, primär) und "+ Neue
 Gruppe" (umrandet) stehen nebeneinander oben (`.manage-new-row`); die Erklärung, was
 eine Gruppe ist, steht im Gruppen-Formular (`habitForm.groupExplain`). Ist ein Feld in
@@ -696,7 +722,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 382 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 392 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
