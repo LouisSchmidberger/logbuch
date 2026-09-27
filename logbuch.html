@@ -6430,7 +6430,10 @@ app.addEventListener('change', (e) => {
     syncHabitFormFromDom();
     state.habitForm.schedule.type = e.target.value;
     render();
-    document.getElementById('habit-form-schedule-type')?.focus(); // siehe habit-schedule-day
+    // Fokus zurück (siehe habit-schedule-day) - aber nicht nach einer Auswahl per Finger:
+    // auf iOS öffnet das Fokussieren einer Auswahlliste sofort wieder deren Auswahl-Menü,
+    // es sah aus, als bliebe es nach der Auswahl offen. Tastatur-Nutzer behalten ihren Platz.
+    if (lastPointerType === 'mouse') document.getElementById('habit-form-schedule-type')?.focus();
     return;
   }
   if (e.target.classList?.contains('text-field-input')) {
