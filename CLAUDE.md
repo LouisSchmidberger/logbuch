@@ -381,6 +381,20 @@ Zustand – `closeHabitForm()` (einziger Schließ-Weg: Speichern, Abbrechen,
 Android-Zurück) springt dann direkt zurück zum Tab statt in der Verwaltung zu bleiben,
 da die Absicht beim Shortcut "jetzt tracken" ist, nicht "verwalten".
 
+**Zeilen-Menü (⋯) pro Feld in "Heute"** (seit 2026-09-27, `renderRowMenu`/
+`openRowMenu`/`closeRowMenu` in `logbuch.html`, `state.rowMenu` = slug): kleines Popover
+mit "Bearbeiten" (öffnet das Feld-Formular in der Verwaltung mit `returnToTab: true`,
+gleiches Muster wie der "+ Neues Feld"-Shortcut) und "Archivieren" (danach Meldung, wo
+sich das Feld reaktivieren lässt). Soll künftig auch Notizen aufnehmen. Der sichtbare
+⋯-Button ist bewusst der Hauptweg (auffindbar, Tastatur/Screenreader,
+Disclosure-Muster mit `aria-expanded`, Escape schließt und gibt den Fokus zurück);
+Long-Press (Touch, eigener 500-ms-Timer, da iOS kein `contextmenu` feuert) bzw.
+Rechtsklick (Maus) auf die Zeile öffnet dasselbe Menü nur als Abkürzung. Ausgenommen
+davon sind Eingabefelder, der Schieberegler und das Menü selbst; der Klick beim
+Loslassen nach einem Long-Press wird verschluckt (`suppressNextClick`), sonst würde er
+auf einem Wert-Button zusätzlich den Wert setzen. Zählt als Overlay für die
+Android-Zurück-Logik; jede andere Klick-Aktion, Wischen und Deep-Links schließen es.
+
 **Verwaltungsliste entschlackt** (seit 2026-09-18, `renderManage` in `logbuch.html`):
 pro Feld-Zeile steht nur noch der Name plus – falls gesetzt – die eigene
 Erinnerungszeit (`manage.reminderAt`); Skala/Bereich, Bezeichnungen, Gut/Schlecht-
@@ -460,7 +474,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 288 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 305 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

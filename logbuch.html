@@ -148,6 +148,9 @@
   .menu-item-btn:hover, .menu-item-btn:focus-visible { background: rgba(var(--moss-rgb), 0.14); border-color: var(--moss); }
   .menu-item-btn--danger { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.4); }
   .menu-item-btn--danger:hover, .menu-item-btn--danger:focus-visible { background: rgba(var(--rust-rgb), 0.12); border-color: var(--rust); }
+  /* Wie .manage-btn--warn: reversibel (z.B. Archivieren), daher dezenter als --danger. */
+  .menu-item-btn--warn { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.25); }
+  .menu-item-btn--warn:hover, .menu-item-btn--warn:focus-visible { background: rgba(var(--rust-rgb), 0.08); border-color: rgba(var(--rust-rgb), 0.6); }
 
   .modal-overlay {
     position: fixed; inset: 0; background: var(--scrim); z-index: 50;
@@ -297,7 +300,32 @@
     font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 12px; color: var(--on-score);
   }
   .habit-row--group { flex-wrap: wrap; }
-  .habit-row--group .manage-meta { flex-basis: 100%; }
+  /* order: 1 schiebt die Mitglieder-Zeile hinter den ⋯-Button (steht im DOM danach),
+     damit der Button in der Kopfzeile neben dem Mittelwert bleibt. */
+  .habit-row--group .manage-meta { flex-basis: 100%; order: 1; }
+
+  /* Zeilen-Menü in "Heute" (siehe renderRowMenu). touch-callout/user-select verhindern,
+     dass iOS/Android beim Long-Press auf die Zeile stattdessen Textauswahl oder ein
+     eigenes Kontextmenü zeigen. */
+  .habit-row, .number-box { position: relative; -webkit-touch-callout: none; }
+  .habit-name, .number-box label { -webkit-user-select: none; user-select: none; }
+  .row-head { display: flex; align-items: center; gap: 10px; }
+  .row-menu-btn {
+    position: relative; flex-shrink: 0; width: 26px; height: 26px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    border: none; border-radius: 50%; background: transparent; color: var(--sand); cursor: pointer;
+  }
+  /* Größere Tippfläche als die sichtbare, ohne das Zeilen-Layout zu verbreitern. */
+  .row-menu-btn::after { content: ''; position: absolute; inset: -6px; }
+  .row-menu-btn:hover, .row-menu-btn:focus-visible, .row-menu-btn[aria-expanded="true"] {
+    color: var(--ink); background: rgba(var(--moss-rgb), 0.14);
+  }
+  .row-menu {
+    position: absolute; top: calc(100% - 4px); right: 0; z-index: 5; min-width: 170px;
+    display: flex; flex-direction: column; gap: 6px; padding: 10px;
+    background: var(--popover-bg); border: 1px solid var(--ink); border-radius: 4px;
+    box-shadow: 0 12px 32px var(--shadow);
+  }
 
   .group-member-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
   .group-member-check { font-size: 13px; }
@@ -928,6 +956,7 @@ const state = {
   habitForm: null,    // { defId, locked, name, mode: 'numeric'|'labels', min, max, steps, labels, good }
   habitFormSaving: false, // true während handleHabitSave() läuft, verhindert Doppel-Submits
   menuOpen: false,
+  rowMenu: null,      // slug des Feldes, dessen Zeilen-Menü (⋯) in "Heute" gerade offen ist
   // Standard-Erinnerungszeit (Minuten seit Mitternacht) für Felder ohne eigene reminder_minute.
   // onboardingCompleted default true, bis loadUserSettings() den echten Wert lädt – verhindert,
   // dass das Tutorial kurz aufblitzt, bevor die tatsächlichen Einstellungen geladen sind.
@@ -1004,7 +1033,7 @@ function leaveSubpage() {
   state.view = state.previousTabView || 'today';
 }
 function isOverlayOpen() {
-  return state.menuOpen || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
+  return state.menuOpen || !!state.rowMenu || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
 }
 function currentLayerCount() {
   return (isSubpageView(state.view) ? 1 : 0) + (isOverlayOpen() ? 1 : 0);
@@ -1030,6 +1059,8 @@ function closeTopLayer() {
     restoreModalFocus();
   } else if (state.menuOpen) {
     state.menuOpen = false;
+  } else if (state.rowMenu) {
+    state.rowMenu = null;
   } else if (state.habitForm) {
     closeHabitForm();
   } else if (state.habitDeleteConfirm) {
@@ -1244,6 +1275,8 @@ const STRINGS = {
     'today.noFields': 'Noch keine Felder angelegt.',
     'today.newField': '+ Neues Feld',
     'today.resetDay': 'Tag zurücksetzen',
+    'today.fieldOptions': 'Optionen für {name}',
+    'notice.fieldArchived': 'Feld archiviert. Unter „Felder verwalten“ kannst du es jederzeit wieder aktivieren.',
     'common.archived': 'archiviert',
     'global.rangeNote': 'Seit {since} · {count} Tage mit Eintrag',
     'global.noEntries': 'Noch keine Einträge.',
@@ -1549,6 +1582,8 @@ const STRINGS = {
     'today.noFields': 'No fields created yet.',
     'today.newField': '+ New field',
     'today.resetDay': 'Reset day',
+    'today.fieldOptions': 'Options for {name}',
+    'notice.fieldArchived': 'Field archived. You can reactivate it anytime under “Manage fields”.',
     'common.archived': 'archived',
     'global.rangeNote': 'Since {since} · {count} days with entry',
     'global.noEntries': 'No entries yet.',
@@ -2551,11 +2586,12 @@ async function handleHabitArchive(defId, archive) {
   if (error) {
     state.notice = { type: 'error', text: t('notice.actionFailed') + translateDbError(error.message) };
     render();
-    return;
+    return false;
   }
   const idx = state.habits.findIndex((h) => h.defId === defId);
   if (idx !== -1) state.habits[idx] = { ...state.habits[idx], archivedAt: archive ? new Date().toISOString() : null };
   render();
+  return true;
 }
 
 // Persistiert eine neue Reihenfolge der (nicht-archivierten) Felder — newIds ist
@@ -3282,6 +3318,43 @@ function renderGroupInfo(habit, dateKey) {
 }
 
 // --- Rendering: Today ----------------------------------------------------
+// Zeilen-Menü (⋯) pro Feld in "Heute": Abkürzung zu Bearbeiten/Archivieren, ohne erst
+// in die Verwaltung zu wechseln. Der sichtbare ⋯-Button ist der Hauptweg (Tastatur/
+// Screenreader, und überhaupt auffindbar) - Long-Press bzw. Rechtsklick auf die Zeile
+// öffnet dasselbe Menü nur als zusätzliche Abkürzung (siehe "Zeilen-Menü per
+// Long-Press" weiter unten). Disclosure-Muster (aria-expanded + normale Buttons) statt
+// role="menu", da letzteres eine eigene Pfeiltasten-Navigation verlangen würde.
+// Das Panel ist absolut positioniert, seine Lage im DOM der Zeile daher egal.
+function renderRowMenu(h) {
+  const open = state.rowMenu === h.id;
+  const label = t('today.fieldOptions', { name: h.name });
+  return `
+    <button type="button" class="row-menu-btn" data-action="row-menu" data-habit="${h.id}" aria-expanded="${open}"${open ? ` aria-controls="row-menu-${h.id}"` : ''} aria-label="${label}">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1.5" fill="currentColor"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="13" cy="8" r="1.5" fill="currentColor"/></svg>
+    </button>
+    ${open ? `
+      <div class="row-menu" id="row-menu-${h.id}" role="group" aria-label="${label}">
+        <button type="button" class="menu-item-btn" data-action="row-menu-edit" data-id="${h.defId}">${t('common.edit')}</button>
+        <button type="button" class="menu-item-btn menu-item-btn--warn" data-action="row-menu-archive" data-id="${h.defId}">${t('manage.archive')}</button>
+      </div>
+    ` : ''}
+  `;
+}
+// Nach jedem Öffnen/Schließen nötig, da render() das DOM komplett neu aufbaut und den
+// Fokus dabei verwirft: beim Öffnen auf den ersten Menüpunkt, beim Schließen zurück
+// auf den ⋯-Button derselben Zeile.
+function openRowMenu(habitId) {
+  state.rowMenu = habitId;
+  render();
+  document.querySelector('.row-menu button')?.focus({ preventScroll: true });
+}
+function closeRowMenu() {
+  const habitId = state.rowMenu;
+  state.rowMenu = null;
+  render();
+  document.querySelector(`.row-menu-btn[data-habit="${habitId}"]`)?.focus({ preventScroll: true });
+}
+
 function renderNumberBox(h, dateKey, dayEntry) {
   const currentValue = dayEntry[h.id] !== undefined ? dayEntry[h.id] : '';
   const last = findLastValue(h.id, dateKey);
@@ -3294,6 +3367,7 @@ function renderNumberBox(h, dateKey, dayEntry) {
     <div class="number-box">
       <label for="number-input-${h.id}">${esc(h.name)}${h.unit ? ` (${esc(h.unit)})` : ''}${lastNote ? `<span class="number-last">${lastNote}</span>` : ''}</label>
       <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-action="number-input" data-habit="${h.id}" value="${esc(currentValue)}" />
+      ${renderRowMenu(h)}
     </div>
   `;
 }
@@ -3320,11 +3394,15 @@ function renderToday() {
           <div class="habit-row habit-row--group">
             <span class="habit-name">${esc(h.name)}</span>
             ${renderGroupInfo(h, dateKey)}
+            ${renderRowMenu(h)}
           </div>
         `;
         if (h.displayStyle === 'slider') return `
           <div class="habit-row habit-row--slider">
-            <span class="habit-name">${esc(h.name)}</span>
+            <div class="row-head">
+              <span class="habit-name">${esc(h.name)}</span>
+              ${renderRowMenu(h)}
+            </div>
             ${renderHabitSlider(h, dayEntry[h.id])}
           </div>
         `;
@@ -3332,6 +3410,7 @@ function renderToday() {
           <div class="habit-row">
             <span class="habit-name">${esc(h.name)}</span>
             <div class="habit-options">${renderHabitOptions(h, dayEntry[h.id])}</div>
+            ${renderRowMenu(h)}
           </div>
         `;
       }).join('')}
@@ -4301,6 +4380,10 @@ app.addEventListener('click', async (e) => {
   // stehen bliebe, bis man aktiv neu lädt) – die aktuelle Aktion setzt bei Bedarf
   // gleich danach ihre eigene, aktuelle Meldung.
   state.notice = null;
+  // Jede andere Aktion (Wert wählen, Tag/Tab wechseln, ...) schließt ein offenes
+  // Zeilen-Menü mit - die Menüpunkte selbst lesen ihr Ziel aus el.dataset, nicht aus
+  // state.rowMenu.
+  if (action !== 'row-menu') state.rowMenu = null;
 
   if (action === 'toggle-auth-mode') {
     state.authMode = state.authMode === 'signup' ? 'signin' : 'signup';
@@ -4432,6 +4515,26 @@ app.addEventListener('click', async (e) => {
     state.habitForm = { ...defaultHabitForm(), returnToTab: true };
     render();
     scrollToHabitForm();
+  } else if (action === 'row-menu') {
+    if (state.rowMenu === el.dataset.habit) closeRowMenu();
+    else openRowMenu(el.dataset.habit);
+  } else if (action === 'row-menu-edit') {
+    // Gleiches Muster wie der "+ Neues Feld"-Shortcut: returnToTab führt nach
+    // Speichern/Abbrechen zurück nach "Heute" statt in der Verwaltung zu bleiben.
+    const h = state.habits.find((x) => x.defId === el.dataset.id);
+    if (h) {
+      enterSubpage('manage');
+      state.habitForm = { ...habitToForm(h), returnToTab: true };
+      render();
+      scrollToHabitForm();
+    }
+  } else if (action === 'row-menu-archive') {
+    // Anders als in der Verwaltung verschwindet das Feld hier einfach aus der Liste -
+    // die Meldung sagt, wo es wieder zu finden ist.
+    if (await handleHabitArchive(el.dataset.id, true)) {
+      state.notice = { type: 'ok', text: t('notice.fieldArchived') };
+      render();
+    }
   } else if (action === 'habit-new') {
     state.habitForm = defaultHabitForm();
     render();
@@ -4708,11 +4811,23 @@ document.addEventListener('click', (e) => {
   state.menuOpen = false;
   render();
 });
+// Dasselbe für das Zeilen-Menü in "Heute" (Klicks auf data-action-Elemente schließen
+// es schon im Klick-Handler oben, hier geht es nur um Klicks auf "leere" Fläche).
+document.addEventListener('click', (e) => {
+  if (!state.rowMenu) return;
+  if (e.target.closest('.row-menu, .row-menu-btn')) return;
+  state.rowMenu = null;
+  render();
+});
 
 app.addEventListener('keydown', (e) => {
   if (e.target && e.target.classList?.contains('number-input') && e.key === 'Enter') {
     e.preventDefault();
     handleSaveNumber(formatKey(state.currentDate), e.target.dataset.habit, e.target.value);
+    return;
+  }
+  if (e.key === 'Escape' && state.rowMenu) {
+    closeRowMenu();
     return;
   }
   const modalBox = document.querySelector('.modal-box');
@@ -4785,6 +4900,7 @@ app.addEventListener('touchend', (e) => {
   touchStartY = null;
   if (Math.abs(dx) < (subpage ? SWIPE_THRESHOLD_SUBPAGE : SWIPE_THRESHOLD) || Math.abs(dx) < Math.abs(dy) * 1.5) return;
   const dir = dx < 0 ? 1 : -1;
+  state.rowMenu = null;
 
   if (subpage) {
     if (dir === -1) { leaveSubpage(); render(); }
@@ -4803,6 +4919,79 @@ app.addEventListener('touchend', (e) => {
   }
   render();
 }, { passive: true });
+
+// --- Zeilen-Menü per Long-Press/Rechtsklick (Heute) ------------------------
+// Reine Abkürzung zum ⋯-Button (siehe renderRowMenu), nie der einzige Weg. Touch/Stift
+// über einen eigenen Timer (iOS Safari feuert beim Long-Press kein 'contextmenu'), Maus
+// über den Rechtsklick ('contextmenu'). Ausgenommen sind alle Stellen, an denen
+// Gedrückthalten schon etwas anderes bedeutet: Eingabefelder (Einfügen/Cursor setzen),
+// der Schieberegler (Halten = Ziehen beginnen) und das Menü selbst.
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_MOVE_TOLERANCE = 10;
+let longPress = null;
+let lastPointerType = 'mouse';
+// Nach einem Long-Press auf einen Wert-Button würde das Loslassen zusätzlich einen
+// normalen Klick auslösen und damit ungewollt den Wert setzen - der erste Klick nach
+// dem Öffnen wird deshalb verschluckt (Capture-Listener unten). Bei jedem neuen
+// pointerdown zurückgesetzt, falls der Klick ausnahmsweise gar nicht kommt - sonst
+// würde stattdessen der nächste echte Klick verschluckt.
+let suppressNextClick = false;
+
+function rowMenuHabitAt(target) {
+  if (state.view !== 'today' || target.closest('input, textarea, select, .slider-row, .row-menu, .row-menu-btn')) return null;
+  return target.closest('.habit-row, .number-box')?.querySelector('.row-menu-btn')?.dataset.habit ?? null;
+}
+function cancelLongPress() {
+  if (!longPress) return;
+  clearTimeout(longPress.timer);
+  longPress = null;
+}
+
+app.addEventListener('pointerdown', (e) => {
+  suppressNextClick = false;
+  lastPointerType = e.pointerType;
+  cancelLongPress();
+  if (e.pointerType === 'mouse') return;
+  const habitId = rowMenuHabitAt(e.target);
+  if (!habitId) return;
+  longPress = {
+    pointerId: e.pointerId, startX: e.clientX, startY: e.clientY,
+    timer: setTimeout(() => {
+      longPress = null;
+      suppressNextClick = true;
+      try { navigator.vibrate?.(10); } catch { /* kein Vibrationsmotor/nicht erlaubt - egal */ }
+      openRowMenu(habitId);
+    }, LONG_PRESS_MS),
+  };
+});
+app.addEventListener('pointermove', (e) => {
+  if (!longPress || e.pointerId !== longPress.pointerId) return;
+  if (Math.hypot(e.clientX - longPress.startX, e.clientY - longPress.startY) > LONG_PRESS_MOVE_TOLERANCE) cancelLongPress();
+});
+// pointercancel: der Browser übernimmt die Geste selbst (z.B. Scrollen der Seite).
+app.addEventListener('pointerup', cancelLongPress);
+app.addEventListener('pointercancel', cancelLongPress);
+
+app.addEventListener('click', (e) => {
+  if (!suppressNextClick) return;
+  suppressNextClick = false;
+  e.stopPropagation();
+  e.preventDefault();
+}, true);
+
+// Rechtsklick mit der Maus - und auf Android, wo der Long-Press zusätzlich ein
+// 'contextmenu' feuert (je nach Gerät vor oder nach dem eigenen Timer), damit dort
+// weder das Browser-Kontextmenü erscheint noch das Menü doppelt geöffnet wird.
+app.addEventListener('contextmenu', (e) => {
+  const habitId = rowMenuHabitAt(e.target);
+  if (!habitId) return;
+  e.preventDefault();
+  if (lastPointerType !== 'mouse') {
+    cancelLongPress();
+    suppressNextClick = true;
+  }
+  if (state.rowMenu !== habitId) openRowMenu(habitId);
+});
 
 // --- Felder-Reihenfolge per Drag (Tab "Felder") ---------------------------
 // Während des Ziehens wird NIE render() aufgerufen (das würde den gesamten #app-Inhalt
@@ -4926,6 +5115,7 @@ if ('serviceWorker' in navigator) {
     // die gesetzte Ansicht greift dann einfach nach dessen Abschluss.
     if (state.userSettings.onboardingCompleted) {
       state.menuOpen = false;
+      state.rowMenu = null;
       state.habitForm = null;
       state.habitDeleteConfirm = null;
       if (state.deleteConfirm) { state.deleteConfirm = null; modalTriggerSelector = null; }
