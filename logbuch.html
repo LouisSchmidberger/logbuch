@@ -561,6 +561,14 @@
     display: block; width: 100%; margin-top: 4px; padding: 11px; font-family: inherit; font-size: 14px; font-weight: 600;
     border: none; border-radius: 4px; background: var(--moss); color: var(--paper); cursor: pointer;
   }
+  /* "+ Neues Feld" bleibt die primäre Aktion, "+ Neue Gruppe" daneben als zweite. */
+  .manage-new-row { display: flex; gap: 8px; }
+  .manage-new-row .manage-new-btn { flex: 1; }
+  .manage-new-btn--secondary { background: transparent; color: var(--moss); border: 1px solid var(--moss); }
+  .manage-group-tag {
+    display: inline-block; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 1px 5px; border: 1px solid var(--line); border-radius: 3px; color: var(--sand);
+  }
   .feedback-form textarea {
     font-family: inherit; font-size: 14px; line-height: 1.5; padding: 9px 10px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink); width: 100%; min-height: 180px; resize: vertical;
@@ -908,6 +916,7 @@ function habitFromParts(row, payload) {
     sliderShowValue: payload.sliderShowValue,
     groupMembers: payload.groupMembers,   // nur bei kind === 'group': Array von Schlüsseln (id) der Mitglieder
     aggregate: payload.aggregate ?? null, // nur bei Zahlen-Gruppen: 'sum'|'avg'|'min'|'max' (null = Skala-Gruppe)
+    hideInStats: !!payload.hideInStats,   // in Woche/Monat/Jahr/Gesamt ausgeblendet (nur Anzeige, siehe inStats)
     reminderMinute: row.reminder_minute, // Minuten seit Mitternacht (0-1439) oder null (= Standardzeit)
     goalThreshold: payload.goalThreshold, // nur bei kind === 'scale'/'group', 0-1 oder null (= 1 = 100%)
     sortOrder: row.sort_order,
@@ -929,6 +938,7 @@ function defPayloadFromPlainRow(row) {
     groupMembers: row.group_members ?? null,
     goalThreshold: row.goal_threshold ?? null,
     aggregate: null, // Zahlen-Gruppen gibt es erst seit der Verschlüsselung - Klartext-Zeilen sind nie welche
+    hideInStats: false,
   };
 }
 // Klartext-Spalten einer verschlüsselten Zeile - leer bzw. auf dem neutralen Default
@@ -1011,6 +1021,11 @@ async function clearFieldNamesForPush() {
 }
 
 function isNumberKind(h) { return h.kind === 'number'; }
+// Ob ein Feld in den Auswertungs-Ansichten (Woche/Monat/Jahr/Gesamt) auftaucht - pro Feld
+// abschaltbar ("In der Auswertung anzeigen"), z.B. wenn einem die Gruppe daraus reicht.
+// Wirkt nur auf die Anzeige: die Tages-Gesamtfarbe (dayOverallScore) und Gruppen, in
+// denen das Feld Mitglied ist, rechnen unverändert mit.
+function inStats(h) { return !h.hideInStats; }
 // Gruppen gibt es in zwei Arten: Skala-Gruppen (Durchschnitt der normalisierten
 // Bewertungen, mit Farbe/Ziel-Quote - der ursprüngliche Fall) und seit 2026-09-27
 // Zahlen-Gruppen (fassen Zahlenwert-Felder derselben Einheit per Summe/Durchschnitt/
@@ -1246,15 +1261,18 @@ function applyGoal(habit, score) {
   return Math.min(1, score / threshold);
 }
 
-// Gesamt-Score eines Tages über alle bewerteten Skala-/Gruppen-Felder gemittelt (für
-// Monats-/Jahres-Heatmap). Zahlenwert-Felder (kind='number') UND unbewertete
-// Skala-Felder (isNeutralScale) fließen bewusst nicht ein — beide haben kein
-// Gut/Schlecht, würden die Tages-Gesamtwertung sonst verfälschen.
+// Gesamt-Score eines Tages über alle bewerteten Skala-Felder gemittelt (für Monats-/
+// Jahres-Heatmap). Zahlenwert-Felder (kind='number') UND unbewertete Skala-Felder
+// (isNeutralScale) fließen bewusst nicht ein — beide haben kein Gut/Schlecht, würden
+// die Tages-Gesamtwertung sonst verfälschen. Gruppen ebenfalls nicht: ihre Mitglieder
+// sind schon als eigene Felder drin, sonst zählte jedes Mitglied doppelt (bis
+// 2026-09-27 so, unbeabsichtigt). Unabhängig davon, ob ein Feld in der Auswertung
+// ausgeblendet ist - das betrifft nur die Anzeige.
 function dayOverallScore(date) {
   const dateKey = formatKey(date);
   const day = state.entries[dateKey];
   if (!day) return null;
-  const scores = state.habits.filter((h) => (h.kind === 'scale' && !isNeutralScale(h)) || (h.kind === 'group' && !isNumberGroup(h)))
+  const scores = state.habits.filter((h) => h.kind === 'scale' && !isNeutralScale(h))
     .map((h) => applyGoal(h, habitScore(h, dateKey)))
     .filter((s) => s !== null);
   if (!scores.length) return null;
@@ -1788,8 +1806,11 @@ const STRINGS = {
     'manage.archive': 'Archivieren',
     'manage.reactivate': 'Reaktivieren',
     'manage.archivedSectionLabel': 'Archiviert',
-    'manage.groupsTitle': 'Gruppen',
-    'manage.groupsExplain': 'Fassen mehrere Skala-Felder zu einem live berechneten Durchschnittswert zusammen – z. B. „Sport gemacht" aus „Ausdauersport" + „Kraftsport".',
+    'manage.groupTag': 'Gruppe',
+    'manage.hiddenInStats': 'in der Auswertung ausgeblendet',
+    'habitForm.showInStats': 'In der Auswertung anzeigen',
+    'habitForm.showInStatsNote': 'Aus: erscheint nur in „Heute“, nicht in Woche, Monat, Jahr und Gesamt – z. B. wenn dir eine Gruppe daraus reicht. Die Tagesfarbe rechnet es trotzdem mit ein.',
+    'habitForm.groupExplain': 'Eine Gruppe fasst mehrere Felder zu einem live berechneten Wert zusammen – Skalen als Durchschnitt, Zahlenwerte z. B. als Summe. Sie hat keinen eigenen Eintrag.',
     'common.finish': 'Fertig',
     'menu.defaultReminderTime': 'Standard-Erinnerungszeit',
     'menu.timezoneNote': 'Zeitzone: {tz} (folgt deinem Gerät)',
@@ -2169,8 +2190,11 @@ const STRINGS = {
     'manage.archive': 'Archive',
     'manage.reactivate': 'Reactivate',
     'manage.archivedSectionLabel': 'Archived',
-    'manage.groupsTitle': 'Groups',
-    'manage.groupsExplain': 'Combine multiple scale fields into one live-calculated average – e.g. "exercised" from "cardio" + "strength training".',
+    'manage.groupTag': 'Group',
+    'manage.hiddenInStats': 'hidden in statistics',
+    'habitForm.showInStats': 'Show in statistics',
+    'habitForm.showInStatsNote': 'Off: only appears in “Today”, not in the week, month, year, and overall views – e.g. if a group made from it is enough for you. It still counts towards the day’s color.',
+    'habitForm.groupExplain': 'A group combines multiple fields into one live-calculated value – scales as an average, number fields e.g. as a sum. It has no entry of its own.',
     'common.finish': 'Done',
     'menu.defaultReminderTime': 'Default reminder time',
     'menu.timezoneNote': 'Time zone: {tz} (follows your device)',
@@ -2963,6 +2987,7 @@ function defaultHabitForm() {
     displayStyle: 'buttons', sliderShowValue: true,
     groupMembers: [],
     groupType: 'scale', aggregate: 'sum', // nur bei kind='group', siehe isNumberGroup
+    showInStats: true,
     goalPercent: 100,
     unit: '', reminderEnabled: false, reminderMinute: state.userSettings.defaultReminderMinute,
     schedule: scheduleToForm(null),
@@ -3044,6 +3069,7 @@ function habitToForm(h) {
     groupMembers: h.kind === 'group' ? [...(h.groupMembers || [])] : [],
     groupType: h.aggregate ? 'number' : 'scale',
     aggregate: h.aggregate || 'sum',
+    showInStats: !h.hideInStats,
     goalPercent: Math.round((h.goalThreshold ?? 1) * 100),
     unit: h.unit || '',
     reminderEnabled: h.reminderMinute !== null && h.reminderMinute !== undefined,
@@ -3108,6 +3134,8 @@ function syncHabitFormFromDom() {
     if (reminderTimeEl) f.reminderMinute = Number(reminderTimeEl.value);
   }
   if (f.kind !== 'group') readScheduleFromDom(f);
+  const showInStatsEl = document.getElementById('habit-form-show-in-stats');
+  if (showInStatsEl) f.showInStats = showInStatsEl.checked;
 }
 
 async function handleHabitSave() {
@@ -3276,6 +3304,7 @@ async function handleHabitSaveInner() {
     groupMembers: fields.group_members,
     goalThreshold: fields.goal_threshold,
     aggregate: fields.aggregate ?? null,
+    hideInStats: !f.showInStats,
   };
   const row = {
     kind: fields.kind,
@@ -3805,6 +3834,7 @@ async function handleExportData() {
           ...rest, slug: p.key, name: p.name, unit: p.unit, min: p.min, max: p.max, labels: p.labels,
           good: p.good, display_style: p.displayStyle, slider_show_value: p.sliderShowValue,
           group_members: p.groupMembers, goal_threshold: p.goalThreshold, aggregate: p.aggregate ?? null,
+          hide_in_stats: !!p.hideInStats,
         };
       } catch {
         return { ...rest, decrypt_error: true };
@@ -4477,7 +4507,7 @@ function renderWeek() {
   // sonst wuerde die Historie beim Archivieren aus der Auswertung verschwinden.
   const dayKeys = days.map(formatKey);
   const visibleHabits = state.habits.filter(
-    (h) => !h.archivedAt || habitVisibleInRange(h, dayKeys)
+    (h) => inStats(h) && (!h.archivedAt || habitVisibleInRange(h, dayKeys))
   );
   const rows = visibleHabits.filter(isScoredKind).map((h) => {
     const scores = dayKeys.map((k) => habitScore(h, k));
@@ -4526,7 +4556,7 @@ function renderMonth() {
   const cellKeys = cells.filter(Boolean).map(formatKey);
   // Archivierte Felder bleiben sichtbar, solange sie in diesem Monat Daten haben.
   const visibleHabits = state.habits.filter(
-    (h) => !h.archivedAt || habitVisibleInRange(h, cellKeys)
+    (h) => inStats(h) && (!h.archivedAt || habitVisibleInRange(h, cellKeys))
   );
   const monthStats = computeHabitStats(visibleHabits.filter(isScoredKind), cellKeys);
 
@@ -4570,7 +4600,7 @@ function renderYear() {
   const yearKeys = Object.keys(state.entries).filter((k) => k.startsWith(`${year}-`)).sort();
   // Archivierte Felder bleiben sichtbar, solange sie in diesem Jahr Daten haben.
   const visibleHabits = state.habits.filter(
-    (h) => !h.archivedAt || habitVisibleInRange(h, yearKeys)
+    (h) => inStats(h) && (!h.archivedAt || habitVisibleInRange(h, yearKeys))
   );
   const yearStats = computeHabitStats(visibleHabits.filter(isScoredKind), yearKeys);
 
@@ -4590,7 +4620,8 @@ function renderYear() {
 // --- Rendering: Gesamt (alle Einträge seit Beginn) ---------------------------
 function renderGlobal() {
   const dateKeys = Object.keys(state.entries).sort();
-  const stats = computeHabitStats(state.habits.filter(isScoredKind), dateKeys);
+  const statsHabits = state.habits.filter(inStats);
+  const stats = computeHabitStats(statsHabits.filter(isScoredKind), dateKeys);
   const rangeNote = dateKeys.length
     ? t('global.rangeNote', { since: formatDMY(dateKeys[0]), count: dateKeys.length })
     : t('global.noEntries');
@@ -4601,8 +4632,8 @@ function renderGlobal() {
     </div>
     <p class="manage-meta" style="margin: -8px 0 14px;">${rangeNote}</p>
     <div class="month-stats">${renderStatsRows(stats)}</div>
-    ${renderNumberCharts(state.habits, dateKeys)}
-    ${renderTextReviews(state.habits, dateKeys)}
+    ${renderNumberCharts(statsHabits, dateKeys)}
+    ${renderTextReviews(statsHabits, dateKeys)}
   `;
 }
 
@@ -5056,6 +5087,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     ? (() => { const first = groupCandidates.find((h) => f.groupMembers.includes(h.id)); return first ? (first.unit || '').trim() : null; })()
     : null;
   const groupBody = `
+    <p class="habit-form-lock-note">${t('habitForm.groupExplain')}</p>
     <div class="auth-field">
       <label id="habit-form-group-type-label">${t('habitForm.groupType')}</label>
       <div class="pill-group" role="group" aria-labelledby="habit-form-group-type-label">
@@ -5192,6 +5224,13 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       ` : ''}
       ${isGroup ? groupBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : numberBody}
       ${!isGroup ? scheduleBody + reminderBody : ''}
+      <div class="auth-field">
+        <label class="checkbox-field">
+          <input type="checkbox" id="habit-form-show-in-stats" aria-describedby="habit-form-show-in-stats-note" ${f.showInStats ? 'checked' : ''} />
+          ${t('habitForm.showInStats')}
+        </label>
+        <p class="habit-form-lock-note" id="habit-form-show-in-stats-note">${t('habitForm.showInStatsNote')}</p>
+      </div>
       <div class="habit-form-actions">
         <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t('common.save')}</button>
         <button type="button" class="habit-form-cancel" data-action="habit-cancel" ${state.habitFormSaving ? 'disabled' : ''}>${t('common.cancel')}</button>
@@ -5206,15 +5245,18 @@ function manageFieldMeta(h) {
   const parts = [
     scheduleSummary(h.schedule),
     h.reminderMinute !== null && h.reminderMinute !== undefined ? t('manage.reminderAt', { time: minutesToTimeStr(h.reminderMinute) }) : '',
+    h.hideInStats ? t('manage.hiddenInStats') : '',
   ].filter(Boolean);
   return parts.length ? `<span class="manage-meta">${parts.join(' · ')}</span>` : '';
 }
 
+// Felder und Gruppen stehen in EINER gemeinsamen, frei sortierbaren Liste (seit
+// 2026-09-27; vorher hatten Gruppen einen eigenen Bereich ganz unten und ließen sich
+// nicht zwischen die übrigen Felder einsortieren). Gruppen erkennt man an ihrer
+// Mitglieder-Zeile ("Ø aus …"/"Summe aus …").
 function renderManage() {
-  const active = state.habits.filter((h) => !h.archivedAt && h.kind !== 'group');
-  const archived = state.habits.filter((h) => h.archivedAt && h.kind !== 'group');
-  const activeGroups = state.habits.filter((h) => !h.archivedAt && h.kind === 'group');
-  const archivedGroups = state.habits.filter((h) => h.archivedAt && h.kind === 'group');
+  const active = state.habits.filter((h) => !h.archivedAt);
+  const archived = state.habits.filter((h) => h.archivedAt);
 
   const row = (h, idx, list) => {
     const hasData = habitHasData(h.id);
@@ -5245,9 +5287,9 @@ function renderManage() {
           ${confirmingDelete
             ? `<span class="manage-delete-warning">${t('manage.deleteWarning')}</span>`
             : h.kind === 'group'
-              ? `<span class="manage-meta">${isNumberGroup(h)
+              ? `<span class="manage-meta"><span class="manage-group-tag">${t('manage.groupTag')}</span> ${isNumberGroup(h)
                   ? t('manage.groupAggregate', { agg: t('aggregate.' + h.aggregate), names: groupMemberHabits(h).map((m) => m.name).join(', ') || '–' })
-                  : t('manage.groupMembers', { names: groupMemberHabits(h).map((m) => m.name).join(', ') || '–' })}</span>`
+                  : t('manage.groupMembers', { names: groupMemberHabits(h).map((m) => m.name).join(', ') || '–' })}${h.hideInStats ? ' · ' + t('manage.hiddenInStats') : ''}</span>`
               : manageFieldMeta(h)}
         </div>
         <div class="manage-actions">
@@ -5267,21 +5309,14 @@ function renderManage() {
   if (state.habitForm) return renderHabitForm({ titleInHeader: true });
 
   return `
-    <button type="button" class="manage-new-btn" data-action="habit-new">+ ${t('habitForm.title.newField')}</button>
+    <div class="manage-new-row">
+      <button type="button" class="manage-new-btn" data-action="habit-new">+ ${t('habitForm.title.newField')}</button>
+      <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="group-new">+ ${t('habitForm.title.newGroup')}</button>
+    </div>
     <div class="manage-list">${active.map(row).join('')}</div>
     ${archived.length ? `
       <p class="habit-form-lock-note">${t('manage.archivedSectionLabel')}</p>
       <div class="manage-list">${archived.map(row).join('')}</div>
-    ` : ''}
-
-    <div class="manage-section-divider"></div>
-    <h3 class="manage-section-title">${t('manage.groupsTitle')}</h3>
-    <p class="manage-meta">${t('manage.groupsExplain')}</p>
-    <button type="button" class="manage-new-btn" data-action="group-new">+ ${t('habitForm.title.newGroup')}</button>
-    <div class="manage-list">${activeGroups.map(row).join('')}</div>
-    ${archivedGroups.length ? `
-      <p class="habit-form-lock-note">${t('manage.archivedSectionLabel')}</p>
-      <div class="manage-list">${archivedGroups.map(row).join('')}</div>
     ` : ''}
   `;
 }

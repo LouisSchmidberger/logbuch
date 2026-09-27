@@ -299,7 +299,8 @@ die für unbewertete Felder `neutralColor()` (monochrome Graustufen-Skala) statt
 `scoreColor()` (Rot-Grün) liefert – überall dort verwendet, wo bisher direkt
 `scoreColor()` mit einem konkreten Feld aufgerufen wurde (Heute-Buttons/-Slider,
 Wochen-Grid-Zeilen, Monats-/Jahres-/Gesamt-Tabellenzeilen). Unbewertete Felder
-fließen NICHT in `dayOverallScore` (Monats-/Jahres-Heatmap) und nicht als
+fließen NICHT in `dayOverallScore` (Monats-/Jahres-Heatmap – dort seit 2026-09-27 auch
+keine Gruppen mehr, deren Mitglieder zählen ja schon selbst, vorher unbeabsichtigt doppelt) und nicht als
 Gruppen-Mitglied ein (im Formular als Kandidat ausgeschlossen, in `habitScore`
 zusätzlich defensiv gefiltert) – beides baut auf einem Gut/Schlecht-Urteil auf, das
 hier fehlt. Ziel-Quote (`goal_threshold`) ist bei `good=null` immer `null` (DB-Check
@@ -318,6 +319,12 @@ erscheint eine Gruppe als nicht-editierbare Info-Zeile (`renderGroupInfo`) mit d
 Tages-Mittelwert. `habitVisibleInRange(h, dateKeys)` ersetzt entsprechend die
 Sichtbarkeits-Prüfung archivierter Felder in den Auswertungs-Ansichten, da eine Gruppe
 nie einen eigenen Entry-Key hat.
+
+**"In der Auswertung anzeigen"** (seit 2026-09-27, `hideInStats` in der verschlüsselten
+payload, Checkbox im Formular für Felder und Gruppen, standardmäßig an): ausgeblendete
+Felder erscheinen nur in "Heute", nicht in Woche/Monat/Jahr/Gesamt (`inStats`). Wirkt nur
+auf die Anzeige – Tagesfarbe (`dayOverallScore`) und Gruppen, in denen das Feld Mitglied
+ist, rechnen unverändert mit (Nutzer-Entscheidung).
 
 **Zahlen-Gruppen** (seit 2026-09-27): eine Gruppe kann statt Skalen auch
 `kind='number'`-Felder zusammenfassen, per Summe, Durchschnitt, Minimum oder Maximum
@@ -614,9 +621,13 @@ nur die (unauffällige) eigene Erinnerungszeit ist erwähnenswert genug, um
 hervorgehoben zu bleiben. `kind='group'`-Zeilen zeigen stattdessen weiterhin ihre
 Mitglieder (`manage.groupMembers`, "Ø aus: ..."), da das die einzige Stelle in der
 Liste ist, an der das sichtbar wird (nicht Teil des Entschlackens, sondern
-weiterhin nötige Identifikationsinformation). "+ Neues Feld"/"+ Neue Gruppe"
-(`.manage-new-btn`) ist jetzt ein ausgefüllter statt gestrichelter Button (deutlich
-prominenter als primäre Aktion der Seite). "Archivieren" hat eine eigene, dezent
+weiterhin nötige Identifikationsinformation), mit kleinem "Gruppe"-Kennzeichen.
+**Felder und Gruppen stehen seit 2026-09-27 in EINER gemeinsamen, frei sortierbaren
+Liste** (vorher eigener Gruppen-Bereich ganz unten – Gruppen ließen sich nicht zwischen
+die übrigen Felder einsortieren). "+ Neues Feld" (ausgefüllt, primär) und "+ Neue
+Gruppe" (umrandet) stehen nebeneinander oben (`.manage-new-row`); die Erklärung, was
+eine Gruppe ist, steht im Gruppen-Formular (`habitForm.groupExplain`). Ist ein Feld in
+der Auswertung ausgeblendet, steht das ebenfalls in seiner Zeile. "Archivieren" hat eine eigene, dezent
 rost-getönte Stil-Klasse (`.manage-btn--warn`, heller als `.manage-btn--danger` bei
 "Löschen") statt optisch identisch zu "Bearbeiten" zu sein – reversibel, aber ein
 Entfernen aus der Tageseingabe, daher bewusst nicht neutral gestylt.
@@ -685,7 +696,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 379 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 382 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
