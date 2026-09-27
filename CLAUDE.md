@@ -52,7 +52,7 @@ in ihren Klartext-Spalten, sondern verschlüsselt in `enc` – im Klartext bleib
 Eigenschaften unten gilt inhaltlich unverändert (im Client heißen sie gleich).
 - `slug` (Key in `habit_entries.data`; verschlüsselt als `key`, bei neuen Feldern ein
   zufälliger Schlüssel aus `newHabitKey` statt aus dem Namen abgeleitet), `name`, `kind` (`'scale'`, `'number'`,
-  `'group'` oder `'text'`, siehe Skalen-/Farblogik unten), `min`/`max` (int, nur bei `kind='scale'`;
+  `'computed'` ("Berechnet") oder `'text'`, siehe Skalen-/Farblogik unten), `min`/`max` (int, nur bei `kind='scale'`;
   bei `display_style='slider'` fix `0`/`<Stufenzahl>`), `labels` (jsonb, nur bei
   `kind='scale'`; `null` = nummerierte Stufen, sonst Array von Strings der Länge
   `max-min+1`), `good` (`'high'`/`'low'`, nur bei `kind='scale'`), `unit` (text, nur bei
@@ -60,11 +60,11 @@ Eigenschaften unten gilt inhaltlich unverändert (im Client heißen sie gleich).
   `kind='scale'` mit `labels=null` relevant), `slider_show_value` (bool, nur bei
   `display_style='slider'` relevant – steuert nur die Sichtbarkeit des aktuellen Werts
   während der Eingabe, der Regler zeigt **nie** eine Min/Max-Beschriftung),
-  `group_members` (jsonb, nur bei `kind='group'`: Array von Slugs anderer
+  `group_members` (jsonb, nur bei `kind='computed'`: Array von Schlüsseln anderer
   `kind='scale'`-Felder dieses Nutzers), `reminder_minute` (Minuten seit Mitternacht,
   0–1439, 15-Minuten-Raster, oder `null` = Standardzeit, siehe Erinnerungen – bei
-  `kind='group'` immer `null`, eine Gruppe kann nie "fehlen"), `schedule` (jsonb,
-  Wiederholung, `null` = täglich, bei `kind='group'` immer `null` – siehe Abschnitt
+  `kind='computed'` immer `null`, ein berechnetes Feld kann nie "fehlen"), `schedule` (jsonb,
+  Wiederholung, `null` = täglich, bei `kind='computed'` immer `null` – siehe Abschnitt
   "Wiederholung" unten), `sort_order`,
   `archived_at` (Soft-Delete – archivierte Felder
   verschwinden aus der Tageseingabe, bleiben aber in Wochen-/Monatsansicht sichtbar,
@@ -83,8 +83,8 @@ Eigenschaften unten gilt inhaltlich unverändert (im Client heißen sie gleich).
   Feld noch keine Daten hat** (App-seitig gesperrt, siehe `habitHasData`/`f.locked`) –
   sonst würden alte Werte plötzlich etwas anderes bedeuten. Für eine neue Skala: altes
   Feld archivieren, neues anlegen. `name`, `unit` und `reminder_minute` bleiben davon
-  unberührt, da sie keine historischen Werte umdeuten. Gilt **nicht** für `kind='group'`:
-  eine Gruppe hält nie einen eigenen Eintrag in `habit_entries.data` (ihr Slug taucht
+  unberührt, da sie keine historischen Werte umdeuten. Gilt **nicht** für `kind='computed'`:
+  ein berechnetes Feld hält nie einen eigenen Eintrag in `habit_entries.data` (ihr Slug taucht
   dort nie als Key auf), ist deshalb nie "locked" – die Mitgliederliste (`group_members`)
   lässt sich jederzeit ändern, auch mit bestehender Historie. Das wirkt sich rückwirkend
   auf die gesamte bisherige Auswertung aus (der Durchschnitt wird bei jedem Rendern live
@@ -147,8 +147,8 @@ erst beim ersten echten Login, da sie das Passwort im Klartext braucht. RLS wie 
 
 **Der Reminder-Check** (SQL-Funktion `get_due_notifications`, siehe Erinnerungen)
 fragt dafür live die aktiven (nicht archivierten) `habit_definitions` je Nutzer ab –
-keine hartkodierte Liste mehr, kein manuelles Synchronhalten nötig. `kind='group'`-Felder werden dabei ausgeschlossen
-(Gruppen sind nie direkt befüllbar, tauchen nie in `filled_slugs` auf – ohne den
+keine hartkodierte Liste mehr, kein manuelles Synchronhalten nötig. `kind='computed'`-Felder werden dabei ausgeschlossen
+(berechnete Felder sind nie direkt befüllbar, tauchen nie in `filled_slugs` auf – ohne den
 Ausschluss würden sie die Sammel-Erinnerung dauerhaft fälschlich als "fehlend" auslösen).
 Erinnert wird, sobald mindestens ein zur jeweiligen Zeit fälliges aktives Feld an dem
 Tag noch fehlt, nicht erst wenn alles leer ist (Details siehe Abschnitt "Erinnerungen").
@@ -159,7 +159,7 @@ als fehlend noch lösen sie ihre eigene Erinnerungszeit aus (`habit_scheduled_on
 
 Pro Feld einstellbar, an welchen Tagen es "dran" ist (Formular "Wiederholung": Typ als
 Auswahlliste, Wochentage als 7 runde Buttons in einer Zeile; nicht für
-Gruppen – die sind dran, sobald eines ihrer aktiven Mitglieder dran ist). `null` =
+berechnete Felder – die sind dran, sobald eines ihrer aktiven Mitglieder dran ist). `null` =
 täglich, sonst `{type:'weekly', days:[0..6]}` (0 = Montag), `{type:'monthly', day:1..31
 | -1}` (-1 = letzter Tag), `{type:'yearly', month, day}` oder `{type:'interval', every:
 1..365, unit:'day'|'week', start:'YYYY-MM-DD'}` (alle X Tage/Wochen ab Start, davor nie
@@ -193,7 +193,7 @@ Konzept, eher Richtung Ziel-Quote).
 
 Vier Feld-Typen: `kind='scale'` (Stufen mit Gut/Schlecht-Bewertung – der Normalfall),
 `kind='number'` (freier Zahlenwert wie Gewicht, bewusst **ohne** Gut/Schlecht-Bewertung,
-dafür mit optionaler Einheit), `kind='group'` (nicht direkt befüllbar, zeigt den live
+dafür mit optionaler Einheit), `kind='computed'` ("Berechnet", nicht direkt befüllbar, zeigt den live
 berechneten Durchschnitt seiner Mitglieder-Felder – siehe `habitScore` unten) und
 `kind='text'` (freie Text-Antwort, siehe unten).
 
@@ -206,7 +206,7 @@ hineinschreiben – anders als die Notizen, die Ausnahme bleiben). Speichert aut
 jeder Tastendruck aktualisiert sofort `state.entries` (ohne `render()`), der verschlüsselte
 Upsert läuft erst nach 1 s Tipp-Pause (`updateTextValue`/`TEXT_SAVE_DELAY_MS`), sofort beim
 Verlassen des Feldes, beim Wechsel in eine andere App und vor dem Abmelden
-(`flushAllDaySaves`). Keine Notizen im Zeilen-Menü (wären doppelt), kein Gruppen-Mitglied.
+(`flushAllDaySaves`). Keine Notizen im Zeilen-Menü (wären doppelt), kein Mitglied berechneter Felder.
 **Rückblick** (`renderTextReviews`): in Woche/Monat/Jahr/Gesamt pro Feld eine
 Liste Datum + Text (jeder Eintrag öffnet seinen Tag), überall gleich: eingeklappt
 (`<details>`, Anzahl im Titel) und neueste zuerst – eine je nach Ansicht umgekehrte
@@ -299,76 +299,94 @@ die für unbewertete Felder `neutralColor()` (monochrome Graustufen-Skala) statt
 `scoreColor()` (Rot-Grün) liefert – überall dort verwendet, wo bisher direkt
 `scoreColor()` mit einem konkreten Feld aufgerufen wurde (Heute-Buttons/-Slider,
 Wochen-Grid-Zeilen, Monats-/Jahres-/Gesamt-Tabellenzeilen). Unbewertete Felder
-fließen NICHT in `dayOverallScore` (Monats-/Jahres-Heatmap – dort seit 2026-09-27 auch
-keine Gruppen mehr, deren Mitglieder zählen ja schon selbst, vorher unbeabsichtigt doppelt) und nicht als
-Gruppen-Mitglied ein (im Formular als Kandidat ausgeschlossen, in `habitScore`
+fließen NICHT in `dayOverallScore` (Monats-/Jahres-Heatmap) und nicht als
+Mitglied berechneter Felder ein (im Formular als Kandidat ausgeschlossen, in `habitScore`
 zusätzlich defensiv gefiltert) – beides baut auf einem Gut/Schlecht-Urteil auf, das
 hier fehlt. Ziel-Quote (`goal_threshold`) ist bei `good=null` immer `null` (DB-Check
 `habit_definitions_kind_fields_check` erzwingt das, Formular blendet das Feld aus).
 
-**Gruppierte Felder (`kind='group'`)**: fassen mehrere `kind='scale'`-Felder (`slugs` in
-`group_members`) zu einem Durchschnittswert zusammen (z.B. "Sport gemacht" = Ø aus
-"Ausdauersport" + "Kraftsport"). Nie selbst direkt befüllbar – kein Eintrag in
-`habit_entries.data`, kein eigener `good`, keine Erinnerungszeit. Der zentrale Helfer
-`habitScore(h, dateKey)` liefert für `kind='group'` den Durchschnitt aus
-`normalize(member, ...)` über alle Mitglieder mit Wert an dem Tag (null, wenn keins
-befüllt ist) und ersetzt damit an allen relevanten Stellen (`dayOverallScore`,
-`renderWeek`, `computeHabitStats` → Monat/Jahr/Gesamt) die direkten `normalize`-Aufrufe;
-für normale `scale`-Felder ist er ein reiner Durchreicher zu `normalize`. In "Heute"
-erscheint eine Gruppe als nicht-editierbare Info-Zeile (`renderGroupInfo`) mit dem
-Tages-Mittelwert. `habitVisibleInRange(h, dateKeys)` ersetzt entsprechend die
-Sichtbarkeits-Prüfung archivierter Felder in den Auswertungs-Ansichten, da eine Gruppe
-nie einen eigenen Entry-Key hat.
+**Begriffe (seit 2026-09-27 neu geordnet – wichtig beim Lesen von Code/DB)**: In der App
+heißt **"Gruppe"** eine einklappbare Überschrift, unter der Felder angeordnet sind – im
+Code/in der DB heißt das **`section`** (`habit_sections`, `state.sections`,
+`renderBySection` …). Was bis 2026-09-27 "Gruppe" hieß (ein Feld, das aus anderen Feldern
+einen Wert berechnet), ist jetzt der **Feldtyp "Berechnet"**, intern **`kind='computed'`**
+(vorher `kind='group'`, per Migration `20260927220000_rename_group_kind_to_computed`
+umbenannt, damit "group" im Code nicht dauerhaft etwas anderes meint als "Gruppe" in der
+App). Einzige Altlast: in der verschlüsselten payload heißt die Mitgliederliste weiterhin
+`groupMembers` (bzw. Klartext-Spalte `group_members` bei noch unverschlüsselten Zeilen) –
+am Feld-Objekt im Client heißt sie `members`.
 
-**Bereiche** (seit 2026-09-27, Tabelle `habit_sections`: `id`, `user_id`, `enc` =
-verschlüsselter `{name}`, `sort_order`; Zuordnung über die Klartext-Spalte
-`habit_definitions.section_id` → FK `ON DELETE SET NULL`, Trigger
-`habit_definitions_check_section_owner` erzwingt einen Bereich desselben Nutzers):
-einklappbare Abschnitte zum Sortieren von Feldern und Gruppen – reine Anordnung, bewusst
-**keine eigene Berechnung** (wer einen Wert will, kombiniert Bereich + Gruppe). Die
-Zuordnung ist absichtlich unverschlüsselt (nur zwei zufällige IDs): die DB löst sie beim
-Löschen selbst, Umhängen braucht kein Neu-Verschlüsseln – steht so auch im
-Datenschutz-Text ("ob du sie in Bereiche sortiert hast"). **Anordnung** (`layoutBlocks`):
-auf oberster Ebene Felder ohne Bereich und Bereiche gemeinsam nach `sort_order`, frei
-untereinander verschiebbar; Felder eines Bereichs darin nach ihrem eigenen `sort_order`
-(gilt nur innerhalb ihres Behälters). **Verwaltung**: ein Bereich ist ein Block
-(Kopfzeile mit Umbenennen/Löschen + eingerückte Felder), der sich wie ein Feld verschieben
-lässt; Ziehen/↑↓ jeweils innerhalb des Behälters (`commitLayoutOrder`; die Zieh-Rechnung
-arbeitet mit den echten Positionen der Geschwister, da ein Bereich-Block höher ist als eine
-Zeile). **Umhängen zwischen Bereichen bewusst über das Feld-Formular** (Auswahl "Bereich",
-nur wenn es Bereiche gibt; landet am Ende des Ziel-Behälters) statt per Ziehen – einfach und
-für Tastatur/Screenreader gleich gut bedienbar; Ziehen zwischen Bereichen wäre ein
-möglicher späterer Zusatz. Löschen (zweistufig) löscht keine Felder: sie rücken an die
-Stelle des Bereichs. **Anzeige überall** (Nutzer-Entscheidung): "Heute" und alle
-Auswertungs-Ansichten gruppieren nach Bereichen (`renderBySection`, leere Bereiche werden
-ausgelassen), jeweils mit einklappbarer Überschrift (`section-toggle`, `aria-expanded`);
-der Eingeklappt-Zustand gilt pro Gerät und getrennt für "Heute" und die Auswertung
-(`localStorage` `sectionCollapsed:<today|stats>:<id>`). Der Bereich "Heute nicht geplant"
-bleibt ungegliedert. Ein Sprung zu einem Feld in einem eingeklappten Bereich klappt ihn auf.
+**Berechnete Felder (`kind='computed'`)**: ganz normale Felder (in Gruppen einsortierbar,
+in der Auswertung ausblendbar), die man nur nicht selbst ausfüllen kann – im Feld-Formular
+der vierte Typ neben Skala/Zahl/Text ("Berechnet"), mit Art der Mitglieder, ggf.
+Berechnung und Mitglieder-Auswahl. **Aus Skalen**: fassen mehrere `kind='scale'`-Felder
+zu einem Durchschnittswert zusammen (z.B. "Sport gemacht" = Ø aus "Ausdauersport" +
+"Kraftsport"). Kein Eintrag in `habit_entries.data`, kein eigener `good`, keine
+Erinnerungszeit, keine Wiederholung (dran, sobald ein Mitglied dran ist), keine Notizen.
+Der zentrale Helfer `habitScore(h, dateKey)` liefert dafür den Durchschnitt aus
+`normalize(member, ...)` über alle Mitglieder mit Wert an dem Tag (null, wenn keins
+befüllt ist) und ersetzt damit in `renderWeek`/`computeHabitStats` (Monat/Jahr/Gesamt)
+die direkten `normalize`-Aufrufe; für normale `scale`-Felder ist er ein reiner
+Durchreicher. In "Heute" erscheinen berechnete Felder als nicht-editierbare Info-Zeile
+(`renderComputedInfo`). `habitVisibleInRange(h, dateKeys)` ersetzt die
+Sichtbarkeits-Prüfung archivierter Felder, da berechnete Felder nie einen Entry-Key haben.
+In der Tagesfarbe (`dayOverallScore`) zählen sie seit 2026-09-27 nicht mehr mit – ihre
+Mitglieder sind schon selbst drin (vorher unbeabsichtigt doppelt).
+
+**Aus Zahlen** (seit 2026-09-27): ein berechnetes Feld kann statt Skalen auch
+`kind='number'`-Felder zusammenfassen, per Summe, Durchschnitt, Minimum oder Maximum
+(`aggregate` in der verschlüsselten payload: gesetzt = aus Zahlen, `null` = aus Skalen).
+Helfer: `isNumberComputed`, `isScoredKind` (Felder mit Gut/Schlecht-Score, in
+Woche/Monat/Jahr/Gesamt), `hasNumericSeries`, `numberComputedDay`/`habitNumericValue`.
+Regeln: Mitglieder nur Zahlenwert-Felder mit **derselben Einheit** (Formular sperrt andere,
+sobald eins gewählt ist, mit kurzem Hinweis; beim Speichern nochmal geprüft) – das Feld
+übernimmt diese Einheit (`computedUnit`). Gerechnet wird mit den an dem Tag eingetragenen
+Mitgliedern (bei der Summe zählt ein fehlendes also als 0), ist gar keins eingetragen, gibt
+es keinen Wert statt 0. Keine Bewertung: kein Score, keine Farbe, keine Ziel-Quote; in
+"Heute" eine neutrale Info-Zeile mit Wert + Einheit, in der Auswertung ein Verlaufsgraph wie
+bei Zahlenwert-Feldern. Werte werden auf 2 Nachkommastellen gerundet (gegen
+Gleitkomma-Reste).
+
+**Gruppen (intern `sections`, seit 2026-09-27)**: Tabelle `habit_sections` (`id`,
+`user_id`, `enc` = verschlüsselter `{name}`, `sort_order`); Zuordnung über die
+Klartext-Spalte `habit_definitions.section_id` → FK `ON DELETE SET NULL`, Trigger
+`habit_definitions_check_section_owner` erzwingt eine Gruppe desselben Nutzers. Rechte
+genau auf SELECT/INSERT/UPDATE/DELETE für `authenticated` zurückgeschnitten (Supabases
+Default-Privilegien hatten auch `anon`/TRUNCATE vergeben). Einklappbare Abschnitte zum
+Anordnen von Feldern (auch berechneten) – reine Anordnung, bewusst **keine eigene
+Berechnung** (wer einen Wert will, kombiniert Gruppe + berechnetes Feld). Die Zuordnung ist
+absichtlich unverschlüsselt (nur zwei zufällige IDs): die DB löst sie beim Löschen selbst,
+Umhängen braucht kein Neu-Verschlüsseln – steht so auch im Datenschutz-Text ("ob du sie in
+Gruppen sortiert hast"). **Anlegen/Bearbeiten** über ein eigenes Formular (eigene Ebene der
+Verwaltung wie das Feld-Formular, `openSectionForm`/`renderSectionForm`/
+`saveSectionForm`): Name + Liste aller aktiven Felder zum Ankreuzen, beliebig gemischt;
+**jedes Feld in höchstens einer Gruppe** – Felder einer anderen Gruppe erscheinen ausgegraut
+mit deren Namen. Neu angekreuzte Felder landen am Ende der Gruppe, abgewählte am Ende der
+obersten Ebene. Zusätzlich lässt sich ein Feld im Feld-Formular über die Auswahl "Gruppe"
+einsortieren (nur wenn es Gruppen gibt). **Anordnung** (`layoutBlocks`): auf oberster Ebene
+Felder ohne Gruppe und Gruppen gemeinsam nach `sort_order`, frei untereinander
+verschiebbar; Felder einer Gruppe darin nach ihrem eigenen `sort_order` (gilt nur innerhalb
+ihres Behälters). **Verwaltung**: eine Gruppe ist ein Block (Kopfzeile mit
+Bearbeiten/Löschen + eingerückte Felder), der sich wie ein Feld verschieben lässt;
+Ziehen/↑↓ jeweils innerhalb des Behälters (`commitLayoutOrder`; die Zieh-Rechnung arbeitet
+mit den echten Positionen der Geschwister, da ein Gruppen-Block höher ist als eine Zeile).
+Umhängen zwischen Gruppen bewusst nur über die Formulare, nicht per Ziehen (einfach und für
+Tastatur/Screenreader gleich gut bedienbar; Ziehen zwischen Gruppen wäre ein möglicher
+späterer Zusatz). Löschen (zweistufig) löscht keine Felder: sie rücken an die Stelle der
+Gruppe. **Anzeige überall** (Nutzer-Entscheidung): "Heute" und alle Auswertungs-Ansichten
+ordnen nach Gruppen (`renderBySection`, leere Gruppen werden ausgelassen), jeweils mit
+einklappbarer Überschrift (`section-toggle`, `aria-expanded`); der Eingeklappt-Zustand
+gilt pro Gerät und getrennt für "Heute" und die Auswertung (`localStorage`
+`sectionCollapsed:<today|stats>:<id>`). Der Bereich "Heute nicht geplant" bleibt
+ungegliedert. Ein Sprung zu einem Feld in einer eingeklappten Gruppe klappt sie auf.
 
 **"In der Auswertung anzeigen"** (seit 2026-09-27, `hideInStats` in der verschlüsselten
-payload, Checkbox im Formular für Felder und Gruppen, standardmäßig an): ausgeblendete
-Felder erscheinen nur in "Heute", nicht in Woche/Monat/Jahr/Gesamt (`inStats`). Wirkt nur
-auf die Anzeige – Tagesfarbe (`dayOverallScore`) und Gruppen, in denen das Feld Mitglied
+payload, Checkbox in jedem Feld-Formular, standardmäßig an): ausgeblendete Felder
+erscheinen nur in "Heute", nicht in Woche/Monat/Jahr/Gesamt (`inStats`). Wirkt nur auf die
+Anzeige – Tagesfarbe (`dayOverallScore`) und berechnete Felder, in denen das Feld Mitglied
 ist, rechnen unverändert mit (Nutzer-Entscheidung).
 
-**Zahlen-Gruppen** (seit 2026-09-27): eine Gruppe kann statt Skalen auch
-`kind='number'`-Felder zusammenfassen, per Summe, Durchschnitt, Minimum oder Maximum
-(`aggregate` in der verschlüsselten payload: gesetzt = Zahlen-Gruppe, `null` = Skala-Gruppe
-wie oben – bestehende Gruppen brauchten deshalb keine Umstellung). Helfer: `isNumberGroup`,
-`isScoredKind` (Felder mit Gut/Schlecht-Score – ersetzt die frühere Prüfung
-`kind === 'scale' || kind === 'group'` in Woche/Monat/Jahr/Gesamt), `hasNumericSeries`,
-`numberGroupDay`/`habitNumericValue`. Regeln: Mitglieder nur Zahlenwert-Felder mit
-**derselben Einheit** (Formular sperrt andere, sobald eins gewählt ist, mit kurzem Hinweis;
-beim Speichern nochmal geprüft) – die Gruppe übernimmt diese Einheit (`groupUnit`).
-Gerechnet wird mit den an dem Tag eingetragenen Mitgliedern (bei der Summe zählt ein
-fehlendes also als 0), ist gar keins eingetragen, gibt es keinen Wert statt 0. Keine
-Bewertung: kein Score, keine Farbe, keine Ziel-Quote, nicht in der Tages-Gesamtwertung;
-in "Heute" eine neutrale Info-Zeile mit Wert + Einheit, in der Auswertung ein
-Verlaufsgraph wie bei Zahlenwert-Feldern. Werte werden auf 2 Nachkommastellen gerundet
-(gegen Gleitkomma-Reste).
-
-**Ziel-Quote (`goal_threshold`, `kind='scale'`/`kind='group'`)**: bei manchen Feldern ist
+**Ziel-Quote (`goal_threshold`, `kind='scale'`/`kind='computed'` aus Skalen)**: bei manchen Feldern ist
 eine 100%-Quote unrealistisch/gar nicht das eigentliche Ziel (z.B. "Kraftsport gemacht"
 jeden Tag). Pro Feld einstellbar (Formular "Ziel für volle Bewertung (%)", Standard 100 =
 `goal_threshold: null`), ab welcher normalisierten Quote (0–1) ein Wert farblich als voll
@@ -398,7 +416,7 @@ werden –, übersprungen wird jeder seit dem Laden geänderte Tag, Upsert nur m
 
 **Feld-Definitionen verschlüsselt** (seit 2026-09-27): `habit_definitions.enc` =
 `{iv, ciphertext}` mit demselben DEK, Inhalt `{key, name, unit, min, max, labels, good,
-displayStyle, sliderShowValue, groupMembers, goalThreshold}` (`habitFromParts` baut
+displayStyle, sliderShowValue, groupMembers, goalThreshold, aggregate, hideInStats}` (`habitFromParts` baut
 daraus das gewohnte Feld-Objekt). Die DB-Schutzregel
 `habit_definitions_enc_no_plaintext_check` lehnt eine verschlüsselte Zeile mit
 Klartext-Resten ab (`DEF_PLAINTEXT_CLEARED` = die geleerten Spalten). Bestehende Zeilen
@@ -557,7 +575,7 @@ Stelle der Liste bzw. von "Heute", von der man kam.
 **"+ Neues Feld"-Shortcut in "Heute"** (seit 2026-09-25): dezenter Text-Button unter der
 Feldliste (bewusst kein ausgefüllter Button – "Heute" ist die tägliche Eintrags-Ansicht,
 nicht die Verwaltung). Öffnet die Verwaltung mit schon offenem "Neues Feld"-Formular
-(nur Feld, keine Gruppe). Das Formular trägt dabei `returnToTab: true` im eigenen
+(Typ-Auswahl wie immer). Das Formular trägt dabei `returnToTab: true` im eigenen
 Zustand – `closeHabitForm()` (einziger Schließ-Weg: Speichern, Abbrechen,
 Android-Zurück) springt dann direkt zurück zum Tab statt in der Verwaltung zu bleiben,
 da die Absicht beim Shortcut "jetzt tracken" ist, nicht "verwalten".
@@ -566,7 +584,7 @@ da die Absicht beim Shortcut "jetzt tracken" ist, nicht "verwalten".
 `renderRowMenuPanel`/`openRowMenu`/`closeRowMenu` in `logbuch.html`, `state.rowMenu` =
 slug): kleines Popover mit "Bearbeiten" (öffnet das Feld-Formular in der Verwaltung mit
 `returnToTab: true`, gleiches Muster wie der "+ Neues Feld"-Shortcut) und "Archivieren"
-(danach Meldung, wo sich das Feld reaktivieren lässt), bei Nicht-Gruppen zusätzlich
+(danach Meldung, wo sich das Feld reaktivieren lässt), bei nicht berechneten Feldern zusätzlich
 "Notiz hinzufügen/bearbeiten" (siehe "Notizen in Heute" unten). **Auslöser ist der
 Feldname selbst** (Button, optisch unverändert Text,
 Disclosure-Muster mit `aria-expanded`, Escape schließt und gibt den Fokus zurück) –
@@ -587,7 +605,7 @@ anderen Feldes, kein versehentlich gesetzter Wert) – nur für Zeige-Geräte
 normal durch. Scrollen, Wischen und Deep-Links schließen es ebenfalls.
 
 **Notizen in "Heute"** (seit 2026-09-27, Datenformat siehe Datenmodell →
-`habit_entries`): freier Text pro Feld (nicht für Gruppen, die haben keinen eigenen
+`habit_entries`): freier Text pro Feld (nicht für berechnete Felder, die haben keinen eigenen
 Eintrag) und für den ganzen Tag, bewusst **kein Teil der Auswertung**. Gedacht als
 Ausnahme ("heute erst nach dem Frühstück gewogen"), nicht als tägliche Eingabe – deshalb
 nur über das Zeilen-Menü erreichbar statt über ein eigenes Symbol pro Zeile. Eine
@@ -644,16 +662,12 @@ Richtung und Ziel-Quote werden dort nicht mehr aufgeführt (`formatScale` entfer
 keine andere Stelle nutzte es). Begründung: der Nutzer befüllt seine Felder täglich
 und kennt ihre Bedeutung bereits, eine Zusammenfassung pro Zeile ist redundant –
 nur die (unauffällige) eigene Erinnerungszeit ist erwähnenswert genug, um
-hervorgehoben zu bleiben. `kind='group'`-Zeilen zeigen stattdessen weiterhin ihre
-Mitglieder (`manage.groupMembers`, "Ø aus: ..."), da das die einzige Stelle in der
-Liste ist, an der das sichtbar wird (nicht Teil des Entschlackens, sondern
-weiterhin nötige Identifikationsinformation), mit kleinem "Gruppe"-Kennzeichen.
-**Felder und Gruppen stehen seit 2026-09-27 in EINER gemeinsamen, frei sortierbaren
-Liste** (samt Bereichen, siehe "Bereiche" unten) (vorher eigener Gruppen-Bereich ganz unten – Gruppen ließen sich nicht zwischen
-die übrigen Felder einsortieren). "+ Neues Feld" (ausgefüllt, primär) und "+ Neue
-Gruppe" (umrandet) stehen nebeneinander oben (`.manage-new-row`); die Erklärung, was
-eine Gruppe ist, steht im Gruppen-Formular (`habitForm.groupExplain`). Ist ein Feld in
-der Auswertung ausgeblendet, steht das ebenfalls in seiner Zeile. "Archivieren" hat eine eigene, dezent
+hervorgehoben zu bleiben (plus ggf. Wiederholung und "in der Auswertung ausgeblendet").
+Berechnete Felder zeigen stattdessen ihre Mitglieder ("Ø aus: ..."/"Summe aus: ...") mit
+kleinem "Berechnet"-Kennzeichen – die einzige Stelle, an der das sichtbar wird. Seit
+2026-09-27 stehen alle Felder in EINER frei sortierbaren Liste, dazwischen Gruppen als
+Blöcke (siehe "Gruppen" oben); "+ Neues Feld" (ausgefüllt, primär) und "+ Neue Gruppe"
+(umrandet) stehen nebeneinander oben (`.manage-new-row`). "Archivieren" hat eine eigene, dezent
 rost-getönte Stil-Klasse (`.manage-btn--warn`, heller als `.manage-btn--danger` bei
 "Löschen") statt optisch identisch zu "Bearbeiten" zu sein – reversibel, aber ein
 Entfernen aus der Tageseingabe, daher bewusst nicht neutral gestylt.
@@ -722,7 +736,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 392 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 395 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
