@@ -384,7 +384,9 @@ Tastatur/Screenreader gleich gut bedienbar; Ziehen zwischen Gruppen wäre ein m�
 späterer Zusatz). Löschen (zweistufig) löscht keine Felder: sie rücken an die Stelle der
 Gruppe. **Anzeige überall** (Nutzer-Entscheidung): "Heute" und alle Auswertungs-Ansichten
 ordnen nach Gruppen (`renderBySection`, leere Gruppen werden ausgelassen), jeweils mit
-einklappbarer Überschrift (`section-toggle`, `aria-expanded`); der Eingeklappt-Zustand
+einklappbarer Überschrift (`section-toggle`, `aria-expanded`) und eingerücktem Inhalt mit
+dezenter Linie links (`.section-content`; im Wochen-Raster nur der Feldname eingerückt,
+sonst stünden die Tageskästchen nicht mehr unter den Wochentagen); der Eingeklappt-Zustand
 gilt pro Gerät und getrennt für "Heute" und die Auswertung (`localStorage`
 `sectionCollapsed:<today|stats>:<id>`). Der Bereich "Heute nicht geplant" bleibt
 ungegliedert. Ein Sprung zu einem Feld in einer eingeklappten Gruppe klappt sie auf.

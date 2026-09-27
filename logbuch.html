@@ -593,6 +593,15 @@
   .section-toggle[aria-expanded="true"] .section-chevron { transform: rotate(90deg); }
   @media (prefers-reduced-motion: reduce) { .section-chevron { transition: none; } }
   .section-block--stats > .section-toggle { font-size: 13px; padding-top: 10px; }
+  /* Inhalt einer aufgeklappten Gruppe eingerückt, mit dezenter Linie links (wie in der
+     Verwaltung), damit sichtbar ist, was dazugehört. Im Wochen-Raster nur der Feldname:
+     eine eingerückte ganze Zeile würde die Tageskästchen gegen die Wochentag-Köpfe
+     verschieben. */
+  .section-content { margin-left: 5px; padding-left: 12px; border-left: 2px solid var(--line); }
+  .grid-scroll .section-content { margin-left: 0; padding-left: 0; border-left: none; }
+  /* Die Gruppen-Überschrift hat schon eine Linie unten - sonst doppelt mit der oberen Linie der ersten Zeile. */
+  .section-content > .habit-row:first-child { border-top: none; }
+  .grid-scroll .section-content .grid-label { padding-left: 10px; border-left: 2px solid var(--line); margin-left: 5px; }
   .manage-new-row .manage-new-btn { flex: 1; }
   .manage-new-btn--secondary { background: transparent; color: var(--moss); border: 1px solid var(--moss); }
   .manage-tag {
@@ -1115,7 +1124,7 @@ function renderBySection(habits, scope, renderList) {
     if (!block.habits.length) continue;
     flush();
     const collapsed = isSectionCollapsed(scope, block.section.id);
-    out.push(`<div class="section-block section-block--${scope}">${renderSectionToggle(block.section, scope, collapsed)}${collapsed ? '' : renderList(block.habits)}</div>`);
+    out.push(`<div class="section-block section-block--${scope}">${renderSectionToggle(block.section, scope, collapsed)}${collapsed ? '' : `<div class="section-content">${renderList(block.habits)}</div>`}</div>`);
   }
   flush();
   return out.join('');
