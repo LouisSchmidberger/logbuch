@@ -6,6 +6,40 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+// Feldnamen sind verschlüsselt, der Server kennt sie nicht - eine Erinnerung an ein
+// bestimmtes Feld kommt deshalb nur mit dessen ID (payload.fieldIds) und einem
+// allgemeinen Text. Die App legt auf dem Gerät eine Liste ID → Name plus die passende
+// Textvorlage in ihrer Sprache ab (IndexedDB 'logbuch-push', siehe
+// saveFieldNamesForPush in logbuch.html); damit wird der Name hier lokal eingesetzt.
+// Fehlt die Liste oder eine ID (neues Gerät, gelöschte Browserdaten, gerade erst
+// angelegtes Feld), bleibt es beim allgemeinen Text.
+function openPushDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('logbuch-push', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('meta');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function personalizedBody(fieldIds, fallback) {
+  try {
+    const db = await openPushDb();
+    const stored = await new Promise((resolve, reject) => {
+      const req = db.transaction('meta', 'readonly').objectStore('meta').get('fieldNames');
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+    if (!stored || !stored.template || !stored.names) return fallback;
+    const names = fieldIds.map((id) => stored.names[id]);
+    if (names.some((n) => !n)) return fallback;
+    // Funktion statt String als Ersatz: sonst würden Zeichenfolgen wie "$&" in einem
+    // Feldnamen als Ersetzungsmuster interpretiert.
+    return stored.template.replace('{names}', () => names.join(', '));
+  } catch {
+    return fallback;
+  }
+}
+
 self.addEventListener('push', (event) => {
   let payload = {};
   try {
@@ -14,11 +48,15 @@ self.addEventListener('push', (event) => {
     payload = { title: 'Logbuch', body: event.data ? event.data.text() : '' };
   }
   const title = payload.title || 'Logbuch';
-  const options = {
-    body: payload.body || '',
-    data: { url: payload.url || './logbuch.html' },
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil((async () => {
+    const body = Array.isArray(payload.fieldIds) && payload.fieldIds.length
+      ? await personalizedBody(payload.fieldIds, payload.body || '')
+      : payload.body || '';
+    await self.registration.showNotification(title, {
+      body,
+      data: { url: payload.url || './logbuch.html' },
+    });
+  })());
 });
 
 // Die URL einer Benachrichtigung trägt ihr Ziel (?view=...&date=..., siehe
