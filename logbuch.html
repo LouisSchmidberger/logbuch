@@ -2523,9 +2523,11 @@ async function loadEntries() {
     return;
   }
   const map = {};
+  unpaddedEntryDates = [];
   for (const row of data) {
     try {
       map[row.entry_date] = row.data ? await decryptData(currentDek, row.data) : {};
+      if (row.data && !isPaddedCiphertext(row.data)) unpaddedEntryDates.push(row.entry_date);
     } catch {
       // Sollte nach der einmaligen Migration nicht mehr vorkommen; defensiv statt
       // die ganze App an einer kaputten/fremden Zeile scheitern zu lassen.
@@ -2533,6 +2535,48 @@ async function loadEntries() {
     }
   }
   state.entries = map;
+}
+
+// Einträge von vor dem Auffüllen (siehe encryptData) verrieten über ihre Länge weiter,
+// an welchen Tagen viel eingetragen/geschrieben wurde - deshalb einmalig neu
+// verschlüsselt speichern (von completeAuthFlow bzw. dem Session-Start nach dem Laden
+// aufgerufen, im Hintergrund). Nur Tage, die mindestens 2 Tage zurückliegen: an denen
+// arbeitet man praktisch nie gerade parallel, ein gleichzeitiges normales Speichern
+// könnte sonst von dieser (älteren) Fassung überschrieben werden; neuere Tage werden
+// beim nächsten normalen Speichern ohnehin aufgefüllt. Überspringt zusätzlich jeden
+// Tag, dessen Inhalt sich seit dem Laden geändert hat (state.entries wird bei jeder
+// Änderung durch ein neues Objekt ersetzt). Nicht entschlüsselbare Zeilen stehen gar
+// nicht erst in der Liste - die werden nie überschrieben. Upsert nur mit data:
+// filled_slugs bleibt unangetastet.
+let unpaddedEntryDates = [];
+function isPaddedCiphertext(enc) {
+  try {
+    return (base64ToBuf(enc.ciphertext).byteLength - 16) % ENCRYPT_PAD_BLOCK === 0; // 16 = GCM-Tag
+  } catch {
+    return true; // unlesbar - nicht anfassen
+  }
+}
+const REPAD_BATCH_SIZE = 50;
+async function repadOldEntries() {
+  const cutoff = formatKey(addDays(startOfDay(new Date()), -2));
+  const todo = unpaddedEntryDates.filter((k) => k <= cutoff).map((k) => [k, state.entries[k]]);
+  unpaddedEntryDates = [];
+  for (let i = 0; i < todo.length; i += REPAD_BATCH_SIZE) {
+    const batch = todo.slice(i, i + REPAD_BATCH_SIZE).filter(([k, day]) => day && state.entries[k] === day);
+    if (!batch.length || !currentDek || !state.session) continue;
+    try {
+      const rows = await Promise.all(batch.map(async ([k, day]) => ({
+        user_id: state.session.user.id, entry_date: k, data: await encryptData(currentDek, day),
+      })));
+      // Kurz vor dem Absenden nochmal prüfen - dazwischen lag die (asynchrone) Verschlüsselung.
+      const stillUnchanged = rows.filter((r) => state.entries[r.entry_date] === batch.find(([k]) => k === r.entry_date)[1]);
+      if (!stillUnchanged.length) continue;
+      const { error } = await supabase.from('habit_entries').upsert(stillUnchanged, { onConflict: 'user_id,entry_date' });
+      if (error) console.error('[Logbuch] Nachträgliches Auffüllen fehlgeschlagen, nächster Versuch beim nächsten Laden', error.message);
+    } catch (err) {
+      console.error('[Logbuch] Nachträgliches Auffüllen fehlgeschlagen', err);
+    }
+  }
 }
 
 async function loadHabits() {
@@ -6362,6 +6406,7 @@ async function completeAuthFlow(userId, password) {
   await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
   state.loading = false;
   saveFieldNamesForPush(); // erst nach loadUserSettings - die Textvorlage hängt an der Sprache
+  repadOldEntries();
   checkPushStatus().then(render);
   render();
 }
@@ -6386,6 +6431,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
       currentDek = cached;
       await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
       saveFieldNamesForPush(); // siehe completeAuthFlow
+      repadOldEntries();
       checkPushStatus().then(render);
     }
     state.loading = false;

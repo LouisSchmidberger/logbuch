@@ -342,7 +342,10 @@ Erinnerungen braucht: `habit_definitions.kind`/`reminder_minute`/`schedule`/`arc
 und `habit_entries.filled_slugs` (nur Feld-IDs der befüllten Felder, keine Werte/Namen).
 Alle verschlüsselten Daten (Einträge wie Felder) werden vor dem Verschlüsseln auf ein
 Vielfaches von 256 Byte aufgefüllt (`encryptData`, Leerzeichen am JSON-Ende), damit die
-Länge nicht verrät, wie viel jemand eingetragen/geschrieben hat.
+Länge nicht verrät, wie viel jemand eingetragen/geschrieben hat. Vorher gespeicherte Einträge
+verschlüsselt die App beim Öffnen einmalig neu (`repadOldEntries`, nur Tage ≥ 2 Tage
+zurück – ein gleichzeitiges normales Speichern desselben Tages könnte sonst überschrieben
+werden –, übersprungen wird jeder seit dem Laden geänderte Tag, Upsert nur mit `data`).
 
 **Feld-Definitionen verschlüsselt** (seit 2026-09-27): `habit_definitions.enc` =
 `{iv, ciphertext}` mit demselben DEK, Inhalt `{key, name, unit, min, max, labels, good,
