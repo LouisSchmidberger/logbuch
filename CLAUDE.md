@@ -111,6 +111,9 @@ Tabelle `habit_entries`: eine Zeile pro Nutzer und Kalendertag.
   zählen nicht – eine Notiz allein gilt für die Erinnerungen nicht als eingetragen.
   Keine Speicher-Uhrzeit (die frühere `updated_at`-Spalte wurde entfernt, sie verriet,
   wann jemand typischerweise einträgt).
+  Der Trigger `habit_entries_normalize_filled_slugs` übersetzt beim Speichern noch
+  auftauchende slugs (alte App-Version) in Feld-IDs, solange die Definition
+  unverschlüsselt ist; nicht Zuordenbares fällt weg.
 - RLS aktiv: jede Zeile nur für den eigenen `user_id` sicht-/änderbar (schützt Nutzer
   voreinander, nicht vor dem DB-Owner — dafür ist ja gerade die Verschlüsselung da).
 
