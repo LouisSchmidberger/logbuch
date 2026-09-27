@@ -6,13 +6,15 @@
 // in Nachrichten und verschickt sie:
 // 1. Sammel-Erinnerung zur Standard-Erinnerungszeit (bewusst generisch, ohne
 //    Feldnamen – bei vielen Feldern sonst eine sehr lange Nachricht).
-// 2. Erinnerung für Felder mit eigener Zeit (nennt die Felder, meist ein einzelnes
-//    bewusst herausgehobenes wie Gewicht morgens).
+// 2. Erinnerung für Felder mit eigener Zeit (meist ein einzelnes bewusst
+//    herausgehobenes wie Gewicht morgens). Feldnamen sind verschlüsselt, diese
+//    Function kennt sie nicht: sie schickt einen allgemeinen Text plus die Feld-IDs
+//    (fieldIds), sw.js setzt auf dem Gerät die Namen aus einer lokalen Liste ein.
 // 3. Sonntags "Wochenübersicht ist da", am Monatsletzten "Monatsübersicht ist da".
 //
 // habit_entries.data ist clientseitig verschlüsselt – die Vollständigkeits-Prüfung
 // läuft deshalb (in der SQL-Funktion) über die unverschlüsselte Spalte
-// habit_entries.filled_slugs (nur Slugs der befüllten Felder, keine Werte).
+// habit_entries.filled_slugs (nur die IDs der befüllten Felder, keine Werte/Namen).
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
@@ -44,9 +46,11 @@ webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 interface PushMessage {
+  kind: 'default' | 'custom' | 'week' | 'month'; // nur fürs Protokoll, nicht verschickt
   title: string;
   body: string;
   url: string;
+  fieldIds?: string[];
 }
 
 // Eine Zeile aus get_due_notifications(): ein Push-Abo plus was ihm gerade zusteht.
@@ -59,7 +63,7 @@ interface DueRow {
   locale: string;
   local_date: string; // 'YYYY-MM-DD', "heute" in der Zeitzone des Nutzers
   default_reminder: boolean;
-  custom_missing: string[];
+  custom_missing: string[]; // IDs der fehlenden Felder mit eigener Erinnerungszeit
   week_summary: boolean;
   month_summary: boolean;
 }
@@ -79,14 +83,18 @@ const PUSH_TEXTS = {
   de: {
     title: 'Logbuch',
     defaultReminder: 'Erinnerung: Noch nicht alle Werte für heute eingetragen.',
-    customReminder: (names: string) => `Erinnerung: ${names} noch nicht eingetragen.`,
+    customReminder: (count: number) => count === 1
+      ? 'Erinnerung: Ein Feld wartet noch auf deinen Eintrag.'
+      : `Erinnerung: ${count} Felder warten noch auf deinen Eintrag.`,
     weekSummary: 'Deine Wochenübersicht ist da.',
     monthSummary: 'Deine Monatsübersicht ist da.',
   },
   en: {
     title: 'Logbuch',
     defaultReminder: 'Reminder: not all values for today have been entered yet.',
-    customReminder: (names: string) => `Reminder: ${names} not entered yet.`,
+    customReminder: (count: number) => count === 1
+      ? 'Reminder: a field is still waiting for your entry.'
+      : `Reminder: ${count} fields are still waiting for your entry.`,
     weekSummary: 'Your weekly summary is ready.',
     monthSummary: 'Your monthly summary is ready.',
   },
@@ -97,16 +105,22 @@ function messagesFor(row: DueRow): PushMessage[] {
   const date = row.local_date;
   const messages: PushMessage[] = [];
   if (row.default_reminder) {
-    messages.push({ title: texts.title, body: texts.defaultReminder, url: deepLink('today', date) });
+    messages.push({ kind: 'default', title: texts.title, body: texts.defaultReminder, url: deepLink('today', date) });
   }
   if (row.custom_missing.length) {
-    messages.push({ title: texts.title, body: texts.customReminder(row.custom_missing.join(', ')), url: deepLink('today', date) });
+    messages.push({
+      kind: 'custom',
+      title: texts.title,
+      body: texts.customReminder(row.custom_missing.length),
+      url: deepLink('today', date),
+      fieldIds: row.custom_missing,
+    });
   }
   if (row.week_summary) {
-    messages.push({ title: texts.title, body: texts.weekSummary, url: deepLink('week', date) });
+    messages.push({ kind: 'week', title: texts.title, body: texts.weekSummary, url: deepLink('week', date) });
   }
   if (row.month_summary) {
-    messages.push({ title: texts.title, body: texts.monthSummary, url: deepLink('month', date) });
+    messages.push({ kind: 'month', title: texts.title, body: texts.monthSummary, url: deepLink('month', date) });
   }
   return messages;
 }
@@ -159,17 +173,19 @@ Deno.serve(async (req) => {
       endpoint: row.endpoint,
       keys: { p256dh: row.p256dh, auth: row.auth_key },
     };
-    for (const msg of messagesFor(row)) {
+    for (const { kind, ...msg } of messagesFor(row)) {
       try {
         await webpush.sendNotification(subscription, JSON.stringify(msg));
-        results.push({ user_id: row.user_id, ok: true, detail: msg.body });
+        // Nur die Art der Nachricht protokollieren, nie Texte/IDs - die Antwort dieser
+        // Function landet in net._http_response in der Datenbank.
+        results.push({ user_id: row.user_id, ok: true, detail: kind });
       } catch (err) {
         const statusCode = (err as { statusCode?: number })?.statusCode;
         const body = (err as { body?: string })?.body;
         results.push({
           user_id: row.user_id,
           ok: false,
-          detail: `${String(err)} | statusCode=${statusCode} body=${body}`,
+          detail: `${kind}: ${String(err)} | statusCode=${statusCode} body=${body}`,
         });
         // Abgelaufene/ungültige Subscription aufräumen – weitere Nachrichten an sie
         // wären ebenso zwecklos.

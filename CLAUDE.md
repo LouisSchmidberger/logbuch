@@ -104,10 +104,13 @@ Tabelle `habit_entries`: eine Zeile pro Nutzer und Kalendertag.
   mit einem Feld, da `slugify()` nur `a-z0-9` erzeugt; **Konvention: Schlüssel mit `_`
   am Anfang sind nie Feldwerte**. Ohne verbleibende Notiz verschwindet `_notes` wieder.
 - `filled_slugs` (jsonb, Array von Strings) – bewusst **unverschlüsselt**, nur die
-  Namen der an dem Tag befüllten Felder, keine Werte. Wird ausschließlich von
-  `send-notifications` für die Vollständigkeits-Prüfung gebraucht, da die Function
-  `data` nicht entschlüsseln kann. `saveDay` filtert `_`-Schlüssel heraus – eine Notiz
-  allein zählt für die Erinnerungen nicht als eingetragen.
+  **IDs** (`habit_definitions.id`) der an dem Tag befüllten Felder, keine Werte und seit
+  2026-09-27 auch keine aus dem Namen abgeleiteten slugs mehr (Spaltenname historisch).
+  Wird ausschließlich von `get_due_notifications` für die Vollständigkeits-Prüfung
+  gebraucht, da der Server `data` nicht entschlüsseln kann. Notizen (`_`-Schlüssel)
+  zählen nicht – eine Notiz allein gilt für die Erinnerungen nicht als eingetragen.
+  Keine Speicher-Uhrzeit (die frühere `updated_at`-Spalte wurde entfernt, sie verriet,
+  wann jemand typischerweise einträgt).
 - RLS aktiv: jede Zeile nur für den eigenen `user_id` sicht-/änderbar (schützt Nutzer
   voreinander, nicht vor dem DB-Owner — dafür ist ja gerade die Verschlüsselung da).
 
@@ -705,7 +708,14 @@ Die Sammel-Erinnerung zur Standardzeit ist bewusst generisch ("Noch nicht alle W
 für heute eingetragen.", keine Feldnamen – sonst bei vielen Feldern schnell eine sehr
 lange Nachricht). Eine Erinnerung zu einer eigenen Zeit nennt dagegen das konkrete
 Feld (`Erinnerung: <Namen> noch nicht eingetragen.`), da dort meist gezielt ein
-einzelnes Feld hervorgehoben werden soll (z.B. Gewicht).
+einzelnes Feld hervorgehoben werden soll (z.B. Gewicht) – **der Name wird dabei erst auf
+dem Gerät eingesetzt**: der Server kennt Feldnamen nicht (sollen verschlüsselt sein),
+`get_due_notifications` liefert nur Feld-IDs, `send-notifications` schickt einen
+allgemeinen Text ("Ein Feld wartet noch …") plus `fieldIds`, und `sw.js` ersetzt ihn
+durch den Namen aus einer lokalen Liste (IndexedDB `logbuch-push`, Store `meta`, Key
+`fieldNames`: `{ names: {id: name}, template }`, von der App angelegt). Fehlt die Liste
+oder eine ID, bleibt es beim allgemeinen Text. Die Function protokolliert in ihrer
+Antwort (landet in `net._http_response`) nur die Art der Nachricht, nie Texte/IDs.
 
 **Zeitzone pro Nutzer**: `get_due_notifications` rechnet für jeden Nutzer per `p_now
 AT TIME ZONE timezone` dessen lokales Datum ("heute") und lokalen Viertelstunden-Slot
