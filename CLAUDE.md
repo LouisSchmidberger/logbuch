@@ -88,10 +88,17 @@ Tabelle `habit_entries`: eine Zeile pro Nutzer und Kalendertag.
   "<base64>"}`. Im entschlüsselten Zustand enthält das Objekt die Werte des Tages,
   Keys entsprechen den `slug`s aus `habit_definitions` des jeweiligen Nutzers (Gewicht
   ist ein ganz normaler `slug='weight'`-Eintrag darin, kein Sonderfall mehr).
+  **Notizen** (seit 2026-09-27) liegen im selben verschlüsselten Objekt unter dem
+  einzigen reservierten Schlüssel `_notes`: `{ mood: 3, _notes: { mood: "…", _day:
+  "…" } }` – je Feld-Slug eine Notiz, `_day` für die Notiz zum ganzen Tag
+  (`NOTES_KEY`/`DAY_NOTE_KEY`, `getNote`/`withNote` in `logbuch.html`). Kollidiert nie
+  mit einem Feld, da `slugify()` nur `a-z0-9` erzeugt; **Konvention: Schlüssel mit `_`
+  am Anfang sind nie Feldwerte**. Ohne verbleibende Notiz verschwindet `_notes` wieder.
 - `filled_slugs` (jsonb, Array von Strings) – bewusst **unverschlüsselt**, nur die
   Namen der an dem Tag befüllten Felder, keine Werte. Wird ausschließlich von
   `send-notifications` für die Vollständigkeits-Prüfung gebraucht, da die Function
-  `data` nicht entschlüsseln kann.
+  `data` nicht entschlüsseln kann. `saveDay` filtert `_`-Schlüssel heraus – eine Notiz
+  allein zählt für die Erinnerungen nicht als eingetragen.
 - RLS aktiv: jede Zeile nur für den eigenen `user_id` sicht-/änderbar (schützt Nutzer
   voreinander, nicht vor dem DB-Owner — dafür ist ja gerade die Verschlüsselung da).
 
@@ -385,8 +392,9 @@ da die Absicht beim Shortcut "jetzt tracken" ist, nicht "verwalten".
 `renderRowMenuPanel`/`openRowMenu`/`closeRowMenu` in `logbuch.html`, `state.rowMenu` =
 slug): kleines Popover mit "Bearbeiten" (öffnet das Feld-Formular in der Verwaltung mit
 `returnToTab: true`, gleiches Muster wie der "+ Neues Feld"-Shortcut) und "Archivieren"
-(danach Meldung, wo sich das Feld reaktivieren lässt). Soll künftig auch Notizen
-aufnehmen. **Auslöser ist der Feldname selbst** (Button, optisch unverändert Text,
+(danach Meldung, wo sich das Feld reaktivieren lässt), bei Nicht-Gruppen zusätzlich
+"Notiz hinzufügen/bearbeiten" (siehe "Notizen in Heute" unten). **Auslöser ist der
+Feldname selbst** (Button, optisch unverändert Text,
 Disclosure-Muster mit `aria-expanded`, Escape schließt und gibt den Fokus zurück) –
 bewusst kein eigenes ⋯-Symbol pro Zeile: kurz so gebaut, wirkte bei vielen Feldern
 überladen für eine selten genutzte Aktion. Da man einem Namen nicht ansieht, dass er
@@ -403,6 +411,30 @@ davon nur das Menü und löst nichts anderes aus (kein direktes Umspringen zum M
 anderen Feldes, kein versehentlich gesetzter Wert) – nur für Zeige-Geräte
 (`e.detail > 0`), per Tastatur ausgelöste Klicks laufen nach bewusstem Wegnavigieren
 normal durch. Scrollen, Wischen und Deep-Links schließen es ebenfalls.
+
+**Notizen in "Heute"** (seit 2026-09-27, Datenformat siehe Datenmodell →
+`habit_entries`): freier Text pro Feld (nicht für Gruppen, die haben keinen eigenen
+Eintrag) und für den ganzen Tag, bewusst **kein Teil der Auswertung**. Gedacht als
+Ausnahme ("heute erst nach dem Frühstück gewogen"), nicht als tägliche Eingabe – deshalb
+nur über das Zeilen-Menü erreichbar statt über ein eigenes Symbol pro Zeile. Eine
+vorhandene Notiz steht als kleiner kursiver Text unter dem Feld (`renderNote`, antippbar
+→ Editor), die Tagesnotiz unter der Feldliste (`renderDayNote`, ohne Notiz ein
+gestrichelter Platzhalter-Button). Editor mit explizitem Speichern/Abbrechen, leer
+speichern = Notiz löschen, max. `NOTE_MAX_LENGTH` (2000) Zeichen. `state.noteEditor`
+(`{dateKey, key, draft}`) gehört zu einem Tag: nur dort sichtbar und als Overlay
+gezählt (`isNoteEditorOpen`, Android-Zurück = Abbrechen), beim Tag-/Tab-Wechsel bleibt
+der Entwurf liegen und erscheint bei Rückkehr wieder; öffnet man stattdessen einen
+anderen Editor, wird der alte Entwurf vorher gespeichert (`commitPendingNoteDraft`) –
+Getipptes geht nie still verloren. Beim Abmelden wird er verworfen (sonst sähe ihn
+das nächste Konto auf dem Gerät). Ein Re-Render beim Tippen behält Fokus/Cursor
+(`renderApp`). Endgültiges Löschen eines Feldes räumt auch dessen Notizen weg
+(`purgeHabitFromEntries`). **Übersicht**: Woche – Punkt in der Feld-Zelle (Notiz zu
+diesem Feld) und am Wochentag (irgendeine Notiz an dem Tag, deckt auch Tagesnotiz und
+Zahlenwert-Felder ab, die in der Woche keine Zelle haben); Monat – Punkt in der
+Tageszelle; Jahr – bewusst keiner (Zellen zu klein). Screenreader: "mit Notiz" im Label
+der Tages-Zelle. **"Tag zurücksetzen"** löscht Werte UND Notizen und fragt deshalb
+seitdem immer nach (`renderResetConfirm`, `state.resetConfirm` = dateKey), auch ohne
+vorhandene Notizen.
 
 **Verwaltungsliste entschlackt** (seit 2026-09-18, `renderManage` in `logbuch.html`):
 pro Feld-Zeile steht nur noch der Name plus – falls gesetzt – die eigene
@@ -448,9 +480,9 @@ Tastatur erreichbar (`tabindex="0" role="button"`, Enter/Space über einen
 generalisierten `data-action`-Keydown-Dispatch, der einen echten Klick auslöst statt
 Aktionen zu duplizieren) und tragen zusätzlich zur Farbe ein Streifenmuster
 (`scorePatternStyle()`, diskrete Stufen, gröber in der Jahres-Ansicht) für
-Rot-Grün-Farbenblinde. Die beiden Modals (Konto löschen, Tutorial überspringen)
+Rot-Grün-Farbenblinde. Die Bestätigungs-Modals (Konto löschen, Tutorial überspringen, Tag zurücksetzen)
 haben `role="dialog"`/Fokus-Trap/Escape-Schließen/Fokus-Rückgabe (siehe
-`focusModalIfOpen()`/`restoreModalFocus()`/`modalTriggerSelector`). Meldungen laufen
+`focusModalIfOpen()`/`restoreModalFocus()`/`modalTriggerSelector`, gemeinsamer Schließ-Weg `closeModals()`). Meldungen laufen
 zentral über `renderNotice()` (Fehler `role="alert"`/assertive, Erfolg
 `role="status"`/polite) statt über 6 duplizierte Inline-Fragmente. Das Feld-Umsortieren
 hat mit Hoch/Runter-Buttons (`commitHabitOrder()`, gemeinsamer Persistenz-Pfad mit dem
@@ -483,7 +515,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 307 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 317 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

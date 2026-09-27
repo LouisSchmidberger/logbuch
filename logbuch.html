@@ -323,6 +323,44 @@
     box-shadow: 0 12px 32px var(--shadow);
   }
 
+  /* Notizen (siehe renderNote). flex-wrap + width: 100% lassen Notiz/Editor in eine
+     eigene Zeile unter Name und Eingabe umbrechen - Name (flex-basis 0) und Buttons
+     (max-width 60%) bzw. Zahlen-Eingabe passen weiterhin zusammen in die erste Zeile. */
+  .habit-row, .number-box { flex-wrap: wrap; }
+  .row-note {
+    width: 100%; text-align: left; font: inherit; font-size: 12px; font-style: italic; line-height: 1.45;
+    color: var(--ink); background: none; border: none; border-left: 2px solid var(--line);
+    padding: 1px 0 1px 8px; margin: 0; cursor: pointer; white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .row-note:hover, .row-note:focus-visible { border-left-color: var(--moss); }
+  .note-editor { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+  .note-input {
+    box-sizing: border-box; width: 100%; font-family: inherit; font-size: 14px; line-height: 1.45;
+    padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px;
+    background: var(--input-bg); color: var(--ink); resize: vertical;
+  }
+  .note-editor-actions { display: flex; gap: 8px; }
+  .note-save-btn {
+    flex: 1; font-family: inherit; font-size: 13px; font-weight: 600; padding: 10px;
+    border: none; border-radius: 3px; background: var(--moss); color: var(--paper); cursor: pointer;
+  }
+  .day-note { margin-top: 16px; }
+  .day-note-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 14px; margin: 0 0 6px; }
+  .day-note-add {
+    display: block; width: 100%; box-sizing: border-box; text-align: left; font-family: inherit; font-size: 13px;
+    color: var(--sand); padding: 10px 12px; background: none; border: 1px dashed var(--line); border-radius: 4px; cursor: pointer;
+  }
+  .day-note-add:hover, .day-note-add:focus-visible { border-color: var(--moss); color: var(--ink); }
+  /* Punkt für "hier gibt es eine Notiz" in Woche (Feld-Zelle bzw. Wochentag = irgendeine
+     Notiz an dem Tag) und Monat. Ink mit Papier-Ring, damit er auf jeder Zellfarbe inkl.
+     Streifenmuster sichtbar bleibt. Im Monat unten statt oben, dort steht die Tageszahl. */
+  .grid-cell.has-note, .month-cell.has-note, .grid-col-header.has-note { position: relative; }
+  .has-note::after {
+    content: ''; position: absolute; top: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--ink); box-shadow: 0 0 0 1.5px var(--paper);
+  }
+  .month-cell.has-note::after { top: auto; bottom: 3px; right: 3px; }
+
   .group-member-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
   .group-member-check { font-size: 13px; }
 
@@ -952,7 +990,9 @@ const state = {
   habitForm: null,    // { defId, locked, name, mode: 'numeric'|'labels', min, max, steps, labels, good }
   habitFormSaving: false, // true während handleHabitSave() läuft, verhindert Doppel-Submits
   menuOpen: false,
-  rowMenu: null,      // slug des Feldes, dessen Zeilen-Menü (⋯) in "Heute" gerade offen ist
+  rowMenu: null,      // slug des Feldes, dessen Zeilen-Menü in "Heute" gerade offen ist
+  noteEditor: null,   // { dateKey, key, draft } - offener Notiz-Editor (key = slug oder DAY_NOTE_KEY)
+  resetConfirm: null, // dateKey, während die Rückfrage "Tag zurücksetzen?" offen ist
   // Standard-Erinnerungszeit (Minuten seit Mitternacht) für Felder ohne eigene reminder_minute.
   // onboardingCompleted default true, bis loadUserSettings() den echten Wert lädt – verhindert,
   // dass das Tutorial kurz aufblitzt, bevor die tatsächlichen Einstellungen geladen sind.
@@ -988,6 +1028,14 @@ function restoreModalFocus() {
   if (!modalTriggerSelector) return;
   document.querySelector(modalTriggerSelector)?.focus();
   modalTriggerSelector = null;
+}
+// Gemeinsamer Schließ-Weg aller Bestätigungs-Modals (Abbrechen-Button, Escape,
+// Android-Zurück) - rendert NICHT selbst, der Aufrufer muss danach render() und
+// restoreModalFocus() aufrufen (closeTopLayer läuft z.B. vor einem eigenen render()).
+function closeModals() {
+  state.deleteConfirm = null;
+  state.tutorialSkipConfirm = false;
+  state.resetConfirm = null;
 }
 
 // --- Android-Zurück-Taste schließt offene Overlays/Unterseiten statt die App zu
@@ -1029,7 +1077,14 @@ function leaveSubpage() {
   state.view = state.previousTabView || 'today';
 }
 function isOverlayOpen() {
-  return state.menuOpen || !!state.rowMenu || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
+  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.resetConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
+}
+// Der Notiz-Editor gehört zu einem bestimmten Tag in "Heute" und zählt nur, solange er
+// dort auch sichtbar ist. Wechselt man den Tag/Tab, bleibt er samt Entwurf im State
+// liegen (kein stilles Verwerfen von Getipptem) und taucht bei der Rückkehr wieder auf -
+// zählt in der Zwischenzeit aber nicht als offene Ebene für die Zurück-Taste.
+function isNoteEditorOpen() {
+  return !!state.noteEditor && state.view === 'today' && state.noteEditor.dateKey === formatKey(state.currentDate);
 }
 function currentLayerCount() {
   return (isSubpageView(state.view) ? 1 : 0) + (isOverlayOpen() ? 1 : 0);
@@ -1049,14 +1104,15 @@ function closeHabitForm() {
   if (returnToTab && state.view === 'manage') state.view = state.previousTabView || 'today';
 }
 function closeTopLayer() {
-  if (state.deleteConfirm || state.tutorialSkipConfirm) {
-    state.deleteConfirm = null;
-    state.tutorialSkipConfirm = false;
+  if (state.deleteConfirm || state.tutorialSkipConfirm || state.resetConfirm) {
+    closeModals();
     restoreModalFocus();
   } else if (state.menuOpen) {
     state.menuOpen = false;
   } else if (state.rowMenu) {
     state.rowMenu = null;
+  } else if (isNoteEditorOpen()) {
+    state.noteEditor = null; // wie "Abbrechen"
   } else if (state.habitForm) {
     closeHabitForm();
   } else if (state.habitDeleteConfirm) {
@@ -1276,6 +1332,16 @@ const STRINGS = {
     'today.newField': '+ Neues Feld',
     'today.resetDay': 'Tag zurücksetzen',
     'today.fieldOptions': 'Optionen für {name}',
+    'note.add': 'Notiz hinzufügen',
+    'note.edit': 'Notiz bearbeiten',
+    'note.editPrefix': 'Notiz bearbeiten:',
+    'note.labelField': 'Notiz zu {name}',
+    'note.labelDay': 'Notiz zum Tag',
+    'note.addDay': 'Notiz zum Tag hinzufügen …',
+    'ariaLabel.withNote': ', mit Notiz',
+    'resetConfirm.title': 'Tag zurücksetzen?',
+    'resetConfirm.body': 'Alle Werte und Notizen vom {date} werden gelöscht. Das lässt sich nicht rückgängig machen.',
+    'resetConfirm.confirm': 'Zurücksetzen',
     'notice.fieldArchived': 'Feld archiviert. Unter „Felder verwalten“ kannst du es jederzeit wieder aktivieren.',
     'common.archived': 'archiviert',
     'global.rangeNote': 'Seit {since} · {count} Tage mit Eintrag',
@@ -1426,8 +1492,8 @@ const STRINGS = {
     'about.tip.jumpDay.body': 'Tippe in der Wochen-, Monats- oder Jahresansicht auf eine beliebige Zelle, um direkt zu diesem Tag zu springen.',
     'about.tip.toggleOff.title': 'Eine Antwort wieder löschen',
     'about.tip.toggleOff.body': 'Tippe eine bereits ausgewählte Option nochmal an, um sie zu entfernen — praktisch, falls du dich vertippt hast.',
-    'about.tip.fieldMenu.title': 'Ein Feld direkt bearbeiten',
-    'about.tip.fieldMenu.body': 'Tippe in „Heute" auf den Namen eines Feldes (oder halte die Zeile kurz gedrückt), um es direkt dort zu bearbeiten oder zu archivieren — ohne Umweg über „Felder verwalten".',
+    'about.tip.fieldMenu.title': 'Notizen & Felder direkt bearbeiten',
+    'about.tip.fieldMenu.body': 'Tippe in „Heute" auf den Namen eines Feldes (oder halte die Zeile kurz gedrückt), um eine Notiz dazu zu schreiben — etwa „heute erst nach dem Frühstück gewogen" — oder das Feld direkt dort zu bearbeiten bzw. zu archivieren. Notizen fließen nicht in die Auswertung ein, in Woche und Monat zeigt ein kleiner Punkt, wo es eine gibt.',
     'about.tip.reorder.title': 'Felder umsortieren',
     'about.tip.reorder.body': 'In „Felder verwalten" kannst du Felder per Ziehen am Griff-Symbol oder mit den ↑/↓-Buttons neu anordnen.',
     'about.tip.noValuation.title': 'Felder ohne Wertung',
@@ -1585,6 +1651,16 @@ const STRINGS = {
     'today.newField': '+ New field',
     'today.resetDay': 'Reset day',
     'today.fieldOptions': 'Options for {name}',
+    'note.add': 'Add note',
+    'note.edit': 'Edit note',
+    'note.editPrefix': 'Edit note:',
+    'note.labelField': 'Note on {name}',
+    'note.labelDay': 'Note for the day',
+    'note.addDay': 'Add a note for the day …',
+    'ariaLabel.withNote': ', with note',
+    'resetConfirm.title': 'Reset day?',
+    'resetConfirm.body': 'All values and notes from {date} will be deleted. This cannot be undone.',
+    'resetConfirm.confirm': 'Reset',
     'notice.fieldArchived': 'Field archived. You can reactivate it anytime under “Manage fields”.',
     'common.archived': 'archived',
     'global.rangeNote': 'Since {since} · {count} days with entry',
@@ -1735,8 +1811,8 @@ const STRINGS = {
     'about.tip.jumpDay.body': 'Tap any cell in the week, month, or year view to jump directly to that day.',
     'about.tip.toggleOff.title': 'Clearing an answer',
     'about.tip.toggleOff.body': 'Tap an already-selected option again to remove it — handy if you tapped the wrong one.',
-    'about.tip.fieldMenu.title': 'Editing a field directly',
-    'about.tip.fieldMenu.body': 'In "Today", tap the name of a field (or briefly press and hold its row) to edit or archive it right there — no detour through "Manage fields".',
+    'about.tip.fieldMenu.title': 'Notes & editing fields directly',
+    'about.tip.fieldMenu.body': 'In "Today", tap the name of a field (or briefly press and hold its row) to write a note about it — say, "weighed myself after breakfast today" — or to edit or archive the field right there. Notes are not part of the statistics; in the week and month views a small dot shows where there is one.',
     'about.tip.reorder.title': 'Reordering fields',
     'about.tip.reorder.body': 'In "Manage fields" you can reorder fields by dragging the handle or using the ↑/↓ buttons.',
     'about.tip.noValuation.title': 'Fields without valuation',
@@ -2637,9 +2713,11 @@ async function handleHabitDelete(defId) {
 }
 
 async function purgeHabitFromEntries(habitId) {
-  const affectedDates = Object.keys(state.entries).filter((k) => state.entries[k]?.[habitId] !== undefined);
+  const affectedDates = Object.keys(state.entries).filter(
+    (k) => state.entries[k]?.[habitId] !== undefined || state.entries[k]?.[NOTES_KEY]?.[habitId] !== undefined
+  );
   await Promise.all(affectedDates.map(async (dateKey) => {
-    const day = { ...state.entries[dateKey] };
+    const day = withNote({ ...state.entries[dateKey] }, habitId, '');
     delete day[habitId];
     state.entries = { ...state.entries, [dateKey]: day };
     await saveDay(dateKey, day);
@@ -2647,12 +2725,78 @@ async function purgeHabitFromEntries(habitId) {
   render();
 }
 
+// --- Notizen ---------------------------------------------------------------
+// Liegen verschlüsselt im selben Tagesobjekt wie die Werte, unter EINEM reservierten
+// Schlüssel: { mood: 3, _notes: { mood: "…", _day: "…" } }. Kann nie mit einem Feld
+// kollidieren, da slugify() nur a-z0-9 erzeugt. Alles mit "_" am Anfang ist dadurch
+// "kein Feldwert" - wichtig v.a. für filled_slugs (siehe saveDay): eine Notiz allein
+// zählt für die Erinnerungen nicht als eingetragen. Die Werte-Logik (Scores, Graphen,
+// habitHasData, ...) greift immer gezielt per Slug zu und sieht den Schlüssel nie.
+const NOTES_KEY = '_notes';
+const DAY_NOTE_KEY = '_day';
+function getNote(dateKey, key) {
+  return state.entries[dateKey]?.[NOTES_KEY]?.[key] ?? '';
+}
+function dayHasNote(dateKey) {
+  return Object.keys(state.entries[dateKey]?.[NOTES_KEY] ?? {}).length > 0;
+}
+// Gibt das Tagesobjekt mit gesetzter (bzw. bei leerem Text entfernter) Notiz zurück -
+// ohne verbleibende Notizen verschwindet auch der _notes-Schlüssel selbst wieder.
+function withNote(day, key, text) {
+  const notes = { ...(day[NOTES_KEY] || {}) };
+  if (text) notes[key] = text;
+  else delete notes[key];
+  const next = { ...day };
+  if (Object.keys(notes).length) next[NOTES_KEY] = notes;
+  else delete next[NOTES_KEY];
+  return next;
+}
+const NOTE_MAX_LENGTH = 2000;
+// Speichert einen noch offenen Entwurf, bevor ein anderer Editor ihn ersetzt (anderes
+// Feld, oder ein an einem anderen Tag liegen gebliebener, siehe isNoteEditorOpen) -
+// Getipptes soll nie still verloren gehen.
+function commitPendingNoteDraft() {
+  const ed = state.noteEditor;
+  if (!ed) return;
+  state.noteEditor = null;
+  const text = ed.draft.trim().slice(0, NOTE_MAX_LENGTH);
+  if (text === getNote(ed.dateKey, ed.key)) return;
+  const day = withNote(state.entries[ed.dateKey] || {}, ed.key, text);
+  state.entries = { ...state.entries, [ed.dateKey]: day };
+  saveDay(ed.dateKey, day);
+}
+function openNoteEditor(key) {
+  const dateKey = formatKey(state.currentDate);
+  if (state.noteEditor && (state.noteEditor.dateKey !== dateKey || state.noteEditor.key !== key)) commitPendingNoteDraft();
+  state.noteEditor = { dateKey, key, draft: state.noteEditor?.draft ?? getNote(dateKey, key) };
+  render();
+  const input = document.getElementById('note-input');
+  if (input) {
+    input.focus({ preventScroll: true });
+    input.setSelectionRange(input.value.length, input.value.length);
+    input.scrollIntoView({ block: 'nearest' });
+  }
+}
+// Speichern UND Abbrechen: danach zurück auf das Element, von dem aus man gekommen ist
+// (Feldname bzw. der Tagesnotiz-Bereich), da render() den Fokus sonst verwirft.
+// Der Entwurf ist über den 'input'-Listener immer aktuell in state.noteEditor.draft.
+function closeNoteEditor(save) {
+  const { key } = state.noteEditor;
+  if (save) commitPendingNoteDraft();
+  else state.noteEditor = null;
+  render();
+  const focusTarget = key === DAY_NOTE_KEY
+    ? document.querySelector('.day-note [data-action="note-edit"]')
+    : document.querySelector(`.row-menu-trigger[data-habit="${key}"]`);
+  focusTarget?.focus({ preventScroll: true });
+}
+
 async function saveDay(dateKey, dayData) {
   const encrypted = await encryptData(currentDek, dayData);
   const { error } = await supabase
     .from('habit_entries')
     .upsert(
-      { user_id: state.session.user.id, entry_date: dateKey, data: encrypted, filled_slugs: Object.keys(dayData) },
+      { user_id: state.session.user.id, entry_date: dateKey, data: encrypted, filled_slugs: Object.keys(dayData).filter((k) => !k.startsWith('_')) },
       { onConflict: 'user_id,entry_date' }
     );
   if (error) {
@@ -2670,8 +2814,11 @@ function handleSelect(dateKey, habitId, value) {
   saveDay(dateKey, day);
 }
 
+// Löscht Werte UND Notizen des Tages - deshalb immer erst nach Rückfrage
+// (renderResetConfirm), nie direkt über den Button.
 function handleReset(dateKey) {
   state.entries = { ...state.entries, [dateKey]: {} };
+  if (state.noteEditor?.dateKey === dateKey) state.noteEditor = null;
   render();
   saveDay(dateKey, {});
 }
@@ -3340,6 +3487,7 @@ function renderRowMenuPanel(h) {
   if (state.rowMenu !== h.id) return '';
   return `
     <div class="row-menu" id="row-menu-${h.id}" role="group" aria-label="${t('today.fieldOptions', { name: h.name })}">
+      ${h.kind !== 'group' ? `<button type="button" class="menu-item-btn" data-action="note-edit" data-note="${h.id}">${getNote(formatKey(state.currentDate), h.id) ? t('note.edit') : t('note.add')}</button>` : ''}
       <button type="button" class="menu-item-btn" data-action="row-menu-edit" data-id="${h.defId}">${t('common.edit')}</button>
       <button type="button" class="menu-item-btn menu-item-btn--warn" data-action="row-menu-archive" data-id="${h.defId}">${t('manage.archive')}</button>
     </div>
@@ -3360,6 +3508,26 @@ function closeRowMenu() {
   document.querySelector(`.row-menu-trigger[data-habit="${habitId}"]`)?.focus({ preventScroll: true });
 }
 
+// Notiz unter einem Feld bzw. im Tagesnotiz-Bereich: entweder der offene Editor, oder
+// die vorhandene Notiz als antippbarer Text (öffnet den Editor), oder nichts. Gruppen
+// haben keine Notizen (kein eigener Eintrag, siehe renderRowMenuPanel).
+function renderNote(dateKey, key, label) {
+  if (isNoteEditorOpen() && state.noteEditor.key === key) {
+    return `
+      <div class="note-editor">
+        <textarea id="note-input" class="note-input" rows="3" maxlength="${NOTE_MAX_LENGTH}" aria-label="${label}">${esc(state.noteEditor.draft)}</textarea>
+        <div class="note-editor-actions">
+          <button type="button" class="note-save-btn" data-action="note-save">${t('common.save')}</button>
+          <button type="button" class="habit-form-cancel" data-action="note-cancel">${t('common.cancel')}</button>
+        </div>
+      </div>
+    `;
+  }
+  const text = getNote(dateKey, key);
+  if (!text) return '';
+  return `<button type="button" class="row-note" data-action="note-edit" data-note="${key}"><span class="visually-hidden">${t('note.editPrefix')} </span>${esc(text)}</button>`;
+}
+
 function renderNumberBox(h, dateKey, dayEntry) {
   const currentValue = dayEntry[h.id] !== undefined ? dayEntry[h.id] : '';
   const last = findLastValue(h.id, dateKey);
@@ -3378,7 +3546,24 @@ function renderNumberBox(h, dateKey, dayEntry) {
         ${lastNote ? `<span class="number-last">${lastNote}</span>` : ''}
       </div>
       <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-action="number-input" data-habit="${h.id}" value="${esc(currentValue)}" aria-label="${nameWithUnit}" />
+      ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
+    </div>
+  `;
+}
+
+function noteLabel(h) {
+  return t('note.labelField', { name: h.name });
+}
+// Notiz zum ganzen Tag, unabhängig von einem Feld. Ohne Notiz nur ein dezenter
+// Platzhalter-Button, mit Notiz deren Text (wie bei den Feld-Notizen antippbar).
+function renderDayNote(dateKey) {
+  const note = renderNote(dateKey, DAY_NOTE_KEY, t('note.labelDay'));
+  return `
+    <div class="day-note">
+      ${note
+        ? `<h2 class="day-note-title">${t('note.labelDay')}</h2>${note}`
+        : `<button type="button" class="day-note-add" data-action="note-edit" data-note="${DAY_NOTE_KEY}">${t('note.addDay')}</button>`}
     </div>
   `;
 }
@@ -3412,6 +3597,7 @@ function renderToday() {
           <div class="habit-row habit-row--slider">
             ${renderRowMenuTrigger(h, esc(h.name))}
             ${renderHabitSlider(h, dayEntry[h.id])}
+            ${renderNote(dateKey, h.id, noteLabel(h))}
             ${renderRowMenuPanel(h)}
           </div>
         `;
@@ -3419,14 +3605,16 @@ function renderToday() {
           <div class="habit-row">
             ${renderRowMenuTrigger(h, esc(h.name))}
             <div class="habit-options">${renderHabitOptions(h, dayEntry[h.id])}</div>
+            ${renderNote(dateKey, h.id, noteLabel(h))}
             ${renderRowMenuPanel(h)}
           </div>
         `;
       }).join('')}
       ${!activeHabits().length ? `<p class="manage-meta">${t('today.noFields')}</p>` : ''}
     </div>
+    ${renderDayNote(dateKey)}
     <button type="button" class="today-new-field-btn" data-action="today-new-field">${t('today.newField')}</button>
-    <button type="button" class="reset-btn" data-action="reset-day">${t('today.resetDay')}</button>
+    <button type="button" class="reset-btn" data-action="reset-day-arm">${t('today.resetDay')}</button>
   `;
 }
 
@@ -3446,7 +3634,7 @@ function renderWeek() {
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
-        ${scores.map((s, i) => `<div class="grid-cell" data-action="open-day" data-date="${formatKey(days[i])}" style="background:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
+        ${scores.map((s, i) => `<div class="grid-cell${h.kind !== 'group' && getNote(dayKeys[i], h.id) ? ' has-note' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" style="background:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
         <div class="grid-cell grid-cell--avg" style="background:${habitColor(h, applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
     `;
@@ -3461,7 +3649,7 @@ function renderWeek() {
     <div class="grid-scroll">
       <div class="grid-row grid-row--header">
         <div class="grid-label"></div>
-        ${days.map((d) => `<div class="grid-col-header" data-action="open-day" data-date="${formatKey(d)}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(d, dayOverallScore(d)))}"><span>${weekdayShort(d)}</span><span class="grid-col-date">${d.getDate()}</span></div>`).join('')}
+        ${days.map((d) => `<div class="grid-col-header${dayHasNote(formatKey(d)) ? ' has-note' : ''}" data-action="open-day" data-date="${formatKey(d)}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(d, dayOverallScore(d)) + (dayHasNote(formatKey(d)) ? t('ariaLabel.withNote') : ''))}"><span>${weekdayShort(d)}</span><span class="grid-col-date">${d.getDate()}</span></div>`).join('')}
         <div class="grid-col-header grid-col-header--avg">Ø</div>
       </div>
       ${rows}
@@ -3500,7 +3688,8 @@ function renderMonth() {
       ${cells.map((d) => {
         if (!d) return `<div class="month-cell month-cell--empty"></div>`;
         const s = dayOverallScore(d);
-        return `<div class="month-cell" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(s)};${scorePatternStyle(s)}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(d, s))}"><span class="month-cell-num">${d.getDate()}</span></div>`;
+        const hasNote = dayHasNote(formatKey(d));
+        return `<div class="month-cell${hasNote ? ' has-note' : ''}" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(s)};${scorePatternStyle(s)}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(d, s) + (hasNote ? t('ariaLabel.withNote') : ''))}"><span class="month-cell-num">${d.getDate()}</span></div>`;
       }).join('')}
     </div>
     <div class="month-stats">${renderStatsRows(monthStats)}</div>
@@ -4260,6 +4449,21 @@ function renderMenu() {
   `;
 }
 
+function renderResetConfirm() {
+  return `
+    <div class="modal-overlay">
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="reset-confirm-title">
+        <h2 id="reset-confirm-title">${t('resetConfirm.title')}</h2>
+        <p>${t('resetConfirm.body', { date: formatDMY(state.resetConfirm) })}</p>
+        <div class="habit-form-actions">
+          <button type="button" class="manage-btn manage-btn--danger" data-action="reset-day-confirm">${t('resetConfirm.confirm')}</button>
+          <button type="button" class="habit-form-cancel" data-action="reset-day-cancel">${t('common.cancel')}</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderDeleteConfirm() {
   const busy = state.deleteConfirm.busy;
   return `
@@ -4307,6 +4511,11 @@ function renderSubpageHeader(titleKey) {
 }
 
 function renderApp() {
+  // Ein Re-Render, während im Notiz-Editor getippt wird (z.B. ein im Hintergrund
+  // fertig werdender Push-Status-Check), ersetzt die Textarea - der Entwurf selbst
+  // überlebt über state.noteEditor.draft, Fokus und Cursor-Position hier.
+  const active = document.activeElement;
+  const noteCaret = active?.id === 'note-input' ? [active.selectionStart, active.selectionEnd] : null;
   const noticeHtml = renderNotice();
   const subpage = isSubpageView(state.view);
   const body = state.loading ? `<div class="loading">${t('common.loading')}</div>` :
@@ -4340,11 +4549,17 @@ function renderApp() {
     ${noticeHtml}
     ${body}
     ${state.deleteConfirm ? renderDeleteConfirm() : ''}
+    ${state.resetConfirm ? renderResetConfirm() : ''}
   `;
   // preventScroll: der Header ist ohnehin (sticky) sichtbar - der native
   // Scroll-in-View-Effekt beim Fokussieren kennt "position: sticky" nicht und hat
   // dadurch leicht falsch/zu weit gescrollt (Header wirkte oben angeschnitten).
   if (subpage) document.querySelector('.subpage-header h1')?.focus({ preventScroll: true });
+  const noteInput = noteCaret && document.getElementById('note-input');
+  if (noteInput) {
+    noteInput.focus({ preventScroll: true });
+    noteInput.setSelectionRange(...noteCaret);
+  }
 }
 
 // Fokussiert nach einem Re-Render das erste fokussierbare Element im gerade
@@ -4512,8 +4727,25 @@ app.addEventListener('click', async (e) => {
     const dateKey = formatKey(state.currentDate);
     const value = JSON.parse(el.dataset.value);
     handleSelect(dateKey, el.dataset.habit, value);
-  } else if (action === 'reset-day') {
-    handleReset(formatKey(state.currentDate));
+  } else if (action === 'reset-day-arm') {
+    modalTriggerSelector = '[data-action="reset-day-arm"]';
+    state.resetConfirm = formatKey(state.currentDate);
+    render();
+  } else if (action === 'reset-day-cancel') {
+    state.resetConfirm = null;
+    render();
+    restoreModalFocus();
+  } else if (action === 'reset-day-confirm') {
+    const dateKey = state.resetConfirm;
+    state.resetConfirm = null;
+    handleReset(dateKey);
+    restoreModalFocus();
+  } else if (action === 'note-edit') {
+    openNoteEditor(el.dataset.note);
+  } else if (action === 'note-save') {
+    closeNoteEditor(true);
+  } else if (action === 'note-cancel') {
+    closeNoteEditor(false);
   } else if (action === 'clear-value') {
     handleClearValue(formatKey(state.currentDate), el.dataset.habit);
   } else if (action === 'enable-push') {
@@ -4773,6 +5005,7 @@ app.addEventListener('input', (e) => {
   // Kein render() beim Tippen (würde Fokus/Cursor zurücksetzen) - nur merken, damit
   // der Text einen späteren Re-Render (z.B. Meldung beim Absenden) übersteht.
   if (e.target.id === 'feedback-message') { state.feedback.message = e.target.value; return; }
+  if (e.target.id === 'note-input' && state.noteEditor) { state.noteEditor.draft = e.target.value; return; }
   // Bezeichnungen im Feld-Formular: Live-Vorschau mitziehen, ohne das ganze Formular
   // neu zu rendern (würde Fokus/Cursor im gerade bearbeiteten Feld zurücksetzen) - nur
   // die Vorschau selbst wird ausgetauscht, die ist inert und hält nie den Fokus.
@@ -4843,8 +5076,7 @@ app.addEventListener('keydown', (e) => {
   const modalBox = document.querySelector('.modal-box');
   if (modalBox) {
     if (e.key === 'Escape') {
-      state.deleteConfirm = null;
-      state.tutorialSkipConfirm = false;
+      closeModals();
       render();
       restoreModalFocus();
       return;
@@ -4895,8 +5127,9 @@ app.addEventListener('touchstart', (e) => {
   // Ein Wisch, der innerhalb einer eigenen horizontal scrollbaren Zeile beginnt (z.B. die
   // Feld-Buttons, wenn deren Bezeichnungen den Platz sprengen) oder auf dem Schieberegler
   // selbst beginnt (der Drag muss den Wert setzen, nicht den Tag wechseln), soll dort
-  // wirken statt die Ansicht zu wechseln.
-  if ((!SWIPEABLE_VIEWS.includes(state.view) && !isSubpageView(state.view)) || e.touches.length !== 1 || e.target.closest('.habit-options, .tabs, .slider-row')) return;
+  // wirken statt die Ansicht zu wechseln. Ebenso in einer Textarea (Notiz-Editor):
+  // dort markiert ein waagerechtes Ziehen Text.
+  if ((!SWIPEABLE_VIEWS.includes(state.view) && !isSubpageView(state.view)) || e.touches.length !== 1 || e.target.closest('.habit-options, .tabs, .slider-row, textarea')) return;
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
 }, { passive: true });
@@ -4951,7 +5184,7 @@ let lastPointerType = 'mouse';
 let suppressNextClick = false;
 
 function rowMenuHabitAt(target) {
-  if (state.view !== 'today' || target.closest('input, textarea, select, .slider-row, .row-menu')) return null;
+  if (state.view !== 'today' || target.closest('input, textarea, select, .slider-row, .row-menu, .note-editor')) return null;
   return target.closest('.habit-row, .number-box')?.querySelector('.row-menu-trigger')?.dataset.habit ?? null;
 }
 function cancelLongPress() {
@@ -5146,7 +5379,7 @@ if ('serviceWorker' in navigator) {
       state.rowMenu = null;
       state.habitForm = null;
       state.habitDeleteConfirm = null;
-      if (state.deleteConfirm) { state.deleteConfirm = null; modalTriggerSelector = null; }
+      if (state.deleteConfirm || state.resetConfirm) { state.deleteConfirm = null; state.resetConfirm = null; modalTriggerSelector = null; }
     }
     render();
     window.scrollTo(0, 0);
@@ -5200,6 +5433,11 @@ supabase.auth.onAuthStateChange(async (event, session) => {
   } else {
     state.entries = {};
     state.habits = [];
+    // Offene Notiz-Entwürfe/Menüs gehören zum abgemeldeten Konto - sonst sähe sie, wer
+    // sich danach auf demselben Gerät anmeldet.
+    state.noteEditor = null;
+    state.rowMenu = null;
+    state.resetConfirm = null;
     currentDek = null;
     state.tutorialStep = null;
     state.tutorialSkipConfirm = false;
