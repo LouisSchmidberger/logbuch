@@ -384,11 +384,16 @@
   .unplanned { margin-top: 14px; }
   .unplanned > summary { font-size: 12px; color: var(--sand); cursor: pointer; padding: 6px 0; }
   .unplanned > .habit-list { margin-top: 6px; }
+  /* Die Zellfarbe kommt inline als background-color (bewusst NICHT die Kurzschreibweise
+     "background:", die setzte auch diese Schraffur wieder zurück). */
   .grid-cell--unplanned {
     border-style: dashed;
-    background-image: repeating-linear-gradient(-45deg, var(--line) 0, var(--line) 1px, transparent 1px, transparent 5px);
+    background-image: repeating-linear-gradient(-45deg, var(--sand) 0, var(--sand) 1px, transparent 1px, transparent 5px);
   }
-  .weekday-toggle { min-width: 40px; }
+  /* 7 gleich breite Spalten statt umbrechender Pills - passt auch auf schmale Handys
+     in eine Zeile. */
+  .weekday-group { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }
+  .weekday-group .pill-toggle { padding-left: 0; padding-right: 0; text-align: center; }
   .schedule-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; }
   .auth-field .schedule-inline select, .auth-field .schedule-inline input:not([type="checkbox"]) { width: auto; }
   .auth-field .schedule-inline input[type="number"] { width: 72px; }
@@ -599,6 +604,10 @@
   .habit-form h2 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 12px; }
   .habit-form .auth-field { margin-bottom: 10px; }
   .habit-form-lock-note { font-size: 11px; color: var(--sand); margin: -4px 0 12px; }
+  /* Innerhalb eines Formularfelds (direkt unter Auswahl/Eingabe) etwas Luft statt des
+     negativen Abstands, der für Hinweise zwischen zwei Feldern gedacht ist - sonst klebte
+     der Text an der Auswahl darüber. */
+  .auth-field > .habit-form-lock-note { margin: 4px 0 0; line-height: 1.45; }
   .pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
   .pill-toggle {
     font-family: inherit; font-size: 12px; padding: 7px 12px; border-radius: 14px;
@@ -4106,7 +4115,7 @@ function renderWeek() {
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
-        ${scores.map((s, i) => `<div class="grid-cell${h.kind !== 'group' && getNote(dayKeys[i], h.id) ? ' has-note' : ''}${s === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
+        ${scores.map((s, i) => `<div class="grid-cell${h.kind !== 'group' && getNote(dayKeys[i], h.id) ? ' has-note' : ''}${s === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background-color:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
         <div class="grid-cell grid-cell--avg" style="background:${habitColor(h, applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
     `;
@@ -4663,14 +4672,15 @@ function renderHabitForm({ titleInHeader = false } = {}) {
 
   // Wiederholung: an welchen Tagen das Feld dran ist (Details siehe isScheduledOn).
   const sch = f.schedule;
-  const scheduleTypePill = (type, key) => `<button type="button" class="pill-toggle${sch.type === type ? ' pill-toggle--active' : ''}" data-action="habit-schedule-type" data-type="${type}" aria-pressed="${sch.type === type}">${t(key)}</button>`;
+  // Typ als Auswahlliste statt fünf Pills - die brachen auf dem Handy in eine zweite Zeile um.
+  const scheduleTypeOption = (type, key) => `<option value="${type}" ${sch.type === type ? 'selected' : ''}>${t(key)}</option>`;
   const dayOptions = (selected) => Array.from({ length: 31 }, (_, i) => i + 1)
     .map((d) => `<option value="${d}" ${d === selected ? 'selected' : ''}>${d}.</option>`).join('');
   let scheduleDetail = '';
   if (sch.type === 'weekly') {
     const shortNames = mondayFirstWeekdayShortNames();
     scheduleDetail = `
-      <div class="pill-group" role="group" aria-label="${esc(t('habitForm.schedule.weekdaysLabel'))}">
+      <div class="pill-group weekday-group" role="group" aria-label="${esc(t('habitForm.schedule.weekdaysLabel'))}">
         ${shortNames.map((name, i) => {
           const on = sch.days.includes(i);
           return `<button type="button" class="pill-toggle weekday-toggle${on ? ' pill-toggle--active' : ''}" data-action="habit-schedule-day" data-day="${i}" aria-pressed="${on}" aria-label="${esc(weekdayLong(new Date(2024, 0, 1 + i)))}">${esc(name)}</button>`;
@@ -4714,14 +4724,14 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   }
   const scheduleBody = `
     <div class="auth-field">
-      <label id="habit-form-schedule-label">${t('habitForm.schedule')}</label>
-      <div class="pill-group" role="group" aria-labelledby="habit-form-schedule-label">
-        ${scheduleTypePill('daily', 'habitForm.schedule.daily')}
-        ${scheduleTypePill('weekly', 'habitForm.schedule.weekly')}
-        ${scheduleTypePill('monthly', 'habitForm.schedule.monthly')}
-        ${scheduleTypePill('yearly', 'habitForm.schedule.yearly')}
-        ${scheduleTypePill('interval', 'habitForm.schedule.interval')}
-      </div>
+      <label for="habit-form-schedule-type">${t('habitForm.schedule')}</label>
+      <select id="habit-form-schedule-type">
+        ${scheduleTypeOption('daily', 'habitForm.schedule.daily')}
+        ${scheduleTypeOption('weekly', 'habitForm.schedule.weekly')}
+        ${scheduleTypeOption('monthly', 'habitForm.schedule.monthly')}
+        ${scheduleTypeOption('yearly', 'habitForm.schedule.yearly')}
+        ${scheduleTypeOption('interval', 'habitForm.schedule.interval')}
+      </select>
       ${scheduleDetail}
       ${sch.type !== 'daily' ? `<p class="habit-form-lock-note">${t('habitForm.schedule.explain')}</p>` : ''}
     </div>
@@ -5416,21 +5426,15 @@ app.addEventListener('click', async (e) => {
     syncHabitFormFromDom();
     state.habitForm.kind = el.dataset.kind;
     render();
-  } else if (action === 'habit-schedule-type' || action === 'habit-schedule-day') {
+  } else if (action === 'habit-schedule-day') {
     syncHabitFormFromDom();
     const sch = state.habitForm.schedule;
-    if (action === 'habit-schedule-type') {
-      sch.type = el.dataset.type;
-    } else {
-      const day = Number(el.dataset.day);
-      sch.days = sch.days.includes(day) ? sch.days.filter((d) => d !== day) : [...sch.days, day];
-    }
+    const day = Number(el.dataset.day);
+    sch.days = sch.days.includes(day) ? sch.days.filter((d) => d !== day) : [...sch.days, day];
     render();
     // render() baut das Formular neu auf - Fokus zurück auf denselben Button, sonst
     // landet man per Tastatur nach jedem Umschalten wieder am Seitenanfang.
-    document.querySelector(action === 'habit-schedule-type'
-      ? `[data-action="habit-schedule-type"][data-type="${el.dataset.type}"]`
-      : `[data-action="habit-schedule-day"][data-day="${el.dataset.day}"]`)?.focus();
+    document.querySelector(`[data-action="habit-schedule-day"][data-day="${el.dataset.day}"]`)?.focus();
   } else if (action === 'habit-good') {
     syncHabitFormFromDom();
     state.habitForm.good = el.dataset.good || null;
@@ -5539,6 +5543,13 @@ app.addEventListener('click', async (e) => {
 
 app.addEventListener('change', (e) => {
   state.notice = null; // siehe Kommentar beim 'click'-Listener oben
+  if (e.target.id === 'habit-form-schedule-type' && state.habitForm) {
+    syncHabitFormFromDom();
+    state.habitForm.schedule.type = e.target.value;
+    render();
+    document.getElementById('habit-form-schedule-type')?.focus(); // siehe habit-schedule-day
+    return;
+  }
   if (e.target.classList?.contains('text-field-input')) {
     flushDaySave(formatKey(state.currentDate)); // Feld verlassen: nicht erst auf den Timer warten
     return;
