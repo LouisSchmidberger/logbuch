@@ -156,7 +156,12 @@ gespeichert. Der Regler zeigt **nie** eine Min/Max-Beschriftung im Eingabe-UI �
 `slider_show_value` steuert nur, ob der aktuell gewählte Wert während der Eingabe
 sichtbar ist. Live-Vorschau (Wert + Farbe)
 läuft beim Ziehen rein über einen `input`-Listener ohne Re-Render; gespeichert wird erst
-bei `change` (Loslassen), über denselben `handleSelect`-Pfad wie bei den Buttons.
+beim Loslassen, über `handleSetValue` (setzt immer – nicht das Umschalten von
+`handleSelect` der Buttons, wo derselbe Wert den Eintrag wieder entfernt; entfernen
+geht beim Regler über das ×). Zwei Wege dorthin: `change`, plus ein eigener
+`pointerup`-Listener für den Fall, den `change` nicht abdeckt (ein leerer Regler steht
+schon mittig – zog man ihn und ließ ihn genau dort los, sah er eingetragen aus, war
+aber nicht gespeichert und hatte kein ×).
 
 **Bezeichnungen (`labels`) sind seit 2026-09-18 kein eigener Modus mehr, sondern ein
 optionaler Text-Overlay über denselben Stufen** – vorher waren "Nummerierte Stufen" und
@@ -421,13 +426,18 @@ vorhandene Notiz steht als kleiner kursiver Text unter dem Feld (`renderNote`, a
 → Editor), die Tagesnotiz unter der Feldliste (`renderDayNote`, ohne Notiz ein
 gestrichelter Platzhalter-Button). Editor mit explizitem Speichern/Abbrechen, leer
 speichern = Notiz löschen, max. `NOTE_MAX_LENGTH` (2000) Zeichen. `state.noteEditor`
-(`{dateKey, key, draft}`) gehört zu einem Tag: nur dort sichtbar und als Overlay
-gezählt (`isNoteEditorOpen`, Android-Zurück = Abbrechen), beim Tag-/Tab-Wechsel bleibt
-der Entwurf liegen und erscheint bei Rückkehr wieder; öffnet man stattdessen einen
-anderen Editor, wird der alte Entwurf vorher gespeichert (`commitPendingNoteDraft`) –
-Getipptes geht nie still verloren. Beim Abmelden wird er verworfen (sonst sähe ihn
-das nächste Konto auf dem Gerät). Ein Re-Render beim Tippen behält Fokus/Cursor
-(`renderApp`). Endgültiges Löschen eines Feldes räumt auch dessen Notizen weg
+(`{dateKey, key, draft, original}`) gehört zu einem Tag und zählt nur dort als Overlay
+(`isNoteEditorOpen`). **Getipptes geht nie still verloren**: wird der Editor unsichtbar
+(Tag-/Tab-Wechsel, anderer Editor geöffnet), speichert und schließt ihn `render()`
+zentral (`commitPendingNoteDraft`); beim Wechsel in eine andere App sichert ein
+`visibilitychange`-Listener den Entwurf schon mal (`persistNoteDraft`, Editor bleibt
+offen). Nur "Abbrechen" und Android-Zurück verwerfen bewusst (`discardNoteDraft`,
+stellt dabei `original` wieder her, falls zwischendurch schon gesichert wurde). Beim
+Abmelden wird ein offener Editor verworfen (sonst sähe ihn das nächste Konto auf dem
+Gerät). Ein Re-Render beim Tippen behält Fokus/Cursor (`renderApp`).
+`ensureNoteEditorVisible` hält den Editor beim Öffnen der Bildschirmtastatur sichtbar –
+rechnet gegen `window.visualViewport` (die Tastatur verkleinert nur den visuellen
+Viewport, `scrollIntoView` allein ließ den Editor darunter) und den angepinnten Header. Endgültiges Löschen eines Feldes räumt auch dessen Notizen weg
 (`purgeHabitFromEntries`). **Übersicht**: Woche – Punkt in der Feld-Zelle (Notiz zu
 diesem Feld) und am Wochentag (irgendeine Notiz an dem Tag, deckt auch Tagesnotiz und
 Zahlenwert-Felder ab, die in der Woche keine Zelle haben); Monat – Punkt in der

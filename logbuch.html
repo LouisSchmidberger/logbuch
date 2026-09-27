@@ -1079,10 +1079,9 @@ function leaveSubpage() {
 function isOverlayOpen() {
   return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.resetConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
 }
-// Der Notiz-Editor gehört zu einem bestimmten Tag in "Heute" und zählt nur, solange er
-// dort auch sichtbar ist. Wechselt man den Tag/Tab, bleibt er samt Entwurf im State
-// liegen (kein stilles Verwerfen von Getipptem) und taucht bei der Rückkehr wieder auf -
-// zählt in der Zwischenzeit aber nicht als offene Ebene für die Zurück-Taste.
+// Der Notiz-Editor gehört zu einem bestimmten Tag in "Heute" und ist nur offen, solange
+// er dort auch sichtbar ist - wechselt man Tag/Tab, speichert render() den Entwurf und
+// schließt ihn (siehe commitPendingNoteDraft).
 function isNoteEditorOpen() {
   return !!state.noteEditor && state.view === 'today' && state.noteEditor.dateKey === formatKey(state.currentDate);
 }
@@ -1112,7 +1111,7 @@ function closeTopLayer() {
   } else if (state.rowMenu) {
     state.rowMenu = null;
   } else if (isNoteEditorOpen()) {
-    state.noteEditor = null; // wie "Abbrechen"
+    discardNoteDraft(); // wie "Abbrechen"
   } else if (state.habitForm) {
     closeHabitForm();
   } else if (state.habitDeleteConfirm) {
@@ -2752,38 +2751,83 @@ function withNote(day, key, text) {
   return next;
 }
 const NOTE_MAX_LENGTH = 2000;
-// Speichert einen noch offenen Entwurf, bevor ein anderer Editor ihn ersetzt (anderes
-// Feld, oder ein an einem anderen Tag liegen gebliebener, siehe isNoteEditorOpen) -
-// Getipptes soll nie still verloren gehen.
-function commitPendingNoteDraft() {
+// Schreibt den Entwurf eines offenen Editors in den Tages-Eintrag (nur wenn er sich
+// vom gespeicherten Stand unterscheidet), ohne den Editor zu schließen.
+function persistNoteDraft() {
   const ed = state.noteEditor;
   if (!ed) return;
-  state.noteEditor = null;
   const text = ed.draft.trim().slice(0, NOTE_MAX_LENGTH);
   if (text === getNote(ed.dateKey, ed.key)) return;
   const day = withNote(state.entries[ed.dateKey] || {}, ed.key, text);
   state.entries = { ...state.entries, [ed.dateKey]: day };
   saveDay(ed.dateKey, day);
 }
+// Speichern und schließen. Außer über den Speichern-Button auch immer dann, wenn der
+// Editor nicht mehr sichtbar ist (Tag-/Tab-Wechsel, anderer Editor geöffnet, siehe
+// render()) - Getipptes soll nie still verloren gehen oder unbemerkt ungespeichert
+// herumliegen. Nur "Abbrechen" bzw. Android-Zurück verwerfen bewusst.
+function commitPendingNoteDraft() {
+  persistNoteDraft();
+  state.noteEditor = null;
+}
+// Abbrechen: stellt den Stand von vor dem Öffnen wieder her - nötig, weil ein Wechsel
+// in eine andere App den Entwurf zwischendurch schon gespeichert haben kann (siehe
+// visibilitychange-Listener).
+function discardNoteDraft() {
+  const ed = state.noteEditor;
+  if (!ed) return;
+  state.noteEditor = null;
+  if (getNote(ed.dateKey, ed.key) === ed.original) return;
+  const day = withNote(state.entries[ed.dateKey] || {}, ed.key, ed.original);
+  state.entries = { ...state.entries, [ed.dateKey]: day };
+  saveDay(ed.dateKey, day);
+}
 function openNoteEditor(key) {
   const dateKey = formatKey(state.currentDate);
-  if (state.noteEditor && (state.noteEditor.dateKey !== dateKey || state.noteEditor.key !== key)) commitPendingNoteDraft();
-  state.noteEditor = { dateKey, key, draft: state.noteEditor?.draft ?? getNote(dateKey, key) };
+  if (state.noteEditor?.dateKey === dateKey && state.noteEditor.key === key) return;
+  commitPendingNoteDraft();
+  const original = getNote(dateKey, key);
+  state.noteEditor = { dateKey, key, draft: original, original };
   render();
   const input = document.getElementById('note-input');
   if (input) {
     input.focus({ preventScroll: true });
     input.setSelectionRange(input.value.length, input.value.length);
-    input.scrollIntoView({ block: 'nearest' });
+    ensureNoteEditorVisible();
   }
 }
+// Hält Textfeld + Speichern/Abbrechen im sichtbaren Bereich, auch wenn die
+// Bildschirmtastatur aufgeht: die verkleinert auf Android/iOS nur den *visuellen*
+// Viewport (window.visualViewport), nicht das Layout - scrollIntoView() allein weiß
+// davon nichts und ließ den Editor unter der Tastatur. Deshalb von Hand gegen die
+// visualViewport-Maße gerechnet, aufgerufen beim Öffnen und bei jeder Größenänderung
+// des visuellen Viewports (Tastatur geht auf), solange die Textarea den Fokus hat.
+// Oben zusätzlich der angepinnte Header (.sticky-top), unter dem nichts landen soll.
+function ensureNoteEditorVisible() {
+  const editor = document.querySelector('.note-editor');
+  if (!editor || document.activeElement?.id !== 'note-input') return;
+  const vv = window.visualViewport;
+  const viewTop = (vv ? vv.offsetTop : 0) + (document.querySelector('.sticky-top')?.getBoundingClientRect().bottom ?? 0);
+  const viewBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+  const margin = 12;
+  const r = editor.getBoundingClientRect();
+  if (r.bottom + margin > viewBottom) window.scrollBy(0, Math.min(r.bottom + margin - viewBottom, r.top - viewTop - margin));
+  else if (r.top - margin < viewTop) window.scrollBy(0, r.top - margin - viewTop);
+}
+window.visualViewport?.addEventListener('resize', ensureNoteEditorVisible);
+// Beim Wechsel in eine andere App (oder Sperren des Handys) den Entwurf schon mal
+// sichern - der Browser kann die Seite im Hintergrund jederzeit verwerfen. Der Editor
+// bleibt dabei offen, man schreibt nach der Rückkehr einfach weiter.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') persistNoteDraft();
+});
 // Speichern UND Abbrechen: danach zurück auf das Element, von dem aus man gekommen ist
 // (Feldname bzw. der Tagesnotiz-Bereich), da render() den Fokus sonst verwirft.
 // Der Entwurf ist über den 'input'-Listener immer aktuell in state.noteEditor.draft.
 function closeNoteEditor(save) {
   const { key } = state.noteEditor;
   if (save) commitPendingNoteDraft();
-  else state.noteEditor = null;
+  else discardNoteDraft();
   render();
   const focusTarget = key === DAY_NOTE_KEY
     ? document.querySelector('.day-note [data-action="note-edit"]')
@@ -2809,6 +2853,19 @@ function handleSelect(dateKey, habitId, value) {
   const day = { ...(state.entries[dateKey] || {}) };
   if (day[habitId] === value) delete day[habitId];
   else day[habitId] = value;
+  state.entries = { ...state.entries, [dateKey]: day };
+  render();
+  saveDay(dateKey, day);
+}
+
+// Schieberegler: setzt immer (nie das Umschalten von handleSelect, wo derselbe Wert
+// ein zweites Mal den Eintrag entfernt - beim Regler ist "loslassen auf demselben Wert"
+// keine Absicht zum Löschen, dafür gibt es das ×). Idempotent, da der Regler-Commit auf
+// zwei Wegen ankommen kann (siehe 'change' und 'pointerup' weiter unten).
+function handleSetValue(dateKey, habitId, value) {
+  const day = { ...(state.entries[dateKey] || {}) };
+  if (day[habitId] === value) return;
+  day[habitId] = value;
   state.entries = { ...state.entries, [dateKey]: day };
   render();
   saveDay(dateKey, day);
@@ -4580,6 +4637,10 @@ function focusModalIfOpen() {
 // "Heute" zu "Monat" dort ebenfalls mitten in der Seite statt oben gelandet.
 let lastRenderedView = null;
 function render() {
+  // Ein Notiz-Editor, der durch einen Tag-/Tab-Wechsel o.ä. nicht mehr sichtbar ist,
+  // wird hier zentral gespeichert und geschlossen, statt an jeder der vielen Stellen,
+  // die Tag oder Ansicht ändern (Klicks, Wischen, Deep-Links, Kalenderzellen, ...).
+  if (state.noteEditor && !isNoteEditorOpen()) commitPendingNoteDraft();
   if (state.passwordRecovery) { renderPasswordRecovery(); }
   else if (!state.session) { renderAuth(); }
   else if (state.recoveryKeyToShow) { renderRecoveryKeyDisplay(); }
@@ -4991,9 +5052,9 @@ app.addEventListener('change', (e) => {
   }
   const slider = e.target.closest('[data-action="value-slider"]');
   if (slider) {
-    // Loslassen/Commit — erst hier wird tatsächlich gespeichert (gleicher Pfad wie
-    // bei den Buttons), nicht bei jedem Zwischenwert während des Ziehens.
-    handleSelect(formatKey(state.currentDate), slider.dataset.habit, Number(slider.value));
+    // Loslassen/Commit — erst hier wird tatsächlich gespeichert, nicht bei jedem
+    // Zwischenwert während des Ziehens.
+    handleSetValue(formatKey(state.currentDate), slider.dataset.habit, Number(slider.value));
   }
 });
 
@@ -5027,11 +5088,34 @@ app.addEventListener('input', (e) => {
   const v = Number(slider.value);
   const pct = ((v - habit.min) / (habit.max - habit.min)) * 100;
   slider.classList.remove('value-slider--unset');
+  slider.dataset.dirty = '1'; // siehe pointerup-Listener unten
   slider.style.setProperty('--slider-color', habitColor(habit, normalize(habit, v)));
   slider.style.setProperty('--slider-pct', pct + '%');
   const valueEl = document.getElementById('slider-value-' + habit.id);
   if (valueEl) valueEl.textContent = habitSliderValueText(habit, v);
 });
+// Lücke im nativen 'change'-Event: das feuert beim Loslassen nur, wenn sich der Wert
+// seit dem Drücken geändert hat. Ein noch leerer Regler steht aber schon mittig -
+// zieht man ihn und lässt ihn genau dort wieder los, sah er durch die Live-Vorschau
+// oben eingetragen aus (eingefärbt), gespeichert wurde aber nichts, und das × fehlte.
+// Deshalb zusätzlich beim Loslassen selbst speichern, sobald während des Ziehens ein
+// 'input' kam (data-dirty). Auf document statt app, da die Maus beim Loslassen schon
+// außerhalb des Reglers sein kann; setTimeout, damit ein ggf. danach noch feuerndes
+// 'change' nicht doppelt rendert - handleSetValue ist ohnehin idempotent, und hat
+// 'change' schon neu gerendert, hängt der alte Regler nicht mehr im DOM.
+let sliderPointerTarget = null;
+app.addEventListener('pointerdown', (e) => {
+  sliderPointerTarget = e.target.closest('[data-action="value-slider"]');
+});
+document.addEventListener('pointerup', () => {
+  const slider = sliderPointerTarget;
+  sliderPointerTarget = null;
+  if (!slider?.dataset.dirty) return;
+  setTimeout(() => {
+    if (slider.isConnected) handleSetValue(formatKey(state.currentDate), slider.dataset.habit, Number(slider.value));
+  });
+});
+document.addEventListener('pointercancel', () => { sliderPointerTarget = null; });
 
 // Merkt sich, wenn einer der hervorgehobenen "Über Logbuch"-Bereiche zu-/aufgeklappt
 // wird (siehe isAboutSectionCollapsed) - reines DOM-natives <details>-Verhalten, kein
