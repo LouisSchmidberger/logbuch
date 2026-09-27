@@ -382,8 +382,10 @@ ersetzen Header **und** Tab-Leiste komplett durch einen eigenen `renderSubpageHe
 `isSubpageView(view)` steuert diese Verzweigung in `renderApp()`. Kein "Tab ohne
 Highlight unter totem Header" mehr wie vorher. Der ←-Button und Android-/Browser-Zurück
 (`closeTopLayer()`, siehe unten) führen zum gemerkten `previousTabView` zurück, nie
-hart zu "Heute". Nach dem Öffnen einer Unterseite wird deren `<h1>` fokussiert
-(`tabindex="-1"`, screenreaderfreundliche Bestätigung der Navigation). Header (+ bei
+hart zu "Heute". Beim Betreten einer Unterseite bzw. Wechsel ihrer Ebene (Liste ↔
+Feld-Formular) wird deren `<h1>` fokussiert (`tabindex="-1"`, screenreaderfreundliche
+Bestätigung der Navigation) – bewusst nur dann (`lastFocusedSubpageLevel`), nicht bei
+jedem `render()`, sonst warf jede Umschaltung im Formular den Tastatur-Fokus nach oben. Header (+ bei
 Tab-Ansichten auch die Tab-Leiste) sind über `.sticky-top` (`position: sticky`)
 angepinnt, damit Menü/Zurück/Tab-Wechsel beim Scrollen immer erreichbar bleiben.
 
@@ -405,9 +407,19 @@ konsumiert dieses "eigene" Pop-Event ohne weitere Aktion. Schließt ein echter
 Zurück-Druck mehr als eine Ebene (Shortcut-Formular nimmt die Verwaltung mit), räumt
 das anschließende `render()` → `syncLayerHistory()` den übrigen Eintrag weg.
 **Verlassen der Verwaltung schließt deren Overlays** (`leaveSubpage`/
-`closeManageOverlays`, auch beim Wechsel zu einer anderen Unterseite übers Menü) –
-vorher blieb ein offenes Feld-Formular beim ←-Button/Wischen unsichtbar im State und
-zählte weiter als History-Ebene.
+`closeManageOverlays`, beim Wechsel zu einer anderen Unterseite übers Menü) – sonst
+bliebe ein offenes Feld-Formular unsichtbar im State und zählte weiter als History-Ebene.
+
+**Feld-Formular als eigene Ebene der Verwaltung** (seit 2026-09-27): solange
+`state.habitForm` offen ist, zeigt `renderManage` NUR das Formular (keine Feldliste
+darunter, kein Hinscrollen zu anderen Feldern), der Titel ("Neues Feld"/"Feld
+bearbeiten"/…, `habitFormTitleKey`) steht im Seitenkopf statt im Formular (im Tutorial
+bleibt er als `<h2>` im Formular, `renderHabitForm({ titleInHeader })`). ←-Button und
+Wischen führen dort zurück zur Liste statt aus der Verwaltung (`subpageBack`), bzw. zum
+Tab bei `returnToTab`. Geöffnet wird immer über `openHabitForm` (merkt sich die
+Scroll-Position), `closeHabitForm` stellt sie wieder her (`pendingScrollRestore`, am
+Ende von `render()` eingelöst) – man landet nach Speichern/Abbrechen wieder an der
+Stelle der Liste bzw. von "Heute", von der man kam.
 
 **"+ Neues Feld"-Shortcut in "Heute"** (seit 2026-09-25): dezenter Text-Button unter der
 Feldliste (bewusst kein ausgefüllter Button – "Heute" ist die tägliche Eintrags-Ansicht,

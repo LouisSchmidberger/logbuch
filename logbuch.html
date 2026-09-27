@@ -1119,6 +1119,7 @@ function enterSubpage(view) {
 // History-Ebene (ein wirkungsloser Android-Zurück-Druck auf der nächsten Seite).
 function closeManageOverlays() {
   state.habitForm = null;
+  habitFormReturnScrollY = null;
   state.habitDeleteConfirm = null;
 }
 function leaveSubpage() {
@@ -1142,20 +1143,44 @@ function isNoteEditorOpen() {
 function currentLayerCount() {
   return (isSubpageView(state.view) ? 1 : 0) + (isOverlayOpen() ? 1 : 0);
 }
-// Schließt jeweils nur die "oberste" Ebene (analog zur bestehenden Escape-Logik) -
-// Overlays vor der Unterseite, da sie darüber liegen. In der Praxis nie mehrere
-// Overlays gleichzeitig offen, da z.B. die Menü-Aktionen state.menuOpen beim Öffnen
-// eines anderen Overlays bereits selbst auf false setzen.
-// Einziger Weg, das Feld-Formular zu schließen (Speichern, Abbrechen, Android-Zurück).
-// Wurde es über den "+ Neues Feld"-Shortcut in "Heute" geöffnet (returnToTab, lebt
-// bewusst im Formular-Zustand und verschwindet so automatisch mit ihm), geht es danach
-// direkt zurück zum Tab statt in der Verwaltung zu bleiben - die Absicht war dort
-// "jetzt tracken", nicht "verwalten".
+// Das Feld-Formular ist eine eigene Ebene innerhalb der Verwaltung: solange es offen
+// ist, zeigt die Verwaltung NUR das Formular (kein Weiterscrollen zu den anderen
+// Feldern, Titel im Seitenkopf, siehe renderManage/renderApp). Geöffnet wird es immer
+// über openHabitForm, das sich die Scroll-Position merkt - closeHabitForm (einziger
+// Schließ-Weg: Speichern, Abbrechen, ←-Button, Wischen, Android-Zurück) bringt einen
+// genau dorthin zurück (per pendingScrollRestore, eingelöst am Ende von render()).
+// Wurde es über einen Shortcut aus "Heute" geöffnet (returnToTab, lebt bewusst im
+// Formular-Zustand und verschwindet so automatisch mit ihm), geht es danach direkt
+// zurück zum Tab statt in der Verwaltung zu bleiben - die Absicht war dort "jetzt
+// tracken", nicht "verwalten".
+let habitFormReturnScrollY = null;
+let pendingScrollRestore = null;
+function openHabitForm(form) {
+  habitFormReturnScrollY = window.scrollY;
+  state.habitForm = form;
+  render();
+  window.scrollTo(0, 0);
+  // Direkt den Namen fokussieren - öffnet auf dem Handy gleich die Tastatur
+  // (funktioniert nur zuverlässig, weil das synchron aus einem Klick-Handler kommt).
+  requestAnimationFrame(() => document.getElementById('habit-form-name')?.focus());
+}
 function closeHabitForm() {
   const returnToTab = state.habitForm?.returnToTab;
   state.habitForm = null;
   if (returnToTab && state.view === 'manage') state.view = state.previousTabView || 'today';
+  pendingScrollRestore = habitFormReturnScrollY;
+  habitFormReturnScrollY = null;
 }
+// ←-Button und Wischen auf einer Unterseite: bei offenem Feld-Formular zurück zur
+// Liste (bzw. zum Tab, siehe returnToTab), sonst die Unterseite verlassen.
+function subpageBack() {
+  if (state.view === 'manage' && state.habitForm) closeHabitForm();
+  else leaveSubpage();
+}
+// Schließt jeweils nur die "oberste" Ebene (analog zur bestehenden Escape-Logik) -
+// Overlays vor der Unterseite, da sie darüber liegen. In der Praxis nie mehrere
+// Overlays gleichzeitig offen, da z.B. die Menü-Aktionen state.menuOpen beim Öffnen
+// eines anderen Overlays bereits selbst auf false setzen.
 function closeTopLayer() {
   if (state.deleteConfirm || state.tutorialSkipConfirm || state.resetConfirm) {
     closeModals();
@@ -4296,21 +4321,13 @@ function renderTextReviews(habits, dateKeys) {
 }
 
 // --- Rendering: Felder-Verwaltung -------------------------------------------
-// Springt zum gerade geöffneten Feld-/Gruppen-Formular — bei einer langen Liste war
-// sonst nach "Bearbeiten" nicht sichtbar, dass sich oben etwas geöffnet hat, wenn man
-// weiter unten in der Liste stand. requestAnimationFrame, da render() das DOM erst
-// gerade neu aufgebaut hat.
-function scrollToHabitForm() {
-  requestAnimationFrame(() => {
-    document.getElementById('habit-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    // Direkt den Namen fokussieren, statt erst hinscrollen und dann selbst antippen zu
-    // müssen - öffnet auf dem Handy gleich die Tastatur (funktioniert nur zuverlässig,
-    // weil scrollToHabitForm() synchron aus einem Klick-Handler heraus aufgerufen wird).
-    document.getElementById('habit-form-name')?.focus();
-  });
+// Titel des Formulars - in der Verwaltung steht er im Seitenkopf (titleInHeader),
+// im Tutorial als eigene Überschrift im Formular.
+function habitFormTitleKey(f) {
+  if (f.kind === 'group') return f.defId ? 'habitForm.title.editGroup' : 'habitForm.title.newGroup';
+  return f.defId ? 'habitForm.title.editField' : 'habitForm.title.newField';
 }
-
-function renderHabitForm() {
+function renderHabitForm({ titleInHeader = false } = {}) {
   const f = state.habitForm;
   const defaultReminderMinute = state.userSettings.defaultReminderMinute;
 
@@ -4428,7 +4445,7 @@ function renderHabitForm() {
   const isGroup = f.kind === 'group';
   return `
     <div class="habit-form" id="habit-form">
-      <h2>${isGroup ? (f.defId ? t('habitForm.title.editGroup') : t('habitForm.title.newGroup')) : (f.defId ? t('habitForm.title.editField') : t('habitForm.title.newField'))}</h2>
+      ${titleInHeader ? '' : `<h2>${t(habitFormTitleKey(f))}</h2>`}
       ${f.locked ? `<p class="habit-form-lock-note">${t('habitForm.lockedNote')}</p>` : ''}
       <div class="auth-field">
         <label for="habit-form-name">${t('habitForm.name')}</label>
@@ -4505,11 +4522,11 @@ function renderManage() {
     `;
   };
 
-  const showFieldForm = state.habitForm && state.habitForm.kind !== 'group';
-  const showGroupForm = state.habitForm && state.habitForm.kind === 'group';
+  // Offenes Formular = eigene Ebene, ohne die Liste darunter (siehe openHabitForm).
+  if (state.habitForm) return renderHabitForm({ titleInHeader: true });
 
   return `
-    ${showFieldForm ? renderHabitForm() : !state.habitForm ? `<button type="button" class="manage-new-btn" data-action="habit-new">+ ${t('habitForm.title.newField')}</button>` : ''}
+    <button type="button" class="manage-new-btn" data-action="habit-new">+ ${t('habitForm.title.newField')}</button>
     <div class="manage-list">${active.map(row).join('')}</div>
     ${archived.length ? `
       <p class="habit-form-lock-note">${t('manage.archivedSectionLabel')}</p>
@@ -4519,7 +4536,7 @@ function renderManage() {
     <div class="manage-section-divider"></div>
     <h3 class="manage-section-title">${t('manage.groupsTitle')}</h3>
     <p class="manage-meta">${t('manage.groupsExplain')}</p>
-    ${showGroupForm ? renderHabitForm() : !state.habitForm ? `<button type="button" class="manage-new-btn" data-action="group-new">+ ${t('habitForm.title.newGroup')}</button>` : ''}
+    <button type="button" class="manage-new-btn" data-action="group-new">+ ${t('habitForm.title.newGroup')}</button>
     <div class="manage-list">${activeGroups.map(row).join('')}</div>
     ${archivedGroups.length ? `
       <p class="habit-form-lock-note">${t('manage.archivedSectionLabel')}</p>
@@ -4808,6 +4825,7 @@ function renderSubpageHeader(titleKey) {
   `;
 }
 
+let lastFocusedSubpageLevel = null;
 function renderApp() {
   // Ein Re-Render, während in einer Textarea getippt wird (Notiz-Editor oder Text-Feld,
   // z.B. durch einen im Hintergrund fertig werdenden Push-Status-Check), ersetzt sie -
@@ -4829,7 +4847,9 @@ function renderApp() {
   app.innerHTML = `
     <div class="sticky-top">
       ${subpage
-        ? renderSubpageHeader({ manage: 'menu.manageFields', about: 'about.title', feedback: 'feedback.title' }[state.view])
+        ? renderSubpageHeader(state.view === 'manage' && state.habitForm
+          ? habitFormTitleKey(state.habitForm)
+          : { manage: 'menu.manageFields', about: 'about.title', feedback: 'feedback.title' }[state.view])
         : `
           <div class="header">
             <h1>Logbuch</h1>
@@ -4853,7 +4873,12 @@ function renderApp() {
   // preventScroll: der Header ist ohnehin (sticky) sichtbar - der native
   // Scroll-in-View-Effekt beim Fokussieren kennt "position: sticky" nicht und hat
   // dadurch leicht falsch/zu weit gescrollt (Header wirkte oben angeschnitten).
-  if (subpage) document.querySelector('.subpage-header h1')?.focus({ preventScroll: true });
+  // Überschrift nur beim Betreten einer Unterseite bzw. Wechsel ihrer Ebene (Liste ↔
+  // Feld-Formular) fokussieren - vorher bei JEDEM render(), wodurch z.B. jede
+  // Umschaltung im Feld-Formular den Tastatur-Fokus wieder ganz nach oben warf.
+  const subpageLevel = subpage ? state.view + (state.view === 'manage' && state.habitForm ? ':form' : '') : null;
+  if (subpageLevel && subpageLevel !== lastFocusedSubpageLevel) document.querySelector('.subpage-header h1')?.focus({ preventScroll: true });
+  lastFocusedSubpageLevel = subpageLevel;
   const caretInput = caret && document.getElementById(caret.id);
   if (caretInput) {
     caretInput.focus({ preventScroll: true });
@@ -4895,6 +4920,10 @@ function render() {
   if (state.view !== lastRenderedView) {
     lastRenderedView = state.view;
     window.scrollTo(0, 0);
+  }
+  if (pendingScrollRestore !== null) {
+    window.scrollTo(0, pendingScrollRestore);
+    pendingScrollRestore = null;
   }
 }
 
@@ -4986,7 +5015,7 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'feedback-submit') {
     await handleFeedbackSubmit();
   } else if (action === 'subpage-back') {
-    leaveSubpage();
+    subpageBack();
     render();
   } else if (action === 'export-data') {
     await handleExportData();
@@ -5059,9 +5088,7 @@ app.addEventListener('click', async (e) => {
     disablePush();
   } else if (action === 'today-new-field') {
     enterSubpage('manage');
-    state.habitForm = { ...defaultHabitForm(), returnToTab: true };
-    render();
-    scrollToHabitForm();
+    openHabitForm({ ...defaultHabitForm(), returnToTab: true });
   } else if (action === 'row-menu') {
     if (state.rowMenu === el.dataset.habit) closeRowMenu();
     else openRowMenu(el.dataset.habit);
@@ -5071,9 +5098,7 @@ app.addEventListener('click', async (e) => {
     const h = state.habits.find((x) => x.defId === el.dataset.id);
     if (h) {
       enterSubpage('manage');
-      state.habitForm = { ...habitToForm(h), returnToTab: true };
-      render();
-      scrollToHabitForm();
+      openHabitForm({ ...habitToForm(h), returnToTab: true });
     }
   } else if (action === 'row-menu-archive') {
     // Anders als in der Verwaltung verschwindet das Feld hier einfach aus der Liste -
@@ -5083,16 +5108,12 @@ app.addEventListener('click', async (e) => {
       render();
     }
   } else if (action === 'habit-new') {
-    state.habitForm = defaultHabitForm();
-    render();
-    scrollToHabitForm();
+    openHabitForm(defaultHabitForm());
   } else if (action === 'group-new') {
-    state.habitForm = { ...defaultHabitForm(), kind: 'group' };
-    render();
-    scrollToHabitForm();
+    openHabitForm({ ...defaultHabitForm(), kind: 'group' });
   } else if (action === 'habit-edit') {
     const h = state.habits.find((x) => x.defId === el.dataset.id);
-    if (h) { state.habitForm = habitToForm(h); render(); scrollToHabitForm(); }
+    if (h) openHabitForm(habitToForm(h));
   } else if (action === 'habit-cancel') {
     closeHabitForm();
     render();
@@ -5487,7 +5508,7 @@ app.addEventListener('touchend', (e) => {
   state.rowMenu = null;
 
   if (subpage) {
-    if (dir === -1) { leaveSubpage(); render(); }
+    if (dir === -1) { subpageBack(); render(); }
     return;
   }
   if (state.view === 'today') {
