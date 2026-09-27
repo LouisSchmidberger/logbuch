@@ -138,7 +138,8 @@ als fehlend noch lösen sie ihre eigene Erinnerungszeit aus (`habit_scheduled_on
 
 ## Wiederholung (`habit_definitions.schedule`, seit 2026-09-27)
 
-Pro Feld einstellbar, an welchen Tagen es "dran" ist (Formular "Wiederholung", nicht für
+Pro Feld einstellbar, an welchen Tagen es "dran" ist (Formular "Wiederholung": Typ als
+Auswahlliste, Wochentage als 7 gleich breite Buttons in einer Zeile; nicht für
 Gruppen – die sind dran, sobald eines ihrer aktiven Mitglieder dran ist). `null` =
 täglich, sonst `{type:'weekly', days:[0..6]}` (0 = Montag), `{type:'monthly', day:1..31
 | -1}` (-1 = letzter Tag), `{type:'yearly', month, day}` oder `{type:'interval', every:
@@ -162,7 +163,9 @@ Konzept, eher Richtung Ziel-Quote).
   über `state.unplannedOpenFor` (dateKey). Ein Sprung aus der Auswertung zu einem Feld
   darin klappt ihn auf (`focusTodayField`).
 - **Woche**: Zellen an nicht geplanten Tagen ohne Wert sind gestrichelt schraffiert
-  (`.grid-cell--unplanned`), damit "nicht dran" nicht wie "vergessen" aussieht.
+  (`.grid-cell--unplanned`), damit "nicht dran" nicht wie "vergessen" aussieht. Die
+  Zellfarbe steht deshalb inline als `background-color`, nicht als Kurzschreibweise
+  `background:` – die setzte die Schraffur (`background-image`) wieder zurück.
   Durchschnitte/Quoten sind unberührt – die rechnen ohnehin nur mit eingetragenen Werten.
 - **Verwaltungsliste**: Kurzform des Plans neben einer ggf. eigenen Erinnerungszeit
   (`manageFieldMeta`/`scheduleSummary`, z.B. "Mo, Mi, Fr · Erinnerung 08:00").
