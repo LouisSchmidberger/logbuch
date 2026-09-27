@@ -1545,6 +1545,8 @@ const STRINGS = {
     'about.tip.jumpDay.body': 'Tippe in der Wochen-, Monats- oder Jahresansicht auf eine beliebige Zelle, um direkt zu diesem Tag zu springen.',
     'about.tip.toggleOff.title': 'Eine Antwort wieder löschen',
     'about.tip.toggleOff.body': 'Tippe eine bereits ausgewählte Option nochmal an, um sie zu entfernen — praktisch, falls du dich vertippt hast.',
+    'about.tip.textFields.title': 'Freie Text-Felder',
+    'about.tip.textFields.body': 'Für Fragen wie „Wofür bin ich heute dankbar?" gibt es den Feld-Typ „Freier Text". In „Heute" steht dafür ein Textfeld, das automatisch speichert. Die Antworten fließen nicht in die Auswertung ein, lassen sich aber in Woche, Monat, Jahr und Gesamt aufklappen und nachlesen — ein Tipp auf einen Eintrag führt zu seinem Tag.',
     'about.tip.fieldMenu.title': 'Notizen & Felder direkt bearbeiten',
     'about.tip.fieldMenu.body': 'Tippe in „Heute" auf den Namen eines Feldes (oder halte die Zeile kurz gedrückt), um eine Notiz dazu zu schreiben — etwa „heute erst nach dem Frühstück gewogen" — oder das Feld direkt dort zu bearbeiten bzw. zu archivieren. Notizen fließen nicht in die Auswertung ein, in Woche und Monat zeigt ein kleiner Punkt, wo es eine gibt.',
     'about.tip.reorder.title': 'Felder umsortieren',
@@ -1870,6 +1872,8 @@ const STRINGS = {
     'about.tip.jumpDay.body': 'Tap any cell in the week, month, or year view to jump directly to that day.',
     'about.tip.toggleOff.title': 'Clearing an answer',
     'about.tip.toggleOff.body': 'Tap an already-selected option again to remove it — handy if you tapped the wrong one.',
+    'about.tip.textFields.title': 'Free text fields',
+    'about.tip.textFields.body': 'For questions like "What am I grateful for today?" there is the "Free text" field type. "Today" shows a text box for it that saves automatically. The answers are not part of the statistics, but you can expand and read them back in the week, month, year, and overall views — tapping an entry takes you to its day.',
     'about.tip.fieldMenu.title': 'Notes & editing fields directly',
     'about.tip.fieldMenu.body': 'In "Today", tap the name of a field (or briefly press and hold its row) to write a note about it — say, "weighed myself after breakfast today" — or to edit or archive the field right there. Notes are not part of the statistics; in the week and month views a small dot shows where there is one.',
     'about.tip.reorder.title': 'Reordering fields',
@@ -3858,7 +3862,7 @@ function renderWeek() {
       ${rows}
     </div>
     ${renderNumberCharts(visibleHabits, days.map(formatKey), true)}
-    ${renderTextReviews(visibleHabits, days.map(formatKey), false)}
+    ${renderTextReviews(visibleHabits, days.map(formatKey))}
   `;
 }
 
@@ -3898,7 +3902,7 @@ function renderMonth() {
     </div>
     <div class="month-stats">${renderStatsRows(monthStats)}</div>
     ${renderNumberCharts(visibleHabits, cellKeys, true)}
-    ${renderTextReviews(visibleHabits, cellKeys, false)}
+    ${renderTextReviews(visibleHabits, cellKeys)}
   `;
 }
 
@@ -3934,7 +3938,7 @@ function renderYear() {
     <div class="year-grid">${monthsGrid}</div>
     <div class="month-stats">${renderStatsRows(yearStats)}</div>
     ${renderNumberCharts(visibleHabits, yearKeys)}
-    ${renderTextReviews(visibleHabits, yearKeys, true)}
+    ${renderTextReviews(visibleHabits, yearKeys)}
   `;
 }
 
@@ -3953,7 +3957,7 @@ function renderGlobal() {
     <p class="manage-meta" style="margin: -8px 0 14px;">${rangeNote}</p>
     <div class="month-stats">${renderStatsRows(stats)}</div>
     ${renderNumberCharts(state.habits, dateKeys)}
-    ${renderTextReviews(state.habits, dateKeys, true)}
+    ${renderTextReviews(state.habits, dateKeys)}
   `;
 }
 
@@ -4070,6 +4074,7 @@ function renderAbout() {
       ['about.tip.groups.title', 'about.tip.groups.body'],
       ['about.tip.goalThreshold.title', 'about.tip.goalThreshold.body'],
       ['about.tip.slider.title', 'about.tip.slider.body'],
+      ['about.tip.textFields.title', 'about.tip.textFields.body'],
       ['about.tip.customReminder.title', 'about.tip.customReminder.body'],
       ['about.tip.archiveVsDelete.title', 'about.tip.archiveVsDelete.body'],
     ])}
@@ -4241,17 +4246,17 @@ function renderNumberCharts(visibleHabits, dateKeys, interactive = false) {
 }
 
 // Rückblick für Text-Felder: pro Feld eine Liste der Antworten im Zeitraum, jeder
-// Eintrag öffnet seinen Tag. Woche/Monat: offen und chronologisch (liest sich wie der
-// Kalender). Jahr/Gesamt (long=true): eingeklappt mit Anzahl im Titel und neueste
-// zuerst - aufgeklappt eine Art Tagebuch-Rückblick, eingeklappt würde die Liste sonst
-// die ganze Seite füllen. Felder ohne Antwort im Zeitraum erscheinen gar nicht.
-function renderTextReviews(habits, dateKeys, long) {
+// Eintrag öffnet seinen Tag. In allen Ansichten gleich: eingeklappt mit Anzahl im
+// Titel, neueste zuerst (in langen Listen ist das Neueste meist das Relevanteste - eine
+// je nach Ansicht umgekehrte Reihenfolge war verwirrend). Felder ohne Antwort im
+// Zeitraum erscheinen gar nicht.
+function renderTextReviews(habits, dateKeys) {
   const blocks = habits.filter(isTextKind).map((h) => {
     const entries = dateKeys
       .map((k) => ({ key: k, text: state.entries[k]?.[h.id] }))
       .filter((e) => typeof e.text === 'string' && e.text.trim());
     if (!entries.length) return '';
-    if (long) entries.reverse();
+    entries.reverse();
     const title = `${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}`;
     const list = `
       <ul class="text-review-list">
@@ -4263,7 +4268,6 @@ function renderTextReviews(habits, dateKeys, long) {
         `).join('')}
       </ul>
     `;
-    if (!long) return `<div class="text-review"><div class="text-review-title">${title}</div>${list}</div>`;
     const count = t(entries.length === 1 ? 'textReview.countOne' : 'textReview.countMany', { count: entries.length });
     return `<details class="text-review"><summary class="text-review-title">${title} <span class="manage-meta">· ${count}</span></summary>${list}</details>`;
   }).join('');

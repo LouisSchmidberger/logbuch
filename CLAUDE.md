@@ -150,10 +150,11 @@ jeder Tastendruck aktualisiert sofort `state.entries` (ohne `render()`), der ver
 Upsert läuft erst nach 1 s Tipp-Pause (`updateTextValue`/`TEXT_SAVE_DELAY_MS`), sofort beim
 Verlassen des Feldes, beim Wechsel in eine andere App und vor dem Abmelden
 (`flushAllDaySaves`). Keine Notizen im Zeilen-Menü (wären doppelt), kein Gruppen-Mitglied.
-**Rückblick** (`renderTextReviews`, vorerst testweise gebaut): in Woche/Monat pro Feld
-eine offene, chronologische Liste Datum + Text (jeder Eintrag öffnet seinen Tag), in
-Jahr/Gesamt eingeklappt (`<details>`, Anzahl im Titel) und neueste zuerst; Felder ohne
-Antwort im Zeitraum erscheinen nicht. DB-Constraints `habit_definitions_kind_check`/
+**Rückblick** (`renderTextReviews`): in Woche/Monat/Jahr/Gesamt pro Feld eine
+Liste Datum + Text (jeder Eintrag öffnet seinen Tag), überall gleich: eingeklappt
+(`<details>`, Anzahl im Titel) und neueste zuerst – eine je nach Ansicht umgekehrte
+Reihenfolge war verwirrend. Felder ohne Antwort im Zeitraum erscheinen nicht. Erklärt
+in "Über Logbuch" (`about.tip.textFields`). DB-Constraints `habit_definitions_kind_check`/
 `habit_definitions_kind_fields_check` erlauben `text` seit Migration
 `20260927120000_add_text_habit_kind`.
 
@@ -565,7 +566,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 323 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 325 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
