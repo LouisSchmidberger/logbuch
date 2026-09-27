@@ -953,12 +953,3 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
 ## Noch nicht gebaut (bekannte TODOs, kein Zeitdruck)
 
 (aktuell leer)
-
-## Bewusst verworfene Ideen
-
-- **Folge-/Bedingungsfelder** (Feld erscheint nur bei bestimmtem Wert eines anderen, z.B.
-  "Alkohol: Ja" → "Menge"), verworfen 2026-09-27: zu wenig Mehrwert für den Umbau – ein
-  Tag ohne Konsum ist als 0 gewollt und gehört in den Durchschnitt, das Feld muss also
-  nicht versteckt werden. Zusätzlich passt es schlecht zur Zero-Access-Architektur: der
-  Server kann nicht wissen, ob die Bedingung erfüllt war, ohne dass man ihm den Wert
-  indirekt verrät (für Erinnerungen an ein "fehlendes" Folgefeld nötig).
