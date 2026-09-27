@@ -789,6 +789,15 @@ Umgesetzt:
   Access-Token ermittelten Nutzer (nie eine vom Client übergebene ID) — alle anderen
   Tabellen hängen per `on delete cascade` an `auth.users` und werden automatisch mit
   gelöscht.
+- **Unbestätigte Konten werden automatisch gelöscht** (seit 2026-09-27): pg_cron-Job
+  `daily-cleanup` (täglich 03:17 UTC) ruft `public.delete_stale_unconfirmed_users()` auf –
+  löscht Konten ohne E-Mail-Bestätigung und ohne je erfolgte Anmeldung 24h nach der
+  letzten Bestätigungsmail (`confirmation_sent_at`, nicht `created_at`, sonst träfe es
+  jemanden, der sich gerade eine neue Mail geschickt hat; der Link selbst gilt nur 1h,
+  `otp_expiry`). Grund Datensparsamkeit: eine vertippte Adresse gehört oft einer
+  fremden Person. Derselbe Job räumt `cron.job_run_details` älter als 14 Tage weg (wächst
+  sonst mit jedem 15-Minuten-Lauf unbegrenzt). Migration
+  `20260927160000_cleanup_unconfirmed_users`.
 - Datenexport (Auskunftsrecht/Datenportabilität, Art. 15/20 DSGVO): "Meine Daten
   exportieren" im Burger-Menü (`handleExportData` in `logbuch.html`) lädt die eigenen
   Rohdaten aus allen vier Tabellen (RLS scoped automatisch auf den eigenen Nutzer) direkt
