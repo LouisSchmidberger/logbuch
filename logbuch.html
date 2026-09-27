@@ -6036,7 +6036,13 @@ app.addEventListener('pointermove', (e) => {
 // von selbst weiterscrollt (siehe updateDragAutoScroll) - sonst bliebe die Zeile beim
 // Scrollen nicht unter dem Finger.
 function updateDragPosition() {
-  const deltaY = dragState.lastClientY - dragState.startY + (window.scrollY - dragState.startScrollY);
+  // Auf die Liste begrenzt: weiter als bis zum ersten/letzten Platz lässt sich die Zeile
+  // nicht ziehen (vorher schoss sie beliebig weit darüber hinaus und sprang erst beim
+  // Loslassen zurück).
+  const minDelta = -dragState.fromIndex * dragState.rowHeight;
+  const maxDelta = (dragState.rows.length - 1 - dragState.fromIndex) * dragState.rowHeight;
+  const rawDelta = dragState.lastClientY - dragState.startY + (window.scrollY - dragState.startScrollY);
+  const deltaY = Math.max(minDelta, Math.min(maxDelta, rawDelta));
   dragState.row.style.transform = `translateY(${deltaY}px)`;
 
   let toIndex = dragState.fromIndex + Math.round(deltaY / dragState.rowHeight);
@@ -6058,8 +6064,8 @@ function updateDragPosition() {
 // nur in Etappen weit nach oben/unten verschieben. Je näher am Rand, desto schneller.
 // Läuft per requestAnimationFrame, damit es auch weiterscrollt, wenn der Finger still
 // am Rand steht (dann kommen keine pointermove-Events).
-const DRAG_SCROLL_ZONE = 70;
-const DRAG_SCROLL_MAX_SPEED = 14; // px pro Frame
+const DRAG_SCROLL_ZONE = 90;
+const DRAG_SCROLL_MAX_SPEED = 8; // px pro Frame
 let dragScrollFrame = null;
 function dragScrollSpeed() {
   const top = document.querySelector('.sticky-top')?.getBoundingClientRect().bottom ?? 0;
@@ -6076,6 +6082,12 @@ function updateDragAutoScroll() {
     if (!dragState) return;
     const speed = dragScrollSpeed();
     if (!speed) return;
+    // Nicht über die Liste hinaus scrollen - ist ihr Ende bzw. Anfang schon im Bild,
+    // gibt es in der Richtung keinen Platz mehr, zu dem man ziehen könnte.
+    const list = dragState.row.parentElement.getBoundingClientRect();
+    const top = document.querySelector('.sticky-top')?.getBoundingClientRect().bottom ?? 0;
+    const bottom = window.visualViewport?.height ?? window.innerHeight;
+    if ((speed > 0 && list.bottom <= bottom) || (speed < 0 && list.top >= top)) return;
     const before = window.scrollY;
     window.scrollBy(0, speed);
     if (window.scrollY === before) return; // Anfang/Ende der Seite erreicht
