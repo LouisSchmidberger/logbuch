@@ -541,7 +541,10 @@ Feld-Formular) wird deren `<h1>` fokussiert (`tabindex="-1"`, screenreaderfreund
 Bestätigung der Navigation) – bewusst nur dann (`lastFocusedSubpageLevel`), nicht bei
 jedem `render()`, sonst warf jede Umschaltung im Formular den Tastatur-Fokus nach oben. Header (+ bei
 Tab-Ansichten auch die Tab-Leiste) sind über `.sticky-top` (`position: sticky`)
-angepinnt, damit Menü/Zurück/Tab-Wechsel beim Scrollen immer erreichbar bleiben.
+angepinnt, damit Menü/Zurück/Tab-Wechsel beim Scrollen immer erreichbar bleiben. In "Über Logbuch" sind alle aufklappbaren
+Abschnitte (hervorgehobene Bereiche und Tipp-Gruppen) bei **jedem** Öffnen der Seite
+zugeklappt (Nutzer-Wunsch 2026-09-27, `openAboutSections`, von `enterSubpage` zurückgesetzt) –
+was man aufklappt, bleibt nur für die Dauer des Besuchs offen, kein dauerhaftes Merken.
 
 **History-Layer-Zähler statt einfacher An/Aus-Prüfung**: Overlay (z.B. Burger-Menü) und
 Unterseite können gleichzeitig offen sein (z.B. Menü öffnen innerhalb von "Verwalten"),
