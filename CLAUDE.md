@@ -282,7 +282,9 @@ eigener Bedeutung muss man sehen und gezielt treffen können. Buttons (mit oder 
 Bezeichnungen) und Schieberegler mit Bezeichnungen: 2 bis `CHOICE_STEP_CAP` (7) – mehr
 Abstufungen machen Antworten eher beliebiger als genauer. Schieberegler ohne Bezeichnungen
 ("ungefähr wie viel"): 2 bis `SLIDER_STEP_CAP` (100) – mehr lässt sich auf dem Handy nicht
-einzeln treffen. `habitFormStepCap(f)` liefert die jeweils gültige Grenze. Am Deckel von 7
+einzeln treffen. `habitFormStepCap(f)` liefert die jeweils gültige Grenze. Begründung für
+Nutzer im ⓘ an "Anzahl Stufen" (`habitForm.stepsExplain`: in Fragebögen haben sich 5–7
+Stufen bewährt – bewusst so vorsichtig formuliert, die Studienlage ist nicht eindeutiger). Am Deckel von 7
 zeigt das Formular einen Hinweis mit Umschalt-Knopf ("Zum Schieberegler wechseln" bzw.
 "Eigene Bezeichnungen abschalten", `habit-steps-to-slider`), statt das Hochzählen stumm
 enden zu lassen. Bestehende Felder mit mehr Stufen bleiben unverändert nutzbar; ist so
@@ -825,7 +827,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 407 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 408 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

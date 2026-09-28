@@ -1944,6 +1944,7 @@ const STRINGS = {
     'habitForm.buttons': 'Buttons',
     'habitForm.slider': 'Schieberegler',
     'habitForm.numberOfSteps': 'Anzahl Stufen',
+    'habitForm.stepsExplain': 'In Fragebögen haben sich 5 bis 7 Stufen bewährt – mehr Abstufungen machen Antworten selten genauer. Deshalb gehen Buttons und eigene Bezeichnungen bis 7. Für ein feineres „ungefähr wie viel“ gibt es den Schieberegler ohne Bezeichnungen (bis 100).',
     'habitForm.sliderRangeExplain': 'Der Regler zeigt nie eine Min/Max-Beschriftung beim Eintragen (nur hier in der Verwaltung).',
     'habitForm.rangeLocked': 'Bereich {min}–{max} (durch vorhandene Einträge gesperrt).',
     'habitForm.showValueWhileEntering': 'Aktuellen Wert beim Eintragen anzeigen',
@@ -2353,6 +2354,7 @@ const STRINGS = {
     'habitForm.buttons': 'Buttons',
     'habitForm.slider': 'Slider',
     'habitForm.numberOfSteps': 'Number of steps',
+    'habitForm.stepsExplain': 'In questionnaires, 5 to 7 steps have proven themselves – more gradations rarely make answers more accurate. That is why buttons and custom labels go up to 7. For a finer “roughly how much”, there is the slider without custom labels (up to 100).',
     'habitForm.sliderRangeExplain': 'The slider never shows a min/max label while entering a value (only here in management).',
     'habitForm.rangeLocked': 'Range {min}–{max} (locked due to existing entries).',
     'habitForm.showValueWhileEntering': 'Show current value while entering',
@@ -5710,7 +5712,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       ${buttonsBlocked ? lockedCapNote : ''}
     </div>
     <div class="auth-field">
-      <label for="habit-form-steps">${t('habitForm.numberOfSteps')}${f.displayStyle === 'slider' ? infoTip(t('habitForm.sliderRangeExplain')) : ''}</label>
+      <label for="habit-form-steps">${t('habitForm.numberOfSteps')}${infoTip(t('habitForm.stepsExplain') + (f.displayStyle === 'slider' ? ' ' + t('habitForm.sliderRangeExplain') : ''))}</label>
       ${f.locked
         ? `<p class="habit-form-lock-note">${t('habitForm.rangeLocked', { min: f.min, max: f.max })}</p>`
         : stepperInput('habit-form-steps', stepCount, 2, habitFormStepCap(f), false, 'data-action="habit-range-change"')}
