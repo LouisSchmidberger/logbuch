@@ -1027,10 +1027,10 @@ async function migrateHabitDefinitions(rows) {
     }
   }
 }
-// Lokale Namensliste für Erinnerungen (siehe sw.js): der Server schickt nur Feld-IDs,
-// der Service Worker setzt daraus auf dem Gerät die Namen ein. Liegt nur auf diesem
+// Lokale Namensliste für Erinnerungen (siehe sw.js): der Server schickt nur Feld- bzw.
+// Gruppen-IDs, der Service Worker setzt daraus auf dem Gerät die Namen ein. Liegt nur auf diesem
 // Gerät (wie der DEK-Cache), wird bei jeder Änderung der Felder oder der Sprache neu
-// geschrieben und bei der Konto-Löschung entfernt.
+// geschrieben (auch der Gruppen) und bei der Konto-Löschung entfernt.
 function openPushDb() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open('logbuch-push', 1);
@@ -1042,10 +1042,14 @@ function openPushDb() {
 async function saveFieldNamesForPush() {
   try {
     const names = Object.fromEntries(state.habits.filter((h) => h.kind !== 'computed').map((h) => [h.defId, h.name]));
+    const sectionNames = Object.fromEntries(state.sections.map((sec) => [sec.id, sec.name]));
     const db = await openPushDb();
     await new Promise((resolve, reject) => {
       const tx = db.transaction('meta', 'readwrite');
-      tx.objectStore('meta').put({ names, template: t('push.customReminder') }, 'fieldNames');
+      tx.objectStore('meta').put({
+        names, template: t('push.customReminder'),
+        sectionNames, sectionTemplate: t('push.sectionReminder'),
+      }, 'fieldNames');
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);
     });
@@ -1717,6 +1721,7 @@ const STRINGS = {
     'notice.loadHabitsError': 'Felder konnten nicht geladen werden: ',
     'notice.habitsUndecryptable': '{count} Feld(er) konnten nicht entschlüsselt werden und werden nicht angezeigt.',
     'push.customReminder': 'Erinnerung: {names} noch nicht eingetragen.',
+    'push.sectionReminder': 'Erinnerung: In „{name}“ fehlt noch etwas.',
     'notice.loadSettingsError': 'Einstellungen konnten nicht geladen werden: ',
     'notice.saveFailed': 'Speichern fehlgeschlagen: ',
     'notice.createFailed': 'Anlegen fehlgeschlagen: ',
@@ -1876,6 +1881,7 @@ const STRINGS = {
     'habitForm.noComputedCandidates': 'Noch keine Skala-Felder vorhanden, die sich zusammenfassen lassen.',
     'habitForm.ownReminderTime': 'Eigene Erinnerungszeit',
     'habitForm.defaultReminderNote': 'Ohne eigene Zeit gilt die Standard-Erinnerungszeit (aktuell {time}, änderbar im Menü).',
+    'habitForm.sectionReminderNote': 'Ohne eigene Zeit über die Gruppe „{name}“ geregelt: gemeinsame Erinnerung um {time}.',
     'habitForm.title.editGroup': 'Gruppe bearbeiten',
     'habitForm.title.newGroup': 'Neue Gruppe',
     'habitForm.title.editField': 'Feld bearbeiten',
@@ -1939,6 +1945,9 @@ const STRINGS = {
     'manage.sectionName': 'Name der Gruppe',
     'manage.sectionNamePlaceholder': 'z. B. Gesundheit',
     'manage.sectionEmpty': 'Noch leer – über „Bearbeiten“ Felder hinzufügen.',
+    'sectionForm.ownReminderTime': 'Eigene Erinnerungszeit für diese Gruppe',
+    'sectionForm.reminderExplain': 'Die Felder dieser Gruppe werden dann nicht mehr zur Standardzeit erinnert, sondern gemeinsam zu dieser Zeit – eine Nachricht für die ganze Gruppe, sobald darin noch etwas fehlt. Felder mit eigener Erinnerungszeit behalten ihre.',
+    'sectionForm.defaultReminderNote': 'Ohne eigene Zeit werden die Felder zur Standard-Erinnerungszeit erinnert (aktuell {time}).',
     'manage.sectionDeleteWarning': 'Gruppe löschen? Die Felder darin bleiben erhalten.',
     'manage.error.sectionNameRequired': 'Bitte einen Namen für die Gruppe eingeben.',
     'habitForm.section': 'Gruppe',
@@ -2039,7 +2048,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'Was ich nicht sehen kann',
     'about.privacy.cannotSee.body': 'Alles, was du einträgst, und worum es dabei geht: deine Werte, Notizen und Text-Antworten, die Namen deiner Felder und die Bezeichnungen ihrer Stufen. Das alles wird auf deinem Gerät verschlüsselt, bevor es überhaupt verschickt wird. Der Schlüssel dafür hängt an deinem Passwort, und das kennst nur du. Selbst mit vollem Zugriff auf die Datenbank sehe ich davon nur unlesbaren Zeichensalat.',
     'about.privacy.canSee.title': 'Was ich sehen kann',
-    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>dass du Felder hast, von welcher Art (z. B. Skala oder Zahl) und ob du sie in Gruppen sortiert hast – aber nicht, worum es geht oder wie Felder und Gruppen heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokolliert der Hosting-Anbieter für kurze Zeit technische Zugriffsdaten wie IP-Adressen.',
+    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>dass du Felder hast, von welcher Art (z. B. Skala oder Zahl) und ob du sie in Gruppen sortiert hast – aber nicht, worum es geht oder wie Felder und Gruppen heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert</li><li>deine Einstellungen wie Erinnerungszeiten (auch die einzelner Felder und Gruppen), an welchen Tagen ein Feld dran ist, Sprache und Zeitzone</li></ul>Dazu protokolliert der Hosting-Anbieter für kurze Zeit technische Zugriffsdaten wie IP-Adressen.',
     'about.privacy.recoveryKey.title': 'Die Kehrseite: dein Recovery-Key',
     'about.privacy.recoveryKey.body': 'Weil ich keinen Zugriff habe, kann ich dir auch nicht helfen, wenn du Passwort <strong>und</strong> Recovery-Key verlierst – dann sind deine Einträge unwiederbringlich weg. Bewahre ihn deshalb gut auf.',
     'about.privacy.yourData.title': 'Deine Daten gehören dir',
@@ -2114,6 +2123,7 @@ const STRINGS = {
     'notice.loadHabitsError': 'Could not load fields: ',
     'notice.habitsUndecryptable': '{count} field(s) could not be decrypted and are not shown.',
     'push.customReminder': 'Reminder: {names} not entered yet.',
+    'push.sectionReminder': 'Reminder: something in “{name}” is still missing.',
     'notice.loadSettingsError': 'Could not load settings: ',
     'notice.saveFailed': 'Save failed: ',
     'notice.createFailed': 'Creating failed: ',
@@ -2273,6 +2283,7 @@ const STRINGS = {
     'habitForm.noComputedCandidates': 'No scale fields available yet that can be combined.',
     'habitForm.ownReminderTime': 'Custom reminder time',
     'habitForm.defaultReminderNote': 'Without a custom time, the default reminder time applies (currently {time}, changeable in the menu).',
+    'habitForm.sectionReminderNote': 'Without a custom time, handled by the group “{name}”: shared reminder at {time}.',
     'habitForm.title.editGroup': 'Edit group',
     'habitForm.title.newGroup': 'New group',
     'habitForm.title.editField': 'Edit field',
@@ -2336,6 +2347,9 @@ const STRINGS = {
     'manage.sectionName': 'Group name',
     'manage.sectionNamePlaceholder': 'e.g. Health',
     'manage.sectionEmpty': 'Still empty – add fields via “Edit”.',
+    'sectionForm.ownReminderTime': 'Custom reminder time for this group',
+    'sectionForm.reminderExplain': 'The fields in this group are then no longer reminded at the default time, but together at this time – one notification for the whole group as soon as something in it is missing. Fields with their own reminder time keep it.',
+    'sectionForm.defaultReminderNote': 'Without a custom time, the fields are reminded at the default reminder time (currently {time}).',
     'manage.sectionDeleteWarning': 'Delete group? The fields in it are kept.',
     'manage.error.sectionNameRequired': 'Please enter a name for the group.',
     'habitForm.section': 'Group',
@@ -2436,7 +2450,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'What I cannot see',
     'about.privacy.cannotSee.body': 'Everything you enter, and what it is about: your values, notes, and text answers, the names of your fields and the labels of their steps. All of this is encrypted on your device before it is even sent. The key for it is tied to your password, and only you know that. Even with full access to the database, all I see is unreadable gibberish.',
     'about.privacy.canSee.title': 'What I can see',
-    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>that you have fields, what kind they are (e.g. scale or number), and whether you sorted them into groups – but not what they are about or what your fields and groups are called</li><li>on which days you filled in which of these fields (for reminders), without the value</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the hosting provider briefly logs technical access data such as IP addresses.',
+    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>that you have fields, what kind they are (e.g. scale or number), and whether you sorted them into groups – but not what they are about or what your fields and groups are called</li><li>on which days you filled in which of these fields (for reminders), without the value</li><li>your settings such as reminder times (including those of individual fields and groups), on which days a field is due, language, and time zone</li></ul>On top of that, the hosting provider briefly logs technical access data such as IP addresses.',
     'about.privacy.recoveryKey.title': 'The flip side: your recovery key',
     'about.privacy.recoveryKey.body': 'Because I have no access, I also cannot help you if you lose your password <strong>and</strong> your recovery key – your entries are then gone for good. So keep it somewhere safe.',
     'about.privacy.yourData.title': 'Your data belongs to you',
@@ -2898,7 +2912,7 @@ async function loadSections() {
   for (const row of data) {
     let name = '?';
     try { name = (await decryptData(currentDek, row.enc)).name; } catch { /* unlesbar - Platzhalter statt Absturz */ }
-    sections.push({ id: row.id, name, sortOrder: row.sort_order });
+    sections.push({ id: row.id, name, sortOrder: row.sort_order, reminderMinute: row.reminder_minute ?? null });
   }
   state.sections = sections;
 }
@@ -3570,6 +3584,8 @@ function openSectionForm(id) {
     id: sec ? sec.id : null,
     name: sec ? sec.name : '',
     members: sec ? state.habits.filter((h) => !h.archivedAt && h.sectionId === sec.id).map((h) => h.defId) : [],
+    reminderEnabled: sec ? sec.reminderMinute !== null : false,
+    reminderMinute: sec && sec.reminderMinute !== null ? sec.reminderMinute : state.userSettings.defaultReminderMinute,
   };
   state.sectionDeleteConfirm = null;
   render();
@@ -3587,6 +3603,10 @@ function readSectionFormFromDom() {
   if (nameEl) sf.name = nameEl.value;
   const boxes = [...document.querySelectorAll('[data-section-member]')];
   if (boxes.length) sf.members = boxes.filter((b) => b.checked && !b.disabled).map((b) => b.dataset.sectionMember);
+  const reminderEnabledEl = document.getElementById('section-form-reminder-enabled');
+  if (reminderEnabledEl) sf.reminderEnabled = reminderEnabledEl.checked;
+  const reminderTimeEl = document.getElementById('section-form-reminder-time');
+  if (reminderTimeEl) sf.reminderMinute = Number(reminderTimeEl.value);
 }
 async function saveSectionForm() {
   const sf = state.sectionForm;
@@ -3599,19 +3619,20 @@ async function saveSectionForm() {
     return;
   }
   const enc = await encryptData(currentDek, { name });
+  const reminderMinute = sf.reminderEnabled ? sf.reminderMinute : null;
   let id = sf.id;
   if (id) {
-    const { error } = await supabase.from('habit_sections').update({ enc }).eq('id', id);
+    const { error } = await supabase.from('habit_sections').update({ enc, reminder_minute: reminderMinute }).eq('id', id);
     if (error) {
       state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
       render();
       return;
     }
-    state.sections = state.sections.map((sec) => (sec.id === id ? { ...sec, name } : sec));
+    state.sections = state.sections.map((sec) => (sec.id === id ? { ...sec, name, reminderMinute } : sec));
   } else {
     const sortOrder = containerMaxSortOrder(null) + 1;
     const { data, error } = await supabase.from('habit_sections')
-      .insert({ user_id: state.session.user.id, enc, sort_order: sortOrder })
+      .insert({ user_id: state.session.user.id, enc, sort_order: sortOrder, reminder_minute: reminderMinute })
       .select().single();
     if (error) {
       state.notice = { type: 'error', text: t('notice.createFailed') + translateDbError(error.message) };
@@ -3619,8 +3640,9 @@ async function saveSectionForm() {
       return;
     }
     id = data.id;
-    state.sections = [...state.sections, { id, name, sortOrder }];
+    state.sections = [...state.sections, { id, name, sortOrder, reminderMinute }];
   }
+  saveFieldNamesForPush();
   // Mitgliedschaft abgleichen: neu angekreuzte Felder ans Ende der Gruppe (in der
   // Reihenfolge, in der sie in der Verwaltung stehen), abgewählte ans Ende der obersten
   // Ebene. Bestehende Mitglieder behalten ihren Platz.
@@ -3675,6 +3697,16 @@ function renderSectionForm() {
           </div>
         ` : `<p class="habit-form-lock-note">${t('sectionForm.noFields')}</p>`}
       </div>
+      <div class="auth-field">
+        <label class="checkbox-field">
+          <input type="checkbox" id="section-form-reminder-enabled" data-action="section-reminder-toggle" aria-describedby="section-form-reminder-note" ${sf.reminderEnabled ? 'checked' : ''} />
+          ${t('sectionForm.ownReminderTime')}
+        </label>
+        ${sf.reminderEnabled ? reminderTimeInputHtml('section-form-reminder-time', sf.reminderMinute, null, false, 'section-form-reminder-note') : ''}
+        <p class="habit-form-lock-note" id="section-form-reminder-note">${sf.reminderEnabled
+          ? t('sectionForm.reminderExplain')
+          : t('sectionForm.defaultReminderNote', { time: minutesToTimeStr(state.userSettings.defaultReminderMinute) })}</p>
+      </div>
       <div class="habit-form-actions">
         <button type="button" class="auth-submit" data-action="section-form-save">${t('common.save')}</button>
         <button type="button" class="habit-form-cancel" data-action="section-form-cancel">${t('common.cancel')}</button>
@@ -3702,6 +3734,7 @@ async function deleteSection(id) {
   }
   state.sections = state.sections.filter((sec) => sec.id !== id);
   state.habits = state.habits.map((h) => (h.sectionId === id ? { ...h, sectionId: null } : h));
+  saveFieldNamesForPush();
   render();
 }
 
@@ -5123,7 +5156,7 @@ function renderPrivacySection() {
 // automatisch aus Git ableiten könnte, und ein Datum genügt hier als Rückverfolgbarkeit
 // (siehe Diskussion in CLAUDE.md-Kontext: keine echte Versionsnummer nötig, solange es
 // keine Release-Branches/nennenswerten externen Nutzerkreis gibt).
-const APP_STATUS_DATE = '2026-09-27';
+const APP_STATUS_DATE = '2026-09-28';
 
 function renderAbout() {
   return `
@@ -5502,7 +5535,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       </label>
       ${f.reminderEnabled
         ? reminderTimeInputHtml('habit-form-reminder-time', f.reminderMinute ?? defaultReminderMinute, 'habit-reminder-time-changed')
-        : `<p class="habit-form-lock-note">${t('habitForm.defaultReminderNote', { time: minutesToTimeStr(defaultReminderMinute) })}</p>`}
+        : `<p class="habit-form-lock-note" id="habit-form-reminder-note">${habitFormReminderNote(f)}</p>`}
     </div>
   `;
 
@@ -5616,6 +5649,16 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   `;
 }
 
+// Hinweis unter "Eigene Erinnerungszeit" (ausgeschaltet): welche Zeit stattdessen gilt -
+// die der Gruppe, falls das Feld in einer Gruppe mit eigener Zeit liegt, sonst die
+// Standardzeit. Wird beim Wechsel der Gruppe im Formular direkt ausgetauscht.
+function habitFormReminderNote(f) {
+  const sec = f.sectionId ? state.sections.find((x) => x.id === f.sectionId) : null;
+  return sec && sec.reminderMinute !== null
+    ? t('habitForm.sectionReminderNote', { name: sec.name, time: minutesToTimeStr(sec.reminderMinute) })
+    : t('habitForm.defaultReminderNote', { time: minutesToTimeStr(state.userSettings.defaultReminderMinute) });
+}
+
 // Zusatzinfo pro Feld in der Verwaltungsliste: nur, was vom Standard abweicht
 // (Wiederholung, eigene Erinnerungszeit) - siehe "Verwaltungsliste entschlackt".
 function manageFieldMeta(h) {
@@ -5712,7 +5755,7 @@ function renderManage() {
               <span class="manage-name manage-section-name">${esc(sec.name)}</span>
               ${confirmingDelete
                 ? `<span class="manage-delete-warning">${t('manage.sectionDeleteWarning')}</span>`
-                : `<span class="manage-meta"><span class="manage-tag">${t('manage.sectionTag')}</span></span>`}
+                : `<span class="manage-meta"><span class="manage-tag">${t('manage.sectionTag')}</span>${sec.reminderMinute !== null ? ' ' + t('manage.reminderAt', { time: minutesToTimeStr(sec.reminderMinute) }) : ''}</span>`}
             </div>
             <div class="manage-actions">
               ${confirmingDelete ? `
@@ -6550,6 +6593,21 @@ app.addEventListener('change', async (e) => {
     // macht sichtbar, dass es weiterhin dieselbe Skala ist, bis man sie überschreibt.
     f.labels = resizeLabels(f.labels, habitFormStepCount(f), f.labelsEnabled ? (i) => String(habitFormStepValue(f, i)) : undefined);
     render();
+    return;
+  }
+  const sectionReminderToggle = e.target.closest('[data-action="section-reminder-toggle"]');
+  if (sectionReminderToggle && state.sectionForm) {
+    readSectionFormFromDom();
+    render();
+    document.getElementById('section-form-reminder-enabled')?.focus();
+    return;
+  }
+  // Gruppe im Feld-Formular gewechselt: nur den Erinnerungs-Hinweis austauschen (kein
+  // render(), der Fokus bleibt auf der Auswahl).
+  if (e.target.id === 'habit-form-section' && state.habitForm) {
+    state.habitForm.sectionId = e.target.value || null;
+    const note = document.getElementById('habit-form-reminder-note');
+    if (note) note.innerHTML = habitFormReminderNote(state.habitForm);
     return;
   }
   const reminderToggle = e.target.closest('[data-action="habit-reminder-toggle"]');

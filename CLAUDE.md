@@ -355,7 +355,8 @@ bei Zahlenwert-Feldern. Werte werden auf 2 Nachkommastellen gerundet (gegen
 Gleitkomma-Reste).
 
 **Gruppen (intern `sections`, seit 2026-09-27)**: Tabelle `habit_sections` (`id`,
-`user_id`, `enc` = verschlüsselter `{name}`, `sort_order`); Zuordnung über die
+`user_id`, `enc` = verschlüsselter `{name}`, `sort_order`, `reminder_minute` = eigene
+Erinnerungszeit der Gruppe oder `null`, siehe Erinnerungen); Zuordnung über die
 Klartext-Spalte `habit_definitions.section_id` → FK `ON DELETE SET NULL`, Trigger
 `habit_definitions_check_section_owner` erzwingt eine Gruppe desselben Nutzers. Rechte
 genau auf SELECT/INSERT/UPDATE/DELETE für `authenticated` zurückgeschnitten (Supabases
@@ -757,7 +758,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 395 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 400 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -779,7 +780,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `user_settings.locale` (text, Default `'de'`, Check-Constraint `de`/`en`) hält
   die Sprachpräferenz serverseitig, analog zu `default_reminder_minute`.
 - Die Edge Function `send-notifications` hat eine eigene, bewusst simplere
-  `PUSH_TEXTS`-Tabelle (nur 4 Strings × 2 Sprachen, kein Teilen der `t()`-
+  `PUSH_TEXTS`-Tabelle (nur eine Handvoll Strings × 2 Sprachen, kein Teilen der `t()`-
   Maschinerie über die Browser/Deno-Grenze hinweg) und liest `user_settings.locale`
   pro Nutzer, um Push-Texte in der jeweils richtigen Sprache zu verschicken.
 - `habit_definitions.name` (frei vom Nutzer vergebene Feldnamen) ist bewusst
@@ -815,6 +816,21 @@ Alle Zeiten/Daten gelten in der **Ortszeit des jeweiligen Nutzers**
   `reminderTimeInputHtml` in `logbuch.html` – bewusst kein natives `<input
   type="time">`, dessen `step`-Attribut viele Browser/Betriebssysteme ignorieren,
   wodurch sich trotzdem jede beliebige Minute auswählen ließe), standardmäßig aus.
+- **Eigene Zeit je Gruppe** (seit 2026-09-28, `habit_sections.reminder_minute`, Klartext wie
+  bei Feldern, DB-Check auf 15-Minuten-Raster): Felder einer solchen Gruppe fallen aus der
+  Sammel-Erinnerung zur Standardzeit heraus und werden stattdessen gemeinsam zur Zeit der
+  Gruppe erinnert – **eine Nachricht pro Gruppe** (auch wenn mehrere Gruppen oder die
+  Standardzeit auf denselben Slot fallen, bewusst nicht zusammengefasst), nur wenn darin
+  ein heute geplantes Feld fehlt. **Vorrang: Feld > Gruppe > Standard** – ein Feld mit
+  eigener `reminder_minute` behält diese auch in einer Gruppe mit Zeit (Nutzer-
+  Entscheidung, damit einzelne Felder weiter heraushebbar bleiben). Text nennt nur den
+  Gruppennamen, nicht die fehlenden Felder ("In „…“ fehlt noch etwas", Name wie bei Feldern
+  erst auf dem Gerät eingesetzt, `sectionId` im Payload); Deep-Link zum ersten fehlenden
+  Feld (klappt die Gruppe auf). Eingestellt im Gruppen-Formular (Checkbox + Uhrzeit), in der
+  Verwaltung an der Gruppen-Kopfzeile angezeigt; im Feld-Formular sagt der Hinweis unter
+  "Eigene Erinnerungszeit", dass die Gruppe die Zeit regelt (`habitFormReminderNote`,
+  wechselt beim Ändern der Gruppe mit). `get_due_notifications` liefert dafür
+  `section_missing` (`[{id, fields}]`), Migration `20260928100000_add_section_reminders`.
 
 **Deep-Links**: jede Benachrichtigung trägt ihr Ziel als URL
 (`./logbuch.html?view=today|week|month&date=YYYY-MM-DD`, `deepLink()` in der
@@ -840,7 +856,8 @@ dem Gerät eingesetzt**: der Server kennt Feldnamen nicht (sollen verschlüsselt
 allgemeinen Text ("Ein Feld wartet noch …") plus `fieldIds`, und `sw.js` ersetzt ihn
 durch den Namen aus einer lokalen Liste (IndexedDB `logbuch-push`, Store `meta`, Key
 `fieldNames`: `{ names: {id: name}, template }`, von der App angelegt). Fehlt die Liste
-oder eine ID, bleibt es beim allgemeinen Text. Die Function protokolliert in ihrer
+oder eine ID, bleibt es beim allgemeinen Text. Gruppen-Erinnerungen genauso über
+`sectionNames`/`sectionTemplate` im selben Eintrag. Die Function protokolliert in ihrer
 Antwort (landet in `net._http_response`) nur die Art der Nachricht, nie Texte/IDs.
 
 **Zeitzone pro Nutzer**: `get_due_notifications` rechnet für jeden Nutzer per `p_now

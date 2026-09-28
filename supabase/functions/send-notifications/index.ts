@@ -10,7 +10,10 @@
 //    herausgehobenes wie Gewicht morgens). Feldnamen sind verschlüsselt, diese
 //    Function kennt sie nicht: sie schickt einen allgemeinen Text plus die Feld-IDs
 //    (fieldIds), sw.js setzt auf dem Gerät die Namen aus einer lokalen Liste ein.
-// 3. Sonntags "Wochenübersicht ist da", am Monatsletzten "Monatsübersicht ist da".
+// 3. Erinnerung je Gruppe mit eigener Zeit (gesammelt für deren Felder ohne eigene
+//    Zeit) - eine Nachricht pro Gruppe. Gruppennamen sind ebenfalls verschlüsselt:
+//    allgemeiner Text plus sectionId, sw.js setzt den Namen ein.
+// 4. Sonntags "Wochenübersicht ist da", am Monatsletzten "Monatsübersicht ist da".
 //
 // habit_entries.data ist clientseitig verschlüsselt – die Vollständigkeits-Prüfung
 // läuft deshalb (in der SQL-Funktion) über die unverschlüsselte Spalte
@@ -46,11 +49,12 @@ webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 interface PushMessage {
-  kind: 'default' | 'custom' | 'week' | 'month'; // nur fürs Protokoll, nicht verschickt
+  kind: 'default' | 'custom' | 'section' | 'week' | 'month'; // nur fürs Protokoll, nicht verschickt
   title: string;
   body: string;
   url: string;
   fieldIds?: string[];
+  sectionId?: string;
 }
 
 // Eine Zeile aus get_due_notifications(): ein Push-Abo plus was ihm gerade zusteht.
@@ -64,6 +68,8 @@ interface DueRow {
   local_date: string; // 'YYYY-MM-DD', "heute" in der Zeitzone des Nutzers
   default_reminder: boolean;
   custom_missing: string[]; // IDs der fehlenden Felder mit eigener Erinnerungszeit
+  // Je Gruppe, deren Zeit gerade dran ist: ihre ID + die IDs ihrer fehlenden Felder
+  section_missing: Array<{ id: string; fields: string[] }>;
   week_summary: boolean;
   month_summary: boolean;
 }
@@ -79,7 +85,7 @@ function deepLink(view: 'today' | 'week' | 'month', dateKey: string, fieldId?: s
 
 // Eigene, bewusst einfachere Übersetzungstabelle als die t()-Maschinerie im Frontend
 // (logbuch.html) — anderes Laufzeit-Environment (Deno statt Browser), kein
-// gemeinsam nutzbares Modul zwischen Edge Function und Frontend, und nur 4 Texte.
+// gemeinsam nutzbares Modul zwischen Edge Function und Frontend, und nur eine Handvoll Texte.
 const PUSH_TEXTS = {
   de: {
     title: 'Logbuch',
@@ -87,6 +93,7 @@ const PUSH_TEXTS = {
     customReminder: (count: number) => count === 1
       ? 'Erinnerung: Ein Feld wartet noch auf deinen Eintrag.'
       : `Erinnerung: ${count} Felder warten noch auf deinen Eintrag.`,
+    sectionReminder: 'Erinnerung: In einer Gruppe fehlt noch etwas.',
     weekSummary: 'Deine Wochenübersicht ist da.',
     monthSummary: 'Deine Monatsübersicht ist da.',
   },
@@ -96,6 +103,7 @@ const PUSH_TEXTS = {
     customReminder: (count: number) => count === 1
       ? 'Reminder: a field is still waiting for your entry.'
       : `Reminder: ${count} fields are still waiting for your entry.`,
+    sectionReminder: 'Reminder: something in a group is still missing.',
     weekSummary: 'Your weekly summary is ready.',
     monthSummary: 'Your monthly summary is ready.',
   },
@@ -115,6 +123,16 @@ function messagesFor(row: DueRow): PushMessage[] {
       body: texts.customReminder(row.custom_missing.length),
       url: deepLink('today', date, row.custom_missing[0]),
       fieldIds: row.custom_missing,
+    });
+  }
+  // Ziel: das erste fehlende Feld der Gruppe - "Heute" klappt die Gruppe dafür auf.
+  for (const section of row.section_missing ?? []) {
+    messages.push({
+      kind: 'section',
+      title: texts.title,
+      body: texts.sectionReminder,
+      url: deepLink('today', date, section.fields[0]),
+      sectionId: section.id,
     });
   }
   if (row.week_summary) {

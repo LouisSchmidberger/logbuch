@@ -12,7 +12,8 @@ self.addEventListener('activate', (event) => {
 // Textvorlage in ihrer Sprache ab (IndexedDB 'logbuch-push', siehe
 // saveFieldNamesForPush in logbuch.html); damit wird der Name hier lokal eingesetzt.
 // Fehlt die Liste oder eine ID (neues Gerät, gelöschte Browserdaten, gerade erst
-// angelegtes Feld), bleibt es beim allgemeinen Text.
+// angelegtes Feld), bleibt es beim allgemeinen Text. Genauso bei Erinnerungen an eine
+// Gruppe (payload.sectionId, Liste sectionNames + sectionTemplate im selben Eintrag).
 function openPushDb() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open('logbuch-push', 1);
@@ -21,14 +22,27 @@ function openPushDb() {
     req.onerror = () => reject(req.error);
   });
 }
+async function loadStoredNames() {
+  const db = await openPushDb();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('meta', 'readonly').objectStore('meta').get('fieldNames');
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function personalizedSectionBody(sectionId, fallback) {
+  try {
+    const stored = await loadStoredNames();
+    const name = stored && stored.sectionNames && stored.sectionNames[sectionId];
+    if (!name || !stored.sectionTemplate) return fallback;
+    return stored.sectionTemplate.replace('{name}', () => name);
+  } catch {
+    return fallback;
+  }
+}
 async function personalizedBody(fieldIds, fallback) {
   try {
-    const db = await openPushDb();
-    const stored = await new Promise((resolve, reject) => {
-      const req = db.transaction('meta', 'readonly').objectStore('meta').get('fieldNames');
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => reject(req.error);
-    });
+    const stored = await loadStoredNames();
     if (!stored || !stored.template || !stored.names) return fallback;
     const names = fieldIds.map((id) => stored.names[id]);
     if (names.some((n) => !n)) return fallback;
@@ -49,9 +63,11 @@ self.addEventListener('push', (event) => {
   }
   const title = payload.title || 'Logbuch';
   event.waitUntil((async () => {
-    const body = Array.isArray(payload.fieldIds) && payload.fieldIds.length
-      ? await personalizedBody(payload.fieldIds, payload.body || '')
-      : payload.body || '';
+    const body = typeof payload.sectionId === 'string'
+      ? await personalizedSectionBody(payload.sectionId, payload.body || '')
+      : Array.isArray(payload.fieldIds) && payload.fieldIds.length
+        ? await personalizedBody(payload.fieldIds, payload.body || '')
+        : payload.body || '';
     await self.registration.showNotification(title, {
       body,
       data: { url: payload.url || './logbuch.html' },
