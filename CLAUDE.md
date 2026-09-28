@@ -391,8 +391,9 @@ gibt). Ein **reaktiviertes Feld** kommt ans Ende seines Bereichs (`handleHabitAr
 sonst landete z.B. ein archiviertes Feld aus einer inzwischen gelöschten Gruppe mit seiner
 alten Position aus der Gruppe irgendwo auf der obersten Ebene. **Anzeige überall** (Nutzer-Entscheidung): "Heute" und alle Auswertungs-Ansichten
 ordnen nach Gruppen (`renderBySection`, leere Gruppen werden ausgelassen), jeweils mit
-einklappbarer Überschrift (`section-toggle`, `aria-expanded`) und eingerücktem Inhalt mit
-dezenter Linie links (`.section-content`; im Wochen-Raster nur der Feldname eingerückt,
+einklappbarer Überschrift (`section-toggle`, `aria-expanded`) und eingerücktem Inhalt
+(`.section-content`, bewusst ohne senkrechte Linie links – wirkte überladen, auch in der
+Verwaltung entfernt; im Wochen-Raster nur der Feldname eingerückt,
 sonst stünden die Tageskästchen nicht mehr unter den Wochentagen); der Eingeklappt-Zustand
 gilt pro Gerät und getrennt für "Heute" und die Auswertung (`localStorage`
 `sectionCollapsed:<today|stats>:<id>`). Der Bereich "Heute nicht geplant" bleibt

@@ -586,7 +586,7 @@
   .manage-section { border-bottom: 1px solid var(--line); }
   .manage-section-head { border-bottom: none; }
   .manage-section-name { font-weight: 600; }
-  .manage-section-children { margin: 0 0 8px 8px; padding-left: 10px; border-left: 2px solid var(--line); }
+  .manage-section-children { margin: 0 0 8px 20px; }
   .manage-section-children .manage-row:last-child { border-bottom: none; }
   .manage-section-empty { margin: 4px 0 6px; }
   .manage-inline-check { font-size: 12px; margin-top: 4px; }
@@ -607,15 +607,15 @@
   /* Notiz zur Gruppe (bzw. ihr Editor) direkt unter der Überschrift, auf Höhe des Pfeils. */
   .section-block > .row-note, .section-block > .note-editor { margin: 8px 0 6px 16px; width: calc(100% - 16px); }
   .section-head .section-toggle { flex: 1; min-width: 0; border-bottom: none; padding: 6px 0; }
-  /* Inhalt einer aufgeklappten Gruppe eingerückt, mit dezenter Linie links (wie in der
-     Verwaltung), damit sichtbar ist, was dazugehört. Im Wochen-Raster nur der Feldname:
-     eine eingerückte ganze Zeile würde die Tageskästchen gegen die Wochentag-Köpfe
-     verschieben. */
-  .section-content { margin-left: 5px; padding-left: 12px; border-left: 2px solid var(--line); }
-  .grid-scroll .section-content { margin-left: 0; padding-left: 0; border-left: none; }
+  /* Inhalt einer aufgeklappten Gruppe eingerückt (wie in der Verwaltung), damit sichtbar
+     ist, was dazugehört - bewusst ohne senkrechte Linie links, die wirkte überladen. Im
+     Wochen-Raster nur der Feldname: eine eingerückte ganze Zeile würde die Tageskästchen
+     gegen die Wochentag-Köpfe verschieben. */
+  .section-content { padding-left: 19px; }
+  .grid-scroll .section-content { padding-left: 0; }
   /* Die Gruppen-Überschrift hat schon eine Linie unten - sonst doppelt mit der oberen Linie der ersten Zeile. */
   .section-content > .habit-row:first-child { border-top: none; }
-  .grid-scroll .section-content .grid-label { padding-left: 10px; border-left: 2px solid var(--line); margin-left: 5px; }
+  .grid-scroll .section-content .grid-label { padding-left: 17px; }
   .manage-new-row .manage-new-btn { flex: 1; }
   .manage-new-btn--secondary { background: transparent; color: var(--moss); border: 1px solid var(--moss); }
   .manage-tag {
