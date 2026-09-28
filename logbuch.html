@@ -425,10 +425,15 @@
   .auth-field .schedule-inline input[type="number"] { width: 72px; }
   .schedule-inline label, .schedule-inline span { font-size: 13px; color: var(--ink); }
   /* Kurzes Aufleuchten des Feldes nach einem Sprung aus der Auswertung (focusTodayField). */
-  @keyframes field-highlight { from { background-color: rgba(var(--moss-rgb), 0.22); } to { background-color: transparent; } }
-  .field-highlight { animation: field-highlight 1.6s ease-out; }
+  /* Hervorhebung nach einem Sprung (Feld in "Heute", Eintrag im Menü): erst eine Weile
+     voll sichtbar, dann ausblenden - sonst ging sie leicht unter. */
+  @keyframes field-highlight {
+    0%, 45% { background-color: rgba(var(--moss-rgb), 0.35); }
+    100% { background-color: transparent; }
+  }
+  .field-highlight { animation: field-highlight 2.8s ease-out; }
   @media (prefers-reduced-motion: reduce) {
-    .field-highlight { animation-duration: 0.01s; animation-delay: 1.2s; background-color: rgba(var(--moss-rgb), 0.22); }
+    .field-highlight { animation-duration: 0.01s; animation-delay: 2.4s; background-color: rgba(var(--moss-rgb), 0.35); }
   }
 
   /* Text-Felder (kind='text', siehe renderTextBox): Textfeld unter dem Namen statt
