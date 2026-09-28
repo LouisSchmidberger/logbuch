@@ -294,7 +294,10 @@ eigener Bedeutung muss man sehen und gezielt treffen können. Buttons (mit oder 
 Bezeichnungen) und Schieberegler mit Bezeichnungen: 2 bis `CHOICE_STEP_CAP` (7) – mehr
 Abstufungen machen Antworten eher beliebiger als genauer. Schieberegler ohne Bezeichnungen
 ("ungefähr wie viel"): 2 bis `SLIDER_STEP_CAP` (100) – mehr lässt sich auf dem Handy nicht
-einzeln treffen. `habitFormStepCap(f)` liefert die jeweils gültige Grenze. Begründung für
+einzeln treffen. `habitFormStepCap(f)` liefert die jeweils gültige Grenze. Die +/−-Knöpfe
+(`stepperInput`) zählen beim Gedrückthalten weiter, immer schneller (`stepperHold`, seit
+2026-09-29); gespeichert/neu gerendert wird erst beim Loslassen, der Klick danach wird
+verschluckt. Begründung für
 Nutzer im ⓘ an "Anzahl Stufen" (`habitForm.stepsExplain`: in Fragebögen haben sich 5–7
 Stufen bewährt – bewusst so vorsichtig formuliert, die Studienlage ist nicht eindeutiger). Am Deckel von 7
 zeigt das Formular einen Hinweis mit Umschalt-Knopf ("Zum Schieberegler wechseln" bzw.

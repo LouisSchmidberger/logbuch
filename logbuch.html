@@ -792,6 +792,9 @@
     border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer;
   }
   .stepper-btn:disabled { opacity: 0.4; cursor: default; }
+  /* Gedrückthalten zählt weiter (stepperHold) - ohne das zeigte iOS beim Halten die
+     Text-Lupe/das Kontextmenü bzw. zoomte bei schnellem Doppeltipp. */
+  .stepper-btn { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
 
   .info-tip { display: inline-block; margin-left: 4px; vertical-align: middle; }
   .info-tip summary {
@@ -3084,6 +3087,53 @@ function stepperInput(id, value, min, max, disabled, extraAttrs = '') {
     </div>
   `;
 }
+
+// Einen Schritt am Zahlenfeld eines Steppers, begrenzt auf dessen min/max. Rückgabe: ob
+// sich der Wert geändert hat.
+function stepInput(target, delta) {
+  const min = target.min !== '' ? Number(target.min) : -Infinity;
+  const max = target.max !== '' ? Number(target.max) : Infinity;
+  const before = Math.round(Number(target.value));
+  const n = Math.max(min, Math.min(max, before + delta));
+  target.value = n;
+  return n !== before;
+}
+// Gedrückthalten zählt weiter (seit 2026-09-29) - bei z.B. 100 Stufen sonst 99 einzelne
+// Tipps. Nach einer kurzen Wartezeit (ein normaler Tipp bleibt ein Schritt) immer
+// schneller. Währenddessen ändert sich nur die Zahl im Feld; gespeichert/neu gerendert
+// wird einmal beim Loslassen (sonst ersetzte jedes render() mitten im Halten den Knopf).
+const STEPPER_HOLD_DELAY_MS = 400;
+let stepperHold = null;
+let stepperHoldSwallowClick = false;
+function stopStepperHold() {
+  if (!stepperHold) return;
+  clearTimeout(stepperHold.timer);
+  const { target, ticks } = stepperHold;
+  stepperHold = null;
+  if (ticks > 0) {
+    stepperHoldSwallowClick = true;
+    // Ließ man neben dem Knopf los, kommt kein Klick - dann nicht den nächsten verschlucken.
+    setTimeout(() => { stepperHoldSwallowClick = false; }, 400);
+    target.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+}
+document.addEventListener('pointerdown', (e) => {
+  const btn = e.target.closest('[data-action="stepper-inc"], [data-action="stepper-dec"]');
+  stepperHoldSwallowClick = false;
+  if (!btn || btn.disabled || e.button > 0) return;
+  const target = document.getElementById(btn.dataset.target);
+  if (!target) return;
+  const delta = btn.dataset.action === 'stepper-inc' ? 1 : -1;
+  const tick = () => {
+    if (!stepperHold) return;
+    if (!stepInput(target, delta)) { stopStepperHold(); return; } // am Rand angekommen
+    stepperHold.ticks += 1;
+    stepperHold.timer = setTimeout(tick, Math.max(35, 110 - stepperHold.ticks * 5));
+  };
+  stepperHold = { target, ticks: 0, timer: setTimeout(tick, STEPPER_HOLD_DELAY_MS) };
+});
+['pointerup', 'pointercancel'].forEach((type) => document.addEventListener(type, stopStepperHold));
+document.addEventListener('pointerleave', stopStepperHold);
 
 // --- Datenzugriff --------------------------------------------------------
 async function loadEntries() {
@@ -7177,14 +7227,16 @@ app.addEventListener('click', async (e) => {
     render();
     document.getElementById('habit-form-steps')?.focus();
   } else if (action === 'stepper-inc' || action === 'stepper-dec') {
+    // Nach Gedrückthalten hat stepperHold schon gezählt und gespeichert - der Klick beim
+    // Loslassen darf nicht noch einen Schritt draufsetzen.
+    if (stepperHoldSwallowClick) { stepperHoldSwallowClick = false; return; }
     const target = document.getElementById(el.dataset.target);
     if (!target) return;
-    const min = target.min !== '' ? Number(target.min) : -Infinity;
-    const max = target.max !== '' ? Number(target.max) : Infinity;
-    let n = Math.round(Number(target.value)) + (action === 'stepper-inc' ? 1 : -1);
-    n = Math.max(min, Math.min(max, n));
-    target.value = n;
+    stepInput(target, action === 'stepper-inc' ? 1 : -1);
     target.dispatchEvent(new Event('change', { bubbles: true }));
+    // Der change-Handler rendert neu und ersetzt dabei den Knopf - Fokus zurück, damit man
+    // per Tastatur weiterzählen kann.
+    document.querySelector(`[data-action="${action}"][data-target="${el.dataset.target}"]`)?.focus({ preventScroll: true });
   } else if (action === 'habit-save') {
     await handleHabitSave();
   } else if (action === 'habit-archive') {
