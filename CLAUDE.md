@@ -795,6 +795,18 @@ rost-getönte Stil-Klasse (`.manage-btn--warn`, heller als `.manage-btn--danger`
 "Löschen") statt optisch identisch zu "Bearbeiten" zu sein – reversibel, aber ein
 Entfernen aus der Tageseingabe, daher bewusst nicht neutral gestylt.
 
+**Rückmeldung beim Zeitraum-Wechsel** (seit 2026-09-29): Wischen und die ‹ ›-Pfeile laufen
+über `shiftPeriod(dir)`; danach gleitet der Inhalt (`.view-body`, bewusst nur der Inhalt,
+nicht die fixierten Dialoge) in ~0,2 s aus der Wischrichtung herein (`.view-slide-next`/
+`-prev`), bei "Bewegung reduzieren" nur ein kurzes Einblenden. Vorher änderte sich der
+Inhalt still – in "Heute" sehen zwei Tage oft fast gleich aus. Dazu steht in "Heute"
+"Heute"/"Gestern"/"Morgen" neben dem Datum (`relativeDay`), Screenreader bekommen den neuen
+Zeitraum über die Live-Region `#sr-announcer` (`announce()`, liegt außerhalb von `#app` und
+übersteht so jedes `render()`), und der Fokus bleibt nach einem Pfeil-Klick auf dem Pfeil.
+Verworfen bzw. in den Gestaltungs-Durchgang geschoben: Inhalt folgt beim Wischen dem Finger
+(deutlich aufwendiger wegen Abgrenzung zum senkrechten Scrollen und Neuaufbau bei jedem
+`render()`).
+
 **Swipe-Schwellenwert für Unterseiten höher als für Tab-Wechsel** (seit 2026-09-19,
 `SWIPE_THRESHOLD_SUBPAGE` in `logbuch.html`, 100px statt 50px): ein Wisch nach rechts
 verlässt auf einer Unterseite (Verwalten/Über Logbuch) die Seite komplett, während er
@@ -863,7 +875,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 461 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 464 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

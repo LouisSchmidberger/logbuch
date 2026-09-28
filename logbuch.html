@@ -218,6 +218,19 @@
   .nav-btn:disabled { opacity: 0.35; cursor: default; }
   .day-label { display: flex; flex-direction: column; align-items: center; text-align: center; }
   .day-weekday { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; }
+  .day-relative { color: var(--moss); font-weight: 600; }
+  /* Rutsch-Animation beim Zeitraum-Wechsel (siehe shiftPeriod/renderApp). Ohne
+     fill-mode: danach bleibt keine Verschiebung am Element hängen (die würde z.B. das
+     Zeilen-Menü falsch positionieren). */
+  @keyframes view-slide-next { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+  @keyframes view-slide-prev { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+  @keyframes view-fade { from { opacity: 0.35; } to { opacity: 1; } }
+  .view-slide-next { animation: view-slide-next 0.22s ease-out; }
+  .view-slide-prev { animation: view-slide-prev 0.22s ease-out; }
+  /* "Bewegung reduzieren": nur kurzes Einblenden, keine Bewegung. */
+  @media (prefers-reduced-motion: reduce) {
+    .view-slide-next, .view-slide-prev { animation: view-fade 0.15s ease-out; }
+  }
   .day-date { font-size: 12px; color: var(--sand); }
 
   .today-jump {
@@ -832,6 +845,7 @@
 </head>
 <body>
 <div id="app"><div class="loading">Lädt …</div></div>
+<div id="sr-announcer" class="visually-hidden" aria-live="polite"></div>
 
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -2061,6 +2075,9 @@ const STRINGS = {
     'habitForm.error.scheduleInterval': 'Bitte eine Anzahl von 1 bis 365 und ein Startdatum angeben.',
     'today.unplanned': 'Heute nicht geplant ({count})',
     'today.nothingPlanned': 'Für heute ist kein Feld geplant.',
+    'day.today': 'Heute',
+    'day.yesterday': 'Gestern',
+    'day.tomorrow': 'Morgen',
     'today.openField': '(noch offen)',
     'today.sectionHasOpen': '(enthält noch offene Felder)',
     'today.allDoneToday': 'Alles eingetragen für heute.',
@@ -2524,6 +2541,9 @@ const STRINGS = {
     'habitForm.error.scheduleInterval': 'Please enter a number from 1 to 365 and a start date.',
     'today.unplanned': 'Not planned today ({count})',
     'today.nothingPlanned': 'No fields are planned for today.',
+    'day.today': 'Today',
+    'day.yesterday': 'Yesterday',
+    'day.tomorrow': 'Tomorrow',
     'today.openField': '(not filled in yet)',
     'today.sectionHasOpen': '(has fields not filled in yet)',
     'today.allDoneToday': 'Everything filled in for today.',
@@ -5460,6 +5480,10 @@ function renderToday() {
   const dateKey = formatKey(state.currentDate);
   const isToday = dateKey === formatKey(new Date());
   const dayEntry = state.entries[dateKey] || {};
+  // "Heute"/"Gestern"/"Morgen" neben dem Datum - zwei Tage sehen in "Heute" oft fast gleich
+  // aus, so sieht man auf einen Blick, welcher gerade gezeigt wird.
+  const dayOffset = Math.round((startOfDay(state.currentDate) - startOfDay(new Date())) / 86400000);
+  const relativeDay = { 0: t('day.today'), [-1]: t('day.yesterday'), 1: t('day.tomorrow') }[dayOffset] || '';
   // Felder, die heute laut Wiederholung nicht dran sind, stehen eingeklappt unter
   // "Heute nicht geplant" - ausnahmsweise eintragen geht so trotzdem. Die Einteilung
   // richtet sich nur nach dem Plan, nicht nach vorhandenen Werten (sonst spränge ein
@@ -5478,7 +5502,7 @@ function renderToday() {
       <button type="button" class="nav-btn" data-action="nav-day" data-dir="-1" aria-label="${esc(t('ariaLabel.prevDay'))}">‹</button>
       <div class="day-label">
         <span class="day-weekday">${weekdayLong(state.currentDate)}</span>
-        <span class="day-date">${longDate(state.currentDate)}</span>
+        <span class="day-date">${relativeDay ? `<span class="day-relative">${relativeDay}</span> · ` : ''}${longDate(state.currentDate)}</span>
       </div>
       <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" aria-label="${esc(t('ariaLabel.nextDay'))}">›</button>
     </div>
@@ -6776,6 +6800,12 @@ function renderApp() {
   const caret = active?.tagName === 'TEXTAREA' && active.id ? { id: active.id, range: [active.selectionStart, active.selectionEnd] } : null;
   const noticeHtml = renderNotice();
   const subpage = isSubpageView(state.view);
+  // Rutsch-Animation nach einem Zeitraum-Wechsel (shiftPeriod): der neue Zeitraum kommt
+  // aus der Richtung, in die man gewischt/geblättert hat. Bewusst nur um den Inhalt, nicht
+  // um die Dialoge (position: fixed verträgt kein verschobenes Elternelement).
+  const slide = !state.loading && SWIPEABLE_VIEWS.includes(state.view) ? pendingPeriodSlide : 0;
+  const slideClass = slide > 0 ? ' view-slide-next' : slide < 0 ? ' view-slide-prev' : '';
+  pendingPeriodSlide = 0;
   const body = state.loading ? `<div class="loading">${t('common.loading')}</div>` :
     state.view === 'today' ? renderToday() :
     state.view === 'week' ? renderWeek() :
@@ -6809,7 +6839,7 @@ function renderApp() {
     </div>
     ${renderInstallHint()}
     ${noticeHtml}
-    ${body}
+    <div class="view-body${slideClass}">${body}</div>
     ${state.deleteConfirm ? renderDeleteConfirm() : ''}
     ${state.resetConfirm ? renderResetConfirm() : ''}
   `;
@@ -6827,6 +6857,15 @@ function renderApp() {
     caretInput.focus({ preventScroll: true });
     caretInput.setSelectionRange(...caret.range);
   }
+  // Screenreader erfahren so, welcher Zeitraum jetzt gezeigt wird (der Pfeil sagt nur
+  // "Nächster Tag").
+  if (slide) announce(document.querySelector('.day-nav .day-label')?.textContent.replace(/\s+/g, ' ').trim() ?? '');
+}
+function announce(text) {
+  const el = document.getElementById('sr-announcer');
+  if (!el || !text) return;
+  el.textContent = '';
+  setTimeout(() => { el.textContent = text; }, 50); // leeren + neu setzen: auch Gleiches wird erneut angesagt
 }
 
 // Fokussiert nach einem Re-Render das erste fokussierbare Element im gerade
@@ -6985,22 +7024,15 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'set-view') {
     state.view = el.dataset.view;
     render();
-  } else if (action === 'nav-day') {
-    state.currentDate = addDays(state.currentDate, Number(el.dataset.dir));
+  } else if (action === 'nav-day' || action === 'nav-week' || action === 'nav-month' || action === 'nav-year') {
+    shiftPeriod(Number(el.dataset.dir));
     render();
+    // render() ersetzt den Pfeil - Fokus zurück, damit man per Tastatur weiterblättern kann.
+    document.querySelector(`[data-action="${action}"][data-dir="${el.dataset.dir}"]`)?.focus({ preventScroll: true });
   } else if (action === 'jump-today') {
-    state.currentDate = startOfDay(new Date());
-    render();
-  } else if (action === 'nav-week') {
-    state.weekAnchor = addDays(state.weekAnchor, Number(el.dataset.dir) * 7);
-    render();
-  } else if (action === 'nav-month') {
-    const d = new Date(state.monthAnchor);
-    d.setMonth(d.getMonth() + Number(el.dataset.dir));
-    state.monthAnchor = d;
-    render();
-  } else if (action === 'nav-year') {
-    state.yearAnchor += Number(el.dataset.dir);
+    const today = startOfDay(new Date());
+    pendingPeriodSlide = today > state.currentDate ? 1 : -1;
+    state.currentDate = today;
     render();
   } else if (action === 'open-day') {
     state.currentDate = parseDateKey(el.dataset.date);
@@ -7595,6 +7627,16 @@ app.addEventListener('touchend', (e) => {
     if (dir === -1) { subpageBack(); render(); }
     return;
   }
+  shiftPeriod(dir);
+  render();
+}, { passive: true });
+
+// Vorheriger/nächster Zeitraum der aktuellen Ansicht - gemeinsam für Wischen und die
+// ‹ ›-Pfeile. Merkt sich die Richtung für die Rutsch-Animation (renderApp): ohne sie
+// änderte sich beim Wischen nur still der Inhalt, und zwei Tage in "Heute" sehen sich oft
+// zum Verwechseln ähnlich.
+let pendingPeriodSlide = 0;
+function shiftPeriod(dir) {
   if (state.view === 'today') {
     state.currentDate = addDays(state.currentDate, dir);
   } else if (state.view === 'week') {
@@ -7605,9 +7647,11 @@ app.addEventListener('touchend', (e) => {
     state.monthAnchor = d;
   } else if (state.view === 'year') {
     state.yearAnchor += dir;
+  } else {
+    return;
   }
-  render();
-}, { passive: true });
+  pendingPeriodSlide = dir;
+}
 
 // --- Zeilen-Menü per Long-Press/Rechtsklick (Heute) ------------------------
 // Reine Abkürzung zum ⋮-Button (siehe renderRowMenuButton), nie der einzige Weg - auf
