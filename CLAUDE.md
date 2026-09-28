@@ -300,14 +300,17 @@ Skala bleibt der Weg: archivieren und neu anlegen.
 `kind='scale'` nicht mehr zwingend `'high'`/`'low'` – ein dritter Zustand "Keine
 Wertung" (Formular-Pill neben Hoch/Niedrig, `habit-good`-Action mit `data-good=""`)
 erlaubt reines Tracken ohne Gut/Schlecht-Urteil (z.B. für Dinge, die man beobachten,
-aber nicht bewerten will). `isNeutralScale(h)` erkennt diesen Fall. `normalize()`
-selbst braucht dafür keine Änderung (liefert ohne Richtung einfach die rohe Position
-im Wertebereich zurück), aber die reine 0-1-Zahl wird bei `good=null` als Magnitude,
-nicht als Bewertung interpretiert: `habitColor(habit, score)` ist die zentrale Weiche,
-die für unbewertete Felder `neutralColor()` (monochrome Graustufen-Skala) statt
-`scoreColor()` (Rot-Grün) liefert – überall dort verwendet, wo bisher direkt
-`scoreColor()` mit einem konkreten Feld aufgerufen wurde (Heute-Buttons/-Slider,
-Wochen-Grid-Zeilen, Monats-/Jahres-/Gesamt-Tabellenzeilen). Unbewertete Felder
+aber nicht bewerten will). `isNeutralScale(h)` erkennt diesen Fall. **Keine Färbung
+nach Wert** (Nutzer-Entscheidung 2026-09-28): `habitColor(habit, score)` ist die zentrale
+Weiche und liefert für unbewertete Felder nur "eingetragen" (`NEUTRAL_FILL` = `--sand`)
+bzw. `transparent`; gewählte Buttons und der Schieberegler in "Heute" nutzen die übliche
+Auswahl-Farbe (`NEUTRAL_SELECTED` = `--ink`, Text `--paper`, wie `.pill-toggle--active`).
+Im Wochen-Grid kein Streifenmuster und eine leere Ø-Zelle, in Monat/Jahr/Gesamt nur die
+Anzahl ("12×") statt eines %-Durchschnitts. Verworfen: eine Graustufen-Skala hell→dunkel
+nach Position (bis 2026-09-28) – setzt eine Reihenfolge der Stufen voraus, die es bei
+vielen solchen Feldern nicht gibt ("sonnig/bewölkt/Regen"), und wirkte trotzdem wie eine
+Wertung; die Ausprägung soll stattdessen die Überarbeitung der Auswertung zeigen (z.B.
+Verteilung pro Stufe). Unbewertete Felder
 fließen NICHT in `dayOverallScore` (Monats-/Jahres-Heatmap) und nicht als
 Mitglied berechneter Felder ein (im Formular als Kandidat ausgeschlossen, in `habitScore`
 zusätzlich defensiv gefiltert) – beides baut auf einem Gut/Schlecht-Urteil auf, das
@@ -754,10 +757,10 @@ nach dem i18n-Block. CSS-seitig: `@media (prefers-color-scheme: dark)` UND
 `--ink`, `--line`, `--moss`, `--rust`, `--sand`, plus neu `--surface` für Modal-/Menü-
 Hintergrund, `--input-bg`, `--shadow`, `--scrim`, `--rust-rgb`/`--moss-rgb` für
 `rgba()`-Tönungen, `--on-score` für hellen Text auf Score-Zellen, theme-unabhängig).
-Text auf Score-/Neutralfarben (gewählte Buttons, berechnete Felder in "Heute", Ø-Zellen der
+Text auf Score-Farben (gewählte Buttons, berechnete Felder in "Heute", Ø-Zellen der
 Woche) wählt `textOnScore()` stattdessen je Farbe: reines Weiß oder Schwarz, je nachdem was
-mehr Kontrast hat – nur damit erreicht jede Stufe beider Skalen mind. 4,5:1 (min. 4,58:1;
-fester heller Text lag auf den hellen Stufen bei bis zu ~1,5:1).
+mehr Kontrast hat – nur damit erreicht jede Stufe der Skala mind. 4,5:1 (fester heller
+Text lag auf den hellen Stufen bei ~3:1).
 `scoreColor()` selbst bleibt bewusst unverändert (liefert rohe `rgb()`-Werte,
 unabhängig vom Theme). `<meta name="theme-color">` wird per JS synchronisiert
 (`syncThemeColorMeta`), da Meta-Tags keine CSS-Variablen lesen können.

@@ -477,6 +477,7 @@
   .grid-col-date { font-size: 10px; color: var(--ink); }
   .grid-col-header--avg { font-family: 'Fraunces', serif; font-style: italic; color: var(--ink); cursor: default; }
   .grid-cell { height: 22px; margin: 1px; border-radius: 2px; border: 1px solid var(--line); cursor: pointer; }
+  .grid-cell--blank { border-color: transparent; }
   .grid-cell--avg { display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--on-score); font-weight: 600; cursor: default; }
 
   .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 20px; }
@@ -1358,28 +1359,28 @@ function scoreColor(score) {
 }
 
 // Skala-Felder ohne Gut/Schlecht-Bewertung (good = null, siehe habitForm.noValuation) -
-// bewusstes Tracken ohne Wertung. Bekommen eine eigene, monochrome Farbskala statt
-// scoreColor()s Rot-Grün, damit nirgends fälschlich ein "gut"/"schlecht" suggeriert
-// wird, wo der Nutzer das explizit nicht wollte.
+// bewusstes Tracken ohne Wertung. Werden bewusst gar nicht nach Wert eingefärbt, auch
+// nicht in Graustufen (Nutzer-Entscheidung 2026-09-28): eine Abstufung hell -> dunkel
+// setzt eine Reihenfolge der Stufen voraus, die es bei vielen solchen Feldern nicht gibt
+// (z.B. "sonnig/bewölkt/Regen"), und wirkte trotzdem wie eine Wertung. Stattdessen nur
+// "eingetragen" (NEUTRAL_FILL) bzw. in "Heute" die übliche Auswahl-Farbe
+// (NEUTRAL_SELECTED, wie .pill-toggle--active), und keine %-Durchschnitte.
 function isNeutralScale(h) { return h.kind === 'scale' && !h.good; }
-function neutralColor(score) {
-  if (score === null || score === undefined) return 'transparent';
-  const light = [214, 206, 186], dark = [110, 98, 78];
-  const c = light.map((v, i) => Math.round(v + (dark[i] - v) * score));
-  return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
-}
+const NEUTRAL_FILL = 'var(--sand)';
+const NEUTRAL_SELECTED = 'var(--ink)';
+const NEUTRAL_SELECTED_TEXT = 'var(--paper)';
 // Zentrale Weiche für jede farbliche Score-Darstellung eines konkreten Feldes -
-// scoreColor() für bewertete (auch berechnete) Felder, neutralColor() für unbewertete.
+// scoreColor() für bewertete (auch berechnete) Felder, NEUTRAL_FILL für unbewertete.
 function habitColor(habit, score) {
-  return isNeutralScale(habit) ? neutralColor(score) : scoreColor(score);
+  if (isNeutralScale(habit)) return score === null || score === undefined ? 'transparent' : NEUTRAL_FILL;
+  return scoreColor(score);
 }
-// Textfarbe auf einer Score-/Neutralfarbe (rgb()-String aus scoreColor/neutralColor):
-// hell oder dunkel, je nachdem was mehr Kontrast hat (WCAG-Leuchtdichte). Ein fester
-// heller Text (--on-score) war auf den hellen Stufen kaum lesbar - Sandton in der Mitte
-// der Rot-Grün-Skala ~3:1, helles Ende der neutralen Skala ~1,5:1. Bewusst reines
-// Weiß/Schwarz statt der warmen App-Töne: die Mittelstufen beider Skalen liegen genau im
-// ungünstigsten Helligkeitsbereich, nur damit erreicht jede Stufe mind. 4,5:1 (nachgerechnet
-// über alle Stufen: min. 4,58:1; mit #f5f3ee/#2b2620 nur 3,7:1).
+// Textfarbe auf einer Score-Farbe (rgb()-String aus scoreColor): hell oder dunkel, je
+// nachdem was mehr Kontrast hat (WCAG-Leuchtdichte). Ein fester heller Text (--on-score)
+// war auf den hellen Stufen kaum lesbar (Sandton in der Mitte der Skala ~3:1). Bewusst
+// reines Weiß/Schwarz statt der warmen App-Töne: die Mittelstufen liegen genau im
+// ungünstigsten Helligkeitsbereich, nur damit erreicht jede Stufe mind. 4,5:1
+// (nachgerechnet über alle Stufen; mit #f5f3ee/#2b2620 nur 3,7:1).
 const ON_SCORE_LIGHT = '#ffffff';
 const ON_SCORE_DARK = '#000000';
 function textOnScore(rgb) {
@@ -2133,7 +2134,7 @@ const STRINGS = {
     'about.tip.reorder.title': 'Felder umsortieren',
     'about.tip.reorder.body': 'In „Felder verwalten" kannst du Felder per Ziehen am Griff-Symbol oder mit den ↑/↓-Buttons neu anordnen.',
     'about.tip.noValuation.title': 'Felder ohne Wertung',
-    'about.tip.noValuation.body': 'Nicht alles muss gut oder schlecht sein. Bei „Keine Wertung" (statt „Hohe/Niedrige Werte erstrebenswert") wird ein Feld einfach nur getrackt, ohne Rot-Grün-Färbung — dafür in der Auswertung mit einer eigenen, neutralen Graustufen-Skala statt der üblichen Farben.',
+    'about.tip.noValuation.body': 'Nicht alles muss gut oder schlecht sein. Bei „Keine Wertung“ (statt „Hohe/Niedrige Werte erstrebenswert“) wird ein Feld einfach nur getrackt – ganz ohne Färbung nach Wert, denn schon eine Abstufung von hell nach dunkel würde ein „mehr“ oder „weniger“ behaupten. In der Auswertung siehst du, an welchen Tagen und wie oft du etwas eingetragen hast, aber keine Prozentwerte.',
     'about.tip.computed.title': 'Berechnete Felder',
     'about.tip.computed.body': 'Ein Feld vom Typ „Berechnet“ fasst mehrere Felder zu einem Wert zusammen: Skala-Felder zu einem Durchschnitt, z. B. „Sport gemacht“ aus „Ausdauersport“ + „Kraftsport“ – oder Zahlenwert-Felder mit derselben Einheit als Summe, Durchschnitt, Minimum oder Maximum, z. B. „Bewegung gesamt (km)“ aus „Laufen“ + „Radfahren“. Selbst ausfüllen kann man es nicht – der Wert berechnet sich immer live aus den anderen Feldern.',
     'about.tip.goalThreshold.title': 'Ziel-Quote statt 100 %',
@@ -2539,7 +2540,7 @@ const STRINGS = {
     'about.tip.reorder.title': 'Reordering fields',
     'about.tip.reorder.body': 'In "Manage fields" you can reorder fields by dragging the handle or using the ↑/↓ buttons.',
     'about.tip.noValuation.title': 'Fields without valuation',
-    'about.tip.noValuation.body': 'Not everything has to be good or bad. With "No valuation" (instead of "High/Low values desirable"), a field is simply tracked without red/green coloring — shown in the evaluation views with its own neutral grayscale instead of the usual colors.',
+    'about.tip.noValuation.body': 'Not everything has to be good or bad. With “No valuation” (instead of “High/Low values desirable”), a field is simply tracked – without any coloring by value, since even shading from light to dark would imply “more” or “less”. The evaluation views show on which days and how often you entered something, but no percentages.',
     'about.tip.computed.title': 'Calculated fields',
     'about.tip.computed.body': 'A field of type “Calculated” combines multiple fields into one value: scale fields into an average, e.g. “exercised” from “cardio” + “strength training” – or number fields with the same unit as a sum, average, minimum, or maximum, e.g. “total movement (km)” from “running” + “cycling”. You cannot fill it in yourself – the value is always calculated live from the other fields.',
     'about.tip.goalThreshold.title': 'Goal threshold instead of 100%',
@@ -4774,8 +4775,9 @@ function renderHabitOptions(habit, value, { preview = false } = {}) {
 
   return options.map(([v, label]) => {
     const selected = value === v;
-    const color = habitColor(habit, normalize(habit, v));
-    const style = selected ? `background:${color};border-color:${color};color:${textOnScore(color)};` : '';
+    const neutral = isNeutralScale(habit);
+    const color = neutral ? NEUTRAL_SELECTED : habitColor(habit, normalize(habit, v));
+    const style = selected ? `background:${color};border-color:${color};color:${neutral ? NEUTRAL_SELECTED_TEXT : textOnScore(color)};` : '';
     const isText = label.length > 1;
     return `<button type="button" class="opt-btn${isText ? ' opt-btn--text' : ''}${selected ? ' opt-btn--selected' : ''}" style="${style}"
       data-action="${preview ? 'preview-select' : 'select'}" data-habit="${habit.id}" data-value='${JSON.stringify(v)}' aria-pressed="${selected}">${esc(label)}</button>`;
@@ -4789,6 +4791,9 @@ function renderHabitOptions(habit, value, { preview = false } = {}) {
 // habitSliderValueText: zeigt die Bezeichnung statt der rohen Zahl, wenn das Feld
 // eigene Bezeichnungen hat - vorher konnte der Schieberegler gar keine Bezeichnungen
 // darstellen, das war eine unbeabsichtigte Lücke, keine bewusste Einschränkung.
+function sliderColor(habit, v) {
+  return isNeutralScale(habit) ? NEUTRAL_SELECTED : habitColor(habit, normalize(habit, v));
+}
 function habitSliderValueText(habit, v) {
   return habit.labels ? habit.labels[v - habit.min] : String(v);
 }
@@ -4798,7 +4803,7 @@ function habitSliderValueText(habit, v) {
 function renderHabitSlider(habit, value, { preview = false } = {}) {
   const hasValue = value !== undefined;
   const v = hasValue ? value : Math.round((habit.min + habit.max) / 2);
-  const color = hasValue ? habitColor(habit, normalize(habit, v)) : 'var(--sand)';
+  const color = hasValue ? sliderColor(habit, v) : 'var(--sand)';
   const pct = ((v - habit.min) / (habit.max - habit.min)) * 100;
   // Eigene --slider-color/--slider-pct-Variablen statt der nativen accent-color: die
   // ließ sich in manchen Browsern bei jedem 'input'-Event nicht glitch-frei neu
@@ -5135,11 +5140,17 @@ function renderWeek() {
     const scores = dayKeys.map((k) => habitScore(h, k));
     const valid = scores.filter((s) => s !== null);
     const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
+    // Unbewertete Felder: nur "eingetragen", kein Streifenmuster (das kodiert die
+    // Bewertungsstufe) und kein Ø - siehe isNeutralScale.
+    const neutral = isNeutralScale(h);
+    const avgCell = neutral
+      ? '<div class="grid-cell grid-cell--avg grid-cell--blank"></div>'
+      : `<div class="grid-cell grid-cell--avg" style="background:${habitColor(h, applyGoal(h, avg))};color:${textOnScore(habitColor(h, applyGoal(h, avg)))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>`;
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
-        ${scores.map((s, i) => `<div class="grid-cell${getNote(dayKeys[i], h.id) ? ' has-note' : ''}${s === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background-color:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
-        <div class="grid-cell grid-cell--avg" style="background:${habitColor(h, applyGoal(h, avg))};color:${textOnScore(habitColor(h, applyGoal(h, avg)))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
+        ${scores.map((s, i) => `<div class="grid-cell${getNote(dayKeys[i], h.id) ? ' has-note' : ''}${s === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background-color:${habitColor(h, applyGoal(h, s))};${neutral ? '' : scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
+        ${avgCell}
       </div>
     `;
   };
@@ -5467,7 +5478,9 @@ function renderStatsRows(stats) {
   return stats.map(({ habit, avg, count }) => `
     <div class="month-stat-row">
       <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
-      <span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : habitColor(habit, applyGoal(habit, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'} <span class="month-stat-count">(${count}×)</span></span>
+      ${isNeutralScale(habit)
+        ? `<span class="month-stat-value"><span class="month-stat-count">${count}×</span></span>`
+        : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : habitColor(habit, applyGoal(habit, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'} <span class="month-stat-count">(${count}×)</span></span>`}
     </div>
   `).join('');
 }
@@ -6958,7 +6971,7 @@ app.addEventListener('input', (e) => {
   const pct = ((v - habit.min) / (habit.max - habit.min)) * 100;
   slider.classList.remove('value-slider--unset');
   slider.dataset.dirty = '1'; // siehe pointerup-Listener unten
-  slider.style.setProperty('--slider-color', habitColor(habit, normalize(habit, v)));
+  slider.style.setProperty('--slider-color', sliderColor(habit, v));
   slider.style.setProperty('--slider-pct', pct + '%');
   slider.setAttribute('aria-valuetext', habitSliderValueText(habit, v));
   const valueEl = document.getElementById('slider-value-' + habit.id);
