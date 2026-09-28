@@ -721,6 +721,8 @@
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   .checkbox-field { display: flex; align-items: center; gap: 7px; font-size: 13px; margin-bottom: 4px; }
+  /* Gruppen-Formular: die Erinnerungszeit klar von der Mitglieder-Checkliste darüber absetzen */
+  .section-form-reminder { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 20px; }
   .checkbox-field input { margin: 0; }
   .recovery-key-confirm-row {
     border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; margin: 12px 0 14px;
@@ -2048,7 +2050,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'Was ich nicht sehen kann',
     'about.privacy.cannotSee.body': 'Alles, was du einträgst, und worum es dabei geht: deine Werte, Notizen und Text-Antworten, die Namen deiner Felder und die Bezeichnungen ihrer Stufen. Das alles wird auf deinem Gerät verschlüsselt, bevor es überhaupt verschickt wird. Der Schlüssel dafür hängt an deinem Passwort, und das kennst nur du. Selbst mit vollem Zugriff auf die Datenbank sehe ich davon nur unlesbaren Zeichensalat.',
     'about.privacy.canSee.title': 'Was ich sehen kann',
-    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>dass du Felder hast, von welcher Art (z. B. Skala oder Zahl) und ob du sie in Gruppen sortiert hast – aber nicht, worum es geht oder wie Felder und Gruppen heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert</li><li>deine Einstellungen wie Erinnerungszeiten (auch die einzelner Felder und Gruppen), an welchen Tagen ein Feld dran ist, Sprache und Zeitzone</li></ul>Dazu protokolliert der Hosting-Anbieter für kurze Zeit technische Zugriffsdaten wie IP-Adressen.',
+    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>dass du Felder hast, von welcher Art (z. B. Skala oder Zahl) und ob du sie in Gruppen sortiert hast – aber nicht, worum es geht oder wie Felder und Gruppen heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokolliert der Hosting-Anbieter für kurze Zeit technische Zugriffsdaten wie IP-Adressen.',
     'about.privacy.recoveryKey.title': 'Die Kehrseite: dein Recovery-Key',
     'about.privacy.recoveryKey.body': 'Weil ich keinen Zugriff habe, kann ich dir auch nicht helfen, wenn du Passwort <strong>und</strong> Recovery-Key verlierst – dann sind deine Einträge unwiederbringlich weg. Bewahre ihn deshalb gut auf.',
     'about.privacy.yourData.title': 'Deine Daten gehören dir',
@@ -2074,8 +2076,8 @@ const STRINGS = {
     'about.tip.goalThreshold.body': 'Bei manchen Feldern ist täglich 100 % unrealistisch. Stell im Feld-Formular eine niedrigere Quote ein, ab der ein Tag farblich schon als voll erreicht gilt.',
     'about.tip.slider.title': 'Schieberegler statt Buttons',
     'about.tip.slider.body': 'Nummerierte Stufen lassen sich auch als Schieberegler statt als Auswahl-Buttons darstellen — praktisch bei vielen Stufen, z. B. einer Prozent-Skala.',
-    'about.tip.customReminder.title': 'Eigene Erinnerungszeit pro Feld',
-    'about.tip.customReminder.body': 'Jedes Feld kann eine eigene Erinnerungszeit bekommen, statt sich an die Standardzeit zu halten — sinnvoll z. B. für Gewicht morgens statt abends.',
+    'about.tip.customReminder.title': 'Eigene Erinnerungszeit pro Feld oder Gruppe',
+    'about.tip.customReminder.body': 'Jedes Feld kann eine eigene Erinnerungszeit bekommen, statt sich an die Standardzeit zu halten — sinnvoll z. B. für Gewicht morgens statt abends. Auch eine Gruppe kann eine eigene Zeit haben: Ihre Felder werden dann gemeinsam zu dieser Zeit erinnert, mit einer Nachricht für die ganze Gruppe. Hat ein Feld darin selbst eine eigene Zeit, gilt seine.',
     'about.tip.archiveVsDelete.title': 'Archivieren statt löschen',
     'about.tip.archiveVsDelete.body': 'Archivierte Felder verschwinden aus der Tageseingabe, bleiben aber in der Auswertung sichtbar und lassen sich jederzeit reaktivieren. Endgültiges Löschen entfernt dagegen auch die bisherigen Werte.',
     'about.tip.theme.title': 'Dark Mode',
@@ -2450,7 +2452,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'What I cannot see',
     'about.privacy.cannotSee.body': 'Everything you enter, and what it is about: your values, notes, and text answers, the names of your fields and the labels of their steps. All of this is encrypted on your device before it is even sent. The key for it is tied to your password, and only you know that. Even with full access to the database, all I see is unreadable gibberish.',
     'about.privacy.canSee.title': 'What I can see',
-    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>that you have fields, what kind they are (e.g. scale or number), and whether you sorted them into groups – but not what they are about or what your fields and groups are called</li><li>on which days you filled in which of these fields (for reminders), without the value</li><li>your settings such as reminder times (including those of individual fields and groups), on which days a field is due, language, and time zone</li></ul>On top of that, the hosting provider briefly logs technical access data such as IP addresses.',
+    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>that you have fields, what kind they are (e.g. scale or number), and whether you sorted them into groups – but not what they are about or what your fields and groups are called</li><li>on which days you filled in which of these fields (for reminders), without the value</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the hosting provider briefly logs technical access data such as IP addresses.',
     'about.privacy.recoveryKey.title': 'The flip side: your recovery key',
     'about.privacy.recoveryKey.body': 'Because I have no access, I also cannot help you if you lose your password <strong>and</strong> your recovery key – your entries are then gone for good. So keep it somewhere safe.',
     'about.privacy.yourData.title': 'Your data belongs to you',
@@ -2476,8 +2478,8 @@ const STRINGS = {
     'about.tip.goalThreshold.body': 'For some fields, 100% every day is unrealistic. Set a lower threshold in the field form, from which a day already counts as fully reached in color.',
     'about.tip.slider.title': 'Slider instead of buttons',
     'about.tip.slider.body': 'Numbered steps can also be shown as a slider instead of selection buttons — handy with many steps, e.g. a percentage scale.',
-    'about.tip.customReminder.title': 'Custom reminder time per field',
-    'about.tip.customReminder.body': 'Each field can get its own reminder time instead of using the default — useful e.g. for weight in the morning instead of the evening.',
+    'about.tip.customReminder.title': 'Custom reminder time per field or group',
+    'about.tip.customReminder.body': 'Each field can get its own reminder time instead of using the default — useful e.g. for weight in the morning instead of the evening. A group can have its own time too: its fields are then reminded together at that time, with one notification for the whole group. If a field in it has its own time, that one applies.',
     'about.tip.archiveVsDelete.title': 'Archiving instead of deleting',
     'about.tip.archiveVsDelete.body': 'Archived fields disappear from daily entry but stay visible in evaluations and can be reactivated anytime. Permanent deletion, on the other hand, also removes the existing values.',
     'about.tip.theme.title': 'Dark mode',
@@ -3697,7 +3699,7 @@ function renderSectionForm() {
           </div>
         ` : `<p class="habit-form-lock-note">${t('sectionForm.noFields')}</p>`}
       </div>
-      <div class="auth-field">
+      <div class="auth-field section-form-reminder">
         <label class="checkbox-field">
           <input type="checkbox" id="section-form-reminder-enabled" data-action="section-reminder-toggle" aria-describedby="section-form-reminder-note" ${sf.reminderEnabled ? 'checked' : ''} />
           ${t('sectionForm.ownReminderTime')}
