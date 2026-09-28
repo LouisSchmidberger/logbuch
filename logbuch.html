@@ -4974,12 +4974,14 @@ let appJustInstalled = false;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredInstallPrompt = e;
-  if (!state.session) render();
+  // Nur neu zeichnen, wenn die Installations-Seite gerade zu sehen ist - nicht mitten ins
+  // Anmelde-Formular hinein.
+  if (!state.session && shouldShowInstallGate()) render();
 });
 window.addEventListener('appinstalled', () => {
   deferredInstallPrompt = null;
   appJustInstalled = true;
-  if (!state.session) render();
+  if (!state.session && shouldShowInstallGate()) render();
 });
 // Gezeichnete Symbole für die Anleitung - "Quadrat mit Pfeil nach oben" in Worten war
 // schwer zu finden. Dekorativ (der Text nennt das Symbol ohnehin).
