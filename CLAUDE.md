@@ -365,8 +365,8 @@ Default-Privilegien hatten auch `anon`/TRUNCATE vergeben). Einklappbare Abschnit
 Anordnen von Feldern (auch berechneten) – reine Anordnung, bewusst **keine eigene
 Berechnung** (wer einen Wert will, kombiniert Gruppe + berechnetes Feld). Die Zuordnung ist
 absichtlich unverschlüsselt (nur zwei zufällige IDs): die DB löst sie beim Löschen selbst,
-Umhängen braucht kein Neu-Verschlüsseln – steht so auch im Datenschutz-Text ("ob du sie in
-Gruppen sortiert hast"). **Anlegen/Bearbeiten** über ein eigenes Formular (eigene Ebene der
+Umhängen braucht kein Neu-Verschlüsseln – steht so auch im Datenschutz-Text ("welches Feld
+in welcher Gruppe steht"). **Anlegen/Bearbeiten** über ein eigenes Formular (eigene Ebene der
 Verwaltung wie das Feld-Formular, `openSectionForm`/`renderSectionForm`/
 `saveSectionForm`): Name + Liste aller aktiven Felder zum Ankreuzen, beliebig gemischt;
 **jedes Feld in höchstens einer Gruppe** – Felder einer anderen Gruppe erscheinen ausgegraut
