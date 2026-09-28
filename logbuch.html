@@ -735,6 +735,7 @@
   .label-inputs input:disabled { color: var(--sand); background: transparent; cursor: default; }
   .field-preview { padding: 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--input-bg); }
   .field-preview .habit-options { max-width: 100%; flex-wrap: wrap; overflow-x: visible; }
+  .field-preview-note { margin: 8px 0 0; }
   .habit-form select {
     font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
@@ -1850,6 +1851,7 @@ const STRINGS = {
     'unlock.unlock': 'Entsperren',
     'unlock.wrongPassword': 'Falsches Passwort.',
     'ariaLabel.deleteEntry': 'Eintrag löschen',
+    'ariaLabel.noValue': 'kein Wert',
     'ariaLabel.prevDay': 'Vorheriger Tag',
     'ariaLabel.nextDay': 'Nächster Tag',
     'ariaLabel.prevWeek': 'Vorherige Woche',
@@ -1915,6 +1917,7 @@ const STRINGS = {
     'habitForm.goalExplain': 'Bei unter 100%: schon eine niedrigere Quote/Wert zählt farblich als voll erreicht (grün) – z. B. bei "Kraftsport gemacht" reichen vielleicht schon 3 von 7 Tagen die Woche als Ziel. Ändert nur die Farbe, nie die angezeigte Prozentzahl. Wirkt sich nicht auf „Heute" aus. Standard 100% = nur der Maximalwert zählt als voll erreicht.',
     'habitForm.ownLabels': 'Eigene Bezeichnungen verwenden',
     'habitForm.preview': 'Vorschau',
+    'habitForm.previewNote': 'Zum Ausprobieren – hier wird nichts gespeichert.',
     'habitForm.display': 'Darstellung',
     'habitForm.displayLockedExplain': 'Reine Anzeige-Einstellung, ändert nichts an bestehenden Werten – deshalb hier trotz gesperrtem Bereich änderbar.',
     'habitForm.buttons': 'Buttons',
@@ -2252,6 +2255,7 @@ const STRINGS = {
     'unlock.unlock': 'Unlock',
     'unlock.wrongPassword': 'Incorrect password.',
     'ariaLabel.deleteEntry': 'Delete entry',
+    'ariaLabel.noValue': 'no value',
     'ariaLabel.prevDay': 'Previous day',
     'ariaLabel.nextDay': 'Next day',
     'ariaLabel.prevWeek': 'Previous week',
@@ -2317,6 +2321,7 @@ const STRINGS = {
     'habitForm.goalExplain': 'Below 100%: even a lower ratio/value already counts as fully reached (green) in terms of color – e.g. for "did strength training", maybe 3 out of 7 days a week is already the goal. Only changes the color, never the displayed percentage. Has no effect on "Today". Default 100% = only the maximum value counts as fully reached.',
     'habitForm.ownLabels': 'Use custom labels',
     'habitForm.preview': 'Preview',
+    'habitForm.previewNote': 'Try it out – nothing is saved here.',
     'habitForm.display': 'Display',
     'habitForm.displayLockedExplain': 'Pure display setting, does not change existing values – that is why it stays editable here despite the locked range.',
     'habitForm.buttons': 'Buttons',
@@ -4667,19 +4672,19 @@ function renderUnlockPrompt() {
 }
 
 // --- Rendering: Habit-Row ---------------------------------------------
-// colorAll: alle Stufen in ihrer Farbe zeigen statt nur der gewählten - für die Vorschau
-// im Feld-Formular, damit man dort die ganze Farbskala (Richtung bzw. neutral) sieht.
-function renderHabitOptions(habit, value, { colorAll = false } = {}) {
+// preview: Vorschau im Feld-Formular (renderHabitFormPreview) - gleiches Aussehen und
+// Verhalten, aber eigene Aktionen, die nur den Formular-Zustand ändern, nie echte Daten.
+function renderHabitOptions(habit, value, { preview = false } = {}) {
   const options = Array.from({ length: habit.max - habit.min + 1 }, (_, i) => habit.min + i)
     .map((n, i) => [n, habit.labels ? habit.labels[i] : String(n)]);
 
   return options.map(([v, label]) => {
-    const selected = colorAll || value === v;
+    const selected = value === v;
     const color = habitColor(habit, normalize(habit, v));
     const style = selected ? `background:${color};border-color:${color};color:${textOnScore(color)};` : '';
     const isText = label.length > 1;
     return `<button type="button" class="opt-btn${isText ? ' opt-btn--text' : ''}${selected ? ' opt-btn--selected' : ''}" style="${style}"
-      data-action="select" data-habit="${habit.id}" data-value='${JSON.stringify(v)}' aria-pressed="${selected}">${esc(label)}</button>`;
+      data-action="${preview ? 'preview-select' : 'select'}" data-habit="${habit.id}" data-value='${JSON.stringify(v)}' aria-pressed="${selected}">${esc(label)}</button>`;
   }).join('');
 }
 
@@ -4693,7 +4698,10 @@ function renderHabitOptions(habit, value, { colorAll = false } = {}) {
 function habitSliderValueText(habit, v) {
   return habit.labels ? habit.labels[v - habit.min] : String(v);
 }
-function renderHabitSlider(habit, value) {
+// aria-label: der Feldname (die Zeile hat kein <label>, siehe renderRowHead) - ohne ihn
+// las ein Screenreader nur "Schieberegler, 50". aria-valuetext: die Bezeichnung statt
+// der rohen Zahl, bzw. "kein Wert", solange nichts eingetragen ist.
+function renderHabitSlider(habit, value, { preview = false } = {}) {
   const hasValue = value !== undefined;
   const v = hasValue ? value : Math.round((habit.min + habit.max) / 2);
   const color = hasValue ? habitColor(habit, normalize(habit, v)) : 'var(--sand)';
@@ -4705,12 +4713,13 @@ function renderHabitSlider(habit, value) {
   // jedem 'input' einfach per Custom Property aktualisiert wird.
   return `
     <div class="slider-row">
-      <input type="range" class="value-slider${hasValue ? '' : ' value-slider--unset'}" data-action="value-slider"
+      <input type="range" class="value-slider${hasValue ? '' : ' value-slider--unset'}" data-action="${preview ? 'preview-slider' : 'value-slider'}"
         data-habit="${habit.id}" min="${habit.min}" max="${habit.max}" step="1" value="${v}"
+        aria-label="${esc(habit.name)}" aria-valuetext="${esc(hasValue ? habitSliderValueText(habit, v) : t('ariaLabel.noValue'))}"
         style="--slider-color:${color};--slider-pct:${pct}%;" />
       ${habit.sliderShowValue ? `<span class="slider-value" id="slider-value-${habit.id}">${hasValue ? esc(habitSliderValueText(habit, v)) : '–'}</span>` : ''}
       ${hasValue
-        ? `<button type="button" class="slider-clear" data-action="clear-value" data-habit="${habit.id}" aria-label="${esc(t('ariaLabel.deleteEntry'))}">×</button>`
+        ? `<button type="button" class="slider-clear" data-action="${preview ? 'preview-clear' : 'clear-value'}" data-habit="${habit.id}" aria-label="${esc(t('ariaLabel.deleteEntry'))}">×</button>`
         : '<span class="slider-clear slider-clear--placeholder" aria-hidden="true"></span>'}
     </div>
   `;
@@ -4719,31 +4728,47 @@ function renderHabitSlider(habit, value) {
 // Live-Vorschau im "Neues Feld"/"Feld bearbeiten"-Formular: baut ein synthetisches
 // Habit-Objekt aus dem aktuellen Formular-Stand und rendert es mit denselben
 // Funktionen wie die echte "Heute"-Ansicht (renderHabitOptions/renderHabitSlider) -
-// dadurch bleibt die Vorschau visuell gleich zur echten Eingabe, ohne eigene
-// Render-Logik zu duplizieren. Einziger Unterschied: bei Buttons sind alle Stufen in
-// ihrer Farbe eingefärbt (colorAll), damit man die ganze Farbskala sieht. inert + aria-hidden, da rein informativ: ein
-// Klick/Tastatur-Zugriff hier soll nie etwas in echten Daten verändern (die
-// synthetische id "preview" existiert in state.habits ohnehin nicht).
-function renderHabitFormPreview(f) {
-  const isSlider = f.displayStyle === 'slider';
-  const stepCount = habitFormStepCount(f);
-  const previewHabit = {
+// dadurch sieht die Vorschau genauso aus und verhält sich genauso wie die echte Eingabe,
+// ohne eigene Render-Logik zu duplizieren. Zum Ausprobieren bedienbar: der Wert lebt nur
+// in f.previewValue (eigene preview-*-Aktionen, siehe setPreviewValue), nie in echten
+// Daten. Ein Wert außerhalb der aktuellen Stufen (Stufenzahl geändert) gilt als leer.
+function previewHabitFromForm(f) {
+  return {
     id: 'preview',
     kind: 'scale',
+    name: f.name.trim() || t('habitForm.preview'),
     min: f.min,
     max: f.max,
-    labels: f.labelsEnabled ? resizeLabels(f.labels, stepCount) : null,
+    labels: f.labelsEnabled ? resizeLabels(f.labels, habitFormStepCount(f)) : null,
     good: f.good,
     displayStyle: f.displayStyle,
     sliderShowValue: f.sliderShowValue,
   };
-  // Beim Schieberegler direkt einen Beispielwert (Mittelwert) zeigen statt des leeren
-  // "-"-Zustands - der Regler steht ohnehin schon mittig, die Werteanzeige sollte dazu
-  // passen, damit die Vorschau auch die Bezeichnung/Farbe an der Stelle zeigt.
-  const widget = isSlider
-    ? renderHabitSlider(previewHabit, Math.round((f.min + f.max) / 2))
-    : `<div class="habit-options">${renderHabitOptions(previewHabit, undefined, { colorAll: true })}</div>`;
-  return `<div class="field-preview" inert aria-hidden="true">${widget}</div>`;
+}
+function renderHabitFormPreview(f) {
+  const previewHabit = previewHabitFromForm(f);
+  const value = Number.isInteger(f.previewValue) && f.previewValue >= f.min && f.previewValue <= f.max ? f.previewValue : undefined;
+  const widget = f.displayStyle === 'slider'
+    ? renderHabitSlider(previewHabit, value, { preview: true })
+    : `<div class="habit-options">${renderHabitOptions(previewHabit, value, { preview: true })}</div>`;
+  return `
+    <div class="field-preview" role="group" aria-labelledby="habit-form-preview-label" aria-describedby="habit-form-preview-note">
+      ${widget}
+      <p class="habit-form-lock-note field-preview-note" id="habit-form-preview-note">${t('habitForm.previewNote')}</p>
+    </div>
+  `;
+}
+// Wert in der Vorschau setzen/entfernen: nur die Vorschau austauschen (kein render(), das
+// Formular bleibt, wie es ist) und den Fokus auf dasselbe Element zurückgeben.
+function setPreviewValue(value, focusSelector) {
+  const f = state.habitForm;
+  if (!f) return;
+  f.previewValue = value;
+  haptic();
+  const preview = document.querySelector('.field-preview');
+  if (!preview) return;
+  preview.outerHTML = renderHabitFormPreview(f);
+  if (focusSelector) document.querySelector(`.field-preview ${focusSelector}`)?.focus({ preventScroll: true });
 }
 
 // Nicht-editierbare Info-Zeile für berechnete Felder (kind='computed') — zeigt den
@@ -4938,7 +4963,7 @@ function renderTodayHabitRow(h, dateKey, dayEntry) {
   return `
     <div class="habit-row">
       ${renderRowHead(h, esc(h.name))}
-      <div class="habit-options">${renderHabitOptions(h, dayEntry[h.id])}</div>
+      <div class="habit-options" role="group" aria-label="${esc(h.name)}">${renderHabitOptions(h, dayEntry[h.id])}</div>
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
     </div>
@@ -5547,7 +5572,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       </div>
     ` : ''}
     <div class="auth-field">
-      <label>${t('habitForm.preview')}</label>
+      <label id="habit-form-preview-label">${t('habitForm.preview')}</label>
       ${renderHabitFormPreview(f)}
     </div>
     <div class="auth-field">
@@ -6446,6 +6471,12 @@ app.addEventListener('click', async (e) => {
     closeNoteEditor(false);
   } else if (action === 'clear-value') {
     handleClearValue(formatKey(state.currentDate), el.dataset.habit);
+  } else if (action === 'preview-select') {
+    // Wie in "Heute": derselbe Wert nochmal entfernt ihn wieder.
+    const v = JSON.parse(el.dataset.value);
+    setPreviewValue(state.habitForm?.previewValue === v ? undefined : v, `[data-value='${JSON.stringify(v)}']`);
+  } else if (action === 'preview-clear') {
+    setPreviewValue(undefined, '.value-slider');
   } else if (action === 'enable-push') {
     enablePush();
   } else if (action === 'disable-push') {
@@ -6781,11 +6812,11 @@ app.addEventListener('change', async (e) => {
     render();
     return;
   }
-  const slider = e.target.closest('[data-action="value-slider"]');
+  const slider = e.target.closest('[data-action="value-slider"], [data-action="preview-slider"]');
   if (slider) {
     // Loslassen/Commit — erst hier wird tatsächlich gespeichert, nicht bei jedem
     // Zwischenwert während des Ziehens.
-    handleSetValue(formatKey(state.currentDate), slider.dataset.habit, Number(slider.value));
+    commitSliderValue(slider);
   }
 });
 
@@ -6802,7 +6833,7 @@ app.addEventListener('input', (e) => {
   if (e.target.classList.contains('text-field-input')) { updateTextValue(formatKey(state.currentDate), e.target.dataset.habit, e.target.value); return; }
   // Bezeichnungen im Feld-Formular: Live-Vorschau mitziehen, ohne das ganze Formular
   // neu zu rendern (würde Fokus/Cursor im gerade bearbeiteten Feld zurücksetzen) - nur
-  // die Vorschau selbst wird ausgetauscht, die ist inert und hält nie den Fokus.
+  // die Vorschau selbst wird ausgetauscht (der Fokus liegt dabei ja im Bezeichnungs-Feld).
   const labelInput = e.target.closest('[data-label-index]');
   if (labelInput && state.habitForm?.labelsEnabled) {
     state.habitForm.labels[Number(labelInput.dataset.labelIndex)] = labelInput.value;
@@ -6813,10 +6844,20 @@ app.addEventListener('input', (e) => {
 
 // Live-Vorschau während des Ziehens am Schieberegler — nur DOM-Update, kein
 // Re-Render/Speichern (verhindert Ruckeln/Sprünge im Formular während der Eingabe).
+// Gilt genauso für den Regler in der Vorschau des Feld-Formulars (preview-slider).
+function sliderHabit(slider) {
+  return slider.dataset.action === 'preview-slider'
+    ? (state.habitForm ? previewHabitFromForm(state.habitForm) : null)
+    : state.habits.find((h) => h.id === slider.dataset.habit);
+}
+function commitSliderValue(slider) {
+  if (slider.dataset.action === 'preview-slider') setPreviewValue(Number(slider.value), '.value-slider');
+  else handleSetValue(formatKey(state.currentDate), slider.dataset.habit, Number(slider.value));
+}
 app.addEventListener('input', (e) => {
-  const slider = e.target.closest('[data-action="value-slider"]');
+  const slider = e.target.closest('[data-action="value-slider"], [data-action="preview-slider"]');
   if (!slider) return;
-  const habit = state.habits.find((h) => h.id === slider.dataset.habit);
+  const habit = sliderHabit(slider);
   if (!habit) return;
   const v = Number(slider.value);
   const pct = ((v - habit.min) / (habit.max - habit.min)) * 100;
@@ -6824,6 +6865,7 @@ app.addEventListener('input', (e) => {
   slider.dataset.dirty = '1'; // siehe pointerup-Listener unten
   slider.style.setProperty('--slider-color', habitColor(habit, normalize(habit, v)));
   slider.style.setProperty('--slider-pct', pct + '%');
+  slider.setAttribute('aria-valuetext', habitSliderValueText(habit, v));
   const valueEl = document.getElementById('slider-value-' + habit.id);
   if (valueEl) valueEl.textContent = habitSliderValueText(habit, v);
 });
@@ -6838,14 +6880,14 @@ app.addEventListener('input', (e) => {
 // 'change' schon neu gerendert, hängt der alte Regler nicht mehr im DOM.
 let sliderPointerTarget = null;
 app.addEventListener('pointerdown', (e) => {
-  sliderPointerTarget = e.target.closest('[data-action="value-slider"]');
+  sliderPointerTarget = e.target.closest('[data-action="value-slider"], [data-action="preview-slider"]');
 });
 document.addEventListener('pointerup', () => {
   const slider = sliderPointerTarget;
   sliderPointerTarget = null;
   if (!slider?.dataset.dirty) return;
   setTimeout(() => {
-    if (slider.isConnected) handleSetValue(formatKey(state.currentDate), slider.dataset.habit, Number(slider.value));
+    if (slider.isConnected) commitSliderValue(slider);
   });
 });
 document.addEventListener('pointercancel', () => { sliderPointerTarget = null; });

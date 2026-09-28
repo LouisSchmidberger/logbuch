@@ -266,9 +266,10 @@ verwenden" (beim Schieberegler nur nutzbar, wenn die Stufenzahl im Cap liegt), d
 bei Buttons immer, beim Schieberegler nur bei aktivierten Bezeichnungen eine Zeile pro
 Stufe (deaktiviertes Textfeld mit der Zahl, oder editierbar mit der Zahl als Startwert)
 → Live-Vorschau (rendert `renderHabitOptions`/`renderHabitSlider` mit einem
-synthetischen Habit-Objekt aus dem Formular-Stand, `inert`/`aria-hidden`, rein
-informativ; bei Buttons sind alle Stufen in ihrer Farbe eingefärbt, `colorAll`, damit man
-die ganze Farbskala sieht) → Bewertung/Ziel-Quote. `habitFormStepCount(f)` (`max-min+1`) und
+synthetischen Habit-Objekt aus dem Formular-Stand, `previewHabitFromForm`; seit
+2026-09-28 zum Ausprobieren bedienbar, verhält sich exakt wie in "Heute" – der Wert lebt nur
+in `f.previewValue`, eigene Aktionen `preview-select`/`preview-slider`/`preview-clear` via
+`setPreviewValue`, nie echte Daten; Hinweis "wird nicht gespeichert") → Bewertung/Ziel-Quote. `habitFormStepCount(f)` (`max-min+1`) und
 `habitFormStepValue(f, i)` (`min+i`) sind seit diesem Umbau für beide Darstellungen
 identisch (kein Sonderfall mehr für den Schieberegler) – `resizeLabels(labels,
 newLength, defaultForIndex)` hält die Bezeichnungs-Liste bei jeder Änderung der
@@ -784,7 +785,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 400 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 402 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
