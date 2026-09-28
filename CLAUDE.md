@@ -863,7 +863,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 460 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 461 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -1021,7 +1021,11 @@ ohne Zahlen (`tutorialDots`, aktueller Punkt länger, Screenreader hören "Schri
 Y"), Symbol, kurze Überschrift (wird bei jedem Bildschirmwechsel fokussiert,
 `lastTutorialScreen`), der eine Kernsatz fett, Begründungen im wiedererkennbaren
 "Warum?"-Kasten (`whyBox`), kurze Hinweise in normaler Schriftfarbe (`.onb-hint`, nicht
-im blassen Sandton der Formular-Hinweise).
+im blassen Sandton der Formular-Hinweise). Zurück/Überspringen stehen in einer eigenen
+Fußleiste mit Trennlinie (`tutorialNav`, Zurück links, Überspringen rechts), damit sie sich
+klar vom Inhalt abheben; Aktionen des Inhalts ("Lieber nicht", "Noch ein Feld") bleiben
+beim Hauptknopf. Versprechen "ohne Druck" bewusst ohne "vergessen" formuliert (ein
+ausgelassener Tag kann auch Absicht sein).
 
 - **Davor** (nur Handy im Browser): Installations-Seite vor dem Anmelden, siehe Stack →
   "Installation vor dem Anmelden". **Danach** (immer): der Ersatzschlüssel, siehe

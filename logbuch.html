@@ -542,6 +542,17 @@
   .onb h1 { margin-bottom: 16px; outline: none; }
   .onb .tutorial-text strong { font-weight: 600; }
   .onb-center { text-align: center; }
+  .onb-nav {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--line);
+  }
+  .onb-nav-btn {
+    font-family: inherit; font-size: 13px; color: var(--ink); background: none; border: none;
+    padding: 8px 4px; cursor: pointer;
+  }
+  /* Farbe bewusst --ink: der blasse Sandton erreicht bei 13px nur ~3:1 Kontrast. Nebensache
+     zeigen hier Position, Trennlinie und Größe. */
+  .onb-nav-btn:hover, .onb-nav-btn:focus-visible { text-decoration: underline; }
   /* Kurze Hinweise im Tutorial: bewusst normale Schriftfarbe statt des blassen Sandtons
      der Formular-Hinweise - hier stehen Dinge, die man wirklich lesen soll. */
   .onb-hint { font-size: 12px; line-height: 1.45; color: var(--ink); margin: 0 0 10px; }
@@ -2102,6 +2113,7 @@ const STRINGS = {
     'menu.summaryNotificationsExplain': 'Sonntags bzw. am letzten Tag des Monats kommt zur Standard-Erinnerungszeit eine Benachrichtigung, dass deine Wochen- bzw. Monatsübersicht bereit ist – aber nur, wenn du im jeweiligen Zeitraum mindestens einen Tag eingetragen hast. Ein Tipp darauf öffnet direkt die passende Übersicht.',
     'tutorial.stepLabel': 'Schritt {step} von {total}',
     'tutorial.skip': 'Tutorial überspringen',
+    'tutorial.navLabel': 'Tutorial-Navigation',
     'tutorial.skipConfirm.title': 'Tutorial überspringen?',
     'tutorial.skipConfirm.body': 'Klar – Felder kannst du jederzeit über Menü → „Felder verwalten“ anlegen.',
     'tutorial.skipConfirm.confirmButton': 'Ja, überspringen',
@@ -2110,7 +2122,7 @@ const STRINGS = {
     'tutorial.hello.privateTitle': 'Privat.',
     'tutorial.hello.privateBody': 'Deine Einträge werden auf deinem Gerät verschlüsselt. Nicht mal ich kann sie lesen.',
     'tutorial.hello.noPressureTitle': 'Ohne Druck.',
-    'tutorial.hello.noPressureBody': 'Keine Punkte, keine Serien, kein schlechtes Gewissen. Ein vergessener Tag ist einfach ein vergessener Tag.',
+    'tutorial.hello.noPressureBody': 'Keine Punkte, keine Serien, kein schlechtes Gewissen – ein Tag ohne Eintrag ist einfach ein Tag ohne Eintrag.',
     'tutorial.hello.yoursTitle': 'Deins.',
     'tutorial.hello.yoursBody': 'Du entscheidest, was du festhältst – es gibt keine vorgegebenen Felder.',
     'tutorial.hello.start': 'Los geht’s',
@@ -2564,6 +2576,7 @@ const STRINGS = {
     'menu.summaryNotificationsExplain': 'On Sundays and on the last day of the month, you get a notification at your default reminder time that your weekly or monthly summary is ready – but only if you have entered at least one day in that period. Tapping it opens the matching summary directly.',
     'tutorial.stepLabel': 'Step {step} of {total}',
     'tutorial.skip': 'Skip tutorial',
+    'tutorial.navLabel': 'Tutorial navigation',
     'tutorial.skipConfirm.title': 'Skip tutorial?',
     'tutorial.skipConfirm.body': 'Sure – you can create fields anytime via menu → “Manage fields”.',
     'tutorial.skipConfirm.confirmButton': 'Yes, skip',
@@ -2572,7 +2585,7 @@ const STRINGS = {
     'tutorial.hello.privateTitle': 'Private.',
     'tutorial.hello.privateBody': 'Your entries are encrypted on your device. Not even I can read them.',
     'tutorial.hello.noPressureTitle': 'No pressure.',
-    'tutorial.hello.noPressureBody': 'No points, no streaks, no guilt. A forgotten day is simply a forgotten day.',
+    'tutorial.hello.noPressureBody': 'No points, no streaks, no guilt – a day without an entry is simply a day without an entry.',
     'tutorial.hello.yoursTitle': 'Yours.',
     'tutorial.hello.yoursBody': 'You decide what you track – there are no predefined fields.',
     'tutorial.hello.start': 'Let’s go',
@@ -6450,8 +6463,18 @@ function tutorialScreen({ step, icon, title, body }) {
     ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
   `;
 }
-const tutorialSkipLink = () => `<button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${t('tutorial.skip')}</button>`;
-const tutorialBackLink = () => `<button type="button" class="auth-toggle" data-action="tutorial-back">${t('common.back')}</button>`;
+// Zurück/Überspringen als eigene Fußleiste mit Trennlinie (Zurück links, Überspringen
+// rechts) - direkt unter dem Inhalt hingen sie vorher so dran, dass nicht erkennbar war,
+// ob sie zum Inhalt gehören. Aktionen des Inhalts ("Lieber nicht", "Noch ein Feld")
+// bleiben beim Hauptknopf.
+function tutorialNav({ back = false, skip = false }) {
+  return `
+    <nav class="onb-nav" aria-label="${esc(t('tutorial.navLabel'))}">
+      ${back ? `<button type="button" class="onb-nav-btn" data-action="tutorial-back"><span aria-hidden="true">← </span>${t('common.back')}</button>` : '<span></span>'}
+      ${skip ? `<button type="button" class="onb-nav-btn" data-action="tutorial-skip-arm">${t('tutorial.skip')}</button>` : ''}
+    </nav>
+  `;
+}
 
 function renderTutorialHello() {
   const promises = [['🔒', 'private'], ['🌿', 'noPressure'], ['✏️', 'yours']].map(([icon, key]) => `
@@ -6463,7 +6486,7 @@ function renderTutorialHello() {
       <p class="tutorial-text">${t('tutorial.hello.body')}</p>
       <ul class="onb-promises">${promises}</ul>
       <button type="button" class="auth-submit" data-action="tutorial-next">${t('tutorial.hello.start')}</button>
-      ${tutorialSkipLink()}
+      ${tutorialNav({ skip: true })}
     `,
   });
 }
@@ -6500,7 +6523,7 @@ function renderTutorialReminders() {
   }
   return tutorialScreen({
     step: 2, icon: '🔔', title: t('tutorial.reminders.title'),
-    body: `${body}${tutorialBackLink()}${tutorialSkipLink()}`,
+    body: `${body}${tutorialNav({ back: true, skip: true })}`,
   });
 }
 
@@ -6527,8 +6550,7 @@ function renderTutorialFieldIntro() {
       <div class="onb-examples" role="group" aria-label="${esc(t('tutorial.field.examplesLabel'))}">${chips}</div>
       ${whyBox('tutorial.field.whyTitle', 'tutorial.field.whyBody')}
       <button type="button" class="auth-submit" data-action="tutorial-ready">${t('tutorial.field.ownIdea')}</button>
-      ${tutorialBackLink()}
-      ${tutorialSkipLink()}
+      ${tutorialNav({ back: true, skip: true })}
     `,
   });
 }
@@ -6549,7 +6571,7 @@ function renderTutorialDone() {
       <p class="tutorial-text">${t('tutorial.done.body')}</p>
       <button type="button" class="auth-submit" data-action="tutorial-finish">${t('tutorial.done.start')}</button>
       <button type="button" class="auth-toggle" data-action="tutorial-add-more">${t('tutorial.done.addMore')}</button>
-      ${tutorialBackLink()}
+      ${tutorialNav({ back: true })}
     `,
   });
 }
