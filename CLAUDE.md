@@ -38,6 +38,18 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
   hinzufügen" keine reine Komfortsache, sondern **Voraussetzung** dafür, dass
   Web-Push überhaupt funktioniert (Safari liefert Push sonst gar nicht aus, seit
   iOS 16.4) — Hinweistext ist deshalb iOS-spezifisch dringlicher formuliert.
+- **Installation vor dem Anmelden** (`renderInstallGate`, seit 2026-09-29): auf dem Handy
+  im Browser kommt noch VOR Registrieren/Anmelden eine eigene Seite "Erst mal ein Zuhause
+  für Logbuch" mit Begründung ("Warum?"-Kasten, iOS: sonst keine Erinnerungen) und
+  Anleitung mit gezeichneten Symbolen; auf Android/Chrome zusätzlich ein echter
+  Installieren-Knopf (`beforeinstallprompt`). So registriert man sich gleich in der
+  installierten App – vorher kam der Hinweis erst nach dem Anmelden (zweites Anmelden in
+  der App nötig) und wurde oft einfach weggeklickt. "Ich bleib erst mal im Browser" merkt
+  sich das Gerät (`localStorage` `installGateSkipped`). Weil der Bestätigungslink aus der
+  Registrierungs-Mail im Browser aufgeht, nicht in der App: kommt man darüber
+  (`#…type=signup`, vor dem Start von supabase-js gemerkt, `ARRIVED_VIA_SIGNUP_CONFIRM`)
+  auf dem Handy im Browser an, zeigt `renderConfirmLanding` "E-Mail bestätigt – zurück zur
+  App" statt der Anmeldung (Weitermachen im Browser bleibt möglich).
 - **iOS-Zoom beim Antippen von Eingabefeldern**: Safari auf iOS/iPadOS zoomt bei Feldern mit
   < 16px Schrift automatisch heran und nie wieder heraus – deshalb bekommen dort alle
   Eingabefelder 16px (`@supports (-webkit-touch-callout: none)` im CSS, nur Apple-Touch-
@@ -491,10 +503,19 @@ alles native Web Crypto API, keine Library):
   SHA256, 250.000 Iterationen, individueller Salt), "verpackt" (wrapped) den DEK
   (`wrapDek`/`unwrapDek`). Nur das verpackte Ergebnis (`wrapped_dek` in
   `user_encryption`) liegt serverseitig — nutzlos ohne Passwort.
-- **Recovery-Key**: ein zweiter, zufälliger 256-Bit-Schlüssel, der den DEK ein
-  zweites Mal verpackt (`wrapped_dek_recovery`). Wird dem Nutzer **einmalig**
-  angezeigt (`renderRecoveryKeyDisplay`, Kopieren-/Download-Button, muss per
-  Checkbox bestätigt werden) und nirgends serverseitig im Klartext gespeichert. Löst
+- **Recovery-Key** (in der App seit 2026-09-29 **"Ersatzschlüssel"**, englisch "spare
+  key"; im Code weiter `recoveryKey`): ein zweiter, zufälliger 256-Bit-Schlüssel, der den
+  DEK ein zweites Mal verpackt (`wrapped_dek_recovery`). Wird dem Nutzer **einmalig**
+  angezeigt (`renderRecoveryKeyDisplay`, Kopieren-/Download-Button, muss per Checkbox
+  bestätigt werden) und nirgends serverseitig im Klartext gespeichert. **Wann**: nicht
+  mehr gleich bei der Einrichtung (erster Eindruck wäre eine Sicherheitswarnung), sondern
+  als eigener Schritt nach dem Tutorial – auch wenn es übersprungen wurde. Dafür merkt
+  sich `user_encryption.recovery_key_confirmed`, ob der aktuelle Schlüssel bestätigt ist
+  (Migration `20260929100000_add_recovery_key_confirmed`, bestehende Konten `true`):
+  `setupEncryption` und `regenerateRecoveryKey` setzen `false` (`spareKeyPending`),
+  `maybeShowSpareKey` erzeugt nach dem Laden bzw. nach dem Tutorial einen frischen und
+  zeigt ihn, `confirmSpareKey` setzt `true`. Wer vorher schließt, bekommt beim nächsten
+  Öffnen einen neuen (der ungesehene ist damit ungültig). Löst
   den Zielkonflikt "Passwortverlust soll nicht Datenverlust bedeuten, aber der
   Server darf trotzdem nie Zugriff haben" — funktioniert nur, solange der Nutzer
   diesen Code noch besitzt. Verliert er Passwort UND Recovery-Key, sind die Daten
@@ -842,7 +863,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 444 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 460 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -1002,6 +1023,9 @@ Y"), Symbol, kurze Überschrift (wird bei jedem Bildschirmwechsel fokussiert,
 "Warum?"-Kasten (`whyBox`), kurze Hinweise in normaler Schriftfarbe (`.onb-hint`, nicht
 im blassen Sandton der Formular-Hinweise).
 
+- **Davor** (nur Handy im Browser): Installations-Seite vor dem Anmelden, siehe Stack →
+  "Installation vor dem Anmelden". **Danach** (immer): der Ersatzschlüssel, siehe
+  Verschlüsselung → Recovery-Key.
 - **1 Hallo** (`renderTutorialHello`): was Logbuch ist + drei Versprechen mit Symbol
   (privat · ohne Druck · deins). Platz für einen persönlichen Satz des Nutzers ist
   vorgesehen, aber noch offen (siehe Memory "Später beim Nutzer nachfragen").
