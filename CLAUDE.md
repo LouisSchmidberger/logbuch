@@ -565,6 +565,13 @@ angepinnt, damit Menü/Zurück/Tab-Wechsel beim Scrollen immer erreichbar bleibe
 Abschnitte (hervorgehobene Bereiche und Tipp-Gruppen) bei **jedem** Öffnen der Seite
 zugeklappt (Nutzer-Wunsch 2026-09-27, `openAboutSections`, von `enterSubpage` zurückgesetzt) –
 was man aufklappt, bleibt nur für die Dauer des Besuchs offen, kein dauerhaftes Merken.
+Tipps, die auf eine Stelle in der App verweisen ("im Menü", "in Felder verwalten"), haben
+darunter einen Link dorthin (`renderTip` mit drittem Element `{ menu: '<ziel>' }` bzw.
+`{ manage: true }`; seit 2026-09-28): "Im Menü zeigen" öffnet das ☰-Menü, scrollt nur
+innerhalb des Panels zum Eintrag (`data-menu-target`), hebt ihn kurz hervor und fokussiert
+ihn (`focusMenuTarget`). Bewusst nur diese Richtung – keine Sprünge zwischen Tipps und
+keine Links von der App zurück in die Erklärungen (Nutzer-Entscheidung). Neue Tipps mit
+Ortsangabe bekommen denselben Link.
 
 **History-Layer-Zähler statt einfacher An/Aus-Prüfung**: Overlay (z.B. Burger-Menü) und
 Unterseite können gleichzeitig offen sein (z.B. Menü öffnen innerhalb von "Verwalten"),
@@ -772,7 +779,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 403 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 405 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

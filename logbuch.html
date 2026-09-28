@@ -632,6 +632,7 @@
     font-family: inherit; font-size: inherit; padding: 0; border: none; background: none; color: var(--moss);
     text-decoration: underline; cursor: pointer; font-style: normal; font-weight: 600;
   }
+  .tip-link { font-size: 12px; margin-top: 4px; }
   .manage-section-divider { border-top: 1px solid var(--line); margin: 22px 0 14px; }
   .manage-section-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 15px; margin: 0 0 4px; }
   .about-status { font-size: 13px; line-height: 1.5; color: var(--ink); font-weight: 600; margin: 0 0 10px; }
@@ -2044,6 +2045,8 @@ const STRINGS = {
     'feedback.error.rateLimited': 'Du hast in den letzten 24 Stunden schon mehrere Nachrichten geschickt – bitte versuch es später noch einmal.',
     'feedback.error.failed': 'Senden fehlgeschlagen – bitte versuch es später noch einmal.',
     'about.intro': 'Ein paar Dinge, die sich nicht von selbst erklären — zum Nachlesen, falls du magst.',
+    'about.link.menu': 'Im Menü zeigen',
+    'about.link.manage': 'Zu „Felder verwalten“',
     'about.status': 'Beta – Stand {date}. Ich baue laufend weiter, melde dich gern, falls dir etwas auffällt.',
     'about.monetizationNote': 'Logbuch ist aktuell in vollem Umfang kostenlos. Es ist möglich, dass ich künftig bestimmte Funktionen kostenpflichtig mache, zum Beispiel über ein Abonnement.',
     'about.group.usage': 'Bedienung',
@@ -2053,7 +2056,7 @@ const STRINGS = {
     'about.a11y.title': 'Barrierefreiheit bei Logbuch',
     'about.a11y.intro': 'Menschen mit Einschränkungen — ob durch eine Behinderung, Farbenblindheit oder eingeschränkte Beweglichkeit — gehören zu den in der Gesellschaft am wenigsten berücksichtigten Gruppen. Gerade eine App, die dabei helfen soll, gut für sich selbst zu sorgen, sollte hier besonders genau hinschauen — nicht weil es irgendwann Pflicht wird, sondern weil es mir wichtig ist. Ein paar konkrete Dinge, die ich deshalb bewusst eingebaut habe, und warum:',
     'about.a11y.pattern.title': 'Warum ein Muster zusätzlich zur Farbe?',
-    'about.a11y.pattern.body': 'Rund 1 von 12 Männern und 1 von 200 Frauen hat eine Rot-Grün-Sehschwäche — oft unbemerkt, weil sie selten diagnostiziert wird. Bewertungen in Logbuch (rot bis grün) sind deshalb standardmäßig zusätzlich mit einem feinen Streifenmuster versehen, dessen Dichte sich nach dem Wert richtet. Bewusst nicht als Extra-Einstellung, die man erst suchen muss (Opt-in), sondern als Standard, den man bei Bedarf abschalten kann (im Menü unter „Darstellung") — wer es braucht, weiß oft selbst nicht, dass er danach suchen müsste.',
+    'about.a11y.pattern.body': 'Rund 1 von 12 Männern und 1 von 200 Frauen hat eine Rot-Grün-Sehschwäche — oft unbemerkt, weil sie selten diagnostiziert wird. Bewertungen in Logbuch (rot bis grün) sind deshalb standardmäßig zusätzlich mit einem feinen Streifenmuster versehen, dessen Dichte sich nach dem Wert richtet. Bewusst nicht als Extra-Einstellung, die man erst suchen muss (Opt-in), sondern als Standard, den man bei Bedarf abschalten kann (im Menü unter „Einstellungen") — wer es braucht, weiß oft selbst nicht, dass er danach suchen müsste.',
     'about.a11y.keyboard.title': 'Tastatur statt Maus oder Finger',
     'about.a11y.keyboard.body': 'Alles in Logbuch lässt sich vollständig ohne Maus oder Touch bedienen — wichtig für Menschen, die aus motorischen Gründen keine Maus präzise führen oder einen Touchscreen nicht zuverlässig treffen können. Kalenderzellen, Dialoge und selbst das Umsortieren von Feldern (sonst nur per Ziehen möglich) haben eine vollwertige Tastatur-Alternative. In Dialogen wie „Konto löschen" bleibt der Tastatur-Fokus zuverlässig innerhalb des Dialogs, statt unbemerkt in den Hintergrund abzurutschen, und Escape schließt sie, wie man es von anderer Software gewohnt ist.',
     'about.a11y.screenreader.title': 'Screenreader (Vorlese-Software für blinde Menschen)',
@@ -2449,6 +2452,8 @@ const STRINGS = {
     'feedback.error.rateLimited': 'You have already sent several messages in the last 24 hours – please try again later.',
     'feedback.error.failed': 'Sending failed – please try again later.',
     'about.intro': 'A few things that are not obvious at first glance — here to read up on if you are curious.',
+    'about.link.menu': 'Show in menu',
+    'about.link.manage': 'Go to “Manage fields”',
     'about.status': 'Beta – as of {date}. I am actively continuing to build this out, feel free to reach out if you notice anything.',
     'about.monetizationNote': 'Logbuch is currently completely free. I may make certain features paid in the future, for example via a subscription.',
     'about.group.usage': 'Using the app',
@@ -2458,7 +2463,7 @@ const STRINGS = {
     'about.a11y.title': 'Accessibility at Logbuch',
     'about.a11y.intro': 'People with disabilities — whether through a physical condition, color blindness, or limited mobility — are among the least considered groups in society. An app meant to help you take good care of yourself should pay particular attention here — not because it will eventually be required, but because it matters to me. Here are a few concrete things I built in on purpose, and why:',
     'about.a11y.pattern.title': 'Why a pattern in addition to color?',
-    'about.a11y.pattern.body': 'About 1 in 12 men and 1 in 200 women has red-green color vision deficiency — often unnoticed, since it is rarely diagnosed. Ratings in Logbuch (red to green) therefore get a subtle stripe pattern by default, whose density follows the value. Deliberately not an extra setting you would have to go looking for (opt-in), but a default you can switch off if you do not need it (in the menu under "Appearance") — the people who need it often would not know to look for it.',
+    'about.a11y.pattern.body': 'About 1 in 12 men and 1 in 200 women has red-green color vision deficiency — often unnoticed, since it is rarely diagnosed. Ratings in Logbuch (red to green) therefore get a subtle stripe pattern by default, whose density follows the value. Deliberately not an extra setting you would have to go looking for (opt-in), but a default you can switch off if you do not need it (in the menu under "Settings") — the people who need it often would not know to look for it.',
     'about.a11y.keyboard.title': 'Keyboard instead of mouse or touch',
     'about.a11y.keyboard.body': 'Everything in Logbuch can be operated fully without a mouse or touch — important for people who, for motor reasons, cannot precisely control a mouse or reliably hit targets on a touchscreen. Calendar cells, dialogs, and even reordering fields (otherwise only possible by dragging) have a full keyboard alternative. In dialogs like "Delete account", keyboard focus reliably stays within the dialog instead of unnoticeably slipping into the background, and Escape closes them, as is standard in other software.',
     'about.a11y.screenreader.title': 'Screen readers (software that reads the screen aloud for blind users)',
@@ -5126,17 +5131,29 @@ function renderGlobal() {
 // aufdringliches Tutorial/Tooltip-Overlay, sondern eine Seite, die da ist, wenn man
 // neugierig ist. Die Tipp-Gruppen (tipGroup) sind eine simple Array-Struktur statt
 // vieler Einzel-Strings, damit neue Tipps sich leicht ergänzen lassen.
+// Ein Tipp in "Über Logbuch". link (optional): wohin der Tipp verweist - { menu:
+// '<data-menu-target>' } öffnet das ☰-Menü und springt zum Eintrag (focusMenuTarget),
+// { manage: true } öffnet "Felder verwalten". Der Tipp-Titel steht im Link zusätzlich
+// unsichtbar für Screenreader, sonst hießen alle Links nur "Im Menü zeigen".
+// bodyTag 'div' für Texte mit Liste (Datenschutz), sonst 'p'.
+function renderTip([titleKey, bodyKey, link], bodyTag = 'p') {
+  const linkHtml = !link ? '' : link.menu
+    ? `<button type="button" class="link-btn tip-link" data-action="open-menu-at" data-target="${link.menu}">${t('about.link.menu')}<span class="visually-hidden">: ${t(titleKey)}</span></button>`
+    : `<button type="button" class="link-btn tip-link" data-action="open-manage">${t('about.link.manage')}<span class="visually-hidden">: ${t(titleKey)}</span></button>`;
+  return `
+    <div class="tip">
+      <p class="tip-title">${t(titleKey)}</p>
+      <${bodyTag} class="tip-body">${t(bodyKey)}</${bodyTag}>
+      ${linkHtml}
+    </div>
+  `;
+}
 function tipGroup(groupTitleKey, tips) {
   const collapseKey = `tipGroup:${groupTitleKey}`;
   return `
     <details class="tip-group" data-collapse-key="${collapseKey}" ${isAboutSectionCollapsed(collapseKey) ? '' : 'open'}>
       <summary class="manage-section-title">${t(groupTitleKey)}</summary>
-      ${tips.map(([titleKey, bodyKey]) => `
-        <div class="tip">
-          <p class="tip-title">${t(titleKey)}</p>
-          <p class="tip-body">${t(bodyKey)}</p>
-        </div>
-      `).join('')}
+      ${tips.map((tip) => renderTip(tip)).join('')}
     </details>
   `;
 }
@@ -5149,7 +5166,7 @@ function tipGroup(groupTitleKey, tips) {
 // nackten Fakten.
 function renderA11ySection() {
   const items = [
-    ['about.a11y.pattern.title', 'about.a11y.pattern.body'],
+    ['about.a11y.pattern.title', 'about.a11y.pattern.body', { menu: 'pattern' }],
     ['about.a11y.keyboard.title', 'about.a11y.keyboard.body'],
     ['about.a11y.screenreader.title', 'about.a11y.screenreader.body'],
   ];
@@ -5157,12 +5174,7 @@ function renderA11ySection() {
     <details class="a11y-highlight" data-collapse-key="aboutA11yCollapsed" ${isAboutSectionCollapsed('aboutA11yCollapsed') ? '' : 'open'}>
       <summary class="manage-section-title">${t('about.a11y.title')}</summary>
       <p class="tip-body">${t('about.a11y.intro')}</p>
-      ${items.map(([titleKey, bodyKey]) => `
-        <div class="tip">
-          <p class="tip-title">${t(titleKey)}</p>
-          <p class="tip-body">${t(bodyKey)}</p>
-        </div>
-      `).join('')}
+      ${items.map((tip) => renderTip(tip)).join('')}
       <p class="tip-body a11y-feedback">${t('about.a11y.feedback')} <button type="button" class="link-btn" data-action="open-feedback">${t('menu.feedback')}</button></p>
     </details>
   `;
@@ -5182,12 +5194,7 @@ function renderMentalHealthSection() {
     <details class="mental-health-highlight" data-collapse-key="aboutMentalHealthCollapsed" ${isAboutSectionCollapsed('aboutMentalHealthCollapsed') ? '' : 'open'}>
       <summary class="manage-section-title">${t('about.mentalHealth.title')}</summary>
       <p class="tip-body">${t('about.mentalHealth.intro')}</p>
-      ${items.map(([titleKey, bodyKey]) => `
-        <div class="tip">
-          <p class="tip-title">${t(titleKey)}</p>
-          <p class="tip-body">${t(bodyKey)}</p>
-        </div>
-      `).join('')}
+      ${items.map((tip) => renderTip(tip)).join('')}
       <div class="tip mental-health-crisis">
         <p class="tip-title">${t('about.mentalHealth.crisis.title')}</p>
         ${detectLikelyCountry() === 'DE' ? `
@@ -5215,19 +5222,14 @@ function renderPrivacySection() {
   const items = [
     ['about.privacy.cannotSee.title', 'about.privacy.cannotSee.body'],
     ['about.privacy.canSee.title', 'about.privacy.canSee.body'],
-    ['about.privacy.recoveryKey.title', 'about.privacy.recoveryKey.body'],
-    ['about.privacy.yourData.title', 'about.privacy.yourData.body'],
+    ['about.privacy.recoveryKey.title', 'about.privacy.recoveryKey.body', { menu: 'recovery-key' }],
+    ['about.privacy.yourData.title', 'about.privacy.yourData.body', { menu: 'export' }],
   ];
   return `
     <details class="privacy-highlight" data-collapse-key="aboutPrivacyCollapsed" ${isAboutSectionCollapsed('aboutPrivacyCollapsed') ? '' : 'open'}>
       <summary class="manage-section-title">${t('about.privacy.title')}</summary>
       <p class="tip-body">${t('about.privacy.intro')}</p>
-      ${items.map(([titleKey, bodyKey]) => `
-        <div class="tip">
-          <p class="tip-title">${t(titleKey)}</p>
-          <div class="tip-body">${t(bodyKey)}</div>
-        </div>
-      `).join('')}
+      ${items.map((tip) => renderTip(tip, 'div')).join('')}
       <p class="tip-body privacy-feedback">${t('about.privacy.feedback')} <button type="button" class="link-btn" data-action="open-feedback">${t('menu.feedback')}</button></p>
     </details>
   `;
@@ -5253,7 +5255,7 @@ function renderAbout() {
       ['about.tip.jumpDay.title', 'about.tip.jumpDay.body'],
       ['about.tip.toggleOff.title', 'about.tip.toggleOff.body'],
       ['about.tip.fieldMenu.title', 'about.tip.fieldMenu.body'],
-      ['about.tip.reorder.title', 'about.tip.reorder.body'],
+      ['about.tip.reorder.title', 'about.tip.reorder.body', { manage: true }],
     ])}
     <div class="manage-section-divider"></div>
     ${tipGroup('about.group.fields', [
@@ -5263,17 +5265,17 @@ function renderAbout() {
       ['about.tip.slider.title', 'about.tip.slider.body'],
       ['about.tip.textFields.title', 'about.tip.textFields.body'],
       ['about.tip.customReminder.title', 'about.tip.customReminder.body'],
-      ['about.tip.archiveVsDelete.title', 'about.tip.archiveVsDelete.body'],
+      ['about.tip.archiveVsDelete.title', 'about.tip.archiveVsDelete.body', { manage: true }],
     ])}
     <div class="manage-section-divider"></div>
     ${tipGroup('about.group.appearance', [
-      ['about.tip.theme.title', 'about.tip.theme.body'],
-      ['about.tip.language.title', 'about.tip.language.body'],
+      ['about.tip.theme.title', 'about.tip.theme.body', { menu: 'theme' }],
+      ['about.tip.language.title', 'about.tip.language.body', { menu: 'language' }],
     ])}
     <div class="manage-section-divider"></div>
     ${tipGroup('about.group.account', [
-      ['about.tip.export.title', 'about.tip.export.body'],
-      ['about.tip.recoveryKey.title', 'about.tip.recoveryKey.body'],
+      ['about.tip.export.title', 'about.tip.export.body', { menu: 'export' }],
+      ['about.tip.recoveryKey.title', 'about.tip.recoveryKey.body', { menu: 'recovery-key' }],
     ])}
   `;
 }
@@ -6048,14 +6050,14 @@ function renderMenu() {
         </div>
         <div class="menu-row">
           <label for="menu-locale">${t('menu.language')}</label>
-          <select id="menu-locale" data-action="menu-locale">
+          <select id="menu-locale" data-action="menu-locale" data-menu-target="language">
             <option value="de" ${currentLocale === 'de' ? 'selected' : ''}>Deutsch</option>
             <option value="en" ${currentLocale === 'en' ? 'selected' : ''}>English</option>
           </select>
         </div>
         <div class="menu-row">
           <label id="menu-theme-label">${t('theme.label')}</label>
-          <div class="pill-group" role="group" aria-labelledby="menu-theme-label">
+          <div class="pill-group" role="group" aria-labelledby="menu-theme-label" data-menu-target="theme">
             <button type="button" class="pill-toggle${!getThemeOverride() ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="" aria-pressed="${!getThemeOverride()}">${t('theme.system')}</button>
             <button type="button" class="pill-toggle${getThemeOverride() === 'light' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="light" aria-pressed="${getThemeOverride() === 'light'}">${t('theme.light')}</button>
             <button type="button" class="pill-toggle${getThemeOverride() === 'dark' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="dark" aria-pressed="${getThemeOverride() === 'dark'}">${t('theme.dark')}</button>
@@ -6063,7 +6065,7 @@ function renderMenu() {
         </div>
         <div class="menu-row">
           <label class="checkbox-field">
-            <input type="checkbox" data-action="pattern-toggle" ${isPatternDisabled() ? '' : 'checked'} />
+            <input type="checkbox" data-action="pattern-toggle" data-menu-target="pattern" ${isPatternDisabled() ? '' : 'checked'} />
             ${t('pattern.enableLabel')}
           </label>
           ${infoTip(t('pattern.explain'))}
@@ -6080,8 +6082,8 @@ function renderMenu() {
       <div class="menu-group-divider"></div>
       <div class="menu-group">
         <p class="menu-group-label">${t('menu.groupAccount')}</p>
-        <button type="button" class="menu-item-btn" data-action="export-data">${t('menu.exportData')}</button>
-        <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key">${t('menu.regenerateRecoveryKey')}</button>
+        <button type="button" class="menu-item-btn" data-action="export-data" data-menu-target="export">${t('menu.exportData')}</button>
+        <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key" data-menu-target="recovery-key">${t('menu.regenerateRecoveryKey')}</button>
         <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="open-delete-confirm">${t('menu.deleteAccount')}</button>
         <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="logout">${t('common.logout')}</button>
       </div>
@@ -6122,6 +6124,25 @@ function renderDeleteConfirm() {
       </div>
     </div>
   `;
+}
+
+// Link aus "Über Logbuch" (siehe renderTip): Menü ist schon offen - zum Eintrag
+// scrollen (nur innerhalb des Panels: ein Fenster-Scroll würde das Menü schließen, siehe
+// scroll-Listener), kurz hervorheben und fokussieren. Bei einer Pill-Gruppe die gerade
+// aktive Pill. Eine Auswahlliste nicht per Finger fokussieren - auf iOS öffnete das
+// sofort deren Auswahl-Menü (siehe habit-form-schedule-type).
+function focusMenuTarget(target) {
+  const panel = document.querySelector('.menu-panel');
+  const el = panel?.querySelector(`[data-menu-target="${target}"]`);
+  if (!el) return;
+  const row = el.closest('.menu-row') || el;
+  const panelRect = panel.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
+  panel.scrollTop += rowRect.top - panelRect.top - (panelRect.height - rowRect.height) / 2;
+  row.classList.add('field-highlight');
+  row.addEventListener('animationend', () => row.classList.remove('field-highlight'), { once: true });
+  const focusEl = el.matches('button, input, select') ? el : el.querySelector('[aria-pressed="true"]') || el.querySelector('button');
+  if (focusEl && !(focusEl.tagName === 'SELECT' && lastPointerType !== 'mouse')) focusEl.focus({ preventScroll: true });
 }
 
 // Header+☰-Menü sind für Tabs und Unterseiten identisch aufgebaut (nur der linke Teil
@@ -6334,6 +6355,10 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'open-manage') {
     enterSubpage('manage');
     render();
+  } else if (action === 'open-menu-at') {
+    state.menuOpen = true;
+    render();
+    focusMenuTarget(el.dataset.target);
   } else if (action === 'open-about') {
     enterSubpage('about');
     render();
@@ -6835,10 +6860,11 @@ app.addEventListener('toggle', (e) => {
   else openAboutSections.delete(details.dataset.collapseKey);
 }, true);
 
-// Menü schließen, wenn außerhalb davon geklickt wird.
+// Menü schließen, wenn außerhalb davon geklickt wird. Ausnahme: die Links in "Über
+// Logbuch", die das Menü gerade erst geöffnet haben (derselbe Klick kommt hier danach an).
 document.addEventListener('click', (e) => {
   if (!state.menuOpen) return;
-  if (e.target.closest('.menu-panel, .menu-btn')) return;
+  if (e.target.closest('.menu-panel, .menu-btn, [data-action="open-menu-at"]')) return;
   state.menuOpen = false;
   render();
 });
