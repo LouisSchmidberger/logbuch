@@ -1146,7 +1146,8 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
   Log, serverseitige Auswertung, neuer Drittanbieter o.ä.), muss diesen Text im selben
   Zug mit anpassen – und bei Reviews gegen den tatsächlichen Stand geprüft werden. Nicht
   hineingehören Selbstverständlichkeiten (z.B. dass der Betreiber Feedback lesen kann –
-  das ist der Zweck von Feedback).
+  das ist der Zweck von Feedback) und Details ohne echte Aussagekraft (z.B. ob/seit wann
+  ein Feld archiviert ist – bewusst weggelassen, Nutzer-Entscheidung 2026-09-28).
 
 ## Noch nicht gebaut (bekannte TODOs, kein Zeitdruck)
 
