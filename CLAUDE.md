@@ -80,7 +80,7 @@ Eigenschaften unten gilt inhaltlich unverändert (im Client heißen sie gleich).
   Einträgen – dann aber erst nach explizitem zweiten Bestätigungsklick in der App
   (`state.habitDeleteConfirm`), da die Rohwerte danach nicht mehr auswertbar sind.
   Löscht zuerst die `habit_definitions`-Zeile, räumt danach zusätzlich per
-  `purgeHabitFromEntries` (in `logbuch.html`) best effort den zugehörigen Schlüssel
+  `purgeKeyFromEntries` (in `logbuch.html`) best effort den zugehörigen Schlüssel
   aus jedem betroffenen Tages-Eintrag (`habit_entries.data`) weg, statt ihn als
   verwaisten Key im verschlüsselten JSON liegen zu lassen (passend zur Zero-Access-/
   Löschrecht-Ausrichtung der App – "Löschen" soll möglichst wenig übrig lassen).
@@ -329,7 +329,8 @@ der vierte Typ neben Skala/Zahl/Text ("Berechnet"), mit Art der Mitglieder, ggf.
 Berechnung und Mitglieder-Auswahl. **Aus Skalen**: fassen mehrere `kind='scale'`-Felder
 zu einem Durchschnittswert zusammen (z.B. "Sport gemacht" = Ø aus "Ausdauersport" +
 "Kraftsport"). Kein Eintrag in `habit_entries.data`, kein eigener `good`, keine
-Erinnerungszeit, keine Wiederholung (dran, sobald ein Mitglied dran ist), keine Notizen.
+Erinnerungszeit, keine Wiederholung (dran, sobald ein Mitglied dran ist). Notizen gehen
+(liegen ohnehin getrennt unter `_notes`, brauchen keinen eigenen Wert).
 Der zentrale Helfer `habitScore(h, dateKey)` liefert dafür den Durchschnitt aus
 `normalize(member, ...)` über alle Mitglieder mit Wert an dem Tag (null, wenn keins
 befüllt ist) und ersetzt damit in `renderWeek`/`computeHabitStats` (Monat/Jahr/Gesamt)
@@ -385,7 +386,10 @@ Ende hängen). Eine gezogene Gruppe wird dabei auf ihre Kopfzeile zusammengeklap
 Umhängen zwischen Gruppen bewusst nur über die Formulare, nicht per Ziehen (einfach und für
 Tastatur/Screenreader gleich gut bedienbar; Ziehen zwischen Gruppen wäre ein möglicher
 späterer Zusatz). Löschen (zweistufig) löscht keine Felder: sie rücken an die Stelle der
-Gruppe. **Anzeige überall** (Nutzer-Entscheidung): "Heute" und alle Auswertungs-Ansichten
+Gruppe; Notizen zur Gruppe werden mitgelöscht (Hinweis in der Bestätigung, falls es welche
+gibt). Ein **reaktiviertes Feld** kommt ans Ende seines Bereichs (`handleHabitArchive`) –
+sonst landete z.B. ein archiviertes Feld aus einer inzwischen gelöschten Gruppe mit seiner
+alten Position aus der Gruppe irgendwo auf der obersten Ebene. **Anzeige überall** (Nutzer-Entscheidung): "Heute" und alle Auswertungs-Ansichten
 ordnen nach Gruppen (`renderBySection`, leere Gruppen werden ausgelassen), jeweils mit
 einklappbarer Überschrift (`section-toggle`, `aria-expanded`) und eingerücktem Inhalt mit
 dezenter Linie links (`.section-content`; im Wochen-Raster nur der Feldname eingerückt,
@@ -609,8 +613,8 @@ oder `section:<id>`): kleines Popover. Bei Feldern "Bearbeiten" (öffnet das Fel
 der Verwaltung mit `returnToTab: true`, gleiches Muster wie der "+ Neues Feld"-Shortcut) und
 "Archivieren" (danach Meldung, wo sich das Feld reaktivieren lässt), bei nicht berechneten
 Feldern zusätzlich "Notiz hinzufügen/bearbeiten" (siehe "Notizen in Heute" unten); bei
-Gruppen nur "Bearbeiten" (Gruppen-Formular, ebenfalls mit `returnToTab`; Löschen bewusst
-nicht aus "Heute"). **Auslöser ist ein senkrechtes ⋮ links vor jedem Feld und jeder
+Gruppen "Notiz" und "Bearbeiten" (Gruppen-Formular, ebenfalls mit `returnToTab`; Löschen
+bewusst nicht aus "Heute"). **Auslöser ist ein senkrechtes ⋮ links vor jedem Feld und jeder
 Gruppen-Überschrift** (Nutzer-Entscheidung: einheitlich für Felder und Gruppen – bei Gruppen
 ist ein Tipp auf die Überschrift schon Auf-/Zuklappen; links statt hinter dem Namen, damit
 die ⋮ eine ruhige Spalte bilden). Vorher war der Feldname selbst der einzige Auslöser –
@@ -633,12 +637,15 @@ anderen Feldes, kein versehentlich gesetzter Wert) – nur für Zeige-Geräte
 normal durch. Scrollen, Wischen und Deep-Links schließen es ebenfalls.
 
 **Notizen in "Heute"** (seit 2026-09-27, Datenformat siehe Datenmodell →
-`habit_entries`): freier Text pro Feld (nicht für berechnete Felder, die haben keinen eigenen
-Eintrag) und für den ganzen Tag, bewusst **kein Teil der Auswertung**. Gedacht als
+`habit_entries`): freier Text pro Feld (auch berechnete; nur Text-Felder nicht, dort wäre es
+doppelt), pro Gruppe (Schlüssel `section:<id>`, `SECTION_NOTE_PREFIX`, seit 2026-09-28) und
+für den ganzen Tag, bewusst **kein Teil der Auswertung**. Gedacht als
 Ausnahme ("heute erst nach dem Frühstück gewogen"), nicht als tägliche Eingabe – deshalb
 nur über das Zeilen-Menü erreichbar statt über ein eigenes Symbol pro Zeile. Eine
-vorhandene Notiz steht als kleiner kursiver Text unter dem Feld (`renderNote`, antippbar
-→ Editor), die Tagesnotiz unter der Feldliste (`renderDayNote`, ohne Notiz ein
+vorhandene Notiz steht als kleiner kursiver Text unter dem Feld bzw. der
+Gruppen-Überschrift (`renderNote`, antippbar → Editor; bei Gruppen auch eingeklappt
+sichtbar, aber nur an Tagen, an denen die Gruppe in "Heute" steht, d.h. mindestens ein
+Feld darin geplant ist – `sectionShownToday`), die Tagesnotiz unter der Feldliste (`renderDayNote`, ohne Notiz ein
 gestrichelter Platzhalter-Button). Editor mit explizitem Speichern/Abbrechen, leer
 speichern = Notiz löschen, max. `NOTE_MAX_LENGTH` (2000) Zeichen. `state.noteEditor`
 (`{dateKey, key, draft, original}`) gehört zu einem Tag und zählt nur dort als Overlay
@@ -659,7 +666,7 @@ Zeilen-Menü die Notiz eines Feldes, deren Editor schon offen ist, springt der F
 zurück ins Textfeld. Ein Feld, das mit offener Notiz archiviert wird, speichert und
 schließt deren Editor (`isNoteEditorOpen` prüft auch, ob das Feld noch in "Heute"
 steht). Endgültiges Löschen eines Feldes räumt auch dessen Notizen weg
-(`purgeHabitFromEntries`). **Übersicht**: Woche – Punkt in der Feld-Zelle (Notiz zu
+(`purgeKeyFromEntries`). **Übersicht**: Woche – Punkt in der Feld-Zelle (Notiz zu
 diesem Feld) und am Wochentag (irgendeine Notiz an dem Tag, auch Tagesnotiz);
 Zahlenwert-Felder – Ring um den Datenpunkt im Verlaufsgraphen (alle Ansichten mit
 Graph; als HTML über dem SVG, da das SVG nur waagerecht gestreckt wird und ein Kreis
@@ -764,7 +771,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 401 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 403 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

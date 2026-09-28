@@ -604,6 +604,8 @@
   /* "Heute": ⋮-Button links neben der Überschrift, die Linie trägt dann der Kopf. */
   .section-head { display: flex; align-items: center; border-bottom: 1px solid var(--line); padding-top: 6px; }
   .section-head > .row-menu-btn { margin-left: -8px; }
+  /* Notiz zur Gruppe (bzw. ihr Editor) direkt unter der Überschrift, auf Höhe des Pfeils. */
+  .section-block > .row-note, .section-block > .note-editor { margin: 8px 0 6px 16px; width: calc(100% - 16px); }
   .section-head .section-toggle { flex: 1; min-width: 0; border-bottom: none; padding: 6px 0; }
   /* Inhalt einer aufgeklappten Gruppe eingerückt, mit dezenter Linie links (wie in der
      Verwaltung), damit sichtbar ist, was dazugehört. Im Wochen-Raster nur der Feldname:
@@ -1139,6 +1141,7 @@ function renderSectionToggle(section, scope, collapsed) {
       ${toggle}
       ${renderSectionMenuPanel(section)}
     </div>
+    ${renderNote(formatKey(state.currentDate), `section:${section.id}`, t('note.labelSection', { name: section.name }))}
   `;
 }
 // Rendert Felder nach Gruppen geordnet, in der Reihenfolge der Verwaltung:
@@ -1579,7 +1582,9 @@ function isOverlayOpen() {
 function isNoteEditorOpen() {
   const ed = state.noteEditor;
   if (!ed || state.view !== 'today' || ed.dateKey !== formatKey(state.currentDate)) return false;
-  return ed.key === DAY_NOTE_KEY || activeHabits().some((h) => h.id === ed.key && h.kind !== 'computed' && !isTextKind(h));
+  if (ed.key === DAY_NOTE_KEY) return true;
+  if (ed.key.startsWith(SECTION_NOTE_PREFIX)) return sectionShownToday(ed.key.slice(SECTION_NOTE_PREFIX.length));
+  return activeHabits().some((h) => h.id === ed.key && !isTextKind(h));
 }
 function currentLayerCount() {
   return (isSubpageView(state.view) ? 1 : 0) + (isOverlayOpen() ? 1 : 0);
@@ -1863,6 +1868,7 @@ const STRINGS = {
     'note.editPrefix': 'Notiz bearbeiten:',
     'note.labelField': 'Notiz zu {name}',
     'note.labelDay': 'Notiz zum Tag',
+    'note.labelSection': 'Notiz zur Gruppe {name}',
     'note.addDay': 'Notiz zum Tag hinzufügen …',
     'ariaLabel.withNote': ', mit Notiz',
     'resetConfirm.title': 'Tag zurücksetzen?',
@@ -1972,6 +1978,7 @@ const STRINGS = {
     'sectionForm.reminderExplain': 'Die Felder dieser Gruppe werden dann nicht mehr zur Standardzeit erinnert, sondern gemeinsam zu dieser Zeit – eine Nachricht für die ganze Gruppe, sobald darin noch etwas fehlt. Felder mit eigener Erinnerungszeit behalten ihre.',
     'sectionForm.defaultReminderNote': 'Ohne eigene Zeit werden die Felder zur Standard-Erinnerungszeit erinnert (aktuell {time}).',
     'manage.sectionDeleteWarning': 'Gruppe löschen? Die Felder darin bleiben erhalten.',
+    'manage.sectionDeleteNotesWarning': 'Deine Notizen zu dieser Gruppe werden mitgelöscht.',
     'manage.error.sectionNameRequired': 'Bitte einen Namen für die Gruppe eingeben.',
     'habitForm.section': 'Gruppe',
     'habitForm.sectionNone': 'Keine Gruppe',
@@ -2266,6 +2273,7 @@ const STRINGS = {
     'note.editPrefix': 'Edit note:',
     'note.labelField': 'Note on {name}',
     'note.labelDay': 'Note for the day',
+    'note.labelSection': 'Note on the group {name}',
     'note.addDay': 'Add a note for the day …',
     'ariaLabel.withNote': ', with note',
     'resetConfirm.title': 'Reset day?',
@@ -2375,6 +2383,7 @@ const STRINGS = {
     'sectionForm.reminderExplain': 'The fields in this group are then no longer reminded at the default time, but together at this time – one notification for the whole group as soon as something in it is missing. Fields with their own reminder time keep it.',
     'sectionForm.defaultReminderNote': 'Without a custom time, the fields are reminded at the default reminder time (currently {time}).',
     'manage.sectionDeleteWarning': 'Delete group? The fields in it are kept.',
+    'manage.sectionDeleteNotesWarning': 'Your notes on this group will be deleted too.',
     'manage.error.sectionNameRequired': 'Please enter a name for the group.',
     'habitForm.section': 'Group',
     'habitForm.sectionNone': 'No group',
@@ -3555,17 +3564,25 @@ async function handleHabitSaveInner() {
   if (isInsert && state.tutorialStep === 2) state.tutorialStep = 3;
 }
 
+// Beim Reaktivieren kommt das Feld ans Ende seines Bereichs (seiner Gruppe bzw. der
+// obersten Ebene): sein alter sort_order kann inzwischen mitten zwischen anderen
+// liegen - etwa wenn seine Gruppe gelöscht wurde, während es archiviert war (dann ist
+// es ohne Gruppe, trägt aber noch seine Position von innerhalb der Gruppe).
 async function handleHabitArchive(defId, archive) {
+  const habit = state.habits.find((h) => h.defId === defId);
+  const sectionId = habit && state.sections.some((sec) => sec.id === habit.sectionId) ? habit.sectionId : null;
+  const sortOrder = archive ? null : containerMaxSortOrder(sectionId) + 1;
   const { error } = await supabase.from('habit_definitions')
-    .update({ archived_at: archive ? new Date().toISOString() : null })
+    .update({ archived_at: archive ? new Date().toISOString() : null, ...(archive ? {} : { sort_order: sortOrder }) })
     .eq('id', defId);
   if (error) {
     state.notice = { type: 'error', text: t('notice.actionFailed') + translateDbError(error.message) };
     render();
     return false;
   }
-  const idx = state.habits.findIndex((h) => h.defId === defId);
-  if (idx !== -1) state.habits[idx] = { ...state.habits[idx], archivedAt: archive ? new Date().toISOString() : null };
+  state.habits = state.habits
+    .map((h) => (h.defId === defId ? { ...h, archivedAt: archive ? new Date().toISOString() : null, ...(archive ? {} : { sortOrder }) } : h))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
   render();
   return true;
 }
@@ -3765,6 +3782,7 @@ async function deleteSection(id) {
   state.habits = state.habits.map((h) => (h.sectionId === id ? { ...h, sectionId: null } : h));
   saveFieldNamesForPush();
   render();
+  purgeKeyFromEntries(SECTION_NOTE_PREFIX + id);
 }
 
 async function handleHabitDelete(defId) {
@@ -3782,16 +3800,18 @@ async function handleHabitDelete(defId) {
   // Einträgen weg, statt sie als verwaisten Schlüssel im verschlüsselten data-JSON
   // liegen zu lassen. Passt zur Zero-Access-/Löschrecht-Ausrichtung der App: "Löschen"
   // soll möglichst wenig übrig lassen, nicht nur die Definition unbrauchbar machen.
-  if (habit) purgeHabitFromEntries(habit.id);
+  if (habit) purgeKeyFromEntries(habit.id);
 }
 
-async function purgeHabitFromEntries(habitId) {
+// Entfernt Wert und Notiz eines Schlüssels (Feld, bzw. nur Notiz bei 'section:<id>')
+// aus allen Tages-Einträgen - beim endgültigen Löschen eines Feldes bzw. einer Gruppe.
+async function purgeKeyFromEntries(key) {
   const affectedDates = Object.keys(state.entries).filter(
-    (k) => state.entries[k]?.[habitId] !== undefined || state.entries[k]?.[NOTES_KEY]?.[habitId] !== undefined
+    (k) => state.entries[k]?.[key] !== undefined || state.entries[k]?.[NOTES_KEY]?.[key] !== undefined
   );
   await Promise.all(affectedDates.map(async (dateKey) => {
-    const day = withNote({ ...state.entries[dateKey] }, habitId, '');
-    delete day[habitId];
+    const day = withNote({ ...state.entries[dateKey] }, key, '');
+    delete day[key];
     state.entries = { ...state.entries, [dateKey]: day };
     await saveDay(dateKey, day);
   }));
@@ -3809,6 +3829,18 @@ async function purgeHabitFromEntries(habitId) {
 // Notiz-Schlüssel nie.
 const NOTES_KEY = '_notes';
 const DAY_NOTE_KEY = '_day';
+// Notizen zu einer Gruppe: unter 'section:<id>' (gleicher Schlüssel wie ihr Zeilen-Menü).
+// Kollidiert nie mit Feld-Schlüsseln (nur a-z0-9) oder _day.
+const SECTION_NOTE_PREFIX = 'section:';
+// Eine Gruppe steht in "Heute" nur, wenn heute mindestens eines ihrer aktiven Felder
+// geplant ist (siehe renderToday/renderBySection) - nur dann ist ihre Notiz sichtbar.
+function sectionShownToday(sectionId) {
+  return state.sections.some((sec) => sec.id === sectionId)
+    && activeHabits().some((h) => h.sectionId === sectionId && isPlannedOn(h, state.currentDate));
+}
+function keyHasNotes(key) {
+  return Object.values(state.entries).some((day) => day?.[NOTES_KEY]?.[key] !== undefined);
+}
 function getNote(dateKey, key) {
   return state.entries[dateKey]?.[NOTES_KEY]?.[key] ?? '';
 }
@@ -4744,6 +4776,7 @@ function renderSectionMenuPanel(section) {
   if (state.rowMenu !== key) return '';
   return `
     <div class="row-menu" id="row-menu-${key}" role="group" aria-label="${t('today.sectionOptions', { name: section.name })}">
+      <button type="button" class="menu-item-btn" data-action="note-edit" data-note="${key}">${getNote(formatKey(state.currentDate), key) ? t('note.edit') : t('note.add')}</button>
       <button type="button" class="menu-item-btn" data-action="section-menu-edit" data-id="${section.id}">${t('common.edit')}</button>
     </div>
   `;
@@ -4753,7 +4786,7 @@ function renderRowMenuPanel(h) {
   if (state.rowMenu !== h.id) return '';
   return `
     <div class="row-menu" id="row-menu-${h.id}" role="group" aria-label="${t('today.fieldOptions', { name: h.name })}">
-      ${h.kind !== 'computed' && !isTextKind(h) ? `<button type="button" class="menu-item-btn" data-action="note-edit" data-note="${h.id}">${getNote(formatKey(state.currentDate), h.id) ? t('note.edit') : t('note.add')}</button>` : ''}
+      ${!isTextKind(h) ? `<button type="button" class="menu-item-btn" data-action="note-edit" data-note="${h.id}">${getNote(formatKey(state.currentDate), h.id) ? t('note.edit') : t('note.add')}</button>` : ''}
       <button type="button" class="menu-item-btn" data-action="row-menu-edit" data-id="${h.defId}">${t('common.edit')}</button>
       <button type="button" class="menu-item-btn menu-item-btn--warn" data-action="row-menu-archive" data-id="${h.defId}">${t('manage.archive')}</button>
     </div>
@@ -4775,8 +4808,9 @@ function closeRowMenu() {
 }
 
 // Notiz unter einem Feld bzw. im Tagesnotiz-Bereich: entweder der offene Editor, oder
-// die vorhandene Notiz als antippbarer Text (öffnet den Editor), oder nichts. Berechnete
-// Felder haben keine Notizen (kein eigener Eintrag, siehe renderRowMenuPanel).
+// die vorhandene Notiz als antippbarer Text (öffnet den Editor), oder nichts. key: Feld,
+// Gruppe ('section:<id>') oder Tag (DAY_NOTE_KEY). Nur Text-Felder haben keine Notizen
+// (wären doppelt zum Freitext, siehe renderRowMenuPanel).
 function renderNote(dateKey, key, label) {
   if (isNoteEditorOpen() && state.noteEditor.key === key) {
     return `
@@ -4868,6 +4902,7 @@ function renderTodayHabitRow(h, dateKey, dayEntry) {
     <div class="habit-row habit-row--computed">
       ${renderRowHead(h, esc(h.name))}
       ${renderComputedInfo(h, dateKey)}
+      ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
     </div>
   `;
@@ -4963,7 +4998,7 @@ function renderWeek() {
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
-        ${scores.map((s, i) => `<div class="grid-cell${h.kind !== 'computed' && getNote(dayKeys[i], h.id) ? ' has-note' : ''}${s === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background-color:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
+        ${scores.map((s, i) => `<div class="grid-cell${getNote(dayKeys[i], h.id) ? ' has-note' : ''}${s === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background-color:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
         <div class="grid-cell grid-cell--avg" style="background:${habitColor(h, applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
     `;
@@ -5800,7 +5835,7 @@ function renderManage() {
             <div class="manage-info">
               <span class="manage-name manage-section-name">${esc(sec.name)}</span>
               ${confirmingDelete
-                ? `<span class="manage-delete-warning">${t('manage.sectionDeleteWarning')}</span>`
+                ? `<span class="manage-delete-warning">${t('manage.sectionDeleteWarning')}${keyHasNotes(SECTION_NOTE_PREFIX + sec.id) ? ' ' + t('manage.sectionDeleteNotesWarning') : ''}</span>`
                 : `<span class="manage-meta"><span class="manage-tag">${t('manage.sectionTag')}</span>${sec.reminderMinute !== null ? ' ' + t('manage.reminderAt', { time: minutesToTimeStr(sec.reminderMinute) }) : ''}</span>`}
             </div>
             <div class="manage-actions">
