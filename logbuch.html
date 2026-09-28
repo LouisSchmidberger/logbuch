@@ -904,7 +904,9 @@ async function decryptData(dek, enc) {
 // Rohbytes des entpackten DEK, ausschließlich auf diesem Gerät — geht nie an den
 // Server. Erspart bei jedem App-Start auf demselben Gerät die erneute Passworteingabe
 // (und die PBKDF2-Ableitung). Vergleichbares Sicherheitsniveau wie die ohnehin schon
-// lokal gespeicherte Supabase-Session.
+// lokal gespeicherte Supabase-Session. Neben dem Schlüssel liegt seine Kennung
+// (user_encryption.dek_id), damit sich ein veralteter Cache erkennen lässt (siehe
+// usableCachedDek). Einträge von vor dieser Kennung sind ein reiner base64-String.
 function openKeyDb() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open('logbuch-keys', 1);
@@ -913,26 +915,28 @@ function openKeyDb() {
     req.onerror = () => reject(req.error);
   });
 }
-async function cacheDek(userId, dek) {
+async function cacheDek(userId, dek, dekId) {
   const raw = await crypto.subtle.exportKey('raw', dek);
   const db = await openKeyDb();
   await new Promise((resolve, reject) => {
     const tx = db.transaction('deks', 'readwrite');
-    tx.objectStore('deks').put(bufToBase64(raw), userId);
+    tx.objectStore('deks').put({ key: bufToBase64(raw), dekId }, userId);
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
 }
 async function loadCachedDek(userId) {
   const db = await openKeyDb();
-  const rawB64 = await new Promise((resolve, reject) => {
+  const stored = await new Promise((resolve, reject) => {
     const tx = db.transaction('deks', 'readonly');
     const req = tx.objectStore('deks').get(userId);
     req.onsuccess = () => resolve(req.result || null);
     req.onerror = () => reject(req.error);
   });
-  if (!rawB64) return null;
-  return crypto.subtle.importKey('raw', base64ToBuf(rawB64), { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']);
+  if (!stored) return null;
+  const legacy = typeof stored === 'string';
+  const dek = await crypto.subtle.importKey('raw', base64ToBuf(legacy ? stored : stored.key), { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']);
+  return { dek, dekId: legacy ? null : stored.dekId };
 }
 async function clearCachedDek(userId) {
   try {
@@ -1529,8 +1533,10 @@ const state = {
 
 // currentDek (Modul-Variable statt state): der lebende Entschlüsselungs-Schlüssel darf
 // nie über render()/innerHTML laufen und soll auch nicht versehentlich durch
-// generische State-Handhabung angefasst werden.
+// generische State-Handhabung angefasst werden. currentDekId ist seine Kennung
+// (user_encryption.dek_id), gegen die checkDekStillCurrent prüft.
 let currentDek = null;
+let currentDekId = null;
 
 // Merkt sich einen CSS-Selektor für das Element, das ein Modal (Konto löschen/
 // Tutorial überspringen) geöffnet hat, damit der Fokus beim Schließen
@@ -1850,6 +1856,7 @@ const STRINGS = {
     'unlock.unlocking': 'Wird entsperrt …',
     'unlock.unlock': 'Entsperren',
     'unlock.wrongPassword': 'Falsches Passwort.',
+    'unlock.keyChanged': 'Deine Verschlüsselung wurde auf einem anderen Gerät neu eingerichtet (Passwort zurückgesetzt ohne Recovery-Key). Bitte gib dein aktuelles Passwort ein.',
     'ariaLabel.deleteEntry': 'Eintrag löschen',
     'ariaLabel.noValue': 'kein Wert',
     'ariaLabel.prevDay': 'Vorheriger Tag',
@@ -2254,6 +2261,7 @@ const STRINGS = {
     'unlock.unlocking': 'Unlocking…',
     'unlock.unlock': 'Unlock',
     'unlock.wrongPassword': 'Incorrect password.',
+    'unlock.keyChanged': 'Your encryption was set up again on another device (password reset without a recovery key). Please enter your current password.',
     'ariaLabel.deleteEntry': 'Delete entry',
     'ariaLabel.noValue': 'no value',
     'ariaLabel.prevDay': 'Previous day',
@@ -2810,6 +2818,7 @@ async function forceLogoutAccountGone() {
   if (accountGoneHandled) return;
   accountGoneHandled = true;
   currentDek = null;
+  currentDekId = null;
   try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* egal, wir wollen nur lokal raus */ }
 }
 
@@ -3105,9 +3114,12 @@ async function setupEncryption(userId, password) {
   const recoveryBytes = generateRecoveryKeyBytes();
   const recoveryKey = await importRecoveryKeyAsCryptoKey(recoveryBytes);
   const { iv: recoveryWrapIv, wrapped: wrappedDekRecovery } = await wrapDek(dek, recoveryKey);
+  // Neuer DEK = neue Kennung - macht die Caches anderer Geräte ungültig (usableCachedDek).
+  const dekId = crypto.randomUUID();
 
   const { error } = await supabase.from('user_encryption').upsert({
     user_id: userId,
+    dek_id: dekId,
     salt: bufToBase64(salt),
     kdf_iterations: PBKDF2_ITERATIONS,
     wrap_iv: wrapIv,
@@ -3120,18 +3132,37 @@ async function setupEncryption(userId, password) {
   await migrateExistingEntries(userId, dek);
 
   currentDek = dek;
-  await cacheDek(userId, dek);
+  currentDekId = dekId;
+  await cacheDek(userId, dek, dekId);
   state.recoveryKeyToShow = { hex: bufToHex(recoveryBytes), confirmed: false };
+}
+
+// Der lokal gecachte DEK, sofern er noch der aktuelle des Kontos ist (row = dessen
+// user_encryption-Zeile). Nach einem Passwort-Reset ohne Recovery-Key hat das Konto einen
+// neuen DEK - ein Gerät mit altem Cache würde sonst weiter mit dem alten Schlüssel
+// speichern, und alle übrigen Geräte könnten diese Einträge nicht lesen. Ein veralteter
+// Cache wird deshalb gelöscht (stale: true, dann muss das Passwort her). Caches von vor
+// der Kennung (dekId null) werden einmalig übernommen und bekommen sie nachgetragen
+// (Nutzer-Entscheidung: kein erneutes Passwort für alle nach dem Update).
+async function usableCachedDek(userId, row) {
+  const cached = await loadCachedDek(userId).catch(() => null);
+  if (!cached) return { dek: null, stale: false };
+  if (row && (cached.dekId === null || cached.dekId === row.dek_id)) {
+    if (cached.dekId === null) await cacheDek(userId, cached.dek, row.dek_id).catch(() => {});
+    return { dek: cached.dek, stale: false };
+  }
+  await clearCachedDek(userId);
+  return { dek: null, stale: Boolean(row) };
 }
 
 // Haupteinstieg nach erfolgreichem signIn/signUp (Passwort ist zu diesem Zeitpunkt im
 // Klartext verfügbar). Schneller Pfad über den lokalen Cache, sonst Passwort-Ableitung;
 // erstmaliger Aufruf für ein Konto legt die Verschlüsselung überhaupt erst an.
 async function unlockEncryption(userId, password) {
-  const cached = await loadCachedDek(userId).catch(() => null);
-  if (cached) { currentDek = cached; return; }
-
   const row = await fetchEncryptionRow(userId);
+  const { dek: cached } = await usableCachedDek(userId, row);
+  if (cached) { currentDek = cached; currentDekId = row.dek_id; return; }
+
   if (!row) {
     state.encryptionSetupInProgress = true;
     render();
@@ -3152,8 +3183,33 @@ async function unlockEncryption(userId, password) {
     return;
   }
   currentDek = await unwrapDekWithPassword(row, password);
-  await cacheDek(userId, currentDek);
+  currentDekId = row.dek_id;
+  await cacheDek(userId, currentDek, row.dek_id);
 }
+
+// Beim Zurückkehren in die App: wurde der DEK inzwischen auf einem anderen Gerät neu
+// erzeugt (Reset ohne Recovery-Key), bleibt dieses Gerät sonst bis zum Ablauf seines
+// Zugangs-Tokens (bis zu 1 h) angemeldet und speichert mit dem alten Schlüssel. Dann
+// alles Geladene verwerfen - ausstehende Speicherungen bewusst NICHT mehr senden, sie
+// wären mit dem alten Schlüssel verschlüsselt - und das Passwort neu abfragen.
+// Netzwerkfehler: still, beim nächsten Zurückkehren wird erneut geprüft.
+async function checkDekStillCurrent() {
+  if (!currentDek || !currentDekId || !state.session || authFlowInFlight) return;
+  const userId = state.session.user.id;
+  let row;
+  try { row = await fetchEncryptionRow(userId); } catch { return; }
+  if (!row || row.dek_id === currentDekId || !currentDek) return;
+  dropPendingDaySaves();
+  await clearCachedDek(userId);
+  clearLoadedAccountState();
+  state.menuOpen = false;
+  state.habitForm = null;
+  state.unlockError = t('unlock.keyChanged');
+  render();
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkDekStillCurrent();
+});
 
 // Für den "Recovery-Key neu erzeugen"-Menüpunkt: nutzt den bereits im Speicher
 // gehaltenen DEK direkt (kein Passwort nötig), macht den bisherigen Code ungültig.
@@ -4078,6 +4134,11 @@ function flushDaySave(dateKey) {
 function flushAllDaySaves() {
   [...pendingDaySaves.keys()].forEach(flushDaySave);
 }
+// Verwirft ausstehende Speicherungen ungesendet (veralteter Schlüssel, checkDekStillCurrent).
+function dropPendingDaySaves() {
+  pendingDaySaves.forEach((timer) => clearTimeout(timer));
+  pendingDaySaves.clear();
+}
 
 // Löscht Werte UND Notizen des Tages - deshalb immer erst nach Rückfrage
 // (renderResetConfirm), nie direkt über den Button.
@@ -4372,6 +4433,7 @@ async function handleDeleteAccount() {
   if (userId) await clearCachedDek(userId);
   await clearFieldNamesForPush();
   currentDek = null;
+  currentDekId = null;
 
   state.deleteConfirm = null;
   state.authEmail = '';
@@ -4557,10 +4619,12 @@ function renderPasswordRecovery() {
       } else {
         const recoveryKeyHex = document.getElementById('recovery-key-input').value;
         let dek;
+        let dekId;
         try {
           const row = await fetchEncryptionRow(userId);
           if (!row) throw new Error(t('recovery.error.noConfig'));
           dek = await unwrapDekWithRecoveryKey(row, recoveryKeyHex);
+          dekId = row.dek_id;
         } catch {
           throw new Error(t('recovery.error.wrongKey'));
         }
@@ -4573,8 +4637,10 @@ function renderPasswordRecovery() {
           .update({ salt: bufToBase64(salt), kdf_iterations: PBKDF2_ITERATIONS, wrap_iv: wrapIv, wrapped_dek: wrappedDek })
           .eq('user_id', userId);
         if (updErr) throw updErr;
+        // Gleicher DEK wie vorher, also auch gleiche Kennung - Caches anderer Geräte bleiben gültig.
         currentDek = dek;
-        await cacheDek(userId, dek);
+        currentDekId = dekId;
+        await cacheDek(userId, dek, dekId);
       }
       // Supabase invalidiert andere Sessions beim Passwort-Ändern NICHT automatisch
       // (bekannte Lücke, siehe supabase/auth#797) - sonst bliebe ein anderes Gerät mit
@@ -6375,6 +6441,7 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'logout') {
     flushAllDaySaves(); // ausstehende Text-Feld-Speicherungen noch mit dem Schlüssel verschicken
     currentDek = null;
+    currentDekId = null;
     state.authEmail = '';
     state.authPassword = '';
     state.authPasswordVisible = false;
@@ -7393,9 +7460,20 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     // der lokale Cache kann hier helfen, sonst muss renderUnlockPrompt() greifen.
     state.loading = true;
     render();
-    const cached = await loadCachedDek(session.user.id).catch(() => null);
+    // Ohne Verbindung lässt sich der Cache nicht gegen die aktuelle Kennung prüfen -
+    // dann lieber das Passwort abfragen als womöglich mit einem veralteten Schlüssel
+    // zu speichern (laden ließe sich ohne Verbindung ohnehin nichts).
+    let cached = null;
+    let row = null;
+    try {
+      row = await fetchEncryptionRow(session.user.id);
+      const result = await usableCachedDek(session.user.id, row);
+      cached = result.dek;
+      if (result.stale) state.unlockError = t('unlock.keyChanged');
+    } catch { /* -> renderUnlockPrompt */ }
     if (cached) {
       currentDek = cached;
+      currentDekId = row.dek_id;
       await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections()]);
       saveFieldNamesForPush(); // siehe completeAuthFlow
       repadOldEntries();
@@ -7403,22 +7481,29 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     }
     state.loading = false;
   } else {
-    state.entries = {};
-    state.habits = [];
-    // Offene Notiz-Entwürfe/Menüs gehören zum abgemeldeten Konto - sonst sähe sie, wer
-    // sich danach auf demselben Gerät anmeldet.
-    state.noteEditor = null;
-    state.rowMenu = null;
-    state.resetConfirm = null;
-    state.sections = [];
-    state.sectionForm = null;
-    currentDek = null;
-    state.tutorialStep = null;
-    state.tutorialSkipConfirm = false;
-    state.tutorialInstallAck = false;
+    clearLoadedAccountState();
   }
   render();
 });
+
+// Verwirft alles aus dem Konto Geladene samt Schlüssel - beim Abmelden und bei einem
+// veralteten Schlüssel (checkDekStillCurrent). Offene Notiz-Entwürfe/Menüs gehören zum
+// Konto - sonst sähe sie, wer sich danach auf demselben Gerät anmeldet.
+function clearLoadedAccountState() {
+  state.entries = {};
+  state.habits = [];
+  state.noteEditor = null;
+  state.rowMenu = null;
+  state.resetConfirm = null;
+  state.sections = [];
+  state.sectionForm = null;
+  currentDek = null;
+  currentDekId = null;
+  state.unlockError = null;
+  state.tutorialStep = null;
+  state.tutorialSkipConfirm = false;
+  state.tutorialInstallAck = false;
+}
 
 // Verhindert versehentliches Verlassen/Reload mitten im geführten Feld-Anlegen
 // (Tutorial Schritt 2, siehe CLAUDE.md).

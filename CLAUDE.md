@@ -504,6 +504,20 @@ alles native Web Crypto API, keine Library):
   verloren" nur mit expliziter zweiter Bestätigung, danach sind alte Einträge weg.
 - Logout: `currentDek = null` (der IndexedDB-Cache bleibt für den nächsten Login auf
   demselben Gerät). Konto-Löschung räumt den Cache zusätzlich explizit auf.
+- **Kennung des DEK** (`user_encryption.dek_id`, seit 2026-09-28): zufällige UUID, nicht
+  geheim, neu nur wenn ein neuer DEK entsteht (`setupEncryption` – Einrichtung bzw. Reset
+  "Recovery-Key auch verloren"). Der IndexedDB-Cache speichert sie neben dem DEK
+  (`{key, dekId}`), und vor jeder Nutzung des Caches wird sie mit der Zeile verglichen
+  (`usableCachedDek`) – sonst würde ein anderes Gerät nach so einem Reset mit dem alten
+  DEK weiter speichern (für alle übrigen Geräte unlesbar). Passt sie nicht: Cache löschen,
+  Passwort abfragen (`unlock.keyChanged`). Ohne Verbindung beim Start wird ebenfalls das
+  Passwort abgefragt statt dem Cache ungeprüft zu vertrauen. Zusätzlich prüft
+  `checkDekStillCurrent` beim Zurückkehren in die App (`visibilitychange`), da ein schon
+  entsperrtes Gerät nach dem Reset bis zum Ablauf seines Zugangs-Tokens (bis 1 h)
+  angemeldet bleibt; ausstehende Speicherungen werden dabei ungesendet verworfen. Caches
+  von vor der Kennung (reiner base64-String) werden einmalig übernommen und bekommen sie
+  nachgetragen (Nutzer-Entscheidung: kein erneutes Passwort für alle nach dem Update).
+  Migration `20260928120000_add_user_encryption_dek_id`.
 
 **Was das für Änderungen an anderer Stelle bedeutet**: `state.entries` hält nach dem
 Laden (`loadEntries`) immer schon entschlüsselte Klartext-Objekte — die gesamte
@@ -785,7 +799,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 402 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 403 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
