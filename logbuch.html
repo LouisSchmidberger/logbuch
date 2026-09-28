@@ -531,7 +531,36 @@
   .auth-box h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 24px; margin: 0 0 4px; text-align: center; }
   .auth-box p.sub { font-size: 12px; color: var(--sand); text-align: center; margin: 0 0 24px; }
   .tutorial-text { font-size: 13px; line-height: 1.5; margin: 0 0 16px; }
-  .tutorial-step-label { font-size: 12px; color: var(--sand); text-align: center; margin: 4px 0 14px; }
+  /* Tutorial-Bausteine (siehe tutorialScreen): Punkte statt "Schritt X von Y", der
+     aktuelle Punkt länger (Form statt nur Farbe); "Warum?"-Kasten als wiedererkennbares
+     Element für Begründungen. */
+  .onb-dots { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 0 0 20px; }
+  .onb-dot { width: 8px; height: 8px; border-radius: 4px; border: 1.5px solid var(--sand); box-sizing: border-box; }
+  .onb-dot--done { background: var(--sand); }
+  .onb-dot--current { width: 22px; background: var(--moss); border-color: var(--moss); }
+  .onb-icon { font-size: 40px; line-height: 1; text-align: center; margin: 0 0 10px; }
+  .onb h1 { margin-bottom: 16px; outline: none; }
+  .onb .tutorial-text strong { font-weight: 600; }
+  .onb-center { text-align: center; }
+  /* Kurze Hinweise im Tutorial: bewusst normale Schriftfarbe statt des blassen Sandtons
+     der Formular-Hinweise - hier stehen Dinge, die man wirklich lesen soll. */
+  .onb-hint { font-size: 12px; line-height: 1.45; color: var(--ink); margin: 0 0 10px; }
+  .onb-hint--after { margin: 6px 0 0; }
+  .why-box {
+    margin: 0 0 18px; padding: 10px 12px; border-left: 3px solid var(--moss); border-radius: 4px;
+    background: rgba(var(--moss-rgb), 0.09); font-size: 13px; line-height: 1.5;
+  }
+  .why-box p { margin: 0; }
+  .why-box .why-box-title { font-weight: 600; margin-bottom: 2px; }
+  .onb-promises { list-style: none; padding: 0; margin: 0 0 24px; display: flex; flex-direction: column; gap: 12px; }
+  .onb-promises li { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.5; }
+  .onb-promise-icon { font-size: 18px; line-height: 1.3; flex-shrink: 0; }
+  .onb-examples { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 18px; }
+  .onb-chip {
+    font-family: inherit; font-size: 13px; padding: 7px 14px; border-radius: 16px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--input-bg); color: var(--ink);
+  }
+  .onb-chip:hover, .onb-chip:focus-visible { border-color: var(--moss); }
   .auth-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
   .auth-field label { font-size: 12px; color: var(--sand); }
   .auth-field input:not([type="checkbox"]), .auth-field select {
@@ -1540,7 +1569,7 @@ const state = {
   userSettings: { defaultReminderMinute: 1320, onboardingCompleted: true, locale: 'de', summaryNotifications: true, timezone: 'Europe/Berlin' },
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
   habitDeleteConfirm: null, // defId eines archivierten Feldes mit Daten, dessen Löschen gerade bestätigt wird
-  tutorialStep: null, // 1/2/3 während das Onboarding-Tutorial für neue Accounts läuft, sonst null
+  tutorialStep: null, // 1-4 (TUTORIAL_STEPS) während das Onboarding-Tutorial für neue Accounts läuft, sonst null
   tutorialSkipConfirm: false, // Bestätigungsdialog "Tutorial überspringen?" offen
   tutorialInstallAck: false, // "Weiter" auf dem Installations-Hinweis vor Schritt 1 geklickt (session-lokal,
   // NICHT dasselbe wie der dauerhafte installHintDismissed-localStorage-Flag)
@@ -2056,24 +2085,54 @@ const STRINGS = {
     'menu.timezoneNote': 'Zeitzone: {tz} (folgt deinem Gerät)',
     'menu.summaryNotifications': 'Wochen- und Monatsübersicht ankündigen',
     'menu.summaryNotificationsExplain': 'Sonntags bzw. am letzten Tag des Monats kommt zur Standard-Erinnerungszeit eine Benachrichtigung, dass deine Wochen- bzw. Monatsübersicht bereit ist – aber nur, wenn du im jeweiligen Zeitraum mindestens einen Tag eingetragen hast. Ein Tipp darauf öffnet direkt die passende Übersicht.',
-    'tutorial.stepLabel': 'Schritt {step} von 3',
+    'tutorial.stepLabel': 'Schritt {step} von {total}',
     'tutorial.skip': 'Tutorial überspringen',
     'tutorial.skipConfirm.title': 'Tutorial überspringen?',
-    'tutorial.skipConfirm.body': 'Du kannst jederzeit später eigene Felder über „Felder verwalten" im Menü anlegen.',
+    'tutorial.skipConfirm.body': 'Klar – Felder kannst du jederzeit über Menü → „Felder verwalten“ anlegen.',
     'tutorial.skipConfirm.confirmButton': 'Ja, überspringen',
+    'tutorial.hello.title': 'Schön, dass du da bist.',
+    'tutorial.hello.body': 'Logbuch hilft dir, jeden Tag kurz festzuhalten, wie es dir geht und was du tust – und mit der Zeit zu sehen, was dir guttut.',
+    'tutorial.hello.privateTitle': 'Privat.',
+    'tutorial.hello.privateBody': 'Deine Einträge werden auf deinem Gerät verschlüsselt. Nicht mal ich kann sie lesen.',
+    'tutorial.hello.noPressureTitle': 'Ohne Druck.',
+    'tutorial.hello.noPressureBody': 'Keine Punkte, keine Serien, kein schlechtes Gewissen. Ein vergessener Tag ist einfach ein vergessener Tag.',
+    'tutorial.hello.yoursTitle': 'Deins.',
+    'tutorial.hello.yoursBody': 'Du entscheidest, was du festhältst – es gibt keine vorgegebenen Felder.',
+    'tutorial.hello.start': 'Los geht’s',
+    'tutorial.reminders.title': 'Soll ich dich erinnern?',
+    'tutorial.reminders.body': '<strong>Ich melde mich nur, wenn an einem Tag noch etwas fehlt</strong> – und, falls du magst, einmal pro Woche und Monat mit deiner Übersicht. Nie Werbung, und die Uhrzeit bestimmst du.',
+    'tutorial.reminders.whyTitle': 'Warum überhaupt?',
+    'tutorial.reminders.whyBody': 'Logbuch wird aussagekräftiger, je regelmäßiger du einträgst. Und wer abends müde ist, vergisst es schnell.',
+    'tutorial.reminders.permissionNote': 'Gleich fragt dein Gerät um Erlaubnis – tipp dort auf „Erlauben“.',
+    'tutorial.reminders.yes': 'Ja, erinnere mich',
+    'tutorial.reminders.no': 'Lieber nicht',
+    'tutorial.reminders.laterNote': 'Kein Problem – du kannst Erinnerungen jederzeit im Menü einschalten.',
+    'tutorial.reminders.activeTitle': '✓ Erinnerungen sind an.',
+    'tutorial.reminders.timeLabel': 'Um wie viel Uhr?',
+    'tutorial.reminders.timeNote': 'Abends passt oft gut – dann ist der Tag rum. Ändern kannst du das jederzeit im Menü.',
+    'tutorial.reminders.iosNeedsInstall': 'Auf dem iPhone kommen Erinnerungen nur an, wenn Logbuch auf dem Home-Bildschirm liegt. Das kannst du jederzeit nachholen – ein Hinweis in der App zeigt dir, wie.',
+    'tutorial.field.title': 'Was möchtest du festhalten?',
+    'tutorial.field.body': 'Überleg dir eine Sache, die du ab heute beobachten willst. Tipp auf ein Beispiel, um damit zu starten – oder nimm deine eigene Idee.',
+    'tutorial.field.examplesLabel': 'Beispiele',
+    'tutorial.field.whyTitle': 'Warum erst mal nur eins?',
+    'tutorial.field.whyBody': 'Wenige Felder heißt: schnell eingetragen. Das hält länger durch als ein langer Fragebogen – ergänzen kannst du jederzeit.',
+    'tutorial.field.ownIdea': 'Eigene Idee',
+    'tutorial.example.mood': 'Stimmung',
+    'tutorial.example.sleep': 'Schlaf',
+    'tutorial.example.energy': 'Energie',
+    'tutorial.example.sport': 'Sport',
+    'tutorial.example.weight': 'Gewicht',
+    'tutorial.example.no': 'Nein',
+    'tutorial.example.yes': 'Ja',
+    'tutorial.done.title': 'Dein erstes Feld steht.',
+    'tutorial.done.titleMore': 'Deine {count} Felder stehen.',
+    'tutorial.done.body': 'Du kannst noch ein, zwei weitere anlegen – oder direkt loslegen. <strong>Tipp: lieber klein anfangen und später erweitern.</strong>',
+    'tutorial.done.start': 'Loslegen',
+    'tutorial.done.addMore': 'Noch ein Feld anlegen',
     'tutorial.installGate.title': 'Bevor es losgeht',
     'tutorial.installGate.action': 'Mach das am besten gleich jetzt: installiere Logbuch auf deinem Home-/Startbildschirm und öffne es danach über das neue Symbol – diese Seite hier brauchst du dann nicht mehr, es geht automatisch mit dem Tutorial weiter.',
     'tutorial.installGate.reloginNote': 'Danach musst du dich dort einmal neu anmelden – mit denselben Zugangsdaten wie gerade eben.',
     'tutorial.installGate.browserFallbackButton': 'Stattdessen im Browser fortfahren (nicht empfohlen)',
-    'tutorial.step1.title': 'Willkommen',
-    'tutorial.step1.body': 'Logbuch lebt davon, dass du täglich ein paar Werte einträgst – je regelmäßiger, desto aussagekräftiger die Auswertung. Push-Erinnerungen helfen dir, das nicht zu vergessen – tippe dafür unten auf „Erinnerungen aktivieren" (nicht einfach nur „Weiter"):',
-    'tutorial.step1.timeDisabledNote': '(erst wählbar, sobald Erinnerungen aktiv sind)',
-    'tutorial.step2Intro.title': 'Dein erstes Feld',
-    'tutorial.step2Intro.body': 'Überlege dir einen Wert, den du ab jetzt beobachten willst – zum Beispiel eine <strong>Skala</strong> (Stimmung, Schlafqualität) oder ein <strong>freier Zahlenwert</strong> (Gewicht, Schritte). Wenn du unsicher bist: fang einfach mit einem an, du kannst später jederzeit weitere Felder anlegen oder bestehende ändern.',
-    'tutorial.step2Intro.readyButton': 'Ich hab mir einen Wert überlegt',
-    'tutorial.step3.title': 'Gut gemacht!',
-    'tutorial.step3.body': 'Dein erstes Feld ist angelegt. Du kannst optional noch 2–4 weitere ergänzen – wer sich unsicher fühlt, fängt lieber mit wenigen an und erweitert später jederzeit über „Felder verwalten" im Menü.',
-    'tutorial.step3.addMoreButton': 'Weiteres Feld anlegen',
     'push.unsupported': 'Erinnerungen werden von diesem Browser nicht unterstützt.',
     'push.checking': 'Erinnerungsstatus wird geprüft …',
     'push.active': 'Erinnerungen aktiv',
@@ -2472,24 +2531,54 @@ const STRINGS = {
     'menu.timezoneNote': 'Time zone: {tz} (follows your device)',
     'menu.summaryNotifications': 'Announce weekly and monthly summary',
     'menu.summaryNotificationsExplain': 'On Sundays and on the last day of the month, you get a notification at your default reminder time that your weekly or monthly summary is ready – but only if you have entered at least one day in that period. Tapping it opens the matching summary directly.',
-    'tutorial.stepLabel': 'Step {step} of 3',
+    'tutorial.stepLabel': 'Step {step} of {total}',
     'tutorial.skip': 'Skip tutorial',
     'tutorial.skipConfirm.title': 'Skip tutorial?',
-    'tutorial.skipConfirm.body': 'You can always create your own fields later via "Manage fields" in the menu.',
+    'tutorial.skipConfirm.body': 'Sure – you can create fields anytime via menu → “Manage fields”.',
     'tutorial.skipConfirm.confirmButton': 'Yes, skip',
+    'tutorial.hello.title': 'Great to have you here.',
+    'tutorial.hello.body': 'Logbuch helps you jot down every day how you are doing and what you do – and over time see what does you good.',
+    'tutorial.hello.privateTitle': 'Private.',
+    'tutorial.hello.privateBody': 'Your entries are encrypted on your device. Not even I can read them.',
+    'tutorial.hello.noPressureTitle': 'No pressure.',
+    'tutorial.hello.noPressureBody': 'No points, no streaks, no guilt. A forgotten day is simply a forgotten day.',
+    'tutorial.hello.yoursTitle': 'Yours.',
+    'tutorial.hello.yoursBody': 'You decide what you track – there are no predefined fields.',
+    'tutorial.hello.start': 'Let’s go',
+    'tutorial.reminders.title': 'Should I remind you?',
+    'tutorial.reminders.body': '<strong>I only get in touch when something is still missing for a day</strong> – and, if you like, once a week and month with your overview. Never ads, and you pick the time.',
+    'tutorial.reminders.whyTitle': 'Why at all?',
+    'tutorial.reminders.whyBody': 'Logbuch becomes more meaningful the more regularly you enter things. And when you are tired in the evening, it is easy to forget.',
+    'tutorial.reminders.permissionNote': 'Your device will ask for permission in a moment – tap “Allow” there.',
+    'tutorial.reminders.yes': 'Yes, remind me',
+    'tutorial.reminders.no': 'Rather not',
+    'tutorial.reminders.laterNote': 'No problem – you can turn reminders on in the menu anytime.',
+    'tutorial.reminders.activeTitle': '✓ Reminders are on.',
+    'tutorial.reminders.timeLabel': 'At what time?',
+    'tutorial.reminders.timeNote': 'Evenings often work well – the day is done by then. You can change this in the menu anytime.',
+    'tutorial.reminders.iosNeedsInstall': 'On iPhone, reminders only arrive when Logbuch is on your home screen. You can do that anytime – a hint in the app shows you how.',
+    'tutorial.field.title': 'What would you like to track?',
+    'tutorial.field.body': 'Think of one thing you want to keep an eye on from today. Tap an example to start with it – or go with your own idea.',
+    'tutorial.field.examplesLabel': 'Examples',
+    'tutorial.field.whyTitle': 'Why just one for now?',
+    'tutorial.field.whyBody': 'Few fields means: quickly filled in. That lasts longer than a long questionnaire – you can add more anytime.',
+    'tutorial.field.ownIdea': 'My own idea',
+    'tutorial.example.mood': 'Mood',
+    'tutorial.example.sleep': 'Sleep',
+    'tutorial.example.energy': 'Energy',
+    'tutorial.example.sport': 'Exercise',
+    'tutorial.example.weight': 'Weight',
+    'tutorial.example.no': 'No',
+    'tutorial.example.yes': 'Yes',
+    'tutorial.done.title': 'Your first field is set.',
+    'tutorial.done.titleMore': 'Your {count} fields are set.',
+    'tutorial.done.body': 'You can add one or two more – or get started right away. <strong>Tip: better start small and expand later.</strong>',
+    'tutorial.done.start': 'Get started',
+    'tutorial.done.addMore': 'Add another field',
     'tutorial.installGate.title': 'Before you start',
     'tutorial.installGate.action': 'Best do this right now: install Logbuch to your home/start screen and then open it via the new icon – you will not need this page anymore, the tutorial continues automatically.',
     'tutorial.installGate.reloginNote': 'You will then need to sign in there once more – with the same credentials as just now.',
     'tutorial.installGate.browserFallbackButton': 'Continue in the browser instead (not recommended)',
-    'tutorial.step1.title': 'Welcome',
-    'tutorial.step1.body': 'Logbuch works by entering a few values every day – the more regularly, the more meaningful the evaluation. Push reminders help you not to forget – tap "Enable reminders" below to do that (not just "Next"):',
-    'tutorial.step1.timeDisabledNote': '(selectable once reminders are active)',
-    'tutorial.step2Intro.title': 'Your first field',
-    'tutorial.step2Intro.body': 'Think of a value you want to track from now on – for example a <strong>scale</strong> (mood, sleep quality) or a <strong>free number value</strong> (weight, steps). If unsure: just start with one, you can add or change fields anytime later.',
-    'tutorial.step2Intro.readyButton': 'I have thought of a value',
-    'tutorial.step3.title': 'Well done!',
-    'tutorial.step3.body': 'Your first field has been created. You can optionally add 2–4 more – if unsure, start with fewer and expand anytime later via "Manage fields" in the menu.',
-    'tutorial.step3.addMoreButton': 'Add another field',
     'push.unsupported': 'Reminders are not supported by this browser.',
     'push.checking': 'Checking reminder status …',
     'push.active': 'Reminders active',
@@ -3696,9 +3785,9 @@ async function handleHabitSaveInner() {
   saveFieldNamesForPush();
 
   closeHabitForm();
-  // Im Tutorial (Schritt 2) gilt das erste erfolgreich angelegte Feld als Abschluss
-  // des Schritts – automatischer Sprung zu Schritt 3, kein zusätzlicher Klick nötig.
-  if (isInsert && state.tutorialStep === 2) state.tutorialStep = 3;
+  // Im Tutorial (Schritt 3, erstes Feld) gilt jedes erfolgreich angelegte Feld als
+  // Abschluss des Schritts – automatischer Sprung zu "Geschafft", kein zusätzlicher Klick.
+  if (isInsert && state.tutorialStep === 3) state.tutorialStep = 4;
 }
 
 // Beim Reaktivieren kommt das Feld ans Ende seines Bereichs (seiner Gruppe bzw. der
@@ -6144,9 +6233,9 @@ function renderManage() {
 // --- Onboarding-Tutorial für neue Accounts ----------------------------------
 // state.userSettings.onboardingCompleted kommt aus der DB (Default false bei neuen
 // Accounts, siehe supabase/migrations/) und steuert in render(), ob statt der normalen
-// App dieses Tutorial gezeigt wird. state.tutorialStep (1/2/3) lebt nur im Speicher,
-// kein Reload-Resume nötig — dafür verhindert die beforeunload-Warnung in Schritt 2
-// ein versehentliches Verlassen mitten im geführten Feld-Anlegen.
+// App dieses Tutorial gezeigt wird. state.tutorialStep (1-4) lebt nur im Speicher,
+// kein Reload-Resume nötig — dafür verhindert die beforeunload-Warnung im offenen
+// Formular (Schritt 3) ein versehentliches Verlassen mitten im Feld-Anlegen.
 //
 async function saveOnboardingCompleted() {
   state.userSettings = { ...state.userSettings, onboardingCompleted: true };
@@ -6188,61 +6277,138 @@ function renderTutorialInstallGate() {
   `;
 }
 
-function renderTutorialStep1() {
+// Bausteine der Tutorial-Bildschirme (Neufassung 2026-09-29): ein Bildschirm, ein
+// Thema - Symbol, kurze Überschrift, der eine wichtige Satz fett, Begründungen im
+// wiedererkennbaren "Warum?"-Kasten (Leitlinie des Nutzers: nie nur sagen, dass etwas so
+// ist, sondern warum; locker statt förmlich, die App als Freund). Fortschritt als Punkte
+// ohne Zahlen (der aktuelle Punkt ist länger - Form statt nur Farbe), Screenreader hören
+// "Schritt X von Y".
+const TUTORIAL_STEPS = 4;
+function tutorialDots(step) {
+  const dots = Array.from({ length: TUTORIAL_STEPS }, (_, i) => {
+    const cls = i + 1 < step ? ' onb-dot--done' : i + 1 === step ? ' onb-dot--current' : '';
+    return `<span class="onb-dot${cls}"></span>`;
+  }).join('');
+  return `<div class="onb-dots" role="img" aria-label="${esc(t('tutorial.stepLabel', { step, total: TUTORIAL_STEPS }))}">${dots}</div>`;
+}
+function whyBox(titleKey, bodyKey) {
+  return `<div class="why-box"><p class="why-box-title">${t(titleKey)}</p><p>${t(bodyKey)}</p></div>`;
+}
+function tutorialScreen({ step, icon, title, body }) {
   return `
-    <div class="auth-box">
-      <h1>${t('tutorial.step1.title')}</h1>
-      <p class="sub">${t('tutorial.stepLabel', { step: 1 })}</p>
+    <div class="auth-box onb">
+      ${tutorialDots(step)}
+      <div class="onb-icon" aria-hidden="true">${icon}</div>
+      <h1 tabindex="-1">${title}</h1>
       ${renderNotice()}
-      <p class="tutorial-text">${t('tutorial.step1.body')}</p>
-      ${renderPushRow(true)}
+      ${body}
+    </div>
+    ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
+  `;
+}
+const tutorialSkipLink = () => `<button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${t('tutorial.skip')}</button>`;
+const tutorialBackLink = () => `<button type="button" class="auth-toggle" data-action="tutorial-back">${t('common.back')}</button>`;
+
+function renderTutorialHello() {
+  const promises = [['🔒', 'private'], ['🌿', 'noPressure'], ['✏️', 'yours']].map(([icon, key]) => `
+    <li><span class="onb-promise-icon" aria-hidden="true">${icon}</span><span><strong>${t(`tutorial.hello.${key}Title`)}</strong> ${t(`tutorial.hello.${key}Body`)}</span></li>
+  `).join('');
+  return tutorialScreen({
+    step: 1, icon: '👋', title: t('tutorial.hello.title'),
+    body: `
+      <p class="tutorial-text">${t('tutorial.hello.body')}</p>
+      <ul class="onb-promises">${promises}</ul>
+      <button type="button" class="auth-submit" data-action="tutorial-next">${t('tutorial.hello.start')}</button>
+      ${!isStandaloneDisplay() && isMobileDevice() ? tutorialBackLink() : ''}
+      ${tutorialSkipLink()}
+    `,
+  });
+}
+
+// Erinnerungen: erst die Frage mit Begründung, die Uhrzeit erst, wenn sie aktiv sind
+// (vorher stand sie ausgegraut daneben und wurde übersehen bzw. verwirrte).
+function renderTutorialReminders() {
+  let body;
+  if (state.pushStatus === 'on') {
+    body = `
+      <p class="tutorial-text"><strong>${t('tutorial.reminders.activeTitle')}</strong></p>
       <div class="auth-field">
-        <label for="tutorial-default-time">${t('menu.defaultReminderTime')}${state.pushStatus !== 'on' ? ` ${t('tutorial.step1.timeDisabledNote')}` : ''}</label>
-        ${reminderTimeInputHtml('tutorial-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', state.pushStatus !== 'on')}
+        <label for="tutorial-default-time">${t('tutorial.reminders.timeLabel')}</label>
+        ${reminderTimeInputHtml('tutorial-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', false, 'tutorial-time-note')}
+        <p class="habit-form-lock-note" id="tutorial-time-note">${t('tutorial.reminders.timeNote')}</p>
       </div>
       <button type="button" class="auth-submit" data-action="tutorial-next">${t('common.next')}</button>
-      ${!isStandaloneDisplay() && isMobileDevice() ? `<button type="button" class="auth-toggle" data-action="tutorial-back">${t('common.back')}</button>` : ''}
-      <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${t('tutorial.skip')}</button>
-    </div>
-    ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
-  `;
+    `;
+  } else if (state.pushStatus === 'unsupported') {
+    body = `
+      <p class="tutorial-text">${isIOSDevice() ? t('tutorial.reminders.iosNeedsInstall') : t('push.unsupported')}</p>
+      <button type="button" class="auth-submit" data-action="tutorial-next">${t('common.next')}</button>
+    `;
+  } else {
+    const busy = state.pushStatus === 'busy' || state.pushStatus === 'unknown';
+    body = `
+      <p class="tutorial-text">${t('tutorial.reminders.body')}</p>
+      ${whyBox('tutorial.reminders.whyTitle', 'tutorial.reminders.whyBody')}
+      <p class="onb-hint">${t('tutorial.reminders.permissionNote')}</p>
+      <button type="button" class="auth-submit" data-action="enable-push" ${busy ? 'disabled' : ''}>${busy ? t('push.checking') : t('tutorial.reminders.yes')}</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-next">${t('tutorial.reminders.no')}</button>
+      <p class="onb-hint onb-hint--after onb-center">${t('tutorial.reminders.laterNote')}</p>
+    `;
+  }
+  return tutorialScreen({
+    step: 2, icon: '🔔', title: t('tutorial.reminders.title'),
+    body: `${body}${tutorialBackLink()}${tutorialSkipLink()}`,
+  });
 }
 
-function renderTutorialStep2Intro() {
-  return `
-    <div class="auth-box">
-      <h1>${t('tutorial.step2Intro.title')}</h1>
-      <p class="sub">${t('tutorial.stepLabel', { step: 2 })}</p>
-      ${renderNotice()}
-      <p class="tutorial-text">${t('tutorial.step2Intro.body')}</p>
-      <button type="button" class="auth-submit" data-action="tutorial-ready">${t('tutorial.step2Intro.readyButton')}</button>
-      <button type="button" class="auth-toggle" data-action="tutorial-back">${t('common.back')}</button>
-      <button type="button" class="auth-toggle" data-action="tutorial-skip-arm">${t('tutorial.skip')}</button>
-    </div>
-    ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
-  `;
+// Beispiele zum Antippen öffnen das Formular schon passend vorausgefüllt - wer keine
+// eigene Idee hat, kommt so mit einem Tipp weiter (das Formular selbst ist unverändert).
+const TUTORIAL_EXAMPLES = ['mood', 'sleep', 'energy', 'sport', 'weight'];
+function tutorialExampleForm(example) {
+  const f = defaultHabitForm();
+  f.name = t(`tutorial.example.${example}`);
+  if (example === 'weight') { f.kind = 'number'; f.unit = 'kg'; }
+  if (example === 'sport') {
+    f.max = 2;
+    f.labelsEnabled = true;
+    f.labels = [t('tutorial.example.no'), t('tutorial.example.yes')];
+  }
+  return f;
+}
+function renderTutorialFieldIntro() {
+  const chips = TUTORIAL_EXAMPLES.map((ex) => `<button type="button" class="onb-chip" data-action="tutorial-example" data-example="${ex}">${t(`tutorial.example.${ex}`)}</button>`).join('');
+  return tutorialScreen({
+    step: 3, icon: '✏️', title: t('tutorial.field.title'),
+    body: `
+      <p class="tutorial-text">${t('tutorial.field.body')}</p>
+      <div class="onb-examples" role="group" aria-label="${esc(t('tutorial.field.examplesLabel'))}">${chips}</div>
+      ${whyBox('tutorial.field.whyTitle', 'tutorial.field.whyBody')}
+      <button type="button" class="auth-submit" data-action="tutorial-ready">${t('tutorial.field.ownIdea')}</button>
+      ${tutorialBackLink()}
+      ${tutorialSkipLink()}
+    `,
+  });
 }
 
-function renderTutorialStep2Form() {
+function renderTutorialFieldForm() {
   return `
-    <p class="tutorial-step-label">${t('tutorial.stepLabel', { step: 2 })}</p>
+    ${tutorialDots(3)}
     ${renderNotice()}
     ${renderHabitForm()}
   `;
 }
 
-function renderTutorialStep3() {
-  return `
-    <div class="auth-box">
-      <h1>${t('tutorial.step3.title')}</h1>
-      <p class="sub">${t('tutorial.stepLabel', { step: 3 })}</p>
-      ${renderNotice()}
-      <p class="tutorial-text">${t('tutorial.step3.body')}</p>
-      <button type="button" class="auth-submit" data-action="tutorial-add-more">${t('tutorial.step3.addMoreButton')}</button>
-      <button type="button" class="auth-toggle" data-action="tutorial-back">${t('common.back')}</button>
-      <button type="button" class="auth-toggle" data-action="tutorial-finish">${t('common.finish')}</button>
-    </div>
-  `;
+function renderTutorialDone() {
+  const count = activeHabits().length;
+  return tutorialScreen({
+    step: 4, icon: '🌱', title: count > 1 ? t('tutorial.done.titleMore', { count }) : t('tutorial.done.title'),
+    body: `
+      <p class="tutorial-text">${t('tutorial.done.body')}</p>
+      <button type="button" class="auth-submit" data-action="tutorial-finish">${t('tutorial.done.start')}</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-add-more">${t('tutorial.done.addMore')}</button>
+      ${tutorialBackLink()}
+    `,
+  });
 }
 
 function renderTutorial() {
@@ -6264,10 +6430,21 @@ function renderTutorial() {
   }
   if (!state.tutorialStep) state.tutorialStep = 1;
   app.innerHTML =
-    state.tutorialStep === 1 ? renderTutorialStep1() :
-    state.tutorialStep === 2 ? (state.habitForm ? renderTutorialStep2Form() : renderTutorialStep2Intro()) :
-    renderTutorialStep3();
+    state.tutorialStep === 1 ? renderTutorialHello() :
+    state.tutorialStep === 2 ? renderTutorialReminders() :
+    state.tutorialStep === 3 ? (state.habitForm ? renderTutorialFieldForm() : renderTutorialFieldIntro()) :
+    renderTutorialDone();
+  // Bei jedem Wechsel des Bildschirms die Überschrift fokussieren (Screenreader hören so,
+  // wo sie sind) - nicht bei jedem render(), sonst spränge der Fokus z.B. nach dem
+  // Aktivieren der Erinnerungen weg.
+  const screenKey = `${state.tutorialStep}:${state.habitForm ? 'form' : ''}`;
+  if (screenKey !== lastTutorialScreen) {
+    lastTutorialScreen = screenKey;
+    if (!state.habitForm) app.querySelector('.onb h1')?.focus({ preventScroll: true });
+    window.scrollTo(0, 0);
+  }
 }
+let lastTutorialScreen = null;
 
 // --- Rendering: Haupt-App --------------------------------------------------
 // `prominent`: im Tutorial (Schritt 1) fällt der sonst unauffällige Text-Link
@@ -6862,18 +7039,17 @@ app.addEventListener('click', async (e) => {
     state.tutorialInstallAck = true;
     render();
   } else if (action === 'tutorial-next') {
-    state.tutorialStep = 2;
+    state.tutorialStep = Math.min(TUTORIAL_STEPS, state.tutorialStep + 1);
     render();
   } else if (action === 'tutorial-back') {
     // Gibt neuen Nutzern Vertrauen ("kann ich aus Versehen zu weit geklickt haben?"),
     // obwohl technisch nichts verloren geht — jede Einstellung lässt sich später über
-    // Menü/Formular erneut ändern. state.habitForm wird mit geleert, falls Schritt 3
-    // gerade zu Schritt 2 zurückspringt, damit dort wieder der Zwischenschritt statt
-    // eines offenen Formulars erscheint. Von Schritt 1 aus geht's zurück zum
-    // Install-Hinweis davor (nicht Teil der Schritt-Zählung, siehe renderTutorial) —
-    // der Button dafür wird nur gezeigt, wenn man diese Seite überhaupt gesehen haben
-    // kann (nicht standalone UND Mobilgerät, siehe renderTutorial), siehe
-    // renderTutorialStep1.
+    // Menü/Formular erneut ändern. state.habitForm wird mit geleert, damit beim Zurück
+    // von "Geschafft" wieder die Feld-Einleitung statt eines offenen Formulars erscheint.
+    // Von Schritt 1 aus geht's zurück zum Install-Hinweis davor (nicht Teil der
+    // Schritt-Zählung, siehe renderTutorial) — der Button dafür wird nur gezeigt, wenn man
+    // diese Seite überhaupt gesehen haben kann (nicht standalone UND Mobilgerät), siehe
+    // renderTutorialHello.
     if (state.tutorialStep === 1) {
       state.tutorialInstallAck = false;
     } else {
@@ -6884,10 +7060,15 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'tutorial-ready') {
     state.habitForm = defaultHabitForm();
     render();
+    document.getElementById('habit-form-name')?.focus();
+  } else if (action === 'tutorial-example') {
+    state.habitForm = tutorialExampleForm(el.dataset.example);
+    render();
   } else if (action === 'tutorial-add-more') {
-    state.tutorialStep = 2;
+    state.tutorialStep = 3;
     state.habitForm = defaultHabitForm();
     render();
+    document.getElementById('habit-form-name')?.focus();
   } else if (action === 'tutorial-finish') {
     await saveOnboardingCompleted();
   } else if (action === 'tutorial-skip-arm') {
@@ -7683,9 +7864,9 @@ function clearLoadedAccountState() {
 }
 
 // Verhindert versehentliches Verlassen/Reload mitten im geführten Feld-Anlegen
-// (Tutorial Schritt 2, siehe CLAUDE.md).
+// (Tutorial Schritt 3 mit offenem Formular, siehe CLAUDE.md).
 window.addEventListener('beforeunload', (e) => {
-  if (state.tutorialStep === 2) { e.preventDefault(); e.returnValue = ''; }
+  if (state.tutorialStep === 3 && state.habitForm) { e.preventDefault(); e.returnValue = ''; }
 });
 
 resetIOSZoomOnStandaloneStart();

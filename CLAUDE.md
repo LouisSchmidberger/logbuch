@@ -842,7 +842,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 414 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 444 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -985,31 +985,46 @@ nicht extra behandelt.
 ## Onboarding-Tutorial für neue Accounts
 
 Seit 2026-09-15: neue Accounts starten ohne vorbelegte Felder (siehe Datenmodell) und
-werden stattdessen durch ein 3-Schritte-Tutorial geführt (`renderTutorial` in
-`logbuch.html`), gesteuert über `state.userSettings.onboardingCompleted` (aus
+werden stattdessen durch ein Tutorial geführt (`renderTutorial` in `logbuch.html`),
+gesteuert über `state.userSettings.onboardingCompleted` (aus
 `user_settings.onboarding_completed`, Default `false` bei neuen Accounts) – solange
 `false`, ersetzt `render()` die normale App durch das Tutorial (Prüfung erst NACH dem
 DEK-Unlock, das Tutorial braucht ja schon entschlüsselte Daten). `state.tutorialStep`
-(1/2/3) lebt nur im Speicher, kein Reload-Resume nötig.
+(1–`TUTORIAL_STEPS`, also 1–4) lebt nur im Speicher, kein Reload-Resume nötig.
 
-- **Schritt 1**: Vollbild-Screen (gleiches Muster wie `renderAuth`, ersetzt `#app`
-  komplett) mit Erklärung zu täglichem Ausfüllen + Push-Wert, eingebetteter
-  Push-Aktivierung (`renderPushRow`) und der Standard-Erinnerungszeit-Auswahl.
-- **Schritt 2**: erst ein Zwischenschritt ("Überleg dir einen Wert") mit Beispielen,
-  danach die **echte** `renderHabitForm()` (kein Duplikat) – gesteuert rein über
-  `state.habitForm`: gesetzt (per `defaultHabitForm()`) zeigt das Formular, `null`
-  (z.B. nach "Abbrechen") fällt zurück auf den Zwischenschritt. Kein Tab-Leiste/
-  Burger-Menü sichtbar (Tutorial-Screens ersetzen `#app` komplett statt in `renderApp`
-  eingebettet zu sein), eine `beforeunload`-Warnung verhindert versehentliches
-  Verlassen, solange `state.tutorialStep === 2`. Nach erfolgreichem Anlegen des ersten
-  Feldes (Insert-Zweig in `handleHabitSave`) automatischer Sprung zu Schritt 3.
-- **Schritt 3**: Vollbild-Screen mit Empfehlung, optional 2–4 weitere Felder
-  anzulegen ("Weiteres Feld anlegen" springt zurück in den Schritt-2-Formular-Zustand,
-  diesmal ohne den Zwischenschritt) oder "Fertig" (`saveOnboardingCompleted()`).
+**Leitlinie für alle Texte hier** (Nutzer, 2026-09-29): nie nur sagen, dass etwas so ist,
+sondern warum; locker statt förmlich, die App als Freund, der helfen will; persönliche
+Ich-Form des Machers, wo es um Vertrauen geht ("Nicht mal ich kann sie lesen"). Ein
+Bildschirm = ein Thema. Gemeinsame Bausteine (`tutorialScreen`): Fortschritt als Punkte
+ohne Zahlen (`tutorialDots`, aktueller Punkt länger, Screenreader hören "Schritt X von
+Y"), Symbol, kurze Überschrift (wird bei jedem Bildschirmwechsel fokussiert,
+`lastTutorialScreen`), der eine Kernsatz fett, Begründungen im wiedererkennbaren
+"Warum?"-Kasten (`whyBox`), kurze Hinweise in normaler Schriftfarbe (`.onb-hint`, nicht
+im blassen Sandton der Formular-Hinweise).
 
-Überspringen (Schritt 1/2) fragt zweistufig nach (`.modal-overlay`/`.modal-box`,
+- **1 Hallo** (`renderTutorialHello`): was Logbuch ist + drei Versprechen mit Symbol
+  (privat · ohne Druck · deins). Platz für einen persönlichen Satz des Nutzers ist
+  vorgesehen, aber noch offen (siehe Memory "Später beim Nutzer nachfragen").
+- **2 Erinnerungen** (`renderTutorialReminders`): Frage mit Begründung ("nur wenn an
+  einem Tag etwas fehlt", plus die abschaltbaren Übersichten – muss mit dem echten
+  Verhalten übereinstimmen), Hinweis auf die Erlaubnis-Abfrage, "Ja, erinnere mich"
+  (`enable-push`) oder "Lieber nicht". Die Uhrzeit erscheint erst, wenn Push aktiv ist.
+  Ohne Push-Unterstützung (iOS im Browser) eine Erklärung statt der Frage.
+- **3 Erstes Feld**: Einleitung (`renderTutorialFieldIntro`) mit antippbaren Beispielen
+  (`TUTORIAL_EXAMPLES`, `tutorialExampleForm`: öffnet das Formular vorausgefüllt, z.B.
+  "Gewicht" als Zahlenwert in kg, "Sport" als Ja/Nein) oder "Eigene Idee" (leeres
+  Formular), danach die **echte** `renderHabitForm()` (kein Duplikat; ob das erste Feld
+  ein vereinfachtes Formular bekommt, ist eine eigene, noch offene Frage des Nutzers) –
+  gesteuert über `state.habitForm`: gesetzt zeigt das Formular, `null` (z.B. nach
+  "Abbrechen") die Einleitung. Kein Tab-Leiste/Burger-Menü sichtbar; eine
+  `beforeunload`-Warnung verhindert versehentliches Verlassen bei offenem Formular. Nach
+  erfolgreichem Anlegen (Insert-Zweig in `handleHabitSave`) Sprung zu 4.
+- **4 Geschafft** (`renderTutorialDone`): "Loslegen" (`saveOnboardingCompleted()`) oder
+  "Noch ein Feld anlegen" (zurück ins Formular, ohne Einleitung).
+
+Überspringen (Schritte 1–3) fragt zweistufig nach (`.modal-overlay`/`.modal-box`,
 gleiches Muster wie `renderDeleteConfirm`) und setzt bei Bestätigung sofort
-`onboarding_completed = true` – identisch zu "Fertig" in Schritt 3.
+`onboarding_completed = true` – identisch zu "Loslegen".
 `saveOnboardingCompleted()` aktualisiert `state` sofort (App erscheint ohne Wartezeit)
 und persistiert danach im Hintergrund.
 
