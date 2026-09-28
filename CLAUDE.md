@@ -501,7 +501,12 @@ alles native Web Crypto API, keine Library):
 - Passwort-Reset über den E-Mail-Link (`renderPasswordRecovery`) verlangt zusätzlich
   den Recovery-Key, um den DEK zu erben und neu (mit dem neuen Passwort) zu
   verpacken — ohne Bestandsdaten neu zu verschlüsseln. Fallback "Recovery-Key auch
-  verloren" nur mit expliziter zweiter Bestätigung, danach sind alte Einträge weg.
+  verloren" nur mit expliziter zweiter Bestätigung: neuer DEK (`setupEncryption`),
+  danach löscht `deleteUndecryptableData` alles mit dem alten DEK Verschlüsselte
+  (alle Einträge, Feld-Definitionen mit `enc`, alle Gruppen) – best effort, das neue
+  Passwort ist dann schon gesetzt; bei einem Fehler Meldung `recovery.cleanupFailed`.
+  Bewusst erst nach `setupEncryption`: scheitert die, bleibt der alte Stand samt
+  Recovery-Wrapping erhalten.
 - Logout: `currentDek = null` (der IndexedDB-Cache bleibt für den nächsten Login auf
   demselben Gerät). Konto-Löschung räumt den Cache zusätzlich explizit auf.
 - **Kennung des DEK** (`user_encryption.dek_id`, seit 2026-09-28): zufällige UUID, nicht
@@ -799,7 +804,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 403 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 404 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

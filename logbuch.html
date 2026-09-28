@@ -1811,10 +1811,10 @@ const STRINGS = {
     'auth.title.forgot': 'Passwort zurücksetzen',
     'auth.title.signup': 'Neuen Account anlegen',
     'auth.title.login': 'Anmelden',
-    'auth.forgotRecoveryNote': 'Zum eigentlichen Zurücksetzen brauchst du im nächsten Schritt deinen Recovery-Key (den du bei der Einrichtung einmalig angezeigt bekommen hast), um deine bisherigen Einträge zu behalten.',
+    'auth.forgotRecoveryNote': 'Zum eigentlichen Zurücksetzen brauchst du im nächsten Schritt deinen Recovery-Key (einmalig angezeigt bei der Einrichtung bzw. zuletzt über das Menü neu erzeugt), um deine bisherigen Daten zu behalten.',
     'auth.email': 'E-Mail',
     'auth.password': 'Passwort',
-    'auth.passwordHint': 'Deine Einträge sind Ende-zu-Ende verschlüsselt – dein Passwort ist der einzige Schlüssel dazu. Wähle deshalb eines, das du sonst nirgends verwendest.',
+    'auth.passwordHint': 'Deine Einträge werden auf deinem Gerät verschlüsselt, bevor sie gespeichert werden. Dein Passwort ist der Schlüssel dazu. Wähle deshalb eines, das du sonst nirgends verwendest.',
     'auth.hide': 'Verbergen',
     'auth.show': 'Anzeigen',
     'auth.sendResetLink': 'Link zum Zurücksetzen senden',
@@ -1831,23 +1831,24 @@ const STRINGS = {
     'recovery.title': 'Neues Passwort setzen',
     'recovery.newPassword': 'Neues Passwort',
     'recovery.key': 'Recovery-Key',
-    'recovery.keyPlaceholder': 'von der einmaligen Anzeige bei der Einrichtung',
+    'recovery.keyPlaceholder': 'von der Einrichtung bzw. zuletzt im Menü neu erzeugt',
     'recovery.saving': 'Wird gespeichert …',
     'recovery.savePassword': 'Passwort speichern',
     'recovery.keyAlsoLost': 'Recovery-Key auch verloren?',
-    'recovery.fallbackWarning': 'Ohne Recovery-Key können deine bisherigen verschlüsselten Einträge nicht mehr entschlüsselt werden — sie sind dann unwiederbringlich verloren. Das betrifft nur die alten Einträge, dein Konto selbst bleibt nutzbar.',
+    'recovery.fallbackWarning': 'Ohne Recovery-Key lassen sich deine bisherigen Daten nicht mehr entschlüsseln: alle Einträge und Notizen sowie deine Felder und Gruppen. Sie sind dann unwiederbringlich verloren und werden gelöscht, du startest mit einem leeren Logbuch. Dein Konto selbst bleibt bestehen.',
     'recovery.setAnyway': 'Verstanden, Passwort trotzdem setzen (alte Daten verloren)',
-    'recovery.cancelHaveKey': 'Doch abbrechen, ich habe den Code noch',
+    'recovery.cancelHaveKey': 'Doch abbrechen, ich habe den Recovery-Key noch',
     'recovery.error.noConfig': 'Keine Verschlüsselungs-Konfiguration gefunden.',
     'recovery.error.wrongKey': 'Recovery-Key ist falsch oder unvollständig. Nichts wurde verändert.',
     'recovery.passwordSaved': 'Passwort gespeichert.',
+    'recovery.cleanupFailed': 'Passwort gespeichert. Deine alten, nicht mehr lesbaren Daten konnten aber nicht vollständig gelöscht werden – falls dir Felder als „nicht entschlüsselbar“ gemeldet werden, schreib mir bitte über „Feedback geben“.',
     'recoveryDisplay.title': 'Dein Recovery-Key',
-    'recoveryDisplay.explain': 'Das ist ein separater Zugangs-Code – <strong>nicht dein Passwort</strong>. Du brauchst ihn nur, falls du dein Passwort mal vergisst.',
-    'recoveryDisplay.warning': 'Dieser Code wird nur einmal angezeigt. Ohne ihn UND dein Passwort sind deine Daten für immer verloren — auch wir können sie dann nicht wiederherstellen. Speichere ihn jetzt sicher (Passwort-Manager, ausgedruckt o.ä.).',
-    'recoveryDisplay.regenerateNote': 'Kein Stress, falls du gerade keine Zeit hast: du kannst dir jederzeit über "Recovery-Key neu erzeugen" im Menü einen neuen Code anzeigen lassen (der alte wird dann ungültig).',
+    'recoveryDisplay.explain': 'Das ist ein zweiter Schlüssel zu deinen Daten – <strong>nicht dein Passwort</strong>. Du brauchst ihn nur, falls du dein Passwort vergisst: Zusammen mit dem Link, den du dann per E-Mail bekommst, setzt du damit ein neues Passwort, ohne deine Daten zu verlieren.',
+    'recoveryDisplay.warning': 'Dieser Recovery-Key wird nur einmal angezeigt. Ohne ihn UND dein Passwort sind deine Daten für immer verloren — auch ich kann sie dann nicht wiederherstellen. Behandle ihn wie ein Passwort: Er öffnet deine Daten genauso. Speichere ihn jetzt sicher (Passwort-Manager, ausgedruckt o.ä.).',
+    'recoveryDisplay.regenerateNote': 'Kein Stress, falls du gerade keine Zeit hast: du kannst dir jederzeit über "Recovery-Key neu erzeugen" im Menü einen neuen anzeigen lassen (der alte wird dann ungültig).',
     'recoveryDisplay.copy': 'Kopieren',
     'recoveryDisplay.download': 'Als Datei herunterladen',
-    'recoveryDisplay.confirmCheckbox': 'Ich habe den Code sicher gespeichert.',
+    'recoveryDisplay.confirmCheckbox': 'Ich habe den Recovery-Key sicher gespeichert.',
     'common.next': 'Weiter',
     'common.back': 'Zurück',
     'common.logout': 'Abmelden',
@@ -2111,7 +2112,7 @@ const STRINGS = {
     'about.privacy.title': 'Deine Daten und deine Privatsphäre',
     'about.privacy.intro': 'In Logbuch landen oft sehr persönliche Dinge: Stimmung, Schlaf, Konsum, Sexualität, Gedanken, die man sonst niemandem erzählt. Genau deshalb soll niemand außer dir sie lesen können – auch ich nicht. Nicht, weil du mir misstrauen müsstest, sondern weil Vertrauen am besten dort funktioniert, wo man es gar nicht erst braucht: Was ich nicht sehen kann, kann ich auch nicht verlieren, weitergeben oder missbrauchen. Hier ganz ehrlich, was ich sehen kann und was nicht:',
     'about.privacy.cannotSee.title': 'Was ich nicht sehen kann',
-    'about.privacy.cannotSee.body': 'Alles, was du einträgst, und worum es dabei geht: deine Werte, Notizen und Text-Antworten, die Namen deiner Felder und die Bezeichnungen ihrer Stufen. Das alles wird auf deinem Gerät verschlüsselt, bevor es überhaupt verschickt wird. Der Schlüssel dafür hängt an deinem Passwort, und das kennst nur du. Selbst mit vollem Zugriff auf die Datenbank sehe ich davon nur unlesbaren Zeichensalat.',
+    'about.privacy.cannotSee.body': 'Alles, was du einträgst, und worum es dabei geht: deine Werte, Notizen und Text-Antworten, die Namen deiner Felder und Gruppen und die Bezeichnungen ihrer Stufen. Das alles wird auf deinem Gerät verschlüsselt, bevor es überhaupt verschickt wird. Der Schlüssel dafür hängt an deinem Passwort und deinem Recovery-Key, und beide kennst nur du. Selbst mit vollem Zugriff auf die Datenbank sehe ich davon nur unlesbaren Zeichensalat.',
     'about.privacy.canSee.title': 'Was ich sehen kann',
     'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>wie viele Felder und Gruppen du hast, von welcher Art die Felder sind (z. B. Skala oder Zahl) und welches Feld in welcher Gruppe steht – aber nicht, worum es geht oder wie Felder und Gruppen heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokolliert der Hosting-Anbieter für kurze Zeit technische Zugriffsdaten wie IP-Adressen.',
     'about.privacy.recoveryKey.title': 'Die Kehrseite: dein Recovery-Key',
@@ -2163,8 +2164,8 @@ const STRINGS = {
     'tabs.global': 'Gesamt',
     'common.encryptingData': 'Deine Daten werden verschlüsselt …',
     'recoveryDisplay.copied': 'In die Zwischenablage kopiert.',
-    'recoveryDisplay.copyFailed': 'Kopieren nicht möglich - bitte den Code manuell abschreiben.',
-    'recoveryDisplay.fileBody': 'Sicher aufbewahren - ohne diesen Code UND dein Passwort sind deine Daten unwiederbringlich verloren.',
+    'recoveryDisplay.copyFailed': 'Kopieren nicht möglich - bitte den Recovery-Key manuell abschreiben.',
+    'recoveryDisplay.fileBody': 'Sicher aufbewahren - ohne diesen Recovery-Key UND dein Passwort sind deine Daten unwiederbringlich verloren. Behandle ihn wie ein Passwort: Er öffnet deine Daten genauso.',
     'recoveryDisplay.downloading': 'Datei wird heruntergeladen.',
   },
   en: {
@@ -2216,10 +2217,10 @@ const STRINGS = {
     'auth.title.forgot': 'Reset password',
     'auth.title.signup': 'Create new account',
     'auth.title.login': 'Sign in',
-    'auth.forgotRecoveryNote': 'To actually reset your password, in the next step you will need your recovery key (shown to you once during setup) in order to keep your existing entries.',
+    'auth.forgotRecoveryNote': 'To actually reset your password, in the next step you will need your recovery key (shown once during setup, or last regenerated via the menu) in order to keep your existing data.',
     'auth.email': 'Email',
     'auth.password': 'Password',
-    'auth.passwordHint': 'Your entries are end-to-end encrypted – your password is the only key to them. Choose one you don’t use anywhere else.',
+    'auth.passwordHint': 'Your entries are encrypted on your device before they are stored. Your password is the key to them. Choose one you don’t use anywhere else.',
     'auth.hide': 'Hide',
     'auth.show': 'Show',
     'auth.sendResetLink': 'Send reset link',
@@ -2236,23 +2237,24 @@ const STRINGS = {
     'recovery.title': 'Set new password',
     'recovery.newPassword': 'New password',
     'recovery.key': 'Recovery key',
-    'recovery.keyPlaceholder': 'from the one-time display during setup',
+    'recovery.keyPlaceholder': 'from setup, or last regenerated in the menu',
     'recovery.saving': 'Saving…',
     'recovery.savePassword': 'Save password',
     'recovery.keyAlsoLost': 'Also lost your recovery key?',
-    'recovery.fallbackWarning': 'Without the recovery key, your existing encrypted entries can no longer be decrypted — they will then be irrecoverably lost. This only affects the old entries, your account itself remains usable.',
+    'recovery.fallbackWarning': 'Without the recovery key, your existing data can no longer be decrypted: all entries and notes as well as your fields and groups. They are then irrecoverably lost and will be deleted, and you start with an empty logbook. Your account itself remains.',
     'recovery.setAnyway': 'Understood, set password anyway (old data lost)',
-    'recovery.cancelHaveKey': 'Cancel after all, I still have the code',
+    'recovery.cancelHaveKey': 'Cancel after all, I still have the recovery key',
     'recovery.error.noConfig': 'No encryption configuration found.',
     'recovery.error.wrongKey': 'Recovery key is incorrect or incomplete. Nothing was changed.',
     'recovery.passwordSaved': 'Password saved.',
+    'recovery.cleanupFailed': 'Password saved. However, your old, no longer readable data could not be fully deleted – if fields are reported as “could not be decrypted”, please let me know via “Send feedback”.',
     'recoveryDisplay.title': 'Your recovery key',
-    'recoveryDisplay.explain': 'This is a separate access code – <strong>not your password</strong>. You only need it if you ever forget your password.',
-    'recoveryDisplay.warning': 'This code is shown only once. Without it AND your password, your data is lost forever — even we cannot recover it then. Save it securely now (password manager, printed, etc.).',
-    'recoveryDisplay.regenerateNote': 'No stress if you do not have time right now: you can always display a new code via "Regenerate recovery key" in the menu (the old one then becomes invalid).',
+    'recoveryDisplay.explain': 'This is a second key to your data – <strong>not your password</strong>. You only need it if you forget your password: together with the link you then receive by email, it lets you set a new password without losing your data.',
+    'recoveryDisplay.warning': 'This recovery key is shown only once. Without it AND your password, your data is lost forever — not even I can recover it then. Treat it like a password: it unlocks your data just the same. Save it securely now (password manager, printed, etc.).',
+    'recoveryDisplay.regenerateNote': 'No stress if you do not have time right now: you can always display a new one via "Regenerate recovery key" in the menu (the old one then becomes invalid).',
     'recoveryDisplay.copy': 'Copy',
     'recoveryDisplay.download': 'Download as file',
-    'recoveryDisplay.confirmCheckbox': 'I have saved the code securely.',
+    'recoveryDisplay.confirmCheckbox': 'I have saved the recovery key securely.',
     'common.next': 'Next',
     'common.back': 'Back',
     'common.logout': 'Sign out',
@@ -2516,7 +2518,7 @@ const STRINGS = {
     'about.privacy.title': 'Your data and your privacy',
     'about.privacy.intro': 'Logbuch often holds very personal things: mood, sleep, substance use, sexuality, thoughts you would not tell anyone else. That is exactly why nobody but you should be able to read them – not even me. Not because you would have to distrust me, but because trust works best where you do not need it in the first place: what I cannot see, I cannot lose, pass on, or misuse. Here, honestly, is what I can see and what I cannot:',
     'about.privacy.cannotSee.title': 'What I cannot see',
-    'about.privacy.cannotSee.body': 'Everything you enter, and what it is about: your values, notes, and text answers, the names of your fields and the labels of their steps. All of this is encrypted on your device before it is even sent. The key for it is tied to your password, and only you know that. Even with full access to the database, all I see is unreadable gibberish.',
+    'about.privacy.cannotSee.body': 'Everything you enter, and what it is about: your values, notes, and text answers, the names of your fields and groups and the labels of their steps. All of this is encrypted on your device before it is even sent. The key for it is tied to your password and your recovery key, and only you know them. Even with full access to the database, all I see is unreadable gibberish.',
     'about.privacy.canSee.title': 'What I can see',
     'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>how many fields and groups you have, what kind the fields are (e.g. scale or number), and which field is in which group – but not what they are about or what your fields and groups are called</li><li>on which days you filled in which of these fields (for reminders), without the value</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the hosting provider briefly logs technical access data such as IP addresses.',
     'about.privacy.recoveryKey.title': 'The flip side: your recovery key',
@@ -2568,8 +2570,8 @@ const STRINGS = {
     'tabs.global': 'Overall',
     'common.encryptingData': 'Your data is being encrypted …',
     'recoveryDisplay.copied': 'Copied to clipboard.',
-    'recoveryDisplay.copyFailed': 'Copying not possible - please write down the code manually.',
-    'recoveryDisplay.fileBody': 'Keep this safe - without this code AND your password, your data is irrecoverably lost.',
+    'recoveryDisplay.copyFailed': 'Copying not possible - please write down the recovery key manually.',
+    'recoveryDisplay.fileBody': 'Keep this safe - without this recovery key AND your password, your data is irrecoverably lost. Treat it like a password: it unlocks your data just the same.',
     'recoveryDisplay.downloading': 'File is being downloaded.',
   },
 };
@@ -4612,10 +4614,12 @@ function renderPasswordRecovery() {
     render();
     try {
       const userId = state.session.user.id;
+      let cleanupFailed = false;
       if (fallback) {
         const { error } = await supabase.auth.updateUser({ password });
         if (error) throw error;
         await setupEncryption(userId, password);
+        cleanupFailed = !(await deleteUndecryptableData(userId));
       } else {
         const recoveryKeyHex = document.getElementById('recovery-key-input').value;
         let dek;
@@ -4650,11 +4654,14 @@ function renderPasswordRecovery() {
       state.recoveryBusy = false;
       state.passwordRecovery = false;
       state.recoveryFallbackConfirm = false;
-      state.notice = { type: 'ok', text: t('recovery.passwordSaved') };
+      state.notice = cleanupFailed
+        ? { type: 'error', text: t('recovery.cleanupFailed') }
+        : { type: 'ok', text: t('recovery.passwordSaved') };
       state.loading = true;
       render();
-      await Promise.all([loadEntries(), loadHabits(), loadUserSettings()]);
+      await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections()]);
       state.loading = false;
+      saveFieldNamesForPush(); // siehe completeAuthFlow
       render();
     } catch (err) {
       state.recoveryBusy = false;
@@ -4664,6 +4671,27 @@ function renderPasswordRecovery() {
       authFlowInFlight = false;
     }
   });
+}
+
+// Reset ohne Recovery-Key: alles mit dem alten DEK Verschlüsselte ist ab jetzt
+// unlesbar - löschen statt es liegen zu lassen (sonst dauerhaft die Meldung "Feld(er)
+// konnten nicht entschlüsselt werden", alte Tage erschienen leer und würden beim
+// Eintragen überschrieben). Erst NACH setupEncryption: schlägt die fehl, bleibt der alte
+// Stand erhalten, und wer den Recovery-Key doch noch findet, kommt wieder an alles.
+// Feld-Definitionen nur mit enc - noch unverschlüsselte (Konto seit der Umstellung nicht
+// geöffnet) bleiben lesbar und damit erhalten; Gruppen sind immer verschlüsselt.
+// Best effort: das neue Passwort ist zu diesem Zeitpunkt schon gesetzt, ein Fehler hier
+// darf den Reset nicht abbrechen (ein zweiter Versuch mit demselben Passwort würde von
+// Supabase abgelehnt). Rückgabe: true = alles gelöscht.
+async function deleteUndecryptableData(userId) {
+  const results = await Promise.all([
+    supabase.from('habit_entries').delete().eq('user_id', userId),
+    supabase.from('habit_definitions').delete().eq('user_id', userId).not('enc', 'is', null),
+    supabase.from('habit_sections').delete().eq('user_id', userId),
+  ]).catch((err) => [{ error: err }]);
+  const failed = results.filter((r) => r.error);
+  failed.forEach((r) => console.error('Alte Daten nach Reset nicht gelöscht:', r.error.message || r.error));
+  return failed.length === 0;
 }
 
 function renderRecoveryKeyDisplay() {
