@@ -221,7 +221,7 @@ Reihenfolge war verwirrend. Felder ohne Antwort im Zeitraum erscheinen nicht.
 Sprünge aus der Auswertung zu einem bestimmten Feld (Rückblick-Eintrag, Punkt im
 Zahlen-Graphen, Feld-Zelle in der Woche; `data-focus-habit` an `open-day`) scrollen in
 "Heute" zusätzlich zum Feld, heben es kurz hervor (`.field-highlight`, bei
-`prefers-reduced-motion` ohne Animation) und fokussieren den Feldnamen
+`prefers-reduced-motion` ohne Animation) und fokussieren dessen ⋮-Button
 (`focusTodayField`). Erklärt
 in "Über Logbuch" (`about.tip.textFields`). DB-Constraints `habit_definitions_kind_check`/
 `habit_definitions_kind_fields_check` erlauben `text` seit Migration
@@ -602,25 +602,31 @@ Zustand – `closeHabitForm()` (einziger Schließ-Weg: Speichern, Abbrechen,
 Android-Zurück) springt dann direkt zurück zum Tab statt in der Verwaltung zu bleiben,
 da die Absicht beim Shortcut "jetzt tracken" ist, nicht "verwalten".
 
-**Zeilen-Menü pro Feld in "Heute"** (seit 2026-09-27, `renderRowMenuTrigger`/
-`renderRowMenuPanel`/`openRowMenu`/`closeRowMenu` in `logbuch.html`, `state.rowMenu` =
-slug): kleines Popover mit "Bearbeiten" (öffnet das Feld-Formular in der Verwaltung mit
-`returnToTab: true`, gleiches Muster wie der "+ Neues Feld"-Shortcut) und "Archivieren"
-(danach Meldung, wo sich das Feld reaktivieren lässt), bei nicht berechneten Feldern zusätzlich
-"Notiz hinzufügen/bearbeiten" (siehe "Notizen in Heute" unten). **Auslöser ist der
-Feldname selbst** (Button, optisch unverändert Text,
-Disclosure-Muster mit `aria-expanded`, Escape schließt und gibt den Fokus zurück) –
-bewusst kein eigenes ⋯-Symbol pro Zeile: kurz so gebaut, wirkte bei vielen Feldern
-überladen für eine selten genutzte Aktion. Da man einem Namen nicht ansieht, dass er
-antippbar ist, erklärt ein Tipp in "Über Logbuch" (`about.tip.fieldMenu`) das.
-Zahlenwert-Felder: der Name ist dadurch kein `<label>` mehr, das Eingabefeld trägt
-seinen Namen per `aria-label`. Long-Press (Touch, eigener 500-ms-Timer, da iOS kein
-`contextmenu` feuert) bzw. Rechtsklick (Maus) auf die Zeile öffnet dasselbe Menü als
-Abkürzung. Ausgenommen davon sind Eingabefelder, der Schieberegler und das Menü selbst,
-nicht aber der Auslöser (Android macht aus langem Drücken keinen Klick mehr); der Klick
-beim Loslassen nach einem Long-Press wird verschluckt (`suppressNextClick`), sonst würde
-er auf einem Wert-Button zusätzlich den Wert setzen. Zählt als Overlay für die
-Android-Zurück-Logik. **Light-Dismiss**: bei offenem Menü schließt ein Tipp außerhalb
+**Zeilen-Menü in "Heute"** (seit 2026-09-27, ⋮-Button seit 2026-09-28;
+`renderRowMenuButton`/`renderRowHead`/`renderRowMenuPanel`/`renderSectionMenuPanel`/
+`openRowMenu`/`closeRowMenu` in `logbuch.html`, `state.rowMenu` bzw. `data-menu` = Feld-id
+oder `section:<id>`): kleines Popover. Bei Feldern "Bearbeiten" (öffnet das Feld-Formular in
+der Verwaltung mit `returnToTab: true`, gleiches Muster wie der "+ Neues Feld"-Shortcut) und
+"Archivieren" (danach Meldung, wo sich das Feld reaktivieren lässt), bei nicht berechneten
+Feldern zusätzlich "Notiz hinzufügen/bearbeiten" (siehe "Notizen in Heute" unten); bei
+Gruppen nur "Bearbeiten" (Gruppen-Formular, ebenfalls mit `returnToTab`; Löschen bewusst
+nicht aus "Heute"). **Auslöser ist ein senkrechtes ⋮ links vor jedem Feld und jeder
+Gruppen-Überschrift** (Nutzer-Entscheidung: einheitlich für Felder und Gruppen – bei Gruppen
+ist ein Tipp auf die Überschrift schon Auf-/Zuklappen; links statt hinter dem Namen, damit
+die ⋮ eine ruhige Spalte bilden). Vorher war der Feldname selbst der einzige Auslöser –
+verworfen, weil man einem Namen nicht ansieht, dass er antippbar ist, und es für Gruppen
+nicht passte; ein waagerechtes ⋯ hinter jedem Namen wirkte kurz davor zu überladen. Der ⋮
+ist das einzige Bedienelement für Tastatur/Screenreader (Disclosure-Muster mit
+`aria-expanded`, "Optionen für …", Escape schließt und gibt den Fokus zurück). Abkürzungen
+für Zeige-Geräte: Tipp auf den Feldnamen (`row-menu-name`, kein Button) sowie Long-Press
+(Touch, eigener 500-ms-Timer, da iOS kein `contextmenu` feuert) bzw. Rechtsklick (Maus) auf
+die Zeile bzw. Gruppen-Überschrift. Zahlenwert-/Text-Felder: der Name ist kein `<label>`
+(Antippen würde sonst zusätzlich das Eingabefeld fokussieren), das Eingabefeld trägt seinen
+Namen per `aria-label`. Vom Long-Press ausgenommen sind Eingabefelder, der Schieberegler und
+das Menü selbst, nicht aber der Name (Android macht aus langem Drücken keinen Klick mehr);
+der Klick beim Loslassen nach einem Long-Press wird verschluckt (`suppressNextClick`), sonst
+würde er auf einem Wert-Button den Wert setzen bzw. die Gruppe auf-/zuklappen. Zählt als
+Overlay für die Android-Zurück-Logik. **Light-Dismiss**: bei offenem Menü schließt ein Tipp außerhalb
 davon nur das Menü und löst nichts anderes aus (kein direktes Umspringen zum Menü eines
 anderen Feldes, kein versehentlich gesetzter Wert) – nur für Zeige-Geräte
 (`e.detail > 0`), per Tastatur ausgelöste Klicks laufen nach bewusstem Wegnavigieren
@@ -758,7 +764,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 400 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 401 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

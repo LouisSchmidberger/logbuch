@@ -321,21 +321,28 @@
   .habit-row--computed { flex-wrap: wrap; }
   .habit-row--computed .manage-meta { flex-basis: 100%; }
 
-  /* Zeilen-Menü in "Heute" (siehe renderRowMenuTrigger). touch-callout/user-select
+  /* Zeilen-Menü in "Heute" (siehe renderRowMenuButton). touch-callout/user-select
      verhindern, dass iOS/Android beim Long-Press auf die Zeile stattdessen Textauswahl
      oder ein eigenes Kontextmenü zeigen. */
-  .habit-row, .number-box { position: relative; -webkit-touch-callout: none; }
-  .habit-name, .number-box-label { -webkit-user-select: none; user-select: none; }
-  /* Der Feldname ist der Auslöser - optisch unverändert reiner Text, nur als Button
-     ausgezeichnet (Tastatur/Screenreader). Offen: dezent unterstrichen, damit sichtbar
-     bleibt, zu welcher Zeile das Menü gehört. */
-  .row-menu-trigger {
-    font: inherit; color: inherit; text-align: left; background: none; border: none;
-    padding: 0; margin: 0; cursor: pointer;
+  .habit-row, .number-box, .section-head { position: relative; -webkit-touch-callout: none; }
+  .row-head, .section-head { -webkit-user-select: none; user-select: none; }
+  /* Kopf einer Zeile: ⋮-Button + Name (bei Zahlenwert-Feldern darunter der letzte Wert).
+     Der Button ragt etwas nach links in den Rand, damit die Namen nur wenig einrücken. */
+  .row-head { display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; margin-left: -8px; }
+  .row-head-text { flex: 1; min-width: 0; }
+  /* In untereinander gestapelten Zeilen (Schieberegler, Text) keine Höhe verteilen. */
+  .habit-row--slider > .row-head, .text-box > .row-head { flex: none; }
+  .row-menu-btn {
+    flex-shrink: 0; width: 24px; height: 32px; display: flex; align-items: center; justify-content: center;
+    padding: 0; margin: 0; background: none; border: none; border-radius: 3px; color: var(--sand); cursor: pointer;
   }
-  .row-menu-trigger[aria-expanded="true"] { text-decoration: underline; text-decoration-color: var(--sand); text-underline-offset: 3px; }
-  .number-box-label { flex: 1; min-width: 0; }
-  .number-box-label .row-menu-trigger { font-size: 13px; }
+  .row-menu-btn svg { fill: currentColor; }
+  .row-menu-btn:hover, .row-menu-btn[aria-expanded="true"] { color: var(--ink); }
+  /* Der Name öffnet per Zeige-Gerät dasselbe Menü (Abkürzung, kein eigenes
+     Bedienelement für Tastatur/Screenreader). Offen: dezent unterstrichen, damit
+     sichtbar bleibt, zu welcher Zeile das Menü gehört. */
+  .row-menu-name { cursor: pointer; }
+  .row-menu-name--open { text-decoration: underline; text-decoration-color: var(--sand); text-underline-offset: 3px; }
   .row-menu {
     position: absolute; top: calc(100% - 4px); left: 0; z-index: 5; min-width: 170px;
     display: flex; flex-direction: column; gap: 6px; padding: 10px;
@@ -594,6 +601,10 @@
   .section-toggle[aria-expanded="true"] .section-chevron { transform: rotate(90deg); }
   @media (prefers-reduced-motion: reduce) { .section-chevron { transition: none; } }
   .section-block--stats > .section-toggle { font-size: 13px; padding-top: 10px; }
+  /* "Heute": ⋮-Button links neben der Überschrift, die Linie trägt dann der Kopf. */
+  .section-head { display: flex; align-items: center; border-bottom: 1px solid var(--line); padding-top: 6px; }
+  .section-head > .row-menu-btn { margin-left: -8px; }
+  .section-head .section-toggle { flex: 1; min-width: 0; border-bottom: none; padding: 6px 0; }
   /* Inhalt einer aufgeklappten Gruppe eingerückt, mit dezenter Linie links (wie in der
      Verwaltung), damit sichtbar ist, was dazugehört. Im Wochen-Raster nur der Feldname:
      eine eingerückte ganze Zeile würde die Tageskästchen gegen die Wochentag-Köpfe
@@ -1114,11 +1125,20 @@ function setSectionCollapsed(scope, id, collapsed) {
   } catch { /* privater Modus o.ä. - wirkt dann nur bis zum nächsten Neuladen nicht */ }
 }
 function renderSectionToggle(section, scope, collapsed) {
-  return `
+  const toggle = `
     <button type="button" class="section-toggle section-toggle--${scope}" data-action="section-toggle" data-section="${section.id}" data-scope="${scope}" aria-expanded="${!collapsed}">
       <svg class="section-chevron" width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>${esc(section.name)}</span>
     </button>
+  `;
+  // Nur in "Heute" mit Zeilen-Menü (siehe renderRowMenuButton), in der Auswertung nicht.
+  if (scope !== 'today') return toggle;
+  return `
+    <div class="section-head">
+      ${renderRowMenuButton(`section:${section.id}`, t('today.sectionOptions', { name: section.name }))}
+      ${toggle}
+      ${renderSectionMenuPanel(section)}
+    </div>
   `;
 }
 // Rendert Felder nach Gruppen geordnet, in der Reihenfolge der Verwaltung:
@@ -1837,6 +1857,7 @@ const STRINGS = {
     'today.newField': '+ Neues Feld',
     'today.resetDay': 'Tag zurücksetzen',
     'today.fieldOptions': 'Optionen für {name}',
+    'today.sectionOptions': 'Optionen für Gruppe {name}',
     'note.add': 'Notiz hinzufügen',
     'note.edit': 'Notiz bearbeiten',
     'note.editPrefix': 'Notiz bearbeiten:',
@@ -2065,7 +2086,7 @@ const STRINGS = {
     'about.tip.textFields.title': 'Freie Text-Felder',
     'about.tip.textFields.body': 'Für Fragen wie „Wofür bin ich heute dankbar?" gibt es den Feld-Typ „Freier Text". In „Heute" steht dafür ein Textfeld, das automatisch speichert. Die Antworten fließen nicht in die Auswertung ein, lassen sich aber in Woche, Monat, Jahr und Gesamt aufklappen und nachlesen — ein Tipp auf einen Eintrag führt zu seinem Tag.',
     'about.tip.fieldMenu.title': 'Notizen & Felder direkt bearbeiten',
-    'about.tip.fieldMenu.body': 'Tippe in „Heute" auf den Namen eines Feldes (oder halte die Zeile kurz gedrückt), um eine Notiz dazu zu schreiben — etwa „heute erst nach dem Frühstück gewogen" — oder das Feld direkt dort zu bearbeiten bzw. zu archivieren. Notizen fließen nicht in die Auswertung ein, in Woche und Monat zeigt ein kleiner Punkt, wo es eine gibt.',
+    'about.tip.fieldMenu.body': 'Über die drei Punkte ⋮ vor jedem Feld in „Heute" kannst du eine Notiz dazu schreiben — etwa „heute erst nach dem Frühstück gewogen" — oder das Feld direkt dort bearbeiten bzw. archivieren; vor einer Gruppe entsprechend die Gruppe bearbeiten. Schneller geht es, wenn du auf den Feldnamen tippst oder die Zeile kurz gedrückt hältst. Notizen fließen nicht in die Auswertung ein, in Woche und Monat zeigt ein kleiner Punkt, wo es eine gibt.',
     'about.tip.reorder.title': 'Felder umsortieren',
     'about.tip.reorder.body': 'In „Felder verwalten" kannst du Felder per Ziehen am Griff-Symbol oder mit den ↑/↓-Buttons neu anordnen.',
     'about.tip.noValuation.title': 'Felder ohne Wertung',
@@ -2239,6 +2260,7 @@ const STRINGS = {
     'today.newField': '+ New field',
     'today.resetDay': 'Reset day',
     'today.fieldOptions': 'Options for {name}',
+    'today.sectionOptions': 'Options for group {name}',
     'note.add': 'Add note',
     'note.edit': 'Edit note',
     'note.editPrefix': 'Edit note:',
@@ -2467,7 +2489,7 @@ const STRINGS = {
     'about.tip.textFields.title': 'Free text fields',
     'about.tip.textFields.body': 'For questions like "What am I grateful for today?" there is the "Free text" field type. "Today" shows a text box for it that saves automatically. The answers are not part of the statistics, but you can expand and read them back in the week, month, year, and overall views — tapping an entry takes you to its day.',
     'about.tip.fieldMenu.title': 'Notes & editing fields directly',
-    'about.tip.fieldMenu.body': 'In "Today", tap the name of a field (or briefly press and hold its row) to write a note about it — say, "weighed myself after breakfast today" — or to edit or archive the field right there. Notes are not part of the statistics; in the week and month views a small dot shows where there is one.',
+    'about.tip.fieldMenu.body': 'In "Today", the three dots ⋮ in front of each field let you write a note about it — say, "weighed myself after breakfast today" — or edit or archive the field right there; in front of a group, they let you edit the group. For a shortcut, tap the field name or briefly press and hold its row. Notes are not part of the statistics; in the week and month views a small dot shows where there is one.',
     'about.tip.reorder.title': 'Reordering fields',
     'about.tip.reorder.body': 'In "Manage fields" you can reorder fields by dragging the handle or using the ↑/↓ buttons.',
     'about.tip.noValuation.title': 'Fields without valuation',
@@ -3579,7 +3601,9 @@ async function commitLayoutOrder(items) {
 // aktiven Felder zum Ankreuzen, beliebig gemischt. Ein Feld kann nur in EINER Gruppe
 // sein - Felder aus einer anderen Gruppe erscheinen ausgegraut mit deren Namen. Scroll-
 // Position und Rückweg teilen sich den Mechanismus des Feld-Formulars.
-function openSectionForm(id) {
+// returnToTab: aus dem Zeilen-Menü in "Heute" geöffnet - danach dorthin zurück (wie beim
+// Feld-Formular, siehe closeHabitForm).
+function openSectionForm(id, { returnToTab = false } = {}) {
   habitFormReturnScrollY = window.scrollY;
   const sec = id ? state.sections.find((x) => x.id === id) : null;
   state.sectionForm = {
@@ -3588,6 +3612,7 @@ function openSectionForm(id) {
     members: sec ? state.habits.filter((h) => !h.archivedAt && h.sectionId === sec.id).map((h) => h.defId) : [],
     reminderEnabled: sec ? sec.reminderMinute !== null : false,
     reminderMinute: sec && sec.reminderMinute !== null ? sec.reminderMinute : state.userSettings.defaultReminderMinute,
+    returnToTab,
   };
   state.sectionDeleteConfirm = null;
   render();
@@ -3595,7 +3620,9 @@ function openSectionForm(id) {
   if (!sec) requestAnimationFrame(() => document.getElementById('section-form-name')?.focus());
 }
 function closeSectionForm() {
+  const returnToTab = state.sectionForm?.returnToTab;
   state.sectionForm = null;
+  if (returnToTab && state.view === 'manage') state.view = state.previousTabView || 'today';
   pendingScrollRestore = habitFormReturnScrollY;
   habitFormReturnScrollY = null;
 }
@@ -3884,7 +3911,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') { persistNoteDraft(); flushAllDaySaves(); }
 });
 // Speichern UND Abbrechen: danach zurück auf das Element, von dem aus man gekommen ist
-// (Feldname bzw. der Tagesnotiz-Bereich), da render() den Fokus sonst verwirft.
+// (⋮-Button des Feldes bzw. der Tagesnotiz-Bereich), da render() den Fokus sonst verwirft.
 // Der Entwurf ist über den 'input'-Listener immer aktuell in state.noteEditor.draft.
 function closeNoteEditor(save) {
   const { key } = state.noteEditor;
@@ -3893,7 +3920,7 @@ function closeNoteEditor(save) {
   render();
   const focusTarget = key === DAY_NOTE_KEY
     ? document.querySelector('.day-note [data-action="note-edit"]')
-    : document.querySelector(`.row-menu-trigger[data-habit="${key}"]`);
+    : document.querySelector(`.row-menu-trigger[data-menu="${key}"]`);
   focusTarget?.focus({ preventScroll: true });
 }
 
@@ -4689,19 +4716,37 @@ function renderComputedInfo(habit, dateKey) {
   `;
 }
 
-// --- Rendering: Today ----------------------------------------------------
-// Zeilen-Menü pro Feld in "Heute": Abkürzung zu Bearbeiten/Archivieren, ohne erst in
-// die Verwaltung zu wechseln. Auslöser ist der Feldname selbst (als Button
-// ausgezeichnet, optisch unverändert Text) statt eines eigenen ⋯-Symbols - das Menü wird
-// selten gebraucht, ein zusätzliches Element in jeder Zeile war dafür zu viel Unruhe.
-// Tastatur/Screenreader erreichen es darüber normal, Long-Press bzw. Rechtsklick auf die
-// Zeile öffnet dasselbe Menü als zusätzliche Abkürzung (siehe "Zeilen-Menü per
-// Long-Press" weiter unten); in "Über Logbuch" erklärt, da man einem Namen nicht
-// ansieht, dass er antippbar ist. Disclosure-Muster (aria-expanded + normale Buttons)
-// statt role="menu", da letzteres eine eigene Pfeiltasten-Navigation verlangen würde.
-function renderRowMenuTrigger(h, content) {
+// Zeilen-Menü in "Heute": ein ⋮-Button links vor jedem Feld und jeder Gruppen-Überschrift
+// (einheitlich für beides - bei Gruppen öffnet ein Tipp auf die Überschrift ja schon das
+// Auf-/Zuklappen). Senkrecht und schmal, damit er in Skala-Zeilen neben den Wert-Buttons
+// wenig Platz kostet; ein waagerechtes ⋯ hinter jedem Namen wirkte zu unruhig. Das ist
+// das einzige Bedienelement für Tastatur/Screenreader. Zusätzliche Abkürzungen für
+// Zeige-Geräte: Tipp auf den Feldnamen (row-menu-name) sowie Long-Press/Rechtsklick auf
+// die Zeile (siehe "Zeilen-Menü per Long-Press" weiter unten). Disclosure-Muster
+// (aria-expanded + normale Buttons) statt role="menu", da letzteres eine eigene
+// Pfeiltasten-Navigation verlangen würde.
+// state.rowMenu / data-menu: bei Feldern deren id, bei Gruppen 'section:<id>'.
+function renderRowMenuButton(key, label) {
+  const open = state.rowMenu === key;
+  return `<button type="button" class="row-menu-btn row-menu-trigger" data-action="row-menu" data-menu="${key}" aria-expanded="${open}"${open ? ` aria-controls="row-menu-${key}"` : ''} aria-label="${label}"><svg width="4" height="16" viewBox="0 0 4 16" aria-hidden="true"><circle cx="2" cy="2" r="1.6"/><circle cx="2" cy="8" r="1.6"/><circle cx="2" cy="14" r="1.6"/></svg></button>`;
+}
+function renderRowHead(h, nameHtml, extra = '') {
   const open = state.rowMenu === h.id;
-  return `<button type="button" class="habit-name row-menu-trigger" data-action="row-menu" data-habit="${h.id}" aria-expanded="${open}"${open ? ` aria-controls="row-menu-${h.id}"` : ''} aria-label="${t('today.fieldOptions', { name: h.name })}">${content}</button>`;
+  return `
+    <div class="row-head">
+      ${renderRowMenuButton(h.id, t('today.fieldOptions', { name: h.name }))}
+      <div class="row-head-text"><span class="habit-name row-menu-name${open ? ' row-menu-name--open' : ''}" data-action="row-menu" data-menu="${h.id}">${nameHtml}</span>${extra}</div>
+    </div>
+  `;
+}
+function renderSectionMenuPanel(section) {
+  const key = `section:${section.id}`;
+  if (state.rowMenu !== key) return '';
+  return `
+    <div class="row-menu" id="row-menu-${key}" role="group" aria-label="${t('today.sectionOptions', { name: section.name })}">
+      <button type="button" class="menu-item-btn" data-action="section-menu-edit" data-id="${section.id}">${t('common.edit')}</button>
+    </div>
+  `;
 }
 // Absolut positioniert (an der Zeile verankert), seine Lage im DOM der Zeile ist egal.
 function renderRowMenuPanel(h) {
@@ -4716,17 +4761,17 @@ function renderRowMenuPanel(h) {
 }
 // Nach jedem Öffnen/Schließen nötig, da render() das DOM komplett neu aufbaut und den
 // Fokus dabei verwirft: beim Öffnen auf den ersten Menüpunkt, beim Schließen zurück
-// auf den Auslöser (Feldname) derselben Zeile.
-function openRowMenu(habitId) {
-  state.rowMenu = habitId;
+// auf den ⋮-Button derselben Zeile.
+function openRowMenu(key) {
+  state.rowMenu = key;
   render();
   document.querySelector('.row-menu button')?.focus({ preventScroll: true });
 }
 function closeRowMenu() {
-  const habitId = state.rowMenu;
+  const key = state.rowMenu;
   state.rowMenu = null;
   render();
-  document.querySelector(`.row-menu-trigger[data-habit="${habitId}"]`)?.focus({ preventScroll: true });
+  document.querySelector(`.row-menu-trigger[data-menu="${key}"]`)?.focus({ preventScroll: true });
 }
 
 // Notiz unter einem Feld bzw. im Tagesnotiz-Bereich: entweder der offene Editor, oder
@@ -4757,7 +4802,7 @@ function renderTextBox(h, dayEntry) {
   const value = typeof dayEntry[h.id] === 'string' ? dayEntry[h.id] : '';
   return `
     <div class="number-box text-box">
-      <div class="number-box-label">${renderRowMenuTrigger(h, esc(h.name))}</div>
+      ${renderRowHead(h, esc(h.name))}
       <textarea id="text-input-${h.id}" class="text-field-input" data-habit="${h.id}" rows="2" maxlength="${NOTE_MAX_LENGTH}" aria-label="${esc(h.name)}">${esc(value)}</textarea>
       ${renderRowMenuPanel(h)}
     </div>
@@ -4766,7 +4811,8 @@ function renderTextBox(h, dayEntry) {
 
 // Nach einem Sprung aus der Auswertung zu einem bestimmten Feld (Text-Eintrag im
 // Rückblick, Punkt im Zahlen-Graphen, Feld-Zelle in der Woche): nicht nur zum Tag,
-// sondern auch zum Feld selbst - hinscrollen, kurz hervorheben, Fokus auf den Feldnamen
+// sondern auch zum Feld selbst - hinscrollen, kurz hervorheben, Fokus auf dessen ⋮-Button
+// (Screenreader lesen dort "Optionen für <Name>")
 // (bewusst nicht ins Textfeld: das würde die Tastatur öffnen, man will ja erst lesen).
 // Archivierte Felder stehen nicht in "Heute" - dann bleibt es beim Tag.
 function focusTodayField(habitId) {
@@ -4776,12 +4822,12 @@ function focusTodayField(habitId) {
     setSectionCollapsed('today', target.sectionId, false);
     render();
   }
-  let trigger = document.querySelector(`.row-menu-trigger[data-habit="${habitId}"]`);
+  let trigger = document.querySelector(`.row-menu-trigger[data-menu="${habitId}"]`);
   // Liegt das Feld im eingeklappten "Heute nicht geplant", erst aufklappen.
   if (trigger?.closest('details.unplanned:not([open])')) {
     state.unplannedOpenFor = formatKey(state.currentDate);
     render();
-    trigger = document.querySelector(`.row-menu-trigger[data-habit="${habitId}"]`);
+    trigger = document.querySelector(`.row-menu-trigger[data-menu="${habitId}"]`);
   }
   const row = trigger?.closest('.habit-row, .number-box');
   if (!row) return;
@@ -4799,15 +4845,13 @@ function renderNumberBox(h, dateKey, dayEntry) {
     last && last.dateKey !== dateKey
       ? t('numberBox.last', { value: last.value + unitSuffix, date: formatDMY(last.dateKey) })
       : '';
-  // Der Name ist hier zugleich Menü-Auslöser (siehe renderRowMenuTrigger), kann also
-  // kein <label> mehr sein - das Eingabefeld bekommt seinen Namen deshalb per aria-label.
+  // Der Name öffnet per Tipp das Zeilen-Menü (siehe renderRowHead), kann also kein
+  // <label> sein (das würde zusätzlich das Eingabefeld fokussieren) - das Eingabefeld
+  // bekommt seinen Namen deshalb per aria-label.
   const nameWithUnit = `${esc(h.name)}${h.unit ? ` (${esc(h.unit)})` : ''}`;
   return `
     <div class="number-box">
-      <div class="number-box-label">
-        ${renderRowMenuTrigger(h, nameWithUnit)}
-        ${lastNote ? `<span class="number-last">${lastNote}</span>` : ''}
-      </div>
+      ${renderRowHead(h, nameWithUnit, lastNote ? `<span class="number-last">${lastNote}</span>` : '')}
       <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-action="number-input" data-habit="${h.id}" value="${esc(currentValue)}" aria-label="${nameWithUnit}" />
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
@@ -4822,14 +4866,14 @@ function renderTodayHabitRow(h, dateKey, dayEntry) {
   if (isTextKind(h)) return renderTextBox(h, dayEntry);
   if (h.kind === 'computed') return `
     <div class="habit-row habit-row--computed">
-      ${renderRowMenuTrigger(h, esc(h.name))}
+      ${renderRowHead(h, esc(h.name))}
       ${renderComputedInfo(h, dateKey)}
       ${renderRowMenuPanel(h)}
     </div>
   `;
   if (h.displayStyle === 'slider') return `
     <div class="habit-row habit-row--slider">
-      ${renderRowMenuTrigger(h, esc(h.name))}
+      ${renderRowHead(h, esc(h.name))}
       ${renderHabitSlider(h, dayEntry[h.id])}
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
@@ -4837,7 +4881,7 @@ function renderTodayHabitRow(h, dateKey, dayEntry) {
   `;
   return `
     <div class="habit-row">
-      ${renderRowMenuTrigger(h, esc(h.name))}
+      ${renderRowHead(h, esc(h.name))}
       <div class="habit-options">${renderHabitOptions(h, dayEntry[h.id])}</div>
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
@@ -6339,8 +6383,11 @@ app.addEventListener('click', async (e) => {
     enterSubpage('manage');
     openHabitForm({ ...defaultHabitForm(), returnToTab: true });
   } else if (action === 'row-menu') {
-    if (state.rowMenu === el.dataset.habit) closeRowMenu();
-    else openRowMenu(el.dataset.habit);
+    if (state.rowMenu === el.dataset.menu) closeRowMenu();
+    else openRowMenu(el.dataset.menu);
+  } else if (action === 'section-menu-edit') {
+    enterSubpage('manage');
+    openSectionForm(el.dataset.id, { returnToTab: true });
   } else if (action === 'row-menu-edit') {
     // Gleiches Muster wie der "+ Neues Feld"-Shortcut: returnToTab führt nach
     // Speichern/Abbrechen zurück nach "Heute" statt in der Verwaltung zu bleiben.
@@ -6764,7 +6811,7 @@ document.addEventListener('click', (e) => {
 // greift schon der Light-Dismiss-Capture-Listener, siehe "Zeilen-Menü per Long-Press").
 document.addEventListener('click', (e) => {
   if (!state.rowMenu) return;
-  if (e.target.closest('.row-menu, .row-menu-trigger')) return;
+  if (e.target.closest('.row-menu, [data-menu]')) return;
   state.rowMenu = null;
   render();
 });
@@ -6870,14 +6917,13 @@ app.addEventListener('touchend', (e) => {
 }, { passive: true });
 
 // --- Zeilen-Menü per Long-Press/Rechtsklick (Heute) ------------------------
-// Reine Abkürzung zum Feldnamen-Auslöser (siehe renderRowMenuTrigger), nie der einzige
-// Weg. Touch/Stift über einen eigenen Timer (iOS Safari feuert beim Long-Press kein
+// Reine Abkürzung zum ⋮-Button (siehe renderRowMenuButton), nie der einzige Weg - auf
+// Feld-Zeilen und Gruppen-Überschriften (dort statt des Auf-/Zuklappens). Touch/Stift über einen eigenen Timer (iOS Safari feuert beim Long-Press kein
 // 'contextmenu'), Maus über den Rechtsklick ('contextmenu'). Ausgenommen sind alle
 // Stellen, an denen Gedrückthalten schon etwas anderes bedeutet: Eingabefelder
 // (Einfügen/Cursor setzen), der Schieberegler (Halten = Ziehen beginnen) und das Menü
-// selbst. Der Auslöser selbst ist bewusst NICHT ausgenommen - Android macht aus einem
-// langen Drücken keinen Klick mehr, ohne Long-Press-Behandlung passierte dort sonst gar
-// nichts.
+// selbst. Der Feldname ist bewusst NICHT ausgenommen - Android macht aus einem langen
+// Drücken keinen Klick mehr, ohne Long-Press-Behandlung passierte dort sonst gar nichts.
 const LONG_PRESS_MS = 500;
 const LONG_PRESS_MOVE_TOLERANCE = 10;
 let longPress = null;
@@ -6889,9 +6935,9 @@ let lastPointerType = 'mouse';
 // würde stattdessen der nächste echte Klick verschluckt.
 let suppressNextClick = false;
 
-function rowMenuHabitAt(target) {
+function rowMenuKeyAt(target) {
   if (state.view !== 'today' || target.closest('input, textarea, select, .slider-row, .row-menu, .note-editor')) return null;
-  return target.closest('.habit-row, .number-box')?.querySelector('.row-menu-trigger')?.dataset.habit ?? null;
+  return target.closest('.habit-row, .number-box, .section-head')?.querySelector('.row-menu-trigger')?.dataset.menu ?? null;
 }
 function cancelLongPress() {
   if (!longPress) return;
@@ -6904,15 +6950,15 @@ app.addEventListener('pointerdown', (e) => {
   lastPointerType = e.pointerType;
   cancelLongPress();
   if (e.pointerType === 'mouse') return;
-  const habitId = rowMenuHabitAt(e.target);
-  if (!habitId) return;
+  const menuKey = rowMenuKeyAt(e.target);
+  if (!menuKey) return;
   longPress = {
     pointerId: e.pointerId, startX: e.clientX, startY: e.clientY,
     timer: setTimeout(() => {
       longPress = null;
       suppressNextClick = true;
       haptic();
-      openRowMenu(habitId);
+      openRowMenu(menuKey);
     }, LONG_PRESS_MS),
   };
 });
@@ -6934,12 +6980,12 @@ app.addEventListener('click', (e) => {
   // Light-Dismiss: bei offenem Zeilen-Menü schließt ein Tipp irgendwo außerhalb nur das
   // Menü und löst sonst nichts aus - weder direkt das Menü eines anderen Feldes noch z.B.
   // einen Wert, wenn man eigentlich nur das Menü loswerden wollte. Ausnahmen: das Menü
-  // selbst und der eigene Auslöser (normales Zuklappen). Nur für Zeige-Geräte
+  // selbst und der eigene Auslöser (⋮ bzw. Feldname, normales Zuklappen). Nur für Zeige-Geräte
   // (e.detail > 0): per Tastatur ausgelöste Klicks (detail 0) sind nach einem bewussten
   // Wegnavigieren gemeint und laufen normal durch - die schließen das Menü dann über den
   // Klick-Handler (state.rowMenu = null bei jeder anderen Aktion).
   if (state.rowMenu && e.detail > 0
-      && !e.target.closest(`.row-menu, .row-menu-trigger[data-habit="${state.rowMenu}"]`)) {
+      && !e.target.closest(`.row-menu, [data-menu="${state.rowMenu}"]`)) {
     e.stopPropagation();
     e.preventDefault();
     closeRowMenu();
@@ -6950,14 +6996,14 @@ app.addEventListener('click', (e) => {
 // 'contextmenu' feuert (je nach Gerät vor oder nach dem eigenen Timer), damit dort
 // weder das Browser-Kontextmenü erscheint noch das Menü doppelt geöffnet wird.
 app.addEventListener('contextmenu', (e) => {
-  const habitId = rowMenuHabitAt(e.target);
-  if (!habitId) return;
+  const menuKey = rowMenuKeyAt(e.target);
+  if (!menuKey) return;
   e.preventDefault();
   if (lastPointerType !== 'mouse') {
     cancelLongPress();
     suppressNextClick = true;
   }
-  if (state.rowMenu !== habitId) openRowMenu(habitId);
+  if (state.rowMenu !== menuKey) openRowMenu(menuKey);
 });
 
 // --- Felder-Reihenfolge per Drag (Tab "Felder") ---------------------------
