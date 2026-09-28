@@ -1368,6 +1368,24 @@ function neutralColor(score) {
 function habitColor(habit, score) {
   return isNeutralScale(habit) ? neutralColor(score) : scoreColor(score);
 }
+// Textfarbe auf einer Score-/Neutralfarbe (rgb()-String aus scoreColor/neutralColor):
+// hell oder dunkel, je nachdem was mehr Kontrast hat (WCAG-Leuchtdichte). Ein fester
+// heller Text (--on-score) war auf den hellen Stufen kaum lesbar - Sandton in der Mitte
+// der Rot-Grün-Skala ~3:1, helles Ende der neutralen Skala ~1,5:1. Bewusst reines
+// Weiß/Schwarz statt der warmen App-Töne: die Mittelstufen beider Skalen liegen genau im
+// ungünstigsten Helligkeitsbereich, nur damit erreicht jede Stufe mind. 4,5:1 (nachgerechnet
+// über alle Stufen: min. 4,58:1; mit #f5f3ee/#2b2620 nur 3,7:1).
+const ON_SCORE_LIGHT = '#ffffff';
+const ON_SCORE_DARK = '#000000';
+function textOnScore(rgb) {
+  const m = /rgb\((\d+), (\d+), (\d+)\)/.exec(rgb || '');
+  if (!m) return 'inherit'; // kein Score (transparent) - normaler Text, z.B. für "–"
+  const channel = (c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
+  const lum = 0.2126 * channel(+m[1]) + 0.7152 * channel(+m[2]) + 0.0722 * channel(+m[3]);
+  const contrast = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  // Leuchtdichte von Weiß = 1, von Schwarz = 0
+  return contrast(lum, 1) >= contrast(lum, 0) ? ON_SCORE_LIGHT : ON_SCORE_DARK;
+}
 
 // Zusätzlich zur Farbe (scoreColor) ein Streifenmuster, dessen Dichte/Deckkraft mit
 // dem Score steigt — macht die Bewertung auch für Rot-Grün-Farbenblinde ohne Farbe
@@ -4649,14 +4667,16 @@ function renderUnlockPrompt() {
 }
 
 // --- Rendering: Habit-Row ---------------------------------------------
-function renderHabitOptions(habit, value) {
+// colorAll: alle Stufen in ihrer Farbe zeigen statt nur der gewählten - für die Vorschau
+// im Feld-Formular, damit man dort die ganze Farbskala (Richtung bzw. neutral) sieht.
+function renderHabitOptions(habit, value, { colorAll = false } = {}) {
   const options = Array.from({ length: habit.max - habit.min + 1 }, (_, i) => habit.min + i)
     .map((n, i) => [n, habit.labels ? habit.labels[i] : String(n)]);
 
   return options.map(([v, label]) => {
-    const selected = value === v;
+    const selected = colorAll || value === v;
     const color = habitColor(habit, normalize(habit, v));
-    const style = selected ? `background:${color};border-color:${color};` : '';
+    const style = selected ? `background:${color};border-color:${color};color:${textOnScore(color)};` : '';
     const isText = label.length > 1;
     return `<button type="button" class="opt-btn${isText ? ' opt-btn--text' : ''}${selected ? ' opt-btn--selected' : ''}" style="${style}"
       data-action="select" data-habit="${habit.id}" data-value='${JSON.stringify(v)}' aria-pressed="${selected}">${esc(label)}</button>`;
@@ -4699,8 +4719,9 @@ function renderHabitSlider(habit, value) {
 // Live-Vorschau im "Neues Feld"/"Feld bearbeiten"-Formular: baut ein synthetisches
 // Habit-Objekt aus dem aktuellen Formular-Stand und rendert es mit denselben
 // Funktionen wie die echte "Heute"-Ansicht (renderHabitOptions/renderHabitSlider) -
-// dadurch bleibt die Vorschau garantiert visuell identisch zur echten Eingabe, ohne
-// eigene Render-Logik zu duplizieren. inert + aria-hidden, da rein informativ: ein
+// dadurch bleibt die Vorschau visuell gleich zur echten Eingabe, ohne eigene
+// Render-Logik zu duplizieren. Einziger Unterschied: bei Buttons sind alle Stufen in
+// ihrer Farbe eingefärbt (colorAll), damit man die ganze Farbskala sieht. inert + aria-hidden, da rein informativ: ein
 // Klick/Tastatur-Zugriff hier soll nie etwas in echten Daten verändern (die
 // synthetische id "preview" existiert in state.habits ohnehin nicht).
 function renderHabitFormPreview(f) {
@@ -4721,7 +4742,7 @@ function renderHabitFormPreview(f) {
   // passen, damit die Vorschau auch die Bezeichnung/Farbe an der Stelle zeigt.
   const widget = isSlider
     ? renderHabitSlider(previewHabit, Math.round((f.min + f.max) / 2))
-    : `<div class="habit-options">${renderHabitOptions(previewHabit, undefined)}</div>`;
+    : `<div class="habit-options">${renderHabitOptions(previewHabit, undefined, { colorAll: true })}</div>`;
   return `<div class="field-preview" inert aria-hidden="true">${widget}</div>`;
 }
 
@@ -4743,7 +4764,7 @@ function renderComputedInfo(habit, dateKey) {
   const filledCount = members.filter((m) => day[m.id] !== undefined).length;
   const score = habitScore(habit, dateKey);
   return `
-    <div class="computed-readout" style="background:${scoreColor(score)}">${score !== null ? Math.round(score * 100) + '%' : '–'}</div>
+    <div class="computed-readout" style="background:${scoreColor(score)};color:${textOnScore(scoreColor(score))}">${score !== null ? Math.round(score * 100) + '%' : '–'}</div>
     <span class="manage-meta">${t('computedInfo.avgOf', { names: members.map((m) => m.name).join(', '), filled: filledCount, total: members.length })}</span>
   `;
 }
@@ -4999,7 +5020,7 @@ function renderWeek() {
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
         ${scores.map((s, i) => `<div class="grid-cell${getNote(dayKeys[i], h.id) ? ' has-note' : ''}${s === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background-color:${habitColor(h, applyGoal(h, s))};${scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
-        <div class="grid-cell grid-cell--avg" style="background:${habitColor(h, applyGoal(h, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
+        <div class="grid-cell grid-cell--avg" style="background:${habitColor(h, applyGoal(h, avg))};color:${textOnScore(habitColor(h, applyGoal(h, avg)))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>
       </div>
     `;
   };

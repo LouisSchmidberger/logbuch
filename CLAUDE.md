@@ -267,7 +267,8 @@ bei Buttons immer, beim Schieberegler nur bei aktivierten Bezeichnungen eine Zei
 Stufe (deaktiviertes Textfeld mit der Zahl, oder editierbar mit der Zahl als Startwert)
 → Live-Vorschau (rendert `renderHabitOptions`/`renderHabitSlider` mit einem
 synthetischen Habit-Objekt aus dem Formular-Stand, `inert`/`aria-hidden`, rein
-informativ) → Bewertung/Ziel-Quote. `habitFormStepCount(f)` (`max-min+1`) und
+informativ; bei Buttons sind alle Stufen in ihrer Farbe eingefärbt, `colorAll`, damit man
+die ganze Farbskala sieht) → Bewertung/Ziel-Quote. `habitFormStepCount(f)` (`max-min+1`) und
 `habitFormStepValue(f, i)` (`min+i`) sind seit diesem Umbau für beide Darstellungen
 identisch (kein Sonderfall mehr für den Schieberegler) – `resizeLabels(labels,
 newLength, defaultForIndex)` hält die Bezeichnungs-Liste bei jeder Änderung der
@@ -732,7 +733,11 @@ nach dem i18n-Block. CSS-seitig: `@media (prefers-color-scheme: dark)` UND
 `:root[data-theme="dark"]` setzen dieselben Werte für dieselben Tokens (`--paper`,
 `--ink`, `--line`, `--moss`, `--rust`, `--sand`, plus neu `--surface` für Modal-/Menü-
 Hintergrund, `--input-bg`, `--shadow`, `--scrim`, `--rust-rgb`/`--moss-rgb` für
-`rgba()`-Tönungen, `--on-score` für Text auf `scoreColor()`-Zellen, theme-unabhängig).
+`rgba()`-Tönungen, `--on-score` für hellen Text auf Score-Zellen, theme-unabhängig).
+Text auf Score-/Neutralfarben (gewählte Buttons, berechnete Felder in "Heute", Ø-Zellen der
+Woche) wählt `textOnScore()` stattdessen je Farbe: reines Weiß oder Schwarz, je nachdem was
+mehr Kontrast hat – nur damit erreicht jede Stufe beider Skalen mind. 4,5:1 (min. 4,58:1;
+fester heller Text lag auf den hellen Stufen bei bis zu ~1,5:1).
 `scoreColor()` selbst bleibt bewusst unverändert (liefert rohe `rgb()`-Werte,
 unabhängig vom Theme). `<meta name="theme-color">` wird per JS synchronisiert
 (`syncThemeColorMeta`), da Meta-Tags keine CSS-Variablen lesen können.
