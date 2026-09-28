@@ -257,6 +257,14 @@
   }
   .opt-btn--selected { color: var(--on-score); }
 
+  /* "Noch offen" (siehe isOpenToday): Punkt hinter dem Namen, Form statt Farbe als
+     Unterscheidung (Punkt da oder nicht). Moos wie die übrigen Akzente, nicht Rost -
+     soll nicht nach Fehler/Warnung aussehen. */
+  .open-dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--moss);
+    margin-left: 6px; vertical-align: middle;
+  }
+  .today-complete { margin: 14px 0 0; text-align: center; font-size: 13px; font-style: italic; color: var(--moss); }
   .today-new-field-btn {
     display: block; margin: 14px auto 0; background: none; border: none; color: var(--moss);
     font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 10px;
@@ -1147,11 +1155,11 @@ function setSectionCollapsed(scope, id, collapsed) {
     else localStorage.removeItem(`sectionCollapsed:${scope}:${id}`);
   } catch { /* privater Modus o.ä. - wirkt dann nur bis zum nächsten Neuladen nicht */ }
 }
-function renderSectionToggle(section, scope, collapsed) {
+function renderSectionToggle(section, scope, collapsed, hasOpen = false) {
   const toggle = `
     <button type="button" class="section-toggle section-toggle--${scope}" data-action="section-toggle" data-section="${section.id}" data-scope="${scope}" aria-expanded="${!collapsed}">
       <svg class="section-chevron" width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>${esc(section.name)}</span>
+      <span>${esc(section.name)}${hasOpen ? `<span class="open-dot" aria-hidden="true"></span><span class="visually-hidden">${t('today.sectionHasOpen')}</span>` : ''}</span>
     </button>
   `;
   // Nur in "Heute" mit Zeilen-Menü (siehe renderRowMenuButton), in der Auswertung nicht.
@@ -1177,7 +1185,11 @@ function renderBySection(habits, scope, renderList) {
     if (!block.habits.length) continue;
     flush();
     const collapsed = isSectionCollapsed(scope, block.section.id);
-    out.push(`<div class="section-block section-block--${scope}">${renderSectionToggle(block.section, scope, collapsed)}${collapsed ? '' : `<div class="section-content">${renderList(block.habits)}</div>`}</div>`);
+    // Eingeklappt verdeckt die Gruppe die Punkte ihrer offenen Felder - dann trägt die
+    // Überschrift den Punkt (siehe isOpenToday).
+    const dayEntry = state.entries[formatKey(state.currentDate)] || {};
+    const hasOpen = scope === 'today' && collapsed && block.habits.some((h) => isOpenToday(h, dayEntry));
+    out.push(`<div class="section-block section-block--${scope}">${renderSectionToggle(block.section, scope, collapsed, hasOpen)}${collapsed ? '' : `<div class="section-content">${renderList(block.habits)}</div>`}</div>`);
   }
   flush();
   return out.join('');
@@ -1994,6 +2006,10 @@ const STRINGS = {
     'habitForm.error.scheduleInterval': 'Bitte eine Anzahl von 1 bis 365 und ein Startdatum angeben.',
     'today.unplanned': 'Heute nicht geplant ({count})',
     'today.nothingPlanned': 'Für heute ist kein Feld geplant.',
+    'today.openField': '(noch offen)',
+    'today.sectionHasOpen': '(enthält noch offene Felder)',
+    'today.allDoneToday': 'Alles eingetragen für heute.',
+    'today.allDoneDay': 'Alles eingetragen für diesen Tag.',
     'schedule.summary.monthly': 'monatlich am {day}.',
     'schedule.summary.monthlyLast': 'monatlich am Monatsletzten',
     'schedule.summary.yearly': 'jährlich am {date}',
@@ -2140,6 +2156,8 @@ const STRINGS = {
     'about.tip.jumpDay.body': 'Tippe in der Wochen-, Monats- oder Jahresansicht auf eine beliebige Zelle, um direkt zu diesem Tag zu springen.',
     'about.tip.toggleOff.title': 'Eine Antwort wieder löschen',
     'about.tip.toggleOff.body': 'Tippe eine bereits ausgewählte Option nochmal an, um sie zu entfernen — praktisch, falls du dich vertippt hast.',
+    'about.tip.openDot.title': 'Punkt = noch offen',
+    'about.tip.openDot.body': 'In „Heute“ markiert ein kleiner Punkt hinter dem Namen die Felder, die an diesem Tag geplant, aber noch nicht eingetragen sind – bei eingeklappten Gruppen an der Überschrift. Ist alles eingetragen, steht unter der Liste „Alles eingetragen“. Bewusst ohne Zähler oder Quote: Es soll zeigen, was noch fehlt, keinen Druck machen.',
     'about.tip.textFields.title': 'Freie Text-Felder',
     'about.tip.textFields.body': 'Für Fragen wie „Wofür bin ich heute dankbar?" gibt es den Feld-Typ „Freier Text". In „Heute" steht dafür ein Textfeld, das automatisch speichert. Die Antworten fließen nicht in die Auswertung ein, lassen sich aber in Woche, Monat, Jahr und Gesamt aufklappen und nachlesen — ein Tipp auf einen Eintrag führt zu seinem Tag.',
     'about.tip.fieldMenu.title': 'Notizen & Felder direkt bearbeiten',
@@ -2404,6 +2422,10 @@ const STRINGS = {
     'habitForm.error.scheduleInterval': 'Please enter a number from 1 to 365 and a start date.',
     'today.unplanned': 'Not planned today ({count})',
     'today.nothingPlanned': 'No fields are planned for today.',
+    'today.openField': '(not filled in yet)',
+    'today.sectionHasOpen': '(has fields not filled in yet)',
+    'today.allDoneToday': 'Everything filled in for today.',
+    'today.allDoneDay': 'Everything filled in for this day.',
     'schedule.summary.monthly': 'monthly on day {day}',
     'schedule.summary.monthlyLast': 'monthly on the last day',
     'schedule.summary.yearly': 'yearly on {date}',
@@ -2550,6 +2572,8 @@ const STRINGS = {
     'about.tip.jumpDay.body': 'Tap any cell in the week, month, or year view to jump directly to that day.',
     'about.tip.toggleOff.title': 'Clearing an answer',
     'about.tip.toggleOff.body': 'Tap an already-selected option again to remove it — handy if you tapped the wrong one.',
+    'about.tip.openDot.title': 'Dot = not filled in yet',
+    'about.tip.openDot.body': 'In “Today”, a small dot after the name marks the fields that are planned for that day but not filled in yet – for collapsed groups, on the group heading. Once everything is filled in, “Everything filled in” appears below the list. Deliberately without a counter or rate: it is meant to show what is still missing, not to put pressure on you.',
     'about.tip.textFields.title': 'Free text fields',
     'about.tip.textFields.body': 'For questions like "What am I grateful for today?" there is the "Free text" field type. "Today" shows a text box for it that saves automatically. The answers are not part of the statistics, but you can expand and read them back in the week, month, year, and overall views — tapping an entry takes you to its day.',
     'about.tip.fieldMenu.title': 'Notes & editing fields directly',
@@ -4159,6 +4183,7 @@ function updateTextValue(dateKey, habitId, raw) {
   if (raw.trim()) day[habitId] = raw.slice(0, NOTE_MAX_LENGTH);
   else delete day[habitId];
   state.entries = { ...state.entries, [dateKey]: day };
+  syncTodayOpenMarkers();
   clearTimeout(pendingDaySaves.get(dateKey));
   pendingDaySaves.set(dateKey, setTimeout(() => flushDaySave(dateKey), TEXT_SAVE_DELAY_MS));
 }
@@ -5033,11 +5058,42 @@ function renderNote(dateKey, key, label) {
 // Bearbeiten wie bei Notizen - wer so ein Feld anlegt, will täglich hineinschreiben.
 // Gespeichert wird automatisch (siehe updateTextValue), kein Speichern-Button. Keine
 // Notizen (wären doppelt zum Freitext).
-function renderTextBox(h, dayEntry) {
+// "Noch offen" in "Heute" (seit 2026-09-28): heute geplante, direkt ausfüllbare Felder
+// (nicht berechnet) ohne Wert - dieselbe Logik wie die Erinnerungen (filledFieldIds,
+// get_due_notifications), Notizen zählen also nicht. Markiert wird bewusst nur das
+// Offene (kleiner Punkt, wie "ungelesen" in Mail-Apps), eingetragene Zeilen bleiben wie
+// sie sind; kein Zähler "5 von 8" (Nutzer-Entscheidung: würde eher Druck machen, wie die
+// verworfene Mindestquote bei den Übersichten), stattdessen ein stiller Abschluss-Hinweis,
+// sobald alles eingetragen ist (renderToday).
+function isOpenToday(h, dayEntry) { return h.kind !== 'computed' && dayEntry[h.id] === undefined; }
+function todayTrackedFields() {
+  return activeHabits().filter((h) => h.kind !== 'computed' && isPlannedOn(h, state.currentDate));
+}
+function todayAllDone(dayEntry) {
+  const tracked = todayTrackedFields();
+  return tracked.length > 0 && !tracked.some((h) => isOpenToday(h, dayEntry));
+}
+// Punkt + Screenreader-Text; bleibt (versteckt) im DOM, damit syncTodayOpenMarkers ihn
+// beim Tippen in Text-Feldern ohne Re-Render umschalten kann.
+function openMarkerHtml(h, dayEntry) {
+  return `<span class="open-marker" data-open-for="${h.id}"${isOpenToday(h, dayEntry) ? '' : ' hidden'}><span class="open-dot" aria-hidden="true"></span><span class="visually-hidden">${t('today.openField')}</span></span>`;
+}
+// Text-Felder speichern beim Tippen ohne render() (updateTextValue) - Punkt und
+// Abschluss-Hinweis hier direkt nachziehen.
+function syncTodayOpenMarkers() {
+  const dayEntry = state.entries[formatKey(state.currentDate)] || {};
+  document.querySelectorAll('.open-marker[data-open-for]').forEach((m) => {
+    m.hidden = dayEntry[m.dataset.openFor] !== undefined;
+  });
+  const done = document.querySelector('.today-complete');
+  if (done) done.hidden = !todayAllDone(dayEntry);
+}
+
+function renderTextBox(h, dayEntry, marker = '') {
   const value = typeof dayEntry[h.id] === 'string' ? dayEntry[h.id] : '';
   return `
     <div class="number-box text-box">
-      ${renderRowHead(h, esc(h.name))}
+      ${renderRowHead(h, esc(h.name) + marker)}
       <textarea id="text-input-${h.id}" class="text-field-input" data-habit="${h.id}" rows="2" maxlength="${NOTE_MAX_LENGTH}" aria-label="${esc(h.name)}">${esc(value)}</textarea>
       ${renderRowMenuPanel(h)}
     </div>
@@ -5072,7 +5128,7 @@ function focusTodayField(habitId) {
   row.addEventListener('animationend', () => row.classList.remove('field-highlight'), { once: true });
 }
 
-function renderNumberBox(h, dateKey, dayEntry) {
+function renderNumberBox(h, dateKey, dayEntry, marker = '') {
   const currentValue = dayEntry[h.id] !== undefined ? dayEntry[h.id] : '';
   const last = findLastValue(h.id, dateKey);
   const unitSuffix = h.unit ? ` ${h.unit}` : '';
@@ -5086,7 +5142,7 @@ function renderNumberBox(h, dateKey, dayEntry) {
   const nameWithUnit = `${esc(h.name)}${h.unit ? ` (${esc(h.unit)})` : ''}`;
   return `
     <div class="number-box">
-      ${renderRowHead(h, nameWithUnit, lastNote ? `<span class="number-last">${lastNote}</span>` : '')}
+      ${renderRowHead(h, nameWithUnit + marker, lastNote ? `<span class="number-last">${lastNote}</span>` : '')}
       <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-action="number-input" data-habit="${h.id}" value="${esc(currentValue)}" aria-label="${nameWithUnit}" />
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
@@ -5095,10 +5151,12 @@ function renderNumberBox(h, dateKey, dayEntry) {
 }
 
 // Eine Feld-Zeile in "Heute" - gemeinsam für geplante Felder und den eingeklappten
-// Bereich "Heute nicht geplant".
-function renderTodayHabitRow(h, dateKey, dayEntry) {
-  if (isNumberKind(h)) return renderNumberBox(h, dateKey, dayEntry);
-  if (isTextKind(h)) return renderTextBox(h, dayEntry);
+// Bereich "Heute nicht geplant" (dort ohne "noch offen"-Markierung, trackOpen=false:
+// nicht geplante Felder fehlen nicht).
+function renderTodayHabitRow(h, dateKey, dayEntry, { trackOpen = false } = {}) {
+  const marker = trackOpen && h.kind !== 'computed' ? openMarkerHtml(h, dayEntry) : '';
+  if (isNumberKind(h)) return renderNumberBox(h, dateKey, dayEntry, marker);
+  if (isTextKind(h)) return renderTextBox(h, dayEntry, marker);
   if (h.kind === 'computed') return `
     <div class="habit-row habit-row--computed">
       ${renderRowHead(h, esc(h.name))}
@@ -5109,7 +5167,7 @@ function renderTodayHabitRow(h, dateKey, dayEntry) {
   `;
   if (h.displayStyle === 'slider') return `
     <div class="habit-row habit-row--slider">
-      ${renderRowHead(h, esc(h.name))}
+      ${renderRowHead(h, esc(h.name) + marker)}
       ${renderHabitSlider(h, dayEntry[h.id])}
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
@@ -5117,7 +5175,7 @@ function renderTodayHabitRow(h, dateKey, dayEntry) {
   `;
   return `
     <div class="habit-row habit-row--buttons">
-      ${renderRowHead(h, esc(h.name))}
+      ${renderRowHead(h, esc(h.name) + marker)}
       <div class="habit-options" role="group" aria-label="${esc(h.name)}">${renderHabitOptions(h, dayEntry[h.id])}</div>
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
@@ -5156,6 +5214,7 @@ function renderToday() {
   const unplannedOpen = state.unplannedOpenFor === dateKey
     || unplanned.some((h) => dayEntry[h.id] !== undefined || getNote(dateKey, h.id));
   const renderTodayRow = (h) => renderTodayHabitRow(h, dateKey, dayEntry);
+  const renderPlannedRow = (h) => renderTodayHabitRow(h, dateKey, dayEntry, { trackOpen: true });
 
   return `
     <div class="day-nav">
@@ -5168,9 +5227,10 @@ function renderToday() {
     </div>
     ${!isToday ? `<button type="button" class="today-jump" data-action="jump-today">${t('today.jumpToday')}</button>` : ''}
     <div class="habit-list">
-      ${renderBySection(planned, 'today', (list) => list.map(renderTodayRow).join(''))}
+      ${renderBySection(planned, 'today', (list) => list.map(renderPlannedRow).join(''))}
       ${!habits.length ? `<p class="manage-meta">${t('today.noFields')}</p>` : !planned.length ? `<p class="manage-meta">${t('today.nothingPlanned')}</p>` : ''}
     </div>
+    <p class="today-complete"${todayAllDone(dayEntry) ? '' : ' hidden'}><span aria-hidden="true">✓ </span>${t(isToday ? 'today.allDoneToday' : 'today.allDoneDay')}</p>
     ${unplanned.length ? `
       <details class="unplanned"${unplannedOpen ? ' open' : ''}>
         <summary>${t('today.unplanned', { count: unplanned.length })}</summary>
@@ -5441,7 +5501,7 @@ function renderPrivacySection() {
 // automatisch aus Git ableiten könnte, und ein Datum genügt hier als Rückverfolgbarkeit
 // (siehe Diskussion in CLAUDE.md-Kontext: keine echte Versionsnummer nötig, solange es
 // keine Release-Branches/nennenswerten externen Nutzerkreis gibt).
-const APP_STATUS_DATE = '2026-09-28';
+const APP_STATUS_DATE = '2026-09-29';
 
 function renderAbout() {
   return `
@@ -5456,6 +5516,7 @@ function renderAbout() {
       ['about.tip.swipe.title', 'about.tip.swipe.body'],
       ['about.tip.jumpDay.title', 'about.tip.jumpDay.body'],
       ['about.tip.toggleOff.title', 'about.tip.toggleOff.body'],
+      ['about.tip.openDot.title', 'about.tip.openDot.body'],
       ['about.tip.fieldMenu.title', 'about.tip.fieldMenu.body'],
       ['about.tip.reorder.title', 'about.tip.reorder.body', { manage: true }],
     ])}

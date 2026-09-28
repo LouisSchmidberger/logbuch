@@ -658,6 +658,21 @@ Zustand – `closeHabitForm()` (einziger Schließ-Weg: Speichern, Abbrechen,
 Android-Zurück) springt dann direkt zurück zum Tab statt in der Verwaltung zu bleiben,
 da die Absicht beim Shortcut "jetzt tracken" ist, nicht "verwalten".
 
+**"Noch offen" in "Heute"** (seit 2026-09-29, `isOpenToday`/`openMarkerHtml`/
+`todayAllDone`): ein kleiner Punkt (`.open-dot`, Moos, Form statt Farbe als Unterscheidung)
+hinter dem Namen jedes heute geplanten, direkt ausfüllbaren Felds (nicht berechnet) ohne
+Wert – dieselbe Logik wie die Erinnerungen, Notizen zählen nicht; im Bereich "Heute nicht
+geplant" keiner. Bei eingeklappten Gruppen trägt die Überschrift den Punkt, falls darin
+etwas offen ist. Screenreader: "(noch offen)" als versteckter Text am Namen. Ist alles
+eingetragen, steht unter der Liste still "Alles eingetragen für heute/diesen Tag"
+(`.today-complete`). Text-Felder speichern beim Tippen ohne `render()`, deshalb zieht
+`syncTodayOpenMarkers` Punkt und Hinweis dort direkt nach. Nutzer-Entscheidung: markiert
+wird nur das Offene, eingetragene Zeilen bleiben unverändert; **bewusst kein Zähler**
+("5 von 8" würde eher Druck machen, wie die verworfene Mindestquote bei den Übersichten).
+Verworfen: eingetragene Felder nach unten schieben/einklappen (Zeilen sprängen beim
+Antippen weg); eingetragene Namen blasser (zu wenig Kontrast für kleinen Text). Erklärt in
+"Über Logbuch" (`about.tip.openDot`).
+
 **Zeilen-Menü in "Heute"** (seit 2026-09-27, ⋮-Button seit 2026-09-28;
 `renderRowMenuButton`/`renderRowHead`/`renderRowMenuPanel`/`renderSectionMenuPanel`/
 `openRowMenu`/`closeRowMenu` in `logbuch.html`, `state.rowMenu` bzw. `data-menu` = Feld-id
@@ -827,7 +842,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 408 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 414 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
