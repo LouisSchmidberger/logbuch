@@ -238,6 +238,13 @@
     scrollbar-width: none;
   }
   .habit-options::-webkit-scrollbar { display: none; }
+  /* Button-Zeilen in "Heute": Buttons neben dem Namen, solange Name (mind. 40 %) und
+     Buttons nebeneinander passen - sonst rutschen die Buttons rechtsbündig in eine eigene
+     Zeile darunter, statt teilweise unsichtbar seitlich zu scrollen (auf 360 px breiten
+     Handys passten vorher nur 5 nummerierte Buttons neben den Namen). Seitlich gescrollt
+     wird nur noch, was selbst in der vollen Breite nicht passt (lange Bezeichnungen). */
+  .habit-row--buttons > .row-head { flex: 1 1 40%; }
+  .habit-row--buttons > .habit-options { flex: 0 0 auto; max-width: 100%; margin-left: auto; }
 
   .opt-btn {
     font-family: inherit; font-size: 12px; width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
@@ -735,7 +742,9 @@
   }
   .label-inputs input:disabled { color: var(--sand); background: transparent; cursor: default; }
   .field-preview { padding: 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--input-bg); }
-  .field-preview .habit-options { max-width: 100%; flex-wrap: wrap; overflow-x: visible; }
+  /* Wie in "Heute" in einer Zeile (kein Umbruch) - sonst verdeckte die Vorschau genau den
+     Fall, dass die Buttons nicht passen (siehe syncPreviewFitHint). */
+  .field-preview .habit-options { max-width: 100%; }
   .field-preview-note { margin: 8px 0 0; }
   .habit-form select {
     font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
@@ -1790,9 +1799,12 @@ const STRINGS = {
     'notice.invalidNumber': 'Das ist keine gültige Zahl.',
     'notice.recoveryKeySaveError': 'Neuer Recovery-Key konnte nicht gespeichert werden: ',
     'habitForm.error.minComputedMembers': 'Bitte mindestens 2 Felder auswählen.',
-    'habitForm.error.stepsRange': 'Anzahl Stufen muss zwischen 2 und 1000 liegen.',
-    'habitForm.error.sliderLabelStepsRange': 'Mit eigenen Bezeichnungen sind beim Schieberegler maximal {cap} Stufen möglich.',
-    'habitForm.error.max12Steps': 'Bitte maximal 12 Stufen.',
+    'habitForm.error.stepsRange': 'Anzahl Stufen muss zwischen 2 und {max} liegen.',
+    'habitForm.lockedStepCap': 'Dieses Feld hat {steps} Stufen – Buttons und eigene Bezeichnungen gehen nur bis {cap} Stufen, damit jede Stufe gut sichtbar und gezielt wählbar bleibt.',
+    'habitForm.stepCapHint': 'Mehr als {cap} Stufen gehen nur als Schieberegler ohne eigene Bezeichnungen – bei so vielen lässt sich eine einzelne Stufe kaum noch gezielt wählen.',
+    'habitForm.stepCapToSlider': 'Zum Schieberegler wechseln',
+    'habitForm.stepCapLabelsOff': 'Eigene Bezeichnungen abschalten',
+    'habitForm.previewTooWide': 'Passt nicht in eine Zeile – in „Heute“ musst du dann seitlich wischen, um alle Stufen zu sehen. Kürzere Bezeichnungen oder der Schieberegler helfen.',
     'habitForm.error.fillAllLabels': 'Bitte alle Bezeichnungen ausfüllen.',
     'habitForm.error.nameRequired': 'Bitte einen Namen eingeben.',
     'ariaLabel.dismissHint': 'Hinweis schließen',
@@ -2140,7 +2152,7 @@ const STRINGS = {
     'about.tip.goalThreshold.title': 'Ziel-Quote statt 100 %',
     'about.tip.goalThreshold.body': 'Bei manchen Feldern ist täglich 100 % unrealistisch. Stell im Feld-Formular eine niedrigere Quote ein, ab der ein Tag farblich schon als voll erreicht gilt.',
     'about.tip.slider.title': 'Schieberegler statt Buttons',
-    'about.tip.slider.body': 'Nummerierte Stufen lassen sich auch als Schieberegler statt als Auswahl-Buttons darstellen — praktisch bei vielen Stufen, z. B. einer Prozent-Skala.',
+    'about.tip.slider.body': 'Stufen lassen sich auch als Schieberegler statt als Auswahl-Buttons darstellen. Buttons gehen bis 7 Stufen, damit jede gut sichtbar und gezielt wählbar bleibt – für feinere Skalen mit bis zu 100 Stufen (z. B. 1 bis 100) nimm den Schieberegler.',
     'about.tip.customReminder.title': 'Eigene Erinnerungszeit pro Feld oder Gruppe',
     'about.tip.customReminder.body': 'Jedes Feld kann eine eigene Erinnerungszeit bekommen, statt sich an die Standardzeit zu halten — sinnvoll z. B. für Gewicht morgens statt abends. Auch eine Gruppe kann eine eigene Zeit haben: Ihre Felder werden dann gemeinsam zu dieser Zeit erinnert, mit einer Nachricht für die ganze Gruppe. Hat ein Feld darin selbst eine eigene Zeit, gilt seine.',
     'about.tip.archiveVsDelete.title': 'Archivieren statt löschen',
@@ -2196,9 +2208,12 @@ const STRINGS = {
     'notice.invalidNumber': 'That is not a valid number.',
     'notice.recoveryKeySaveError': 'New recovery key could not be saved: ',
     'habitForm.error.minComputedMembers': 'Please select at least 2 fields.',
-    'habitForm.error.stepsRange': 'Number of steps must be between 2 and 1000.',
-    'habitForm.error.sliderLabelStepsRange': 'With custom labels, a slider can have at most {cap} steps.',
-    'habitForm.error.max12Steps': 'Please use at most 12 steps.',
+    'habitForm.error.stepsRange': 'Number of steps must be between 2 and {max}.',
+    'habitForm.lockedStepCap': 'This field has {steps} steps – buttons and custom labels only go up to {cap} steps, so that every step stays clearly visible and easy to pick.',
+    'habitForm.stepCapHint': 'More than {cap} steps only work as a slider without custom labels – with that many, a single step can hardly be picked deliberately.',
+    'habitForm.stepCapToSlider': 'Switch to slider',
+    'habitForm.stepCapLabelsOff': 'Turn off custom labels',
+    'habitForm.previewTooWide': 'Doesn’t fit on one line – in “Today” you would have to swipe sideways to see all steps. Shorter labels or the slider help.',
     'habitForm.error.fillAllLabels': 'Please fill in all labels.',
     'habitForm.error.nameRequired': 'Please enter a name.',
     'ariaLabel.dismissHint': 'Dismiss hint',
@@ -2546,7 +2561,7 @@ const STRINGS = {
     'about.tip.goalThreshold.title': 'Goal threshold instead of 100%',
     'about.tip.goalThreshold.body': 'For some fields, 100% every day is unrealistic. Set a lower threshold in the field form, from which a day already counts as fully reached in color.',
     'about.tip.slider.title': 'Slider instead of buttons',
-    'about.tip.slider.body': 'Numbered steps can also be shown as a slider instead of selection buttons — handy with many steps, e.g. a percentage scale.',
+    'about.tip.slider.body': 'Steps can also be shown as a slider instead of buttons. Buttons go up to 7 steps, so that each one stays clearly visible and easy to pick – for finer scales with up to 100 steps (e.g. 1 to 100), use the slider.',
     'about.tip.customReminder.title': 'Custom reminder time per field or group',
     'about.tip.customReminder.body': 'Each field can get its own reminder time instead of using the default — useful e.g. for weight in the morning instead of the evening. A group can have its own time too: its fields are then reminded together at that time, with one notification for the whole group. If a field in it has its own time, that one applies.',
     'about.tip.archiveVsDelete.title': 'Archiving instead of deleting',
@@ -3251,11 +3266,29 @@ function resizeLabels(labels, newLength, defaultForIndex) {
 function habitFormStepCount(f) {
   return f.max - f.min + 1;
 }
-// Ein Schieberegler ist normalerweise für viele Stufen gedacht (bis 1000, wie Prozent) -
-// mit eigenen Bezeichnungen wäre eine dreistellige Liste einzelner Textfelder aber
-// unbedienbar. Bei aktivierten Bezeichnungen deshalb enger gedeckelt (analog zum
-// 12er-Deckel bei Buttons).
-const SLIDER_LABEL_STEP_CAP = 8;
+// Stufenzahl-Obergrenzen, eine Regel für alle Darstellungen (seit 2026-09-28): jede
+// Stufe mit eigener Bedeutung muss man sehen und gezielt treffen können. Buttons (mit
+// oder ohne Bezeichnungen) und eigene Bezeichnungen beim Schieberegler deshalb höchstens
+// CHOICE_STEP_CAP - mehr Abstufungen machen Antworten eher beliebiger als genauer, und
+// schon 7 nummerierte Buttons passen auf schmalen Handys nicht mehr neben den Namen
+// (siehe .habit-row--buttons). Ein Schieberegler ohne Bezeichnungen steht für "ungefähr
+// wie viel": bis SLIDER_STEP_CAP, mehr lässt sich auf einem Handy nicht mehr einzeln
+// treffen. Bestehende Felder mit mehr Stufen bleiben unverändert nutzbar
+// (lockedChoiceBlocked).
+const CHOICE_STEP_CAP = 7;
+const SLIDER_STEP_CAP = 100;
+function habitFormStepCap(f) {
+  return f.displayStyle === 'buttons' || f.labelsEnabled ? CHOICE_STEP_CAP : SLIDER_STEP_CAP;
+}
+// Gesperrtes Feld (hat Daten, Stufenzahl fest): würde diese Darstellung die Obergrenze
+// für gezielt wählbare Stufen erst überschreiten? Was das Feld schon vorher so hatte
+// (z.B. 12 Buttons aus der Zeit vor der Grenze), bleibt erlaubt.
+function lockedChoiceBlocked(f, displayStyle, labelsEnabled) {
+  if (!f.locked || habitFormStepCount(f) <= CHOICE_STEP_CAP) return false;
+  const original = state.habits.find((h) => h.defId === f.defId);
+  return (displayStyle === 'buttons' && original?.displayStyle !== 'buttons')
+    || (labelsEnabled && !original?.labels);
+}
 // Der zugrundeliegende Zahlenwert der i-ten Stufe - f.min ist bei neuen/noch leeren
 // Feldern immer 1 (siehe defaultHabitForm), bei bereits bestehenden Feldern deren
 // echtes, ggf. historisch anderes min (z.B. alte Schieberegler-Felder mit Basis 0).
@@ -3263,12 +3296,12 @@ function habitFormStepValue(f, i) {
   return f.min + i;
 }
 // Deckelt die aktuelle Stufenzahl auf den je nach Darstellung/Bezeichnungen gültigen
-// Höchstwert (12 bei Buttons, 8 bei Schieberegler+Bezeichnungen, sonst 1000) - gebraucht
-// beim Wechsel der Darstellung oder beim Aktivieren von Bezeichnungen, da f.max (anders
-// als früher f.sliderSteps) jetzt zwischen beiden Darstellungen geteilt wird.
+// Höchstwert (habitFormStepCap) - gebraucht beim Wechsel der Darstellung oder beim
+// Aktivieren von Bezeichnungen, da f.max zwischen beiden Darstellungen geteilt wird.
+// Gesperrte Felder nie: deren Stufenzahl ist fest (siehe lockedChoiceBlocked).
 function clampHabitFormSteps(f) {
-  const cap = f.displayStyle === 'buttons' ? 12 : (f.labelsEnabled ? SLIDER_LABEL_STEP_CAP : 1000);
-  f.max = Math.min(f.max, f.min + cap - 1);
+  if (f.locked) return;
+  f.max = Math.min(f.max, f.min + habitFormStepCap(f) - 1);
 }
 
 // Neue (bzw. noch unbefüllte) Skala-Felder starten immer bei 1 - kein frei wählbares
@@ -3529,12 +3562,11 @@ async function handleHabitSaveInner() {
     // bleibt dabei immer gleich (Von/Bis bzw. Stufenzahl sind weiterhin gesperrt).
     const original = state.habits.find((h) => h.defId === f.defId);
     const stepCount = original.max - original.min + 1;
-    if (f.labelsEnabled && f.displayStyle === 'slider' && stepCount > SLIDER_LABEL_STEP_CAP) {
-      // Bereich ist gesperrt (siehe oben) - bei einem bereits bestehenden Schieberegler
-      // mit mehr als SLIDER_LABEL_STEP_CAP Stufen lässt sich die Stufenzahl nicht mehr
-      // nachträglich verkleinern, Bezeichnungen sind für dieses Feld also nicht mehr
-      // aktivierbar (Tier 3, bewusst nicht umgesetzt - siehe CLAUDE.md).
-      state.notice = { type: 'error', text: t('habitForm.error.sliderLabelStepsRange', { cap: SLIDER_LABEL_STEP_CAP }) };
+    if (lockedChoiceBlocked(f, f.displayStyle, f.labelsEnabled)) {
+      // Die Stufenzahl lässt sich bei vorhandenen Daten nicht mehr verkleinern (Tier 3,
+      // bewusst nicht umgesetzt - siehe CLAUDE.md), Buttons/Bezeichnungen sind für so ein
+      // Feld also nicht mehr wählbar. Das Formular sperrt beides schon (scaleBody).
+      state.notice = { type: 'error', text: t('habitForm.lockedStepCap', { steps: stepCount, cap: CHOICE_STEP_CAP }) };
       return;
     }
     if (f.labelsEnabled && (f.labels.length !== stepCount || f.labels.some((l) => !l.trim()))) {
@@ -3549,12 +3581,9 @@ async function handleHabitSaveInner() {
     const stepsEl = document.getElementById('habit-form-steps');
     const steps = Math.round(Number(stepsEl ? stepsEl.value : habitFormStepCount(f)));
     const isSlider = f.displayStyle === 'slider';
-    if (!Number.isFinite(steps) || steps < 2 || steps > (isSlider ? 1000 : 12)) {
-      state.notice = { type: 'error', text: t(isSlider ? 'habitForm.error.stepsRange' : 'habitForm.error.max12Steps') };
-      return;
-    }
-    if (isSlider && f.labelsEnabled && steps > SLIDER_LABEL_STEP_CAP) {
-      state.notice = { type: 'error', text: t('habitForm.error.sliderLabelStepsRange', { cap: SLIDER_LABEL_STEP_CAP }) };
+    const stepCap = habitFormStepCap(f);
+    if (!Number.isFinite(steps) || steps < 2 || steps > stepCap) {
+      state.notice = { type: 'error', text: t('habitForm.error.stepsRange', { max: stepCap }) };
       return;
     }
     const max = min + steps - 1;
@@ -4018,6 +4047,10 @@ function onViewportResize() {
 }
 window.visualViewport?.addEventListener('resize', onViewportResize);
 window.addEventListener('resize', onViewportResize);
+// Passt-nicht-Hinweis der Formular-Vorschau neu messen: Drehen des Geräts ändert die
+// Breite, nachgeladene Schriften die Textbreite der Buttons.
+window.addEventListener('resize', syncPreviewFitHint);
+document.fonts?.ready.then(syncPreviewFitHint);
 // Beim Wechsel in eine andere App (oder Sperren des Handys) den Entwurf schon mal
 // sichern - der Browser kann die Seite im Hintergrund jederzeit verwerfen. Der Editor
 // bleibt dabei offen, man schreibt nach der Rückkehr einfach weiter.
@@ -4850,12 +4883,35 @@ function renderHabitFormPreview(f) {
   const widget = f.displayStyle === 'slider'
     ? renderHabitSlider(previewHabit, value, { preview: true })
     : `<div class="habit-options">${renderHabitOptions(previewHabit, value, { preview: true })}</div>`;
+  // Der Passt-nicht-Hinweis wird erst nach dem Einfügen per Messung eingeblendet
+  // (syncPreviewFitHint) - ob die Buttons in eine Zeile passen, hängt von Bildschirm-
+  // breite und Textlänge ab, das lässt sich nicht vorab ausrechnen.
   return `
     <div class="field-preview" role="group" aria-labelledby="habit-form-preview-label" aria-describedby="habit-form-preview-note">
       ${widget}
+      ${f.displayStyle === 'buttons' ? `<p class="habit-form-lock-note field-preview-note field-preview-fit" hidden>${t('habitForm.previewTooWide')}</p>` : ''}
       <p class="habit-form-lock-note field-preview-note" id="habit-form-preview-note">${t('habitForm.previewNote')}</p>
     </div>
   `;
+}
+// Die Vorschau zeigt die Buttons wie in "Heute" in einer Zeile (dort seitlich scrollbar,
+// falls sie selbst in einer eigenen Zeile unter dem Namen nicht passen, siehe
+// .habit-row--buttons) - hier dann ein Hinweis, statt das still hinzunehmen. Gemessen
+// auf dem Gerät, auf dem man das Feld gerade anlegt, also meist dem, auf dem man es
+// auch nutzt.
+function syncPreviewFitHint() {
+  const hint = document.querySelector('.field-preview-fit');
+  const options = document.querySelector('.field-preview .habit-options');
+  if (hint && options) hint.hidden = options.scrollWidth <= options.clientWidth + 1;
+}
+// Tauscht nur die Vorschau aus (kein render(): Fokus/Cursor im Formular bleiben).
+// Rückgabe: ob eine Vorschau da war.
+function refreshHabitFormPreview() {
+  const preview = document.querySelector('.field-preview');
+  if (!preview || !state.habitForm) return false;
+  preview.outerHTML = renderHabitFormPreview(state.habitForm);
+  syncPreviewFitHint();
+  return true;
 }
 // Wert in der Vorschau setzen/entfernen: nur die Vorschau austauschen (kein render(), das
 // Formular bleibt, wie es ist) und den Fokus auf dasselbe Element zurückgeben.
@@ -4864,9 +4920,7 @@ function setPreviewValue(value, focusSelector) {
   if (!f) return;
   f.previewValue = value;
   haptic();
-  const preview = document.querySelector('.field-preview');
-  if (!preview) return;
-  preview.outerHTML = renderHabitFormPreview(f);
+  if (!refreshHabitFormPreview()) return;
   if (focusSelector) document.querySelector(`.field-preview ${focusSelector}`)?.focus({ preventScroll: true });
 }
 
@@ -5060,7 +5114,7 @@ function renderTodayHabitRow(h, dateKey, dayEntry) {
     </div>
   `;
   return `
-    <div class="habit-row">
+    <div class="habit-row habit-row--buttons">
       ${renderRowHead(h, esc(h.name))}
       <div class="habit-options" role="group" aria-label="${esc(h.name)}">${renderHabitOptions(h, dayEntry[h.id])}</div>
       ${renderNote(dateKey, h.id, noteLabel(h))}
@@ -5634,27 +5688,36 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     </div>
   `;
 
-  // Ein bereits gesperrtes Schieberegler-Feld mit mehr Stufen als SLIDER_LABEL_STEP_CAP
-  // kann seine Stufenzahl nicht mehr verkleinern (Bereich ist gesperrt) - Bezeichnungen
-  // sind für so ein Feld deshalb nicht aktivierbar, sonst liefe man in eine verwirrende
-  // Fehlermeldung erst beim Speichern statt direkt hier verständlich zu bleiben.
-  const sliderLabelsBlocked = f.kind === 'scale' && f.locked && f.displayStyle === 'slider' && (f.max - f.min + 1) > SLIDER_LABEL_STEP_CAP;
+  // Ein gesperrtes Feld mit mehr Stufen als CHOICE_STEP_CAP kann seine Stufenzahl nicht
+  // mehr verkleinern - Buttons/Bezeichnungen sind dann direkt hier gesperrt (mit
+  // Erklärung), statt erst beim Speichern mit einer Fehlermeldung abzulehnen.
   const stepCount = habitFormStepCount(f);
+  const buttonsBlocked = f.kind === 'scale' && lockedChoiceBlocked(f, 'buttons', f.labelsEnabled);
+  const labelsBlocked = f.kind === 'scale' && lockedChoiceBlocked(f, f.displayStyle, true);
+  const lockedCapNote = `<p class="habit-form-lock-note">${t('habitForm.lockedStepCap', { steps: stepCount, cap: CHOICE_STEP_CAP })}</p>`;
+  // Am Deckel für gezielt wählbare Stufen: sagen, wie es weitergeht (Schieberegler ohne
+  // Bezeichnungen), statt das Hochzählen stumm enden zu lassen.
+  const atChoiceCap = !f.locked && habitFormStepCap(f) === CHOICE_STEP_CAP && stepCount >= CHOICE_STEP_CAP;
   const currentLabels = resizeLabels(f.labels, stepCount);
 
   const scaleBody = `
     <div class="auth-field">
       <label>${t('habitForm.display')}${f.locked ? infoTip(t('habitForm.displayLockedExplain')) : ''}</label>
       <div class="pill-group">
-        <button type="button" class="pill-toggle${f.displayStyle === 'buttons' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="buttons">${t('habitForm.buttons')}</button>
+        <button type="button" class="pill-toggle${f.displayStyle === 'buttons' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="buttons" ${buttonsBlocked ? 'disabled' : ''}>${t('habitForm.buttons')}</button>
         <button type="button" class="pill-toggle${f.displayStyle === 'slider' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="slider">${t('habitForm.slider')}</button>
       </div>
+      ${buttonsBlocked ? lockedCapNote : ''}
     </div>
     <div class="auth-field">
       <label for="habit-form-steps">${t('habitForm.numberOfSteps')}${f.displayStyle === 'slider' ? infoTip(t('habitForm.sliderRangeExplain')) : ''}</label>
       ${f.locked
         ? `<p class="habit-form-lock-note">${t('habitForm.rangeLocked', { min: f.min, max: f.max })}</p>`
-        : stepperInput('habit-form-steps', stepCount, 2, f.displayStyle === 'buttons' ? 12 : (f.labelsEnabled ? SLIDER_LABEL_STEP_CAP : 1000), false, 'data-action="habit-range-change"')}
+        : stepperInput('habit-form-steps', stepCount, 2, habitFormStepCap(f), false, 'data-action="habit-range-change"')}
+      ${atChoiceCap ? `
+        <p class="habit-form-lock-note">${t('habitForm.stepCapHint', { cap: CHOICE_STEP_CAP })}</p>
+        <button type="button" class="link-btn tip-link" data-action="habit-steps-to-slider">${t(f.displayStyle === 'buttons' ? 'habitForm.stepCapToSlider' : 'habitForm.stepCapLabelsOff')}</button>
+      ` : ''}
     </div>
     ${f.displayStyle === 'slider' ? `
       <div class="auth-field">
@@ -5666,10 +5729,10 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     ` : ''}
     <div class="auth-field">
       <label class="checkbox-field">
-        <input type="checkbox" id="habit-form-labels-toggle" data-action="habit-labels-toggle" ${f.labelsEnabled ? 'checked' : ''} ${sliderLabelsBlocked ? 'disabled' : ''} />
+        <input type="checkbox" id="habit-form-labels-toggle" data-action="habit-labels-toggle" ${f.labelsEnabled ? 'checked' : ''} ${labelsBlocked ? 'disabled' : ''} />
         ${t('habitForm.ownLabels')}
       </label>
-      ${sliderLabelsBlocked ? `<p class="habit-form-lock-note">${t('habitForm.error.sliderLabelStepsRange', { cap: SLIDER_LABEL_STEP_CAP })}</p>` : ''}
+      ${labelsBlocked && !buttonsBlocked ? lockedCapNote : ''}
     </div>
     ${f.displayStyle === 'buttons' || f.labelsEnabled ? `
       <div class="auth-field">
@@ -6406,6 +6469,7 @@ function render() {
   else if (!currentDek) { renderUnlockPrompt(); }
   else if (!state.loading && !state.userSettings.onboardingCompleted) { renderTutorial(); }
   else { renderApp(); }
+  syncPreviewFitHint();
   focusModalIfOpen();
   syncLayerHistory();
   if (state.view !== lastRenderedView) {
@@ -6680,6 +6744,17 @@ app.addEventListener('click', async (e) => {
     clampHabitFormSteps(f);
     f.labels = resizeLabels(f.labels, habitFormStepCount(f), f.labelsEnabled ? (i) => String(habitFormStepValue(f, i)) : undefined);
     render();
+  } else if (action === 'habit-steps-to-slider') {
+    // Am Deckel für gezielt wählbare Stufen (siehe atChoiceCap in renderHabitForm):
+    // Schieberegler ohne Bezeichnungen, danach direkt weiter hochzählen können. Die
+    // Bezeichnungs-Texte bleiben im Formular-Zustand erhalten (resizeLabels), falls man
+    // zurückwechselt.
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    f.displayStyle = 'slider';
+    f.labelsEnabled = false;
+    render();
+    document.getElementById('habit-form-steps')?.focus();
   } else if (action === 'stepper-inc' || action === 'stepper-dec') {
     const target = document.getElementById(el.dataset.target);
     if (!target) return;
@@ -6838,8 +6913,7 @@ app.addEventListener('change', async (e) => {
   const showValueEl = e.target.closest('[data-action="habit-slider-show-value"]');
   if (showValueEl && state.habitForm) {
     state.habitForm.sliderShowValue = showValueEl.checked;
-    const preview = document.querySelector('.field-preview');
-    if (preview) preview.outerHTML = renderHabitFormPreview(state.habitForm);
+    refreshHabitFormPreview();
     return;
   }
   const labelsToggleEl = e.target.closest('[data-action="habit-labels-toggle"]');
@@ -6945,8 +7019,7 @@ app.addEventListener('input', (e) => {
   const labelInput = e.target.closest('[data-label-index]');
   if (labelInput && state.habitForm?.labelsEnabled) {
     state.habitForm.labels[Number(labelInput.dataset.labelIndex)] = labelInput.value;
-    const preview = document.querySelector('.field-preview');
-    if (preview) preview.outerHTML = renderHabitFormPreview(state.habitForm);
+    refreshHabitFormPreview();
   }
 });
 

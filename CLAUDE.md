@@ -58,7 +58,7 @@ Eigenschaften unten gilt inhaltlich unverändert (im Client heißen sie gleich).
 - `slug` (Key in `habit_entries.data`; verschlüsselt als `key`, bei neuen Feldern ein
   zufälliger Schlüssel aus `newHabitKey` statt aus dem Namen abgeleitet), `name`, `kind` (`'scale'`, `'number'`,
   `'computed'` ("Berechnet") oder `'text'`, siehe Skalen-/Farblogik unten), `min`/`max` (int, nur bei `kind='scale'`;
-  bei `display_style='slider'` fix `0`/`<Stufenzahl>`), `labels` (jsonb, nur bei
+  neue Felder immer `min=1`, `max=<Stufenzahl>`; ältere können eine andere Basis haben), `labels` (jsonb, nur bei
   `kind='scale'`; `null` = nummerierte Stufen, sonst Array von Strings der Länge
   `max-min+1`), `good` (`'high'`/`'low'`, nur bei `kind='scale'`), `unit` (text, nur bei
   `kind='number'`, z.B. `'kg'`), `display_style` (`'buttons'`/`'slider'`, nur bei
@@ -238,9 +238,8 @@ einfach eine `scale` mit `min:0, max:1, labels:['Nein','Ja']`.
 
 **Darstellung von `scale`-Feldern (`display_style`)**: `buttons` (Standard) zeigt
 Auswahl-Buttons, `slider` einen Schieberegler (`renderHabitSlider`) – dafür wird beim
-Anlegen keine freie Von/Bis-Spanne eingegeben, sondern nur eine Stufenzahl (Standard
-100, wirkt wie Prozent; Ganzzahl, 2–1000), intern als `min=0`/`max=<Stufenzahl>`
-gespeichert. Der Regler zeigt **nie** eine Min/Max-Beschriftung im Eingabe-UI –
+Anlegen keine freie Von/Bis-Spanne eingegeben, sondern nur eine Stufenzahl (wie bei
+Buttons, Grenzen siehe unten), intern als `min=1`/`max=<Stufenzahl>` gespeichert. Der Regler zeigt **nie** eine Min/Max-Beschriftung im Eingabe-UI –
 `slider_show_value` steuert nur, ob der aktuell gewählte Wert während der Eingabe
 sichtbar ist. Live-Vorschau (Wert + Farbe)
 läuft beim Ziehen rein über einen `input`-Listener ohne Re-Render; gespeichert wird erst
@@ -260,9 +259,8 @@ immer bei `min=1`** (kein frei wählbares "Von" mehr, unabhängig von Buttons/Sc
 – wer andere Bezeichnungen will, nutzt dafür eigene Bezeichnungen statt eines
 verschobenen Zahlenbereichs). Das Formular (`scaleBody` in `renderHabitForm`) fragt
 jetzt in dieser Reihenfolge: Darstellung (Buttons/Schieberegler) → **eine** gemeinsame
-"Anzahl Stufen"-Eingabe (gedeckelt auf 12 bei Buttons, 2–1000 beim Schieberegler bzw. 8
-bei aktivierten Bezeichnungen, `SLIDER_LABEL_STEP_CAP`) → Checkbox "Eigene Bezeichnungen
-verwenden" (beim Schieberegler nur nutzbar, wenn die Stufenzahl im Cap liegt), darunter
+"Anzahl Stufen"-Eingabe → Checkbox "Eigene Bezeichnungen
+verwenden", darunter
 bei Buttons immer, beim Schieberegler nur bei aktivierten Bezeichnungen eine Zeile pro
 Stufe (deaktiviertes Textfeld mit der Zahl, oder editierbar mit der Zahl als Startwert)
 → Live-Vorschau (rendert `renderHabitOptions`/`renderHabitSlider` mit einem
@@ -279,6 +277,25 @@ Schieberegler kann seit diesem Umbau ebenfalls Bezeichnungen anzeigen
 (`habitSliderValueText`) – vorher eine unbeabsichtigte Lücke, keine bewusste
 Einschränkung.
 
+**Stufenzahl-Grenzen (seit 2026-09-28, eine Regel statt vorher 12/8/1000)**: jede Stufe mit
+eigener Bedeutung muss man sehen und gezielt treffen können. Buttons (mit oder ohne
+Bezeichnungen) und Schieberegler mit Bezeichnungen: 2 bis `CHOICE_STEP_CAP` (7) – mehr
+Abstufungen machen Antworten eher beliebiger als genauer. Schieberegler ohne Bezeichnungen
+("ungefähr wie viel"): 2 bis `SLIDER_STEP_CAP` (100) – mehr lässt sich auf dem Handy nicht
+einzeln treffen. `habitFormStepCap(f)` liefert die jeweils gültige Grenze. Am Deckel von 7
+zeigt das Formular einen Hinweis mit Umschalt-Knopf ("Zum Schieberegler wechseln" bzw.
+"Eigene Bezeichnungen abschalten", `habit-steps-to-slider`), statt das Hochzählen stumm
+enden zu lassen. Bestehende Felder mit mehr Stufen bleiben unverändert nutzbar; ist so
+ein Feld gesperrt, sind nur Buttons/Bezeichnungen gesperrt, die es vorher noch nicht hatte
+(`lockedChoiceBlocked`, mit Erklärung am Formular). **Vorschau** zeigt Buttons wie in
+"Heute" in einer Zeile und blendet einen Hinweis ein, wenn sie auf dem aktuellen Gerät
+nicht hineinpassen (`syncPreviewFitHint`, gemessen nach jedem Rendern/Drehen/Laden der
+Schrift). **In "Heute"** rutschen die Buttons in eine eigene Zeile unter den Namen, sobald
+Name (mind. 40 %) und Buttons nicht nebeneinander passen (`.habit-row--buttons`, reines
+CSS über `flex-wrap`) – vorher waren sie auf 60 % der Breite begrenzt und scrollten
+seitlich (auf 360 px breiten Handys nur 5 nummerierte sichtbar); seitlich gescrollt wird
+nur noch, was selbst in der vollen Breite nicht passt.
+
 **Bearbeiten mit vorhandenen Daten (`f.locked`, siehe `habitHasData`)**: nur die
 Stufenzahl (bzw. das historische `min`/`max` dahinter) bleibt gesperrt (das wäre eine
 rückwirkende Neuinterpretation bestehender Werte – bewusst NICHT gebaut, siehe unten).
@@ -286,9 +303,10 @@ Ein bereits bestehendes `min` ungleich 1 (z.B. alte Schieberegler-Felder mit his
 Basis 0) bleibt dabei unangetastet erhalten, die "immer Basis 1"-Regel gilt nur für neue
 Felder. Darstellung, die Bezeichnungen-Checkbox und der Bezeichnungs-Text selbst bleiben
 dagegen auch mit vorhandenen Daten änderbar, da sich dabei nur die Beschriftung ändert,
-nie die zugrundeliegende Zahl/Position. Ein bereits gesperrtes Schieberegler-Feld mit
-mehr als `SLIDER_LABEL_STEP_CAP` Stufen kann Bezeichnungen gar nicht mehr aktivieren
-(Checkbox disabled mit Erklärung) – die Stufenzahl lässt sich ja nicht mehr verkleinern.
+nie die zugrundeliegende Zahl/Position. Ausnahme: ein gesperrtes Feld mit mehr als
+`CHOICE_STEP_CAP` Stufen kann nicht neu auf Buttons oder Bezeichnungen umgestellt werden
+(`lockedChoiceBlocked`, siehe Stufenzahl-Grenzen) – die Stufenzahl lässt sich ja nicht
+mehr verkleinern.
 **Bewusst nicht umgesetzt**: eine rückwirkende Umrechnung bei einer echten
 Anzahl-Änderung (z.B. 3 Stufen → 5 Stufen) eines Feldes mit vorhandenen Daten –
 mathematisch bei rein nummerierten Stufen unproblematisch (linear, Score/Farbe bleibt
@@ -807,7 +825,7 @@ Mechanismus in `logbuch.html`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 404 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 407 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
