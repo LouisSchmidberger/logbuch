@@ -3754,8 +3754,8 @@ function renderSectionForm() {
           : t('sectionForm.defaultReminderNote', { time: minutesToTimeStr(state.userSettings.defaultReminderMinute) })}</p>
       </div>
       <div class="habit-form-actions">
-        <button type="button" class="auth-submit" data-action="section-form-save">${t('common.save')}</button>
         <button type="button" class="habit-form-cancel" data-action="section-form-cancel">${t('common.cancel')}</button>
+        <button type="button" class="auth-submit" data-action="section-form-save">${t('common.save')}</button>
       </div>
     </div>
   `;
@@ -4817,8 +4817,8 @@ function renderNote(dateKey, key, label) {
       <div class="note-editor">
         <textarea id="note-input" class="note-input" rows="3" maxlength="${NOTE_MAX_LENGTH}" aria-label="${label}">${esc(state.noteEditor.draft)}</textarea>
         <div class="note-editor-actions">
-          <button type="button" class="note-save-btn" data-action="note-save">${t('common.save')}</button>
           <button type="button" class="habit-form-cancel" data-action="note-cancel">${t('common.cancel')}</button>
+          <button type="button" class="note-save-btn" data-action="note-save">${t('common.save')}</button>
         </div>
       </div>
     `;
@@ -5715,8 +5715,8 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         <p class="habit-form-lock-note" id="habit-form-show-in-stats-note">${t('habitForm.showInStatsNote')}</p>
       </div>
       <div class="habit-form-actions">
-        <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t('common.save')}</button>
         <button type="button" class="habit-form-cancel" data-action="habit-cancel" ${state.habitFormSaving ? 'disabled' : ''}>${t('common.cancel')}</button>
+        <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t('common.save')}</button>
       </div>
     </div>
   `;
@@ -5761,8 +5761,8 @@ function renderManage() {
       ? `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete" data-id="${h.defId}">${t('common.delete')}</button>`
       : confirmingDelete
         ? `
-          <button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete" data-id="${h.defId}">${t('manage.deleteConfirmFinal')}</button>
           <button type="button" class="manage-btn" data-action="habit-delete-cancel">${t('common.cancel')}</button>
+          <button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete" data-id="${h.defId}">${t('manage.deleteConfirmFinal')}</button>
         `
         : `<button type="button" class="manage-btn manage-btn--danger" data-action="habit-delete-arm" data-id="${h.defId}">${t('common.delete')}</button>`;
     return `
@@ -5832,8 +5832,8 @@ function renderManage() {
             </div>
             <div class="manage-actions">
               ${confirmingDelete ? `
-                <button type="button" class="manage-btn manage-btn--danger" data-action="section-delete" data-id="${sec.id}">${t('manage.deleteConfirmFinal')}</button>
                 <button type="button" class="manage-btn" data-action="section-delete-cancel">${t('common.cancel')}</button>
+                <button type="button" class="manage-btn manage-btn--danger" data-action="section-delete" data-id="${sec.id}">${t('manage.deleteConfirmFinal')}</button>
               ` : `
                 <button type="button" class="manage-btn" data-action="section-edit" data-id="${sec.id}">${t('common.edit')}</button>
                 <button type="button" class="manage-btn manage-btn--danger" data-action="section-delete-arm" data-id="${sec.id}">${t('common.delete')}</button>
@@ -5889,8 +5889,8 @@ function renderTutorialSkipConfirm() {
         <h2 id="tutorial-skip-confirm-title">${t('tutorial.skipConfirm.title')}</h2>
         <p>${t('tutorial.skipConfirm.body')}</p>
         <div class="habit-form-actions">
-          <button type="button" class="manage-btn manage-btn--danger" data-action="tutorial-skip-confirm">${t('tutorial.skipConfirm.confirmButton')}</button>
           <button type="button" class="habit-form-cancel" data-action="tutorial-skip-cancel">${t('common.cancel')}</button>
+          <button type="button" class="manage-btn manage-btn--danger" data-action="tutorial-skip-confirm">${t('tutorial.skipConfirm.confirmButton')}</button>
         </div>
       </div>
     </div>
@@ -6088,8 +6088,8 @@ function renderResetConfirm() {
         <h2 id="reset-confirm-title">${t('resetConfirm.title')}</h2>
         <p>${t('resetConfirm.body', { date: formatDMY(state.resetConfirm) })}</p>
         <div class="habit-form-actions">
-          <button type="button" class="manage-btn manage-btn--danger" data-action="reset-day-confirm">${t('resetConfirm.confirm')}</button>
           <button type="button" class="habit-form-cancel" data-action="reset-day-cancel">${t('common.cancel')}</button>
+          <button type="button" class="manage-btn manage-btn--danger" data-action="reset-day-confirm">${t('resetConfirm.confirm')}</button>
         </div>
       </div>
     </div>
@@ -6108,8 +6108,8 @@ function renderDeleteConfirm() {
           <input type="text" id="delete-confirm-input" autocomplete="off" ${busy ? 'disabled' : ''} />
         </div>
         <div class="habit-form-actions">
-          <button type="button" class="manage-btn manage-btn--danger" data-action="delete-confirm-submit" ${busy ? 'disabled' : ''}>${busy ? t('deleteAccount.deleting') : t('deleteAccount.deletePermanently')}</button>
           <button type="button" class="habit-form-cancel" data-action="delete-confirm-cancel" ${busy ? 'disabled' : ''}>${t('common.cancel')}</button>
+          <button type="button" class="manage-btn manage-btn--danger" data-action="delete-confirm-submit" ${busy ? 'disabled' : ''}>${busy ? t('deleteAccount.deleting') : t('deleteAccount.deletePermanently')}</button>
         </div>
       </div>
     </div>

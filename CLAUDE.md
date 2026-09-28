@@ -1130,6 +1130,15 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
 ## Präferenzen für die Zusammenarbeit
 
 - Code-Qualität geht vor Geschwindigkeit.
+- **Mobil zuerst** (Nutzer-Einschätzung 2026-09-28): die Nutzer sind mit großem Abstand auf
+  Handy und Tablet (Android/iOS), nennenswerte PC-Nutzung wird nicht erwartet. Bei jeder
+  Gestaltungs-/Bedienentscheidung von Mobilgeräten und deren Plattform-Konventionen
+  ausgehen; der PC muss funktionieren, gibt aber nicht die Richtung vor. Daraus z.B.:
+  Button-Paare überall **Abbrechen links, Aktion rechts** (iOS/Android-Konvention, seit
+  2026-09-28 einheitlich – vorher Aktion links), auch in der Code-Reihenfolge (Screenreader
+  lesen in DOM-Reihenfolge; nebenbei landet der Anfangsfokus in Dialogen so auf
+  "Abbrechen"). Untereinander gestapelte Buttons (Tutorial, Anmelden) bleiben Hauptaktion
+  oben.
 - Bei Unklarheiten nachfragen statt zu raten.
 - UI-Texte seit der i18n-Umstellung (siehe Abschnitt oben) auf Deutsch UND
   Englisch pflegen, neue Strings immer über `STRINGS`/`t()` in beiden Sprachen
