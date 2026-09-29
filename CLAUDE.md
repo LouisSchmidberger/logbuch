@@ -895,6 +895,16 @@ Bildschirmrand von selbst weiter (`updateDragAutoScroll`, schneller je näher am
 sich ein Feld in einem Zug weit verschieben lässt. Der Zahlenwert-Verlaufsgraph hat eine
 `.visually-hidden`-Textzusammenfassung (Anzahl/letzter Wert/Durchschnitt/Spanne/Trend)
 statt eines reinen `aria-label`.
+**Fokus bleibt nach jeder Aktion erhalten** (seit 2026-09-29, `focusKeyOf`/`restoreFocus` in
+`render()`): `render()` ersetzt das ganze `#app` – vorher merkt es sich das fokussierte
+Element (id bzw. `data-action` + übrige `data-*`-Merkmale) und fokussiert danach das
+entsprechende neue, sofern nichts anderes (Dialog, Unterseiten-Überschrift) den Fokus
+bekommen hat. Neue klickbare Elemente brauchen deshalb stabile, eindeutige `data-*`-
+Merkmale bzw. eine id. Fehlermeldungen auf Anmelde-/Entsperr-/Reset-Seite mit
+`role="alert"`. Burger-Menü: `aria-expanded`, Escape schließt. **Wenig Höhe** (Handy quer,
+Zoom; `@media (max-height: 500px)`): Kopf und Tab-Leiste nicht angepinnt
+(`stickyHeaderBottom()` liefert dann 0), Dialoge scrollen, wenn sie höher als der
+Bildschirm sind.
 
 **Android-Zurück-Taste** (seit 2026-09-18, um Unterseiten erweitert am selben Tag): ohne
 eigene Browser-History-Einträge hatte die native/Gesten-Zurück-Taste nichts, wohin sie
@@ -926,6 +936,9 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
   selbst bleibt unescaped (darf bewusst gesetztes HTML wie `<strong>` enthalten).
+  **Meldungen sind reiner Text** (`state.notice`, `authError`, `unlockError` werden beim
+  Anzeigen escaped) – Meldungen mit Parametern deshalb mit `tPlain()` bauen (escaped die
+  Parameter nicht), sonst erscheinen sie doppelt escaped ("&amp;").
   Eine Start-Assertion beim Laden vergleicht `Object.keys(STRINGS.de)` gegen
   `.en` und meldet jede Abweichung per `console.error`.
 - `currentLocale` (Modul-Variable) wird über `applyLocale(locale)` gesetzt (setzt

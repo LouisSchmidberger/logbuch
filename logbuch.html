@@ -254,6 +254,13 @@
     position: sticky; top: 0; z-index: 6; background: var(--surface);
     margin: -20px -18px 0; padding: 14px 18px 0;
   }
+  /* Wenig Höhe (Handy im Querformat, starke Vergrößerung): angepinnt nähmen Kopf und
+     Tab-Leiste - mit geöffneter Tastatur erst recht - fast den ganzen Bildschirm ein.
+     Dann scrollen sie normal mit. Die Ausrichtung bewusst NICHT sperren (WCAG 1.3.4, z.B.
+     fest montierte Geräte). JS, das mit der Kopfhöhe rechnet: stickyHeaderBottom(). */
+  @media (max-height: 500px) {
+    .sticky-top { position: static; }
+  }
 
   .header-menu-wrap { position: relative; }
   .menu-btn {
@@ -291,13 +298,16 @@
   .menu-item-btn--warn { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.25); }
   .menu-item-btn--warn:hover, .menu-item-btn--warn:focus-visible { background: rgba(var(--rust-rgb), 0.08); border-color: rgba(var(--rust-rgb), 0.6); }
 
+  /* overflow-y + margin: auto: passt der Dialog, steht er mittig; ist er höher als der
+     Bildschirm (Querformat mit Tastatur, starke Vergrößerung), lässt er sich scrollen,
+     statt oben und unten abgeschnitten zu werden - sonst wären seine Buttons unerreichbar. */
   .modal-overlay {
     position: fixed; inset: 0; background: var(--scrim); z-index: 50;
-    display: flex; align-items: center; justify-content: center; padding: 20px;
+    display: flex; justify-content: center; padding: 20px; overflow-y: auto;
   }
   .modal-box {
     background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
-    padding: 18px; max-width: 340px; width: 100%;
+    padding: 18px; max-width: 340px; width: 100%; margin: auto;
   }
   .modal-box h2 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 17px; margin: 0 0 10px; }
   .modal-box p { font-size: 13px; line-height: 1.45; margin: 0 0 14px; }

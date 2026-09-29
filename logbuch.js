@@ -652,15 +652,12 @@ function scorePatternStyle(score, coarse) {
   return `background-image:repeating-linear-gradient(45deg, rgba(0,0,0,${opacity[step]}) 0, rgba(0,0,0,${opacity[step]}) 1px, transparent 1px, transparent ${spacing[step]}px);`;
 }
 
-// Beschreibung für Kalenderzellen (Woche/Monat/Jahr), die nur per Hintergrundfarbe
-// bewertet sind — macht dieselbe Information per Tastatur/Screenreader zugänglich.
-// habitName optional: Wochen-Grid-Zellen gehören zu einem konkreten Feld, Monats-/
-// Jahres-Zellen zeigen den Tages-Gesamtwert über alle Felder.
-function dayCellAriaLabel(date, score, habitName) {
+// Beschreibung für Kalender-Tage (Wochentage der Woche, Monat, Jahr), die nur per
+// Hintergrundfarbe bewertet sind — macht den Tages-Gesamtwert über alle Felder per
+// Tastatur/Screenreader zugänglich. tPlain: die Aufrufer escapen das Ergebnis fürs Attribut.
+function dayCellAriaLabel(date, score) {
   const scoreText = score === null || score === undefined ? t('common.noData') : `${Math.round(score * 100)}%`;
-  return habitName
-    ? t('ariaLabel.dayCellForHabit', { name: habitName, date: formatDMY(date), score: scoreText })
-    : t('ariaLabel.dayCell', { date: formatDMY(date), score: scoreText });
+  return tPlain('ariaLabel.dayCell', { date: formatDMY(date), score: scoreText });
 }
 
 // Verschiebt einen normalisierten Score (0-1) anhand der pro Feld einstellbaren
@@ -1139,7 +1136,6 @@ const STRINGS = {
     'ariaLabel.menu': 'Menü',
     'ariaLabel.back': 'Zurück',
     'ariaLabel.dayCell': '{date}, {score}',
-    'ariaLabel.dayCellForHabit': '{name}, {date}, {score}',
     'ariaLabel.moveUp': 'Nach oben verschieben',
     'ariaLabel.moveDown': 'Nach unten verschieben',
     'common.noData': 'keine Daten',
@@ -1610,7 +1606,6 @@ const STRINGS = {
     'ariaLabel.menu': 'Menu',
     'ariaLabel.back': 'Back',
     'ariaLabel.dayCell': '{date}, {score}',
-    'ariaLabel.dayCellForHabit': '{name}, {date}, {score}',
     'ariaLabel.moveUp': 'Move up',
     'ariaLabel.moveDown': 'Move down',
     'common.noData': 'no data',
@@ -1967,7 +1962,7 @@ const STRINGS = {
 
 let currentLocale = 'de';
 
-function t(key, params) {
+function t(key, params, escapeParams = true) {
   const table = STRINGS[currentLocale] || STRINGS.de;
   let str = table[key];
   if (str === undefined) {
@@ -1977,8 +1972,16 @@ function t(key, params) {
   if (!params) return str;
   return str.replace(/\{(\w+)\}/g, (_, name) => {
     const v = params[name];
-    return v === undefined ? `{${name}}` : esc(String(v));
+    return v === undefined ? `{${name}}` : escapeParams ? esc(String(v)) : String(v);
   });
+}
+
+// Für REINEN TEXT, der später selbst noch escaped wird: Meldungen (state.notice,
+// authError, unlockError - renderNotice & Co. escapen den ganzen Text) und Werte, die
+// per esc() in ein Attribut kommen. Mit t() würden die Parameter dort doppelt escaped
+// ("&" erschiene als "&amp;"). Nur für Templates ohne HTML.
+function tPlain(key, params) {
+  return t(key, params, false);
 }
 
 function applyLocale(locale) {
@@ -2156,7 +2159,7 @@ function translateAuthError(message) {
   // künftigen Policy-Änderung wieder auseinanderlaufen (genau das ist hier passiert,
   // als minimum_password_length von 6 auf 10 erhöht wurde).
   const shortMatch = /^Password should be at least (\d+) characters?/.exec(message);
-  if (shortMatch) return t('auth.error.passwordTooShort', { min: shortMatch[1] });
+  if (shortMatch) return tPlain('auth.error.passwordTooShort', { min: shortMatch[1] });
   return (AUTH_ERROR_TRANSLATIONS[currentLocale] || AUTH_ERROR_TRANSLATIONS.de)[message] || message;
 }
 
@@ -2244,6 +2247,8 @@ function infoTip(text) {
 // Screenreader neue Fehler-/Erfolgsmeldungen automatisch mitbekommen, ohne dass
 // der Nutzer erst zur Meldung navigieren muss. Fehler unterbrechen sofort
 // (assertive/alert), Erfolgsmeldungen kündigen sich nur höflich an (polite/status).
+// state.notice.text ist reiner Text (wird hier escaped) - Meldungen mit Parametern
+// deshalb mit tPlain(), nicht t() bauen.
 function renderNotice() {
   if (!state.notice) return '';
   const isErr = state.notice.type !== 'ok';
@@ -2371,7 +2376,7 @@ async function loadEntries({ keepLocalChanges = false } = {}) {
   syncedEntries.clear();
   synced.forEach((v, k) => syncedEntries.set(k, v));
   if (undecryptableEntryDates.size) {
-    state.notice = { type: 'error', text: t('notice.entriesUndecryptable', { count: undecryptableEntryDates.size }) };
+    state.notice = { type: 'error', text: tPlain('notice.entriesUndecryptable', { count: undecryptableEntryDates.size }) };
   }
 }
 
@@ -2442,7 +2447,7 @@ async function loadHabits() {
     }
   }
   state.habits = habits;
-  if (undecryptable) state.notice = { type: 'error', text: t('notice.habitsUndecryptable', { count: undecryptable }) };
+  if (undecryptable) state.notice = { type: 'error', text: tPlain('notice.habitsUndecryptable', { count: undecryptable }) };
   if (unencrypted.length) migrateHabitDefinitions(unencrypted);
 }
 
@@ -3183,7 +3188,7 @@ async function handleHabitSaveInner() {
       // Die Stufenzahl lässt sich bei vorhandenen Daten nicht mehr verkleinern (Tier 3,
       // bewusst nicht umgesetzt - siehe CLAUDE.md), Buttons/Bezeichnungen sind für so ein
       // Feld also nicht mehr wählbar. Das Formular sperrt beides schon (scaleBody).
-      state.notice = { type: 'error', text: t('habitForm.lockedStepCap', { steps: stepCount, cap: CHOICE_STEP_CAP }) };
+      state.notice = { type: 'error', text: tPlain('habitForm.lockedStepCap', { steps: stepCount, cap: CHOICE_STEP_CAP }) };
       return;
     }
     if (f.labelsEnabled && (f.labels.length !== stepCount || f.labels.some((l) => !l.trim()))) {
@@ -3200,7 +3205,7 @@ async function handleHabitSaveInner() {
     const isSlider = f.displayStyle === 'slider';
     const stepCap = habitFormStepCap(f);
     if (!Number.isFinite(steps) || steps < 2 || steps > stepCap) {
-      state.notice = { type: 'error', text: t('habitForm.error.stepsRange', { max: stepCap }) };
+      state.notice = { type: 'error', text: tPlain('habitForm.error.stepsRange', { max: stepCap }) };
       return;
     }
     const max = min + steps - 1;
@@ -3642,11 +3647,19 @@ function openNoteEditor(key) {
 // visualViewport-Maße gerechnet, aufgerufen beim Öffnen und bei jeder Größenänderung
 // des visuellen Viewports (Tastatur geht auf), solange die Textarea den Fokus hat.
 // Oben zusätzlich der angepinnte Header (.sticky-top), unter dem nichts landen soll.
+// Unterkante des angepinnten Kopfs (Header + Tab-Leiste) - 0, wenn er gerade nicht
+// angepinnt ist (wenig Höhe, siehe @media max-height in logbuch.html): dann verdeckt er
+// nichts, und seine Position beim Scrollen spielt keine Rolle.
+function stickyHeaderBottom() {
+  const el = document.querySelector('.sticky-top');
+  if (!el || getComputedStyle(el).position !== 'sticky') return 0;
+  return Math.max(0, el.getBoundingClientRect().bottom);
+}
 function ensureNoteEditorVisible() {
   const editor = document.querySelector('.note-editor');
   if (!editor || document.activeElement?.id !== 'note-input') return;
   const vv = window.visualViewport;
-  const viewTop = (vv ? vv.offsetTop : 0) + (document.querySelector('.sticky-top')?.getBoundingClientRect().bottom ?? 0);
+  const viewTop = (vv ? vv.offsetTop : 0) + (stickyHeaderBottom());
   const viewBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
   const margin = 12;
   const r = editor.getBoundingClientRect();
@@ -4167,7 +4180,7 @@ async function handleExportData() {
 async function handleDeleteAccount() {
   const input = (document.getElementById('delete-confirm-input')?.value || '').trim();
   if (input !== t('deleteAccount.confirmWord')) {
-    state.notice = { type: 'error', text: t('deleteAccount.confirmMismatch', { word: t('deleteAccount.confirmWord') }) };
+    state.notice = { type: 'error', text: tPlain('deleteAccount.confirmMismatch', { word: t('deleteAccount.confirmWord') }) };
     render();
     return;
   }
@@ -4221,7 +4234,7 @@ function renderAuth() {
     <div class="auth-box">
       <h1>Logbuch</h1>
       <p class="sub">${title}</p>
-      ${state.authError ? `<div class="notice">${esc(state.authError)}</div>` : ''}
+      ${state.authError ? `<div class="notice" role="alert">${esc(state.authError)}</div>` : ''}
       ${renderNotice()}
       ${isForgot ? `<p class="habit-form-lock-note">${t('auth.forgotRecoveryNote')}</p>` : ''}
       <form id="auth-form">
@@ -4341,7 +4354,7 @@ function renderPasswordRecovery() {
     <div class="auth-box">
       <h1>Logbuch</h1>
       <p class="sub">${t('recovery.title')}</p>
-      ${state.authError ? `<div class="notice">${esc(state.authError)}</div>` : ''}
+      ${state.authError ? `<div class="notice" role="alert">${esc(state.authError)}</div>` : ''}
       <form id="recovery-form">
         <div class="auth-field">
           <label for="new-password">${t('recovery.newPassword')}</label>
@@ -4573,7 +4586,7 @@ function renderUnlockPrompt() {
       <h1>Logbuch</h1>
       <p class="sub">${t('unlock.title')}</p>
       <p class="habit-form-lock-note">${t('unlock.explain')}</p>
-      ${state.unlockError ? `<div class="notice">${esc(state.unlockError)}</div>` : ''}
+      ${state.unlockError ? `<div class="notice" role="alert">${esc(state.unlockError)}</div>` : ''}
       <form id="unlock-form">
         <div class="auth-field">
           <label for="unlock-password">${t('auth.password')}</label>
@@ -6287,7 +6300,7 @@ function focusMenuTarget(target) {
 function renderMenuButton() {
   return `
     <div class="header-menu-wrap">
-      <button type="button" class="menu-btn" data-action="toggle-menu" aria-label="${esc(t('ariaLabel.menu'))}">☰</button>
+      <button type="button" class="menu-btn" data-action="toggle-menu" aria-label="${esc(t('ariaLabel.menu'))}" aria-expanded="${state.menuOpen}">☰</button>
       ${state.menuOpen ? renderMenu() : ''}
     </div>
   `;
@@ -6402,7 +6415,31 @@ function focusModalIfOpen() {
 // Seitenwechsel), z.B. wäre man nach dem Wechsel von einem herunter gescrollten
 // "Heute" zu "Monat" dort ebenfalls mitten in der Seite statt oben gelandet.
 let lastRenderedView = null;
+// Tastatur-Fokus über render() hinweg erhalten: render() ersetzt das ganze #app, das
+// fokussierte Element verschwindet also bei jeder Aktion - wer per Tastatur, Schalter-
+// Steuerung oder Screenreader einen Wert wählt, eine Gruppe aufklappt oder im Formular
+// etwas umschaltet, stünde danach wieder am Seitenanfang. Deshalb vorher merken, WAS
+// fokussiert war (id bzw. data-action + übrige data-Merkmale - bei den neu gebauten
+// Elementen gleich), und nachher das entsprechende neue Element fokussieren. Nur wenn
+// nichts anderes den Fokus bekommen hat (Dialog, Überschrift einer neuen Unterseite) -
+// Aktionen, die bewusst woandershin fokussieren, tun das nach render() und gewinnen.
+function focusKeyOf(el) {
+  if (!el || el === document.body || !app.contains(el)) return null;
+  if (el.id) return `#${CSS.escape(el.id)}`;
+  if (!el.dataset.action) return null;
+  return [...el.attributes]
+    .filter((a) => a.name.startsWith('data-') && a.name !== 'data-dirty')
+    .map((a) => `[${a.name}="${CSS.escape(a.value)}"]`)
+    .join('');
+}
+function restoreFocus(key) {
+  const active = document.activeElement;
+  if (!key || (active && active !== document.body && app.contains(active))) return;
+  try { app.querySelector(key)?.focus({ preventScroll: true }); } catch { /* ungültiger Selektor - egal */ }
+}
+
 function render() {
+  const focusKey = focusKeyOf(document.activeElement);
   // Ein Notiz-Editor, der durch einen Tag-/Tab-Wechsel o.ä. nicht mehr sichtbar ist,
   // wird hier zentral gespeichert und geschlossen, statt an jeder der vielen Stellen,
   // die Tag oder Ansicht ändern (Klicks, Wischen, Deep-Links, Kalenderzellen, ...).
@@ -6417,6 +6454,7 @@ function render() {
   else { renderApp(); }
   syncPreviewFitHint();
   focusModalIfOpen();
+  restoreFocus(focusKey);
   syncLayerHistory();
   if (state.view !== lastRenderedView) {
     lastRenderedView = state.view;
@@ -7070,6 +7108,12 @@ app.addEventListener('keydown', (e) => {
     closeRowMenu();
     return;
   }
+  if (e.key === 'Escape' && state.menuOpen) {
+    state.menuOpen = false;
+    render();
+    document.querySelector('.menu-btn')?.focus();
+    return;
+  }
   const modalBox = document.querySelector('.modal-box');
   if (modalBox) {
     if (e.key === 'Escape') {
@@ -7378,7 +7422,7 @@ const DRAG_SCROLL_ZONE = 90;
 const DRAG_SCROLL_MAX_SPEED = 10; // px pro Frame
 let dragScrollFrame = null;
 function dragScrollSpeed() {
-  const top = document.querySelector('.sticky-top')?.getBoundingClientRect().bottom ?? 0;
+  const top = stickyHeaderBottom();
   const bottom = window.visualViewport?.height ?? window.innerHeight;
   const y = dragState.lastClientY;
   if (y < top + DRAG_SCROLL_ZONE) return -DRAG_SCROLL_MAX_SPEED * Math.min(1, (top + DRAG_SCROLL_ZONE - y) / DRAG_SCROLL_ZONE);
@@ -7395,7 +7439,7 @@ function updateDragAutoScroll() {
     // Nicht über die Liste hinaus scrollen - ist ihr Ende bzw. Anfang schon im Bild,
     // gibt es in der Richtung keinen Platz mehr, zu dem man ziehen könnte.
     const list = dragState.row.parentElement.getBoundingClientRect();
-    const top = document.querySelector('.sticky-top')?.getBoundingClientRect().bottom ?? 0;
+    const top = stickyHeaderBottom();
     const bottom = window.visualViewport?.height ?? window.innerHeight;
     if ((speed > 0 && list.bottom <= bottom) || (speed < 0 && list.top >= top)) return;
     const before = window.scrollY;
