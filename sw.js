@@ -10,7 +10,7 @@ self.addEventListener('activate', (event) => {
 // bestimmtes Feld kommt deshalb nur mit dessen ID (payload.fieldIds) und einem
 // allgemeinen Text. Die App legt auf dem Gerät eine Liste ID → Name plus die passende
 // Textvorlage in ihrer Sprache ab (IndexedDB 'logbuch-push', siehe
-// saveFieldNamesForPush in logbuch.html); damit wird der Name hier lokal eingesetzt.
+// saveFieldNamesForPush in logbuch.js); damit wird der Name hier lokal eingesetzt.
 // Fehlt die Liste oder eine ID (neues Gerät, gelöschte Browserdaten, gerade erst
 // angelegtes Feld), bleibt es beim allgemeinen Text. Genauso bei Erinnerungen an eine
 // Gruppe (payload.sectionId, Liste sectionNames + sectionTemplate im selben Eintrag).

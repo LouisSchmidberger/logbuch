@@ -81,14 +81,14 @@ interface DueRow {
 // Ziel-URL einer Benachrichtigung: Ansicht + der Tag, auf den sie sich bezieht (nicht
 // "heute zum Klick-Zeitpunkt" - eine Wochenübersicht, die erst Montagmorgen angetippt
 // wird, soll trotzdem die gemeinte, schon abgelaufene Woche zeigen). Ausgewertet von
-// sw.js (notificationclick) und parseDeepLink in logbuch.html.
+// sw.js (notificationclick) und parseDeepLink in logbuch.js.
 // fieldId (optional): bei Erinnerungen an ein bestimmtes Feld scrollt "Heute" dorthin.
 function deepLink(view: 'today' | 'week' | 'month', dateKey: string, fieldId?: string): string {
   return `./logbuch.html?view=${view}&date=${dateKey}${fieldId ? `&field=${fieldId}` : ''}`;
 }
 
 // Eigene, bewusst einfachere Übersetzungstabelle als die t()-Maschinerie im Frontend
-// (logbuch.html) — anderes Laufzeit-Environment (Deno statt Browser), kein
+// (logbuch.js) — anderes Laufzeit-Environment (Deno statt Browser), kein
 // gemeinsam nutzbares Modul zwischen Edge Function und Frontend, und nur eine Handvoll Texte.
 const PUSH_TEXTS = {
   de: {

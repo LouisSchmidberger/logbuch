@@ -15,8 +15,17 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
 
 ## Stack
 
-- **Frontend**: `logbuch.html` – eine einzelne Datei, Vanilla JS (kein Framework, kein
-  Build-Step), `supabase-js` per ESM-CDN-Import. Rendering per Template-Strings +
+- **Frontend**: `logbuch.html` (Markup + CSS) und `logbuch.js` (die ganze App-Logik, als
+  ES-Modul eingebunden), Vanilla JS (kein Framework, kein Build-Step). Seit 2026-09-29
+  getrennt statt einer einzigen Datei – nur so kann die Content-Security-Policy (`<meta>`
+  in `logbuch.html`) Inline-Skripte komplett verbieten (`script-src 'self'`): eingeschleuster
+  Code liefe nicht, und `connect-src` lässt Daten nur zum eigenen Supabase-Projekt. Neue
+  externe Quellen müssen dort ergänzt werden. **Keine Drittanbieter zur Laufzeit**:
+  `supabase-js` liegt in fester Version gebündelt unter `vendor/` (Neu-Bauen siehe
+  Dateikopf; bewusst nicht von einem CDN – wer das CDN kontrolliert, könnte Passwort und
+  Schlüssel mitlesen), die Schriften (Fraunces, IBM Plex Sans, SIL OFL) unter `fonts/`
+  (bewusst nicht Google Fonts – übermittelte bei jedem Öffnen die IP an Google).
+  Rendering per Template-Strings +
   Event-Delegation auf `#app` (kein virtuelles DOM, bewusst einfach gehalten).
 - **Service Worker**: `sw.js` – nur für Web-Push-Empfang/-Klick, sonst nichts (kein Offline-
   Caching gebaut).
@@ -26,12 +35,13 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
   frisch ausgestelltes Token gelegentlich ab (Uhren-Abweichung Auth↔PostgREST bzw.
   Zeit-Cache-Bug, behoben erst in PostgREST 14.18/16.3 – Projekt am 2026-09-27 auf v14.5,
   Version prüfbar per `npx supabase services`). Trat v.a. beim Öffnen der App auf.
-  Abgefangen zentral im Supabase-Client (`fetchWithJwtFutureRetry` in `logbuch.html`:
+  Abgefangen zentral im Supabase-Client (`fetchWithJwtFutureRetry` in `logbuch.js`:
   REST-Anfragen mit genau diesem Fehler werden bis zu zweimal nach 1 s/2 s wiederholt –
   sicher auch für Schreibzugriffe, da PostgREST sie vor der Ausführung abweist).
-- **Hosting**: GitHub Pages, statisch. `logbuch.html` und `sw.js` müssen im selben
+- **Hosting**: GitHub Pages, statisch. `logbuch.html`, `logbuch.js` und `sw.js` (plus
+  `vendor/`, `fonts/`) müssen im selben
   Wurzelverzeichnis des gehosteten Pfads liegen.
-- **PWA-Installationshinweis** (`renderInstallHint` in `logbuch.html`): erscheint direkt
+- **PWA-Installationshinweis** (`renderInstallHint` in `logbuch.js`): erscheint direkt
   im App-Bereich (nicht auf den Auth-Screens), solange die Seite nicht als PWA läuft
   (`display-mode: standalone` bzw. `navigator.standalone`) und nicht per
   `localStorage`-Flag dauerhaft weggeklickt wurde. Auf iOS ist "zum Home-Bildschirm
@@ -61,7 +71,7 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
 Tabelle `habit_definitions`: eine Zeile pro Nutzer und Feld – **ersetzt die frühere feste
 `HABITS`-Konstante**. Jeder Nutzer verwaltet seine Felder selbst über "Felder verwalten"
 im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
-`renderManage` in `logbuch.html` – kein eigener Tab mehr, siehe Abschnitt "Design").
+`renderManage` in `logbuch.js` – kein eigener Tab mehr, siehe Abschnitt "Design").
 **Seit 2026-09-27 größtenteils verschlüsselt** (siehe Abschnitt "Verschlüsselung" →
 Feld-Definitionen): die folgenden Eigenschaften stehen bei umgestellten Zeilen nicht mehr
 in ihren Klartext-Spalten, sondern verschlüsselt in `enc` – im Klartext bleiben nur
@@ -92,7 +102,7 @@ Eigenschaften unten gilt inhaltlich unverändert (im Client heißen sie gleich).
   Einträgen – dann aber erst nach explizitem zweiten Bestätigungsklick in der App
   (`state.habitDeleteConfirm`), da die Rohwerte danach nicht mehr auswertbar sind.
   Löscht zuerst die `habit_definitions`-Zeile, räumt danach zusätzlich per
-  `purgeKeyFromEntries` (in `logbuch.html`) best effort den zugehörigen Schlüssel
+  `purgeKeyFromEntries` (in `logbuch.js`) best effort den zugehörigen Schlüssel
   aus jedem betroffenen Tages-Eintrag (`habit_entries.data`) weg, statt ihn als
   verwaisten Key im verschlüsselten JSON liegen zu lassen (passend zur Zero-Access-/
   Löschrecht-Ausrichtung der App – "Löschen" soll möglichst wenig übrig lassen).
@@ -125,7 +135,7 @@ Tabelle `habit_entries`: eine Zeile pro Nutzer und Kalendertag.
   **Notizen** (seit 2026-09-27) liegen im selben verschlüsselten Objekt unter dem
   einzigen reservierten Schlüssel `_notes`: `{ mood: 3, _notes: { mood: "…", _day:
   "…" } }` – je Feld-Slug eine Notiz, `_day` für die Notiz zum ganzen Tag
-  (`NOTES_KEY`/`DAY_NOTE_KEY`, `getNote`/`withNote` in `logbuch.html`). Kollidiert nie
+  (`NOTES_KEY`/`DAY_NOTE_KEY`, `getNote`/`withNote` in `logbuch.js`). Kollidiert nie
   mit einem Feld, da `slugify()` nur `a-z0-9` erzeugt; **Konvention: Schlüssel mit `_`
   am Anfang sind nie Feldwerte**. Ohne verbleibende Notiz verschwindet `_notes` wieder.
 - `filled_slugs` (jsonb, Array von Strings) – bewusst **unverschlüsselt**, nur die
@@ -200,7 +210,7 @@ behandeln beide Seiten als Monatsletzten statt ihn ausfallen zu lassen; ungülti
 gelten als dran (die DB lässt sie per CHECK gar nicht erst zu, siehe `push_subscriptions` →
 Robustheit). Alle 7 Wochentage bzw. "alle 1 Tage" werden als `null` gespeichert
 (eine einzige Darstellung von täglich). **Zwei Implementierungen derselben Regeln, die
-synchron bleiben müssen**: `isScheduledOn`/`isPlannedOn` in `logbuch.html` und die
+synchron bleiben müssen**: `isScheduledOn`/`isPlannedOn` in `logbuch.js` und die
 SQL-Funktion `public.habit_scheduled_on(schedule, date)` (plpgsql, aktuelle Fassung in
 Migration `20260929120000_harden_reminder_inputs`, von `get_due_notifications` genutzt). Bewusst **nicht**
 unterstützt: Kalender-Regeln wie "jeder erste Montag im Monat" (Nutzer: unübersichtlich
@@ -511,7 +521,7 @@ zuordenbare/nicht entschlüsselbare Zeilen werden nicht angezeigt (Meldung
 `notice.habitsUndecryptable`). Migrationen `20260927180000_encrypt_habit_definitions_prep`
 und `20260927183000_normalize_filled_slugs`.
 
-**Zweistufiger Schlüssel** (Crypto-Helfer + Lebenszyklus-Funktionen in `logbuch.html`,
+**Zweistufiger Schlüssel** (Crypto-Helfer + Lebenszyklus-Funktionen in `logbuch.js`,
 alles native Web Crypto API, keine Library):
 - **DEK** (Data Encryption Key): pro Nutzer ein zufälliger AES-256-GCM-Schlüssel
   (`generateDek`), verschlüsselt/entschlüsselt `habit_entries.data`
@@ -602,7 +612,7 @@ nicht auf generische Tailwind-/Card-Optik wechseln.
 
 Tab-Leiste zeigt nur noch die Auswertungs-Ansichten (Heute/Woche/Monat/Jahr/Gesamt,
 `.tabs` bereits horizontal scrollbar für künftig weitere Views). Alles Konfigurative
-sitzt im **Burger-Menü** (☰-Button oben rechts, `renderMenu` in `logbuch.html`), intern
+sitzt im **Burger-Menü** (☰-Button oben rechts, `renderMenu` in `logbuch.js`), intern
 in drei Gruppen unterteilt: Navigation ("Felder verwalten", "Über Logbuch", "Feedback geben") oben,
 Einstellungen (Push/Erinnerungszeit/Sprache/Darstellung/Streifenmuster) in der Mitte,
 Konto (Export/Recovery-Key/Löschen/Abmelden) unten. Jede Gruppe steckt in einem eigenen
@@ -623,7 +633,7 @@ bewusst allgemein benannt für künftige weitere Popovers. Zwei unterschiedliche
 (Hintergrund/Fenster) soll das Menü schließen, Scrollen AUF dem Panel selbst (falls
 dessen Inhalt z.B. bei Zoom nicht mehr auf den Bildschirm passt) soll dagegen gar
 nichts am Hintergrund auslösen, aber innerhalb des Panels normal funktionieren. Löst
-sich rein über CSS + einen `scroll`-Listener am `window` (`logbuch.html`, direkt nach
+sich rein über CSS + einen `scroll`-Listener am `window` (`logbuch.js`, direkt nach
 `syncLayerHistory()`): `.menu-panel` hat ein eigenes `max-height`/`overflow-y: auto`
 (scrollt bei Bedarf in sich selbst) und `overscroll-behavior: contain` (verhindert
 Scroll-Chaining zum Hintergrund, sobald das Panel selbst an sein Scroll-Ende kommt).
@@ -715,7 +725,7 @@ Antippen weg); eingetragene Namen blasser (zu wenig Kontrast für kleinen Text).
 
 **Zeilen-Menü in "Heute"** (seit 2026-09-27, ⋮-Button seit 2026-09-28;
 `renderRowMenuButton`/`renderRowHead`/`renderRowMenuPanel`/`renderSectionMenuPanel`/
-`openRowMenu`/`closeRowMenu` in `logbuch.html`, `state.rowMenu` bzw. `data-menu` = Feld-id
+`openRowMenu`/`closeRowMenu` in `logbuch.js`, `state.rowMenu` bzw. `data-menu` = Feld-id
 oder `section:<id>`): kleines Popover. Bei Feldern "Bearbeiten" (öffnet das Feld-Formular in
 der Verwaltung mit `returnToTab: true`, gleiches Muster wie der "+ Neues Feld"-Shortcut) und
 "Archivieren" (danach Meldung, wo sich das Feld reaktivieren lässt), bei nicht berechneten
@@ -787,7 +797,7 @@ Monat – Punkt in der Tageszelle; Jahr – bewusst keiner (Zellen zu klein). Sc
 und fragt deshalb seitdem immer nach (`renderResetConfirm`, `state.resetConfirm` =
 dateKey), auch ohne vorhandene Notizen.
 
-**Haptisches Feedback** (seit 2026-09-27, `haptic()` in `logbuch.html`): kurzes
+**Haptisches Feedback** (seit 2026-09-27, `haptic()` in `logbuch.js`): kurzes
 Vibrieren beim Setzen/Entfernen eines Werts (Buttons, Schieberegler erst beim
 Loslassen – nicht bei jedem Schritt, das wären bei 100 Stufen zu viele – und ×) sowie
 beim Long-Press-Menü, damit versehentliche Eingaben eher auffallen. Im Menü
@@ -797,7 +807,7 @@ Vibration für manche unangenehm ist (z.B. sensorische Empfindlichkeit). **Nur
 Android**: Safari auf iOS bietet Webseiten keine Vibration-API, der Schalter wird dort
 gar nicht erst angezeigt (`hapticsSupported`).
 
-**Verwaltungsliste entschlackt** (seit 2026-09-18, `renderManage` in `logbuch.html`):
+**Verwaltungsliste entschlackt** (seit 2026-09-18, `renderManage` in `logbuch.js`):
 pro Feld-Zeile steht nur noch der Name plus – falls abweichend – Wiederholung und eigene
 Erinnerungszeit (`manageFieldMeta`); Skala/Bereich, Bezeichnungen, Gut/Schlecht-
 Richtung und Ziel-Quote werden dort nicht mehr aufgeführt (`formatScale` entfernt,
@@ -827,7 +837,7 @@ Verworfen bzw. in den Gestaltungs-Durchgang geschoben: Inhalt folgt beim Wischen
 `render()`).
 
 **Swipe-Schwellenwert für Unterseiten höher als für Tab-Wechsel** (seit 2026-09-19,
-`SWIPE_THRESHOLD_SUBPAGE` in `logbuch.html`, 100px statt 50px): ein Wisch nach rechts
+`SWIPE_THRESHOLD_SUBPAGE` in `logbuch.js`, 100px statt 50px): ein Wisch nach rechts
 verlässt auf einer Unterseite (Verwalten/Über Logbuch) die Seite komplett, während er
 bei Heute/Woche/Monat/Jahr nur den Zeitraum wechselt – dort war versehentliches
 Auslösen (z.B. beim Scrollen in einer langen Feldliste) spürbar störender als bei den
@@ -838,7 +848,7 @@ Burger-Menü überschreibbar (System/Hell/Dunkel als Pill-Toggle, gleiches Muste
 `f.kind`/`f.mode`/`f.good` im Habit-Formular). Override liegt in `localStorage`
 (`themeOverride`, Werte `'light'`/`'dark'`/nicht gesetzt = System) — bewusst NICHT in
 `user_settings`, da geräte-lokal statt kontoweit gedacht (anders als die Sprache).
-`applyTheme()`/`getThemeOverride()`/`setThemeOverride()` in `logbuch.html`, direkt
+`applyTheme()`/`getThemeOverride()`/`setThemeOverride()` in `logbuch.js`, direkt
 nach dem i18n-Block. CSS-seitig: `@media (prefers-color-scheme: dark)` UND
 `:root[data-theme="dark"]` setzen dieselben Werte für dieselben Tokens (`--paper`,
 `--ink`, `--line`, `--moss`, `--rust`, `--sand`, plus neu `--surface` für Modal-/Menü-
@@ -874,7 +884,7 @@ eigene Browser-History-Einträge hatte die native/Gesten-Zurück-Taste nichts, w
 zurückgehen könnte, und hat stattdessen sofort die App verlassen — unabhängig davon,
 was gerade offen war. `isOverlayOpen()`/`isSubpageView()`/`currentLayerCount()`/
 `closeTopLayer()`/`syncLayerHistory()` (direkt nach `modalTriggerSelector` in
-`logbuch.html`) schließen stattdessen offene Overlays (Burger-Menü, Feld-Formular,
+`logbuch.js`) schließen stattdessen offene Overlays (Burger-Menü, Feld-Formular,
 Konto-/Tutorial-/Feld-Lösch-Bestätigungen) UND Unterseiten (Verwalten/Über Logbuch,
 siehe oben) über einen `popstate`-Listener, bevor die App wirklich verlassen wird.
 Overlay und Unterseite können gleichzeitig offen sein (z.B. "Neues Feld" innerhalb von
@@ -890,7 +900,7 @@ Zurück-Taste nicht aushebeln).
 ## Internationalisierung (i18n)
 
 Seit 2026-09-16: Deutsch + Englisch, Deutsch bleibt Standard/Fallback. Zentraler
-Mechanismus in `logbuch.html`, direkt nach `esc()`:
+Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
@@ -949,7 +959,7 @@ Alle Zeiten/Daten gelten in der **Ortszeit des jeweiligen Nutzers**
   Standardzeit eine eigene Erinnerungszeit bekommen – z.B. Gewicht typischerweise
   morgens statt zur (abendlichen) Standardzeit. In der App per Checkbox "Eigene
   Erinnerungszeit" im Feld-Formular (`<select>` mit allen 96 15-Minuten-Werten,
-  `reminderTimeInputHtml` in `logbuch.html` – bewusst kein natives `<input
+  `reminderTimeInputHtml` in `logbuch.js` – bewusst kein natives `<input
   type="time">`, dessen `step`-Attribut viele Browser/Betriebssysteme ignorieren,
   wodurch sich trotzdem jede beliebige Minute auswählen ließe), standardmäßig aus.
 - **Eigene Zeit je Gruppe** (seit 2026-09-28, `habit_sections.reminder_minute`, Klartext wie
@@ -975,7 +985,7 @@ Montagmorgen angetippte Wochenübersicht trotzdem die gemeinte Woche zeigt bzw. 
 nach Mitternacht angetippte Erinnerung den gemeinten Tag. `sw.js` öffnet die App mit
 dieser URL oder schickt einer schon offenen App das Ziel per `postMessage`
 (`logbuch-navigate`, bewusst kein Neuladen – das würde ggf. erneutes Entsperren des
-DEK erzwingen). `parseDeepLink`/`applyDeepLink` in `logbuch.html` setzen daraufhin
+DEK erzwingen). `parseDeepLink`/`applyDeepLink` in `logbuch.js` setzen daraufhin
 Ansicht + Zeitraum (auch schon vor dem Entsperren) und entfernen die Parameter per
 `history.replaceState` wieder aus der URL. Erinnerungen an ein bestimmtes Feld tragen zusätzlich
 `&field=<Feld-ID>` (bei mehreren das erste): "Heute" scrollt dann zum Feld und hebt es
@@ -1001,7 +1011,7 @@ und Fehlerursachen – nie Texte, IDs oder wer etwas bekommen hat.
 AT TIME ZONE timezone` dessen lokales Datum ("heute") und lokalen Viertelstunden-Slot
 aus (auf 15 Minuten **abgerundet**, damit ein um ein paar Minuten verspäteter Cron-Lauf
 keine Erinnerung verpasst). Die App gleicht `timezone` still mit der Zeitzone des Geräts
-ab (`syncTimezone` in `logbuch.html`, bei jedem Laden der Einstellungen und beim
+ab (`syncTimezone` in `logbuch.js`, bei jedem Laden der Einstellungen und beim
 Zurückkehren in die App per `visibilitychange`; im Menü als Hinweis unter der
 Standard-Erinnerungszeit angezeigt). Bewusste Entscheidung für "folgt dem Gerät" statt
 manueller Einstellung: die App speichert Einträge unter dem **lokalen Gerätedatum** –
@@ -1038,7 +1048,7 @@ nicht extra behandelt.
 ## Onboarding-Tutorial für neue Accounts
 
 Seit 2026-09-15: neue Accounts starten ohne vorbelegte Felder (siehe Datenmodell) und
-werden stattdessen durch ein Tutorial geführt (`renderTutorial` in `logbuch.html`),
+werden stattdessen durch ein Tutorial geführt (`renderTutorial` in `logbuch.js`),
 gesteuert über `state.userSettings.onboardingCompleted` (aus
 `user_settings.onboarding_completed`, Default `false` bei neuen Accounts) – solange
 `false`, ersetzt `render()` die normale App durch das Tutorial (Prüfung erst NACH dem
@@ -1111,7 +1121,7 @@ Umgesetzt:
   sonst mit jedem 15-Minuten-Lauf unbegrenzt). Migration
   `20260927160000_cleanup_unconfirmed_users`.
 - Datenexport (Auskunftsrecht/Datenportabilität, Art. 15/20 DSGVO): "Meine Daten
-  exportieren" im Burger-Menü (`handleExportData` in `logbuch.html`) lädt die eigenen
+  exportieren" im Burger-Menü (`handleExportData` in `logbuch.js`) lädt die eigenen
   Rohdaten aus allen vier Tabellen (RLS scoped automatisch auf den eigenen Nutzer) direkt
   im Browser als eine JSON-Datei herunter — kein Server-Roundtrip über eine eigene
   Function nötig. Feedback (siehe unten) ist bewusst **nicht** Teil des Exports
@@ -1119,7 +1129,7 @@ Umgesetzt:
 - **Feedback an den Betreiber** (seit 2026-09-25, Übergangslösung bis zu einem
   möglichen Community-Bereich): Unterseite "Feedback geben" (Burger-Menü + Links an den
   "ich freue mich über Feedback"-Stellen in "Über Logbuch", `renderFeedback`/
-  `handleFeedbackSubmit` in `logbuch.html`) → Edge Function `submit-feedback` →
+  `handleFeedbackSubmit` in `logbuch.js`) → Edge Function `submit-feedback` →
   `record_feedback()` (SQL) speichert in `public.feedback`, danach Mail an den
   Betreiber über Resend (best effort – schlägt die Mail fehl, bleibt das Feedback
   trotzdem gespeichert). Die Tabellen `feedback`/`feedback_rate_log` sind für Nutzer
@@ -1140,7 +1150,7 @@ Umgesetzt:
 - Passwort-Reset-Flow: "Passwort vergessen?" im Anmelden-Formular →
   `supabase.auth.resetPasswordForEmail(email, { redirectTo: <aktuelle App-URL> })`.
   Der Rückkehr-Link löst clientseitig das Event `PASSWORD_RECOVERY` aus
-  (`onAuthStateChange`-Listener in `logbuch.html`), das App-Routing zeigt dann
+  (`onAuthStateChange`-Listener in `logbuch.js`), das App-Routing zeigt dann
   `renderPasswordRecovery()` (neues Passwort setzen via `auth.updateUser`) statt der
   normalen App, unabhängig vom sonstigen Session-Status. **Wichtig bei einer neuen
   Domain/Hosting-URL**: die jeweilige URL muss unter Supabase Dashboard →
@@ -1154,7 +1164,7 @@ Umgesetzt:
 
 - Signup-Schutz gegen Missbrauch: **kein sichtbares Drittanbieter-Captcha** (bewusste
   Entscheidung, siehe unten), sondern zwei dependency-freie Filter im Signup-Formular
-  (`renderAuth` in `logbuch.html`): ein für Menschen unsichtbares Honeypot-Feld
+  (`renderAuth` in `logbuch.js`): ein für Menschen unsichtbares Honeypot-Feld
   (`.honeypot-field`, off-screen statt `display:none`, da manche Bots das erkennen)
   und eine Mindest-Ausfüllzeit (`SIGNUP_MIN_FILL_MS`, aktuell 1500ms). Beides wird nur
   clientseitig geprüft und bewusst mit einer generischen Fehlermeldung abgelehnt
@@ -1213,14 +1223,14 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
 
 ## Secrets
 
-- `VAPID_PUBLIC_KEY` ist im Klartext in `logbuch.html` hinterlegt – das ist beabsichtigt,
+- `VAPID_PUBLIC_KEY` ist im Klartext in `logbuch.js` hinterlegt – das ist beabsichtigt,
   öffentliche Push-Keys sind dafür gedacht.
 - `VAPID_PRIVATE_KEY` liegt **ausschließlich** als Supabase Function Secret
   (`supabase secrets set ...`), niemals im Repo. Beim Rotieren: neuen Key generieren,
-  Secret updaten, öffentlichen Key in `logbuch.html` UND im Push-Subscribe-Flow der
+  Secret updaten, öffentlichen Key in `logbuch.js` UND im Push-Subscribe-Flow der
   Nutzer neu abgleichen (alte Subscriptions werden mit neuem Key ungültig).
 - `SUPABASE_ANON_KEY` (publishable) ist ebenfalls unkritisch öffentlich, liegt in
-  `logbuch.html` und im Vault (`publishable_key`, für den Cron-Aufruf der Edge Function).
+  `logbuch.js` und im Vault (`publishable_key`, für den Cron-Aufruf der Edge Function).
 - `RESEND_FEEDBACK_KEY` (Function Secret): eigener Resend-API-Key nur für
   `submit-feedback` (Berechtigung "Sending access"), getrennt vom SMTP-Key, damit er
   sich unabhängig sperren lässt. `FEEDBACK_TO_EMAIL` (Function Secret): Empfänger der
@@ -1250,7 +1260,7 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
 
 ## Deployment-Schritte (Referenz, siehe auch Anleitung im Chat-Verlauf)
 
-1. `logbuch.html` + `sw.js` → GitHub Pages (Root-Verzeichnis).
+1. `logbuch.html`, `logbuch.js`, `sw.js`, `vendor/`, `fonts/` → GitHub Pages (Root-Verzeichnis).
 2. `supabase functions deploy <name>` für `send-notifications`, `delete-account` und
    `submit-feedback` (Code unter `supabase/functions/<name>/index.ts`).
 3. Schema-Änderungen laufen seit 2026-09-16 über **Supabase-Migrationen**
@@ -1283,7 +1293,7 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
   Englisch pflegen, neue Strings immer über `STRINGS`/`t()` in beiden Sprachen
   anlegen statt hartkodiert.
 - **Stand-Datum in "Über Logbuch" mitziehen** (Nutzer-Wunsch 2026-09-27): der Hinweis
-  "Beta – Stand …" oben auf der Seite kommt aus `APP_STATUS_DATE` in `logbuch.html` (kein
+  "Beta – Stand …" oben auf der Seite kommt aus `APP_STATUS_DATE` in `logbuch.js` (kein
   Build-Step, der es automatisch setzen könnte). Bei jeder für Nutzer sichtbaren Änderung
   von mindestens mittlerer Größe im selben Commit auf das aktuelle Datum setzen – nicht erst
   am Session-Ende gesammelt. Reine Interna, Doku oder winzige Textkorrekturen zählen nicht.
