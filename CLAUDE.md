@@ -143,7 +143,20 @@ Tabelle `habit_entries`: eine Zeile pro Nutzer und Kalendertag.
   voreinander, nicht vor dem DB-Owner — dafür ist ja gerade die Verschlüsselung da).
 
 Tabelle `push_subscriptions`: eine Zeile pro Browser/Gerät mit aktivierten Erinnerungen
-(Web-Push-Endpoint + Schlüssel). RLS wie oben.
+(Web-Push-Endpoint + Schlüssel). RLS wie oben. Endpoint nur `https://`, begrenzte Längen,
+höchstens 10 Abos pro Konto (Trigger `push_subscriptions_limit`) – `send-notifications`
+schickt an jeden Endpoint eine Anfrage, ohne Grenzen könnte ein Konto den Versand für alle
+ausbremsen. **Abmelden beendet die Erinnerungen dieses Geräts** (`endPushForThisDevice`:
+Server-Zeile löschen, Browser-Abo kündigen, lokale Namensliste leeren – sonst kämen sie samt
+Feldnamen weiter, auch für die nächste Person am Gerät); `checkPushStatus` kündigt ein
+Browser-Abo, zu dem das angemeldete Konto keine Server-Zeile hat.
+
+**Robustheit von `get_due_notifications`** (Review 2026-09-29): die Abfrage läuft über alle
+Nutzer in einem Rutsch – ein einziger Wert, an dem sie scheitert, ließ vorher den ganzen Lauf
+abbrechen. Deshalb prüft die DB die Form aller dort gelesenen, vom Nutzer schreibbaren
+Spalten selbst: `schedule` über `habit_schedule_valid` (CHECK, spiegelt `formToSchedule`),
+`filled_slugs` muss ein Array sein, `timezone` per Trigger, Erinnerungsminuten per Bereich.
+Neue solche Spalten brauchen dieselbe Prüfung.
 
 Tabelle `user_settings`: eine Zeile pro Nutzer. `default_reminder_minute` (Minuten
 seit Mitternacht, 0–1439, 15-Minuten-Raster, Default 1320 = 22:00) ist die
@@ -183,12 +196,13 @@ täglich, sonst `{type:'weekly', days:[0..6]}` (0 = Montag), `{type:'monthly', d
 | -1}` (-1 = letzter Tag), `{type:'yearly', month, day}` oder `{type:'interval', every:
 1..365, unit:'day'|'week', start:'YYYY-MM-DD'}` (alle X Tage/Wochen ab Start, davor nie
 dran). Einen Tag, den es im Monat nicht gibt (31.4., 29.2. außerhalb von Schaltjahren),
-behandeln beide Seiten als Monatsletzten statt ihn ausfallen zu lassen; unbekannte Pläne
-gelten als dran. Alle 7 Wochentage bzw. "alle 1 Tage" werden als `null` gespeichert
+behandeln beide Seiten als Monatsletzten statt ihn ausfallen zu lassen; ungültige Pläne
+gelten als dran (die DB lässt sie per CHECK gar nicht erst zu, siehe `push_subscriptions` →
+Robustheit). Alle 7 Wochentage bzw. "alle 1 Tage" werden als `null` gespeichert
 (eine einzige Darstellung von täglich). **Zwei Implementierungen derselben Regeln, die
 synchron bleiben müssen**: `isScheduledOn`/`isPlannedOn` in `logbuch.html` und die
-SQL-Funktion `public.habit_scheduled_on(schedule, date)` (Migration
-`20260927140000_add_habit_schedule`, von `get_due_notifications` genutzt). Bewusst **nicht**
+SQL-Funktion `public.habit_scheduled_on(schedule, date)` (plpgsql, aktuelle Fassung in
+Migration `20260929120000_harden_reminder_inputs`, von `get_due_notifications` genutzt). Bewusst **nicht**
 unterstützt: Kalender-Regeln wie "jeder erste Montag im Monat" (Nutzer: unübersichtlich
 und eher irrelevant) und Häufigkeits-Ziele ohne feste Tage ("3x pro Woche" – anderes
 Konzept, eher Richtung Ziel-Quote).
@@ -401,7 +415,8 @@ Erinnerungszeit der Gruppe oder `null`, siehe Erinnerungen); Zuordnung über die
 Klartext-Spalte `habit_definitions.section_id` → FK `ON DELETE SET NULL`, Trigger
 `habit_definitions_check_section_owner` erzwingt eine Gruppe desselben Nutzers. Rechte
 genau auf SELECT/INSERT/UPDATE/DELETE für `authenticated` zurückgeschnitten (Supabases
-Default-Privilegien hatten auch `anon`/TRUNCATE vergeben). Einklappbare Abschnitte zum
+Default-Privilegien hatten auch `anon`/TRUNCATE vergeben; seit 2026-09-29 für alle Tabellen
+so). Einklappbare Abschnitte zum
 Anordnen von Feldern (auch berechneten) – reine Anordnung, bewusst **keine eigene
 Berechnung** (wer einen Wert will, kombiniert Gruppe + berechnetes Feld). Die Zuordnung ist
 absichtlich unverschlüsselt (nur zwei zufällige IDs): die DB löst sie beim Löschen selbst,
@@ -555,7 +570,8 @@ alles native Web Crypto API, keine Library):
   Bewusst erst nach `setupEncryption`: scheitert die, bleibt der alte Stand samt
   Recovery-Wrapping erhalten.
 - Logout: `currentDek = null` (der IndexedDB-Cache bleibt für den nächsten Login auf
-  demselben Gerät). Konto-Löschung räumt den Cache zusätzlich explizit auf.
+  demselben Gerät), Erinnerungen des Geräts enden (`endPushForThisDevice`). Konto-Löschung
+  räumt den Cache zusätzlich explizit auf.
 - **Kennung des DEK** (`user_encryption.dek_id`, seit 2026-09-28): zufällige UUID, nicht
   geheim, neu nur wenn ein neuer DEK entsteht (`setupEncryption` – Einrichtung bzw. Reset
   "Recovery-Key auch verloren"). Der IndexedDB-Cache speichert sie neben dem DEK
@@ -978,7 +994,8 @@ durch den Namen aus einer lokalen Liste (IndexedDB `logbuch-push`, Store `meta`,
 `fieldNames`: `{ names: {id: name}, template }`, von der App angelegt). Fehlt die Liste
 oder eine ID, bleibt es beim allgemeinen Text. Gruppen-Erinnerungen genauso über
 `sectionNames`/`sectionTemplate` im selben Eintrag. Die Function protokolliert in ihrer
-Antwort (landet in `net._http_response`) nur die Art der Nachricht, nie Texte/IDs.
+Antwort (landet in `net._http_response`, 6 h aufbewahrt) nur Anzahlen je Art der Nachricht
+und Fehlerursachen – nie Texte, IDs oder wer etwas bekommen hat.
 
 **Zeitzone pro Nutzer**: `get_due_notifications` rechnet für jeden Nutzer per `p_now
 AT TIME ZONE timezone` dessen lokales Datum ("heute") und lokalen Viertelstunden-Slot
@@ -1005,7 +1022,7 @@ rechnen mit demselben Zeitpunkt) und macht die Funktion mit beliebigen Zeitpunkt
 testbar (`select * from get_due_notifications(timestamptz '...')` per `supabase db
 query --linked`). Die Funktion liefert Push-Endpoints aller Nutzer – deshalb nur für
 `service_role` ausführbar. Versand parallel mit max. `SEND_CONCURRENCY` (25) Abos
-gleichzeitig – bei Tausenden gleichzeitig fälligen Nutzern (Ballung am 22-Uhr-Default)
+gleichzeitig, je Zustellung höchstens `SEND_TIMEOUT_MS` (10 s) – bei Tausenden gleichzeitig fälligen Nutzern (Ballung am 22-Uhr-Default)
 stößt aber eher das Zeit-/CPU-Limit pro Function-Aufruf an (jede Push-Nachricht wird
 einzeln verschlüsselt/signiert), nicht die Parallelität. Deshalb misst jede Antwort
 `due`/`sent`/`failed`/`duration_ms` (nachlesbar in `net._http_response`); nächster
@@ -1112,7 +1129,8 @@ Umgesetzt:
   (Advisory-Lock pro Nutzer) in `record_feedback()` – ein Client-Limit allein wäre per
   direktem API-Aufruf umgehbar. **"Ohne Absender senden"**: `feedback.user_id` bleibt
   NULL, das Limit läuft dann über das getrennte `feedback_rate_log` (nur Konto +
-  Zeitpunkt, kein Inhalt, Einträge nach 24h gelöscht). Bewusst nicht "anonym" genannt:
+  Zeitpunkt, kein Inhalt, Einträge nach 24h gelöscht – stündlicher pg_cron-Job
+  `feedback-rate-log-cleanup`). Bewusst nicht "anonym" genannt:
   der DB-Owner könnte innerhalb dieser 24h theoretisch über Zeitpunkte zuordnen – der
   App-Text verspricht deshalb nur "ich sehe dann nicht, von wem es kommt". Mit
   Absender: die Konto-E-Mail wird als Reply-To der Mail gesetzt (Antworten geht direkt

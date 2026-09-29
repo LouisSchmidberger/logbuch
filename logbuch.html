@@ -1860,6 +1860,7 @@ const STRINGS = {
     'error.db.duplicateGeneric': 'Das gibt es in dieser Form schon.',
     'error.db.notNull': 'Ein Pflichtfeld fehlt oder enthält gerade keinen gültigen Wert – bitte alle Felder prüfen und nochmal versuchen.',
     'error.db.check': 'Einer der eingegebenen Werte liegt außerhalb des erlaubten Bereichs.',
+    'error.db.pushLimit': 'Erinnerungen sind schon auf 10 Geräten eingeschaltet – schalte sie auf einem davon aus, um sie hier einzuschalten.',
     'error.db.accountGone': 'Dieses Konto existiert nicht mehr (z.B. von einem anderen Gerät aus gelöscht). Du wurdest ausgeloggt.',
     'error.db.foreignKey': 'Ein verknüpfter Eintrag existiert nicht mehr – bitte die Seite neu laden und nochmal versuchen.',
     'error.db.network': 'Keine Verbindung zum Server – prüfe deine Internetverbindung und versuch es nochmal.',
@@ -2326,6 +2327,7 @@ const STRINGS = {
     'error.db.duplicateGeneric': 'This already exists in this form.',
     'error.db.notNull': 'A required field is missing or currently has no valid value – please check all fields and try again.',
     'error.db.check': 'One of the entered values is outside the allowed range.',
+    'error.db.pushLimit': 'Reminders are already on for 10 devices – turn them off on one of them to turn them on here.',
     'error.db.accountGone': 'This account no longer exists (e.g. deleted from another device). You have been signed out.',
     'error.db.foreignKey': 'A linked entry no longer exists – please reload the page and try again.',
     'error.db.network': 'No connection to the server – check your internet connection and try again.',
@@ -2999,6 +3001,9 @@ function translateDbError(message) {
   if (/violates not-null constraint/.test(message)) {
     return t('error.db.notNull');
   }
+  if (/push subscription limit reached/.test(message)) {
+    return t('error.db.pushLimit');
+  }
   if (/violates check constraint/.test(message)) {
     return t('error.db.check');
   }
@@ -3034,6 +3039,7 @@ async function forceLogoutAccountGone() {
   accountGoneHandled = true;
   currentDek = null;
   currentDekId = null;
+  endPushForThisDevice({ deleteServerRow: false }); // Server-Zeilen sind mit dem Konto schon weg
   try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* egal, wir wollen nur lokal raus */ }
 }
 
@@ -4573,10 +4579,43 @@ async function checkPushStatus() {
   try {
     const reg = await navigator.serviceWorker.register('./sw.js');
     const sub = await reg.pushManager.getSubscription();
+    // Das Abo des Browsers gehört nicht zwingend zu diesem Konto: es kann von einem
+    // anderen Konto auf diesem Gerät stammen oder serverseitig schon aufgeräumt sein
+    // (abgelaufen). Fehlt die eigene Server-Zeile, ist es für dieses Konto nutzlos - dann
+    // kündigen, damit "Erinnerungen einschalten" ein frisches anlegen kann. Nur bei
+    // eindeutiger Antwort, nicht bei einem Netzwerkfehler.
+    if (sub && state.session) {
+      const { data, error } = await supabase.from('push_subscriptions')
+        .select('id').eq('endpoint', sub.endpoint).maybeSingle();
+      if (!error && !data) {
+        await sub.unsubscribe();
+        state.pushStatus = 'off';
+        return;
+      }
+    }
     state.pushStatus = sub ? 'on' : 'off';
   } catch {
     state.pushStatus = 'unsupported';
   }
+}
+
+// Beendet die Erinnerungen dieses Geräts für das angemeldete Konto - beim Abmelden und
+// beim Löschen des Kontos: Server-Zeile löschen (solange die Session noch gilt), das Abo
+// im Browser kündigen und die lokale Namensliste leeren. Sonst kämen die Erinnerungen
+// des alten Kontos samt Feldnamen weiter auf das Gerät, auch wenn sich danach jemand
+// anders anmeldet. getRegistration statt serviceWorker.ready: ready wartet ohne
+// registrierten Service Worker für immer. Best effort, darf das Abmelden nie blockieren.
+async function endPushForThisDevice({ deleteServerRow = true } = {}) {
+  try {
+    const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+    const sub = reg?.pushManager ? await reg.pushManager.getSubscription() : null;
+    if (sub) {
+      if (deleteServerRow) await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+      await sub.unsubscribe();
+    }
+  } catch { /* best effort */ }
+  await clearFieldNamesForPush();
+  if (state.pushStatus !== 'unsupported') state.pushStatus = 'off';
 }
 
 async function enablePush() {
@@ -4605,7 +4644,7 @@ async function enablePush() {
       },
       { onConflict: 'endpoint' }
     );
-    if (error) throw error;
+    if (error) throw new Error(translateDbError(error.message));
     state.pushStatus = 'on';
     state.notice = { type: 'ok', text: t('notice.pushEnabled') };
   } catch (err) {
@@ -4726,16 +4765,11 @@ async function handleDeleteAccount() {
     return;
   }
 
-  // Best effort: lokale Push-Subscription und gecachten Verschlüsselungs-Schlüssel im
-  // Browser aufräumen (die DB-Zeilen sind durch die Kontolöschung ohnehin schon weg).
-  // Darf das eigentliche Löschen nicht blockieren.
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    if (sub) await sub.unsubscribe();
-  } catch { /* ignorieren */ }
+  // Best effort: lokale Push-Subscription, Namensliste und gecachten
+  // Verschlüsselungs-Schlüssel im Browser aufräumen (die DB-Zeilen sind durch die
+  // Kontolöschung ohnehin schon weg). Darf das eigentliche Löschen nicht blockieren.
+  await endPushForThisDevice({ deleteServerRow: false });
   if (userId) await clearCachedDek(userId);
-  await clearFieldNamesForPush();
   currentDek = null;
   currentDekId = null;
 
@@ -7023,6 +7057,7 @@ app.addEventListener('click', async (e) => {
     await regenerateRecoveryKey();
   } else if (action === 'logout') {
     flushAllDaySaves(); // ausstehende Text-Feld-Speicherungen noch mit dem Schlüssel verschicken
+    await endPushForThisDevice();
     currentDek = null;
     currentDekId = null;
     state.authEmail = '';

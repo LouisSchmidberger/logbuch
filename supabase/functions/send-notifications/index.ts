@@ -43,6 +43,10 @@ const SEND_CONCURRENCY = 25;
 // Seitengröße beim Abrufen der fälligen Abos – muss unter api.max_rows (1000, siehe
 // supabase/config.toml) bleiben, sonst kappt PostgREST die Antwort still.
 const PAGE_SIZE = 500;
+// Höchstwartezeit pro Zustellung: ohne sie könnte ein Endpoint, der nie antwortet, einen
+// der parallelen Versand-Plätze bis zum Zeitlimit der Function blockieren - mit ein paar
+// solchen Abos bekäme in dem Lauf niemand mehr seine Erinnerung.
+const SEND_TIMEOUT_MS = 10_000;
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
@@ -183,7 +187,12 @@ Deno.serve(async (req) => {
     after = page[page.length - 1].subscription_id;
   }
 
-  const results: Array<{ user_id: string; ok: boolean; detail: string }> = [];
+  // Protokoll für die Antwort dieser Function (landet in net._http_response in der
+  // Datenbank): nur Anzahlen je Art der Nachricht und Fehlerursachen - keine Texte,
+  // keine Feld-IDs, und auch nicht, WER etwas bekommen hat.
+  let sent = 0;
+  const sentByKind: Record<string, number> = {};
+  const failures: string[] = [];
 
   // Pro Abo nacheinander (Reihenfolge Erinnerung vor Übersicht bleibt erhalten), über
   // die Abos hinweg parallel.
@@ -194,18 +203,13 @@ Deno.serve(async (req) => {
     };
     for (const { kind, ...msg } of messagesFor(row)) {
       try {
-        await webpush.sendNotification(subscription, JSON.stringify(msg));
-        // Nur die Art der Nachricht protokollieren, nie Texte/IDs - die Antwort dieser
-        // Function landet in net._http_response in der Datenbank.
-        results.push({ user_id: row.user_id, ok: true, detail: kind });
+        await webpush.sendNotification(subscription, JSON.stringify(msg), { timeout: SEND_TIMEOUT_MS });
+        sent++;
+        sentByKind[kind] = (sentByKind[kind] ?? 0) + 1;
       } catch (err) {
         const statusCode = (err as { statusCode?: number })?.statusCode;
         const body = (err as { body?: string })?.body;
-        results.push({
-          user_id: row.user_id,
-          ok: false,
-          detail: `${kind}: ${String(err)} | statusCode=${statusCode} body=${body}`,
-        });
+        failures.push(`${kind}: ${String(err)} | statusCode=${statusCode} body=${body}`);
         // Abgelaufene/ungültige Subscription aufräumen – weitere Nachrichten an sie
         // wären ebenso zwecklos.
         if (statusCode === 404 || statusCode === 410) {
@@ -216,13 +220,13 @@ Deno.serve(async (req) => {
     }
   });
 
-  const sent = results.filter((r) => r.ok).length;
   return new Response(JSON.stringify({
     due: rows.length,
     sent,
-    failed: results.length - sent,
+    failed: failures.length,
     duration_ms: Date.now() - startedAt,
-    results,
+    sent_by_kind: sentByKind,
+    failures,
   }), {
     headers: { 'Content-Type': 'application/json' },
   });
