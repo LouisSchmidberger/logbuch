@@ -923,7 +923,10 @@ function formatRecoveryKey(hex) {
   return hex.match(/.{1,5}/g).join('-');
 }
 
-const PBKDF2_ITERATIONS = 250000;
+// OWASP-Empfehlung für PBKDF2-SHA256 (Stand 2023). Konten mit weniger Runden (bis
+// 2026-09-29: 250.000) werden beim nächsten Entsperren mit Passwort still hochgestuft
+// (upgradePasswordWrap).
+const PBKDF2_ITERATIONS = 600000;
 
 async function deriveKek(password, saltBuf, iterations) {
   const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
@@ -1626,6 +1629,19 @@ const state = {
 // (user_encryption.dek_id), gegen die checkDekStillCurrent prüft.
 let currentDek = null;
 let currentDekId = null;
+// Konto, dem der geladene Schlüssel gehört - damit sich erkennen lässt, wenn die Session
+// plötzlich einem anderen Konto gehört (z.B. in einem anderen Tab umgemeldet).
+let currentDekUserId = null;
+function setCurrentDek(dek, dekId, userId) {
+  currentDek = dek;
+  currentDekId = dekId;
+  currentDekUserId = userId;
+}
+function clearCurrentDek() {
+  currentDek = null;
+  currentDekId = null;
+  currentDekUserId = null;
+}
 // Ersatzschlüssel (Recovery-Key) noch unbestätigt (user_encryption.recovery_key_confirmed
 // = false): neues Konto, Reset ohne Ersatzschlüssel, oder im Menü neu erzeugt und vor dem
 // Bestätigen geschlossen. maybeShowSpareKey zeigt dann einen frisch erzeugten an.
@@ -1897,6 +1913,8 @@ const STRINGS = {
     'notice.pushPermissionDenied': 'Ohne Benachrichtigungs-Erlaubnis im Browser geht das leider nicht.',
     'notice.pushEnabled': 'Erinnerungen sind aktiv.',
     'notice.enableFailed': 'Aktivieren fehlgeschlagen: ',
+    'notice.entriesUndecryptable': '{count} Tag(e) konnten nicht entschlüsselt werden und erscheinen leer. Damit nichts verloren geht, speichert Logbuch dort nichts. Schreib mir gern über „Feedback geben“.',
+    'notice.dayUndecryptable': 'Dieser Tag konnte nicht entschlüsselt werden. Damit sein Inhalt nicht überschrieben wird, speichert Logbuch hier nichts.',
     'notice.disableFailed': 'Deaktivieren fehlgeschlagen: ',
     'notice.exportFailed': 'Export fehlgeschlagen: ',
     'notice.exportDownloaded': 'Export heruntergeladen.',
@@ -1955,6 +1973,7 @@ const STRINGS = {
     'unlock.unlocking': 'Wird entsperrt …',
     'unlock.unlock': 'Entsperren',
     'unlock.wrongPassword': 'Falsches Passwort.',
+    'unlock.failed': 'Entsperren fehlgeschlagen: ',
     'unlock.keyChanged': 'Deine Verschlüsselung wurde auf einem anderen Gerät neu eingerichtet (Passwort zurückgesetzt ohne Ersatzschlüssel). Bitte gib dein aktuelles Passwort ein.',
     'ariaLabel.deleteEntry': 'Eintrag löschen',
     'ariaLabel.noValue': 'kein Wert',
@@ -2317,6 +2336,7 @@ const STRINGS = {
     'tabs.year': 'Jahr',
     'tabs.global': 'Gesamt',
     'common.encryptingData': 'Deine Daten werden verschlüsselt …',
+    'recoveryDisplay.replacedElsewhere': 'Dein Ersatzschlüssel wurde inzwischen auf einem anderen Gerät neu erzeugt – der eben gezeigte gilt deshalb nicht mehr. Hier ist ein neuer, bewahre bitte diesen auf.',
     'recoveryDisplay.copied': 'In die Zwischenablage kopiert.',
     'recoveryDisplay.copyFailed': 'Kopieren nicht möglich - bitte den Ersatzschlüssel von Hand abschreiben.',
     'recoveryDisplay.fileBody': 'Sicher aufbewahren – ohne diesen Ersatzschlüssel UND dein Passwort sind deine Daten unwiederbringlich verloren. Gib ihn niemandem: Er öffnet dein Logbuch genauso wie dein Passwort.',
@@ -2364,6 +2384,8 @@ const STRINGS = {
     'notice.pushPermissionDenied': 'Without notification permission in the browser this unfortunately does not work.',
     'notice.pushEnabled': 'Reminders are active.',
     'notice.enableFailed': 'Enabling failed: ',
+    'notice.entriesUndecryptable': '{count} day(s) could not be decrypted and appear empty. So that nothing gets lost, Logbuch does not save anything there. Feel free to write to me via “Send feedback”.',
+    'notice.dayUndecryptable': 'This day could not be decrypted. So that its content is not overwritten, Logbuch does not save anything here.',
     'notice.disableFailed': 'Disabling failed: ',
     'notice.exportFailed': 'Export failed: ',
     'notice.exportDownloaded': 'Export downloaded.',
@@ -2422,6 +2444,7 @@ const STRINGS = {
     'unlock.unlocking': 'Unlocking…',
     'unlock.unlock': 'Unlock',
     'unlock.wrongPassword': 'Incorrect password.',
+    'unlock.failed': 'Unlocking failed: ',
     'unlock.keyChanged': 'Your encryption was set up again on another device (password reset without a spare key). Please enter your current password.',
     'ariaLabel.deleteEntry': 'Delete entry',
     'ariaLabel.noValue': 'no value',
@@ -2784,6 +2807,7 @@ const STRINGS = {
     'tabs.year': 'Year',
     'tabs.global': 'Overall',
     'common.encryptingData': 'Your data is being encrypted …',
+    'recoveryDisplay.replacedElsewhere': 'Your spare key was created anew on another device in the meantime – so the one just shown is no longer valid. Here is a new one, please keep this one.',
     'recoveryDisplay.copied': 'Copied to clipboard.',
     'recoveryDisplay.copyFailed': 'Copying not possible - please write down the spare key by hand.',
     'recoveryDisplay.fileBody': 'Keep this safe – without this spare key AND your password, your data is irrecoverably lost. Do not give it to anyone: it unlocks your Logbuch just like your password.',
@@ -3037,8 +3061,7 @@ let accountGoneHandled = false;
 async function forceLogoutAccountGone() {
   if (accountGoneHandled) return;
   accountGoneHandled = true;
-  currentDek = null;
-  currentDekId = null;
+  clearCurrentDek();
   endPushForThisDevice({ deleteServerRow: false }); // Server-Zeilen sind mit dem Konto schon weg
   try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* egal, wir wollen nur lokal raus */ }
 }
@@ -3142,25 +3165,49 @@ document.addEventListener('pointerdown', (e) => {
 document.addEventListener('pointerleave', stopStepperHold);
 
 // --- Datenzugriff --------------------------------------------------------
+// PostgREST liefert höchstens api.max_rows (1000) Zeilen pro Anfrage und kappt still -
+// bei den Tages-Einträgen wären das nach ~2,7 Jahren täglicher Nutzung nicht mehr alle
+// (ohne Sortierung sogar eine zufällige Auswahl). Deshalb seitenweise; buildQuery muss
+// eine eindeutige Sortierung setzen, sonst sind die Seiten nicht stabil.
+const FETCH_PAGE_SIZE = 1000;
+async function fetchAllRows(buildQuery) {
+  const rows = [];
+  for (let from = 0; ; from += FETCH_PAGE_SIZE) {
+    const { data, error } = await buildQuery().range(from, from + FETCH_PAGE_SIZE - 1);
+    if (error) return { data: null, error };
+    rows.push(...data);
+    if (data.length < FETCH_PAGE_SIZE) return { data: rows, error: null };
+  }
+}
+
+// Tage, deren Eintrag sich nicht entschlüsseln ließ (z.B. beschädigt oder mit einem
+// anderen Schlüssel geschrieben). Sie erscheinen leer, dürfen aber nie überschrieben
+// werden - sonst wäre der Inhalt endgültig weg, auch falls er sich später doch noch
+// lesen ließe. saveDay verweigert deshalb das Speichern dort.
+let undecryptableEntryDates = new Set();
 async function loadEntries() {
-  const { data, error } = await supabase.from('habit_entries').select('entry_date, data');
+  const { data, error } = await fetchAllRows(() =>
+    supabase.from('habit_entries').select('entry_date, data').order('entry_date'));
   if (error) {
     state.notice = { type: 'error', text: t('notice.loadEntriesError') + translateDbError(error.message) };
     return;
   }
   const map = {};
   unpaddedEntryDates = [];
+  undecryptableEntryDates = new Set();
   for (const row of data) {
     try {
       map[row.entry_date] = row.data ? await decryptData(currentDek, row.data) : {};
       if (row.data && !isPaddedCiphertext(row.data)) unpaddedEntryDates.push(row.entry_date);
     } catch {
-      // Sollte nach der einmaligen Migration nicht mehr vorkommen; defensiv statt
-      // die ganze App an einer kaputten/fremden Zeile scheitern zu lassen.
       map[row.entry_date] = {};
+      undecryptableEntryDates.add(row.entry_date);
     }
   }
   state.entries = map;
+  if (undecryptableEntryDates.size) {
+    state.notice = { type: 'error', text: t('notice.entriesUndecryptable', { count: undecryptableEntryDates.size }) };
+  }
 }
 
 // Einträge von vor dem Auffüllen (siehe encryptData) verrieten über ihre Länge weiter,
@@ -3369,10 +3416,17 @@ async function migrateExistingEntries(userId, dek) {
 }
 
 // Erzeugt DEK + Passwort-Wrapping + Recovery-Key-Wrapping neu, migriert bestehende
-// Klartext-Einträge und markiert den Ersatzschlüssel als unbestätigt (spareKeyPending). Genutzt sowohl beim allerersten Setup (Neu-Signup oder
-// Bestandskonto vor diesem Umbau) als auch beim "Recovery-Key auch verloren"-Fallback
-// im Passwort-Reset (dort verliert der Nutzer bewusst seine alten Einträge).
-async function setupEncryption(userId, password) {
+// Klartext-Einträge und markiert den Ersatzschlüssel als unbestätigt (spareKeyPending).
+// Genutzt beim allerersten Setup (Neu-Signup oder Bestandskonto vor diesem Umbau) und beim
+// "Recovery-Key auch verloren"-Fallback im Passwort-Reset (dort verliert der Nutzer bewusst
+// seine alten Einträge) - NUR dort mit replace: true. Beim ersten Setup wird bewusst
+// eingefügt statt überschrieben: meldet man sich auf zwei Geräten fast gleichzeitig zum
+// ersten Mal an (z.B. App + Bestätigungslink im Browser), würde das zweite sonst den
+// Schlüssel des ersten ersetzen - und was das erste inzwischen verschlüsselt hat, wäre
+// unlesbar. Existiert die Zeile schon, wirft das einen KEY_EXISTS-Fehler (siehe
+// unlockEncryption).
+const KEY_EXISTS = 'key-exists';
+async function setupEncryption(userId, password, { replace = false } = {}) {
   const dek = await generateDek();
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const kek = await deriveKek(password, salt, PBKDF2_ITERATIONS);
@@ -3384,7 +3438,7 @@ async function setupEncryption(userId, password) {
   // Neuer DEK = neue Kennung - macht die Caches anderer Geräte ungültig (usableCachedDek).
   const dekId = crypto.randomUUID();
 
-  const { error } = await supabase.from('user_encryption').upsert({
+  const row = {
     user_id: userId,
     dek_id: dekId,
     salt: bufToBase64(salt),
@@ -3394,13 +3448,16 @@ async function setupEncryption(userId, password) {
     recovery_wrap_iv: recoveryWrapIv,
     wrapped_dek_recovery: wrappedDekRecovery,
     recovery_key_confirmed: false,
-  }, { onConflict: 'user_id' });
+  };
+  const { error } = replace
+    ? await supabase.from('user_encryption').upsert(row, { onConflict: 'user_id' })
+    : await supabase.from('user_encryption').insert(row);
+  if (error?.code === '23505') throw new Error(KEY_EXISTS);
   if (error) throw error;
 
   await migrateExistingEntries(userId, dek);
 
-  currentDek = dek;
-  currentDekId = dekId;
+  setCurrentDek(dek, dekId, userId);
   await cacheDek(userId, dek, dekId);
   // Den gerade erzeugten Ersatzschlüssel bekommt niemand zu sehen - angezeigt wird erst
   // nach dem Tutorial ein frisch erzeugter (maybeShowSpareKey), damit der erste Eindruck
@@ -3429,12 +3486,22 @@ async function usableCachedDek(userId, row) {
 // Haupteinstieg nach erfolgreichem signIn/signUp (Passwort ist zu diesem Zeitpunkt im
 // Klartext verfügbar). Schneller Pfad über den lokalen Cache, sonst Passwort-Ableitung;
 // erstmaliger Aufruf für ein Konto legt die Verschlüsselung überhaupt erst an.
-async function unlockEncryption(userId, password) {
+// verifyPassword: das Passwort kommt NICHT aus einer gerade erfolgreichen Anmeldung (die
+// Entsperr-Maske, z.B. nach dem Bestätigungslink) - dann vor dem Einrichten bei Supabase
+// prüfen. Sonst würde ein Tippfehler zum Schlüssel-Passwort, und auf jedem anderen Gerät
+// hieße es danach für immer "Falsches Passwort". Bei bestehender Verschlüsselung prüft
+// das Entpacken selbst (falsches Passwort -> wirft).
+const WRONG_PASSWORD = 'wrong-password';
+async function unlockEncryption(userId, password, { verifyPassword = false } = {}) {
   const row = await fetchEncryptionRow(userId);
   const { dek: cached } = await usableCachedDek(userId, row);
-  if (cached) { currentDek = cached; currentDekId = row.dek_id; spareKeyPending = !row.recovery_key_confirmed; return; }
+  if (cached) { setCurrentDek(cached, row.dek_id, userId); spareKeyPending = !row.recovery_key_confirmed; return; }
 
   if (!row) {
+    if (verifyPassword) {
+      const { error } = await supabase.auth.signInWithPassword({ email: state.session.user.email, password });
+      if (error) throw new Error(/invalid login credentials/i.test(error.message) ? WRONG_PASSWORD : error.message);
+    }
     state.encryptionSetupInProgress = true;
     render();
     try {
@@ -3448,15 +3515,53 @@ async function unlockEncryption(userId, password) {
       await supabase.from('user_settings')
         .update({ locale: detectInitialLocale() })
         .eq('user_id', userId);
+      return;
+    } catch (err) {
+      // Ein anderes Gerät hat den Schlüssel gerade eben angelegt - dann einfach den
+      // benutzen (unten), statt ihn zu ersetzen.
+      if (err.message !== KEY_EXISTS) throw err;
     } finally {
       state.encryptionSetupInProgress = false;
     }
-    return;
+    return unlockEncryption(userId, password, { verifyPassword });
   }
-  currentDek = await unwrapDekWithPassword(row, password);
-  currentDekId = row.dek_id;
+  let dek;
+  try {
+    dek = await unwrapDekWithPassword(row, password);
+  } catch {
+    throw new Error(WRONG_PASSWORD);
+  }
+  setCurrentDek(dek, row.dek_id, userId);
   spareKeyPending = !row.recovery_key_confirmed;
-  await cacheDek(userId, currentDek, row.dek_id);
+  await cacheDek(userId, dek, row.dek_id);
+  if (row.kdf_iterations < PBKDF2_ITERATIONS) upgradePasswordWrap(row, dek, password);
+}
+
+// Verpackt den DEK mit der aktuellen Rundenzahl neu (siehe PBKDF2_ITERATIONS) - im
+// Hintergrund, best effort: klappt es nicht, bleibt die alte Verpackung gültig. Nur, wenn
+// die Verpackung seit dem Laden unverändert ist (.eq wrapped_dek) - ein gleichzeitiger
+// Passwort-Reset auf einem anderen Gerät darf nicht überschrieben werden.
+async function upgradePasswordWrap(row, dek, password) {
+  try {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const kek = await deriveKek(password, salt, PBKDF2_ITERATIONS);
+    const { iv, wrapped } = await wrapDek(dek, kek);
+    const { error } = await supabase.from('user_encryption')
+      .update({ salt: bufToBase64(salt), kdf_iterations: PBKDF2_ITERATIONS, wrap_iv: iv, wrapped_dek: wrapped })
+      .eq('user_id', row.user_id)
+      .eq('wrapped_dek', row.wrapped_dek);
+    if (error) console.warn('[Logbuch] Schlüssel-Verpackung nicht hochgestuft:', error.message);
+  } catch (err) {
+    console.warn('[Logbuch] Schlüssel-Verpackung nicht hochgestuft:', err);
+  }
+}
+
+// Meldung für einen fehlgeschlagenen Entsperr-Versuch: "Falsches Passwort" nur, wenn es
+// wirklich am Passwort lag - ein Netzwerkfehler beim Laden der Schlüssel-Zeile soll nicht
+// so aussehen.
+function unlockErrorText(err) {
+  if (err?.message === WRONG_PASSWORD) return t('unlock.wrongPassword');
+  return t('unlock.failed') + translateDbError(err?.message || String(err));
 }
 
 // Beim Zurückkehren in die App: wurde der DEK inzwischen auf einem anderen Gerät neu
@@ -3485,24 +3590,31 @@ document.addEventListener('visibilitychange', () => {
 
 // Für den "Recovery-Key neu erzeugen"-Menüpunkt: nutzt den bereits im Speicher
 // gehaltenen DEK direkt (kein Passwort nötig), macht den bisherigen Code ungültig.
-async function regenerateRecoveryKey() {
+// onlyIfUnconfirmed (automatische Anzeige, maybeShowSpareKey): nur ersetzen, solange der
+// Schlüssel serverseitig noch unbestätigt ist - hat man ihn inzwischen auf einem anderen
+// Gerät bestätigt, würde ein neuer den dort gespeicherten sonst still ungültig machen.
+async function regenerateRecoveryKey({ onlyIfUnconfirmed = false } = {}) {
   if (!currentDek || !state.session) return;
   const recoveryBytes = generateRecoveryKeyBytes();
   const recoveryKey = await importRecoveryKeyAsCryptoKey(recoveryBytes);
   const { iv: recoveryWrapIv, wrapped: wrappedDekRecovery } = await wrapDek(currentDek, recoveryKey);
   // Unbestätigt, bis der Nutzer das Speichern abhakt - schließt er vorher, ist der alte
   // schon ungültig und der neue ungesehen, dann gibt es beim nächsten Öffnen einen neuen.
-  const { error } = await supabase.from('user_encryption')
+  let query = supabase.from('user_encryption')
     .update({ recovery_wrap_iv: recoveryWrapIv, wrapped_dek_recovery: wrappedDekRecovery, recovery_key_confirmed: false })
     .eq('user_id', state.session.user.id);
+  if (onlyIfUnconfirmed) query = query.eq('recovery_key_confirmed', false);
+  const { data, error } = await query.select('user_id');
   if (error) {
     state.notice = { type: 'error', text: t('notice.recoveryKeySaveError') + translateDbError(error.message) };
     render();
     return;
   }
+  if (!data.length) { spareKeyPending = false; return; } // schon anderswo bestätigt
   spareKeyPending = true;
   state.menuOpen = false;
-  state.recoveryKeyToShow = { hex: bufToHex(recoveryBytes) };
+  // wrapped: woran confirmSpareKey erkennt, ob noch genau DIESER Schlüssel gilt.
+  state.recoveryKeyToShow = { hex: bufToHex(recoveryBytes), wrapped: wrappedDekRecovery };
   render();
   document.querySelector('.onb h1')?.focus({ preventScroll: true });
 }
@@ -3514,17 +3626,30 @@ async function maybeShowSpareKey() {
   if (!spareKeyPending || spareKeyInFlight || !currentDek || !state.session
     || state.recoveryKeyToShow || state.loading || !state.userSettings.onboardingCompleted) return;
   spareKeyInFlight = true;
-  try { await regenerateRecoveryKey(); } finally { spareKeyInFlight = false; }
+  try { await regenerateRecoveryKey({ onlyIfUnconfirmed: true }); } finally { spareKeyInFlight = false; }
 }
+// Bestätigt nur, wenn in der Datenbank noch genau der angezeigte Schlüssel steht. Hat ein
+// anderes Gerät ihn inzwischen ersetzt (dort ebenfalls angezeigt oder im Menü neu
+// erzeugt), wäre der hier gezeigte ungültig - dann erklären und einen neuen zeigen, statt
+// ihn als gesichert zu markieren.
 async function confirmSpareKey() {
+  const shown = state.recoveryKeyToShow;
   state.recoveryKeyToShow = null;
   render();
-  if (!spareKeyPending || !state.session) return;
-  const { error } = await supabase.from('user_encryption')
+  if (!spareKeyPending || !state.session || !shown) return;
+  const { data, error } = await supabase.from('user_encryption')
     .update({ recovery_key_confirmed: true })
-    .eq('user_id', state.session.user.id);
+    .eq('user_id', state.session.user.id)
+    .eq('wrapped_dek_recovery', shown.wrapped)
+    .select('user_id');
   if (error) {
     state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+    render();
+    return;
+  }
+  if (!data.length) {
+    await regenerateRecoveryKey();
+    state.notice = { type: 'error', text: t('recoveryDisplay.replacedElsewhere') };
     render();
     return;
   }
@@ -4389,6 +4514,12 @@ async function updateHabitPayload(habit, changes) {
 }
 
 async function saveDay(dateKey, dayData) {
+  if (undecryptableEntryDates.has(dateKey)) {
+    state.entries = { ...state.entries, [dateKey]: {} }; // die Änderung nicht stehen lassen - sie ist ja nicht gespeichert
+    state.notice = { type: 'error', text: t('notice.dayUndecryptable') };
+    render();
+    return;
+  }
   const encrypted = await encryptData(currentDek, dayData);
   const { error } = await supabase
     .from('habit_entries')
@@ -4679,7 +4810,7 @@ async function handleExportData() {
   state.menuOpen = false;
   const [defsRes, entriesRes, settingsRes, subsRes, sectionsRes] = await Promise.all([
     supabase.from('habit_definitions').select('*'),
-    supabase.from('habit_entries').select('*'),
+    fetchAllRows(() => supabase.from('habit_entries').select('*').order('entry_date')),
     supabase.from('user_settings').select('*'),
     supabase.from('push_subscriptions').select('*'),
     supabase.from('habit_sections').select('*'),
@@ -4740,7 +4871,9 @@ async function handleExportData() {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Erst verzögert freigeben: Safari/iOS bricht den Download sonst teils ab, weil die
+  // Datei beim tatsächlichen Speichern schon weg ist.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
   state.notice = { type: 'ok', text: t('notice.exportDownloaded') };
   render();
 }
@@ -4770,8 +4903,7 @@ async function handleDeleteAccount() {
   // Kontolöschung ohnehin schon weg). Darf das eigentliche Löschen nicht blockieren.
   await endPushForThisDevice({ deleteServerRow: false });
   if (userId) await clearCachedDek(userId);
-  currentDek = null;
-  currentDekId = null;
+  clearCurrentDek();
 
   state.deleteConfirm = null;
   state.authEmail = '';
@@ -4906,6 +5038,12 @@ function renderAuth() {
         if (error) { state.authError = translateAuthError(error.message); render(); return; }
         await completeAuthFlow(data.user.id, password);
       }
+    } catch (err) {
+      // Angemeldet, aber Entsperren gescheitert (z.B. Verbindung weg) - die Entsperr-Maske
+      // übernimmt und zeigt, woran es lag.
+      state.unlockError = unlockErrorText(err);
+      state.loading = false;
+      render();
     } finally {
       authFlowInFlight = false;
     }
@@ -4954,7 +5092,7 @@ function renderPasswordRecovery() {
       if (fallback) {
         const { error } = await supabase.auth.updateUser({ password });
         if (error) throw error;
-        await setupEncryption(userId, password);
+        await setupEncryption(userId, password, { replace: true });
         cleanupFailed = !(await deleteUndecryptableData(userId));
       } else {
         const recoveryKeyHex = document.getElementById('recovery-key-input').value;
@@ -4980,8 +5118,7 @@ function renderPasswordRecovery() {
           .eq('user_id', userId);
         if (updErr) throw updErr;
         // Gleicher DEK wie vorher, also auch gleiche Kennung - Caches anderer Geräte bleiben gültig.
-        currentDek = dek;
-        currentDekId = dekId;
+        setCurrentDek(dek, dekId, userId);
         spareKeyPending = !keyConfirmed;
         await cacheDek(userId, dek, dekId);
       }
@@ -5177,12 +5314,18 @@ function renderUnlockPrompt() {
       // ohne dass je ein Passwort-Formular durchlaufen wurde), sie mit diesem
       // Passwort neu einrichten — bisher landete dieser Fall in einer Sackgasse
       // (immer "Falsches Passwort", obwohl gar keine Konfiguration existierte).
-      await completeAuthFlow(state.session.user.id, password);
+      // verifyPassword: hier hat niemand das Passwort bei Supabase geprüft (siehe
+      // unlockEncryption); die Prüfung meldet sich neu an - authFlowInFlight hält
+      // onAuthStateChange dabei heraus.
+      authFlowInFlight = true;
+      await completeAuthFlow(state.session.user.id, password, { verifyPassword: true });
       state.unlockBusy = false;
-    } catch {
+    } catch (err) {
       state.unlockBusy = false;
-      state.unlockError = t('unlock.wrongPassword');
+      state.unlockError = unlockErrorText(err);
       render();
+    } finally {
+      authFlowInFlight = false;
     }
   });
 }
@@ -7047,7 +7190,7 @@ app.addEventListener('click', async (e) => {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 60_000); // siehe handleExportData
     state.notice = { type: 'ok', text: t('recoveryDisplay.downloading') };
     render();
   } else if (action === 'confirm-recovery-key') {
@@ -7058,8 +7201,7 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'logout') {
     flushAllDaySaves(); // ausstehende Text-Feld-Speicherungen noch mit dem Schlüssel verschicken
     await endPushForThisDevice();
-    currentDek = null;
-    currentDekId = null;
+    clearCurrentDek();
     state.authEmail = '';
     state.authPassword = '';
     state.authPasswordVisible = false;
@@ -8075,9 +8217,9 @@ if ('serviceWorker' in navigator) {
 // das Passwort gerade eben schon eingegeben wurde.
 let authFlowInFlight = false;
 
-async function completeAuthFlow(userId, password) {
+async function completeAuthFlow(userId, password, { verifyPassword = false } = {}) {
   accountGoneHandled = false;
-  await unlockEncryption(userId, password);
+  await unlockEncryption(userId, password, { verifyPassword });
   state.loading = true;
   render();
   await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections()]);
@@ -8099,7 +8241,15 @@ supabase.auth.onAuthStateChange(async (event, session) => {
   }
   if (authFlowInFlight) { render(); return; }
   if (session) {
-    if (currentDek) { render(); return; }
+    // Schon entsperrt und dasselbe Konto: z.B. die stündliche Token-Erneuerung oder die
+    // Rückkehr in die App - sichtbar ändert sich nichts. Bewusst KEIN render(): der würde
+    // die ganze Ansicht neu aufbauen und dabei Getipptes, aber noch nicht Gespeichertes
+    // (z.B. den Namen im Feld-Formular) verwerfen.
+    if (currentDek && currentDekUserId === session.user.id) return;
+    // Schlüssel eines ANDEREN Kontos geladen (z.B. in einem anderen Tab umgemeldet):
+    // alles davon verwerfen, sonst würde mit fremdem Schlüssel unter diesem Konto
+    // gespeichert.
+    if (currentDek) clearLoadedAccountState();
     // Kein Passwort verfügbar (Session-Wiederherstellung, z.B. Browser-Reload) - nur
     // der lokale Cache kann hier helfen, sonst muss renderUnlockPrompt() greifen.
     state.loading = true;
@@ -8116,8 +8266,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
       if (result.stale) state.unlockError = t('unlock.keyChanged');
     } catch { /* -> renderUnlockPrompt */ }
     if (cached) {
-      currentDek = cached;
-      currentDekId = row.dek_id;
+      setCurrentDek(cached, row.dek_id, session.user.id);
       spareKeyPending = !row.recovery_key_confirmed;
       await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections()]);
       saveFieldNamesForPush(); // siehe completeAuthFlow
@@ -8133,8 +8282,9 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 });
 
 // Verwirft alles aus dem Konto Geladene samt Schlüssel - beim Abmelden und bei einem
-// veralteten Schlüssel (checkDekStillCurrent). Offene Notiz-Entwürfe/Menüs gehören zum
-// Konto - sonst sähe sie, wer sich danach auf demselben Gerät anmeldet.
+// veralteten Schlüssel (checkDekStillCurrent). Auch offene Formulare, Entwürfe, Dialoge
+// und die zuletzt offene Unterseite gehören zum Konto - sonst sähe sie, wer sich danach
+// auf demselben Gerät anmeldet (z.B. einen Feldnamen im offenen Feld-Formular).
 function clearLoadedAccountState() {
   state.entries = {};
   state.habits = [];
@@ -8143,8 +8293,19 @@ function clearLoadedAccountState() {
   state.resetConfirm = null;
   state.sections = [];
   state.sectionForm = null;
-  currentDek = null;
-  currentDekId = null;
+  state.sectionDeleteConfirm = null;
+  state.habitForm = null;
+  state.habitFormSaving = false;
+  state.habitDeleteConfirm = null;
+  state.deleteConfirm = null;
+  state.menuOpen = false;
+  state.recoveryKeyToShow = null;
+  state.unplannedOpenFor = null;
+  state.feedback = { message: '', anonymous: false, busy: false };
+  state.view = 'today';
+  state.previousTabView = 'today';
+  undecryptableEntryDates = new Set();
+  clearCurrentDek();
   spareKeyPending = false;
   state.unlockError = null;
   state.tutorialStep = null;
