@@ -430,8 +430,12 @@ function isNumberComputed(h) { return h.kind === 'computed' && !!h.aggregate; }
 function isScoredKind(h) { return h.kind === 'scale' || (h.kind === 'computed' && !h.aggregate); }
 // Felder mit Zahlen-Verlauf (Graph statt Farbe).
 function hasNumericSeries(h) { return isNumberKind(h) || isNumberComputed(h); }
+// Nur Mitglieder vom passenden Typ: der Typ eines Mitglieds lässt sich ändern, solange es
+// noch keine Daten hat - ein Skala-Mittelwert über ein inzwischen zum Zahlenwert gewordenes
+// Feld ergäbe sonst NaN (und umgekehrt).
 function computedMemberHabits(h) {
-  return (h.members || []).map((key) => state.habits.find((x) => x.id === key)).filter(Boolean);
+  const kind = h.aggregate ? 'number' : 'scale';
+  return (h.members || []).map((key) => state.habits.find((x) => x.id === key)).filter((m) => m && m.kind === kind);
 }
 // Einheit eines berechneten Zahlen-Felds = die (gemeinsame, im Formular erzwungene) Einheit seiner Mitglieder.
 function computedUnit(h) { return computedMemberHabits(h)[0]?.unit || null; }
@@ -568,9 +572,8 @@ function habitScore(h, dateKey) {
   if (!day) return null;
   if (isNumberComputed(h)) return null; // keine Bewertung, siehe isNumberComputed
   if (h.kind === 'computed') {
-    const memberScores = (h.members || [])
-      .map((slug) => state.habits.find((x) => x.id === slug))
-      .filter((m) => m && !isNeutralScale(m)) // unbewertete Mitglieder haben kein Gut/Schlecht zum Mitteln
+    const memberScores = computedMemberHabits(h)
+      .filter((m) => !isNeutralScale(m)) // unbewertete Mitglieder haben kein Gut/Schlecht zum Mitteln
       .map((m) => normalize(m, day[m.id]))
       .filter((s) => s !== null);
     if (!memberScores.length) return null;
@@ -2332,7 +2335,13 @@ async function fetchAllRows(buildQuery) {
 // werden - sonst wäre der Inhalt endgültig weg, auch falls er sich später doch noch
 // lesen ließe. saveDay verweigert deshalb das Speichern dort.
 let undecryptableEntryDates = new Set();
-async function loadEntries() {
+// { keepLocalChanges: true } (Neuladen nach der Rückkehr in die App): hat sich
+// state.entries während des Ladens geändert (jemand hat schon etwas angetippt), wird das
+// Ergebnis verworfen statt diese Änderung zu überschreiben - die Speicherung führt sie
+// ohnehin mit dem Server-Stand zusammen (saveDay).
+async function loadEntries({ keepLocalChanges = false } = {}) {
+  const before = state.entries;
+  const dek = currentDek;
   const { data, error } = await fetchAllRows(() =>
     supabase.from('habit_entries').select('entry_date, data').order('entry_date'));
   if (error) {
@@ -2340,18 +2349,27 @@ async function loadEntries() {
     return;
   }
   const map = {};
-  unpaddedEntryDates = [];
-  undecryptableEntryDates = new Set();
+  const unpadded = [];
+  const undecryptable = new Set();
+  const synced = new Map();
   for (const row of data) {
     try {
-      map[row.entry_date] = row.data ? await decryptData(currentDek, row.data) : {};
-      if (row.data && !isPaddedCiphertext(row.data)) unpaddedEntryDates.push(row.entry_date);
+      map[row.entry_date] = row.data ? await decryptData(dek, row.data) : {};
+      synced.set(row.entry_date, { day: map[row.entry_date], iv: row.data?.iv ?? null });
+      if (row.data && !isPaddedCiphertext(row.data)) unpadded.push(row.entry_date);
     } catch {
       map[row.entry_date] = {};
-      undecryptableEntryDates.add(row.entry_date);
+      undecryptable.add(row.entry_date);
     }
   }
+  // Schlüssel inzwischen verworfen (abgemeldet, veraltet) - nichts mehr übernehmen.
+  if (currentDek !== dek) return;
+  if (keepLocalChanges && state.entries !== before) return;
   state.entries = map;
+  unpaddedEntryDates = unpadded;
+  undecryptableEntryDates = undecryptable;
+  syncedEntries.clear();
+  synced.forEach((v, k) => syncedEntries.set(k, v));
   if (undecryptableEntryDates.size) {
     state.notice = { type: 'error', text: t('notice.entriesUndecryptable', { count: undecryptableEntryDates.size }) };
   }
@@ -2393,6 +2411,9 @@ async function repadOldEntries() {
       if (!stillUnchanged.length) continue;
       const { error } = await supabase.from('habit_entries').upsert(stillUnchanged, { onConflict: 'user_id,entry_date' });
       if (error) console.error('[Logbuch] Nachträgliches Auffüllen fehlgeschlagen, nächster Versuch beim nächsten Laden', error.message);
+      // Neuer Chiffretext = neuer IV - sonst hielte saveDay den eigenen Stand für eine
+      // Änderung von einem anderen Gerät (harmlos, aber ein unnötiges Zusammenführen).
+      else stillUnchanged.forEach((r) => syncedEntries.set(r.entry_date, { day: state.entries[r.entry_date], iv: r.data.iv }));
     } catch (err) {
       console.error('[Logbuch] Nachträgliches Auffüllen fehlgeschlagen', err);
     }
@@ -2731,9 +2752,51 @@ async function checkDekStillCurrent() {
   state.unlockError = t('unlock.keyChanged');
   render();
 }
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') checkDekStillCurrent();
+// --- Rückkehr in die App -------------------------------------------------------
+// Eine installierte App bleibt oft tage- oder nächtelang im Hintergrund offen. Beim
+// Zurückkehren: 1. Schlüssel noch aktuell? (checkDekStillCurrent) 2. Ein neuer Tag hat
+// begonnen - wer auf dem damaligen "heute" stand, landet auf dem neuen (sonst trüge man
+// abends in den Vortag ein, neben dem Datum stand nur klein "Gestern"); wer bewusst woanders
+// hingeblättert hat, bleibt dort. 3. Nach längerer Abwesenheit die Daten neu laden - auf
+// einem anderen Gerät kann inzwischen etwas eingetragen worden sein.
+const RETURN_REFRESH_AFTER_MS = 5 * 60 * 1000;
+let hiddenSince = null;
+let lastKnownTodayKey = formatKey(new Date());
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'hidden') { hiddenSince = Date.now(); return; }
+  const awayMs = hiddenSince ? Date.now() - hiddenSince : 0;
+  hiddenSince = null;
+  await checkDekStillCurrent();
+  const rolledOver = rollOverToNewDay();
+  if (awayMs >= RETURN_REFRESH_AFTER_MS) await refreshAfterReturn();
+  else if (rolledOver && !isEditingSomething()) renderUnlessTyping();
 });
+function rollOverToNewDay() {
+  const todayKey = formatKey(new Date());
+  if (todayKey === lastKnownTodayKey) return false;
+  const oldToday = parseDateKey(lastKnownTodayKey);
+  const now = startOfDay(new Date());
+  lastKnownTodayKey = todayKey;
+  if (formatKey(state.currentDate) === formatKey(oldToday)) state.currentDate = now;
+  if (formatKey(state.weekAnchor) === formatKey(startOfWeek(oldToday))) state.weekAnchor = startOfWeek(now);
+  if (state.monthAnchor.getFullYear() === oldToday.getFullYear() && state.monthAnchor.getMonth() === oldToday.getMonth()) {
+    const m = new Date(now); m.setDate(1); state.monthAnchor = m;
+  }
+  if (state.yearAnchor === oldToday.getFullYear()) state.yearAnchor = now.getFullYear();
+  return true;
+}
+// Offene Formulare/Editoren: ein Neuzeichnen würde Getipptes verwerfen bzw. mitten im
+// Bearbeiten den Stand austauschen - dann weder neu laden noch neu zeichnen.
+function isEditingSomething() {
+  return Boolean(state.habitForm || state.sectionForm || state.noteEditor);
+}
+async function refreshAfterReturn() {
+  if (!currentDek || !state.session || authFlowInFlight || state.loading || isEditingSomething()) return;
+  await Promise.all([loadEntries({ keepLocalChanges: true }), loadHabits(), loadSections()]);
+  if (!currentDek) return;
+  saveFieldNamesForPush();
+  if (!isEditingSomething()) renderUnlessTyping();
+}
 
 // Für den "Recovery-Key neu erzeugen"-Menüpunkt: nutzt den bereits im Speicher
 // gehaltenen DEK direkt (kein Passwort nötig), macht den bisherigen Code ungültig.
@@ -3478,7 +3541,7 @@ async function purgeKeyFromEntries(key) {
     const day = withNote({ ...state.entries[dateKey] }, key, '');
     delete day[key];
     state.entries = { ...state.entries, [dateKey]: day };
-    await saveDay(dateKey, day);
+    await saveDay(dateKey);
   }));
   render();
 }
@@ -3533,7 +3596,7 @@ function persistNoteDraft() {
   if (text === getNote(ed.dateKey, ed.key)) return;
   const day = withNote(state.entries[ed.dateKey] || {}, ed.key, text);
   state.entries = { ...state.entries, [ed.dateKey]: day };
-  saveDay(ed.dateKey, day);
+  saveDay(ed.dateKey);
 }
 // Speichern und schließen. Außer über den Speichern-Button auch immer dann, wenn der
 // Editor nicht mehr sichtbar ist (Tag-/Tab-Wechsel, anderer Editor geöffnet, siehe
@@ -3553,7 +3616,7 @@ function discardNoteDraft() {
   if (getNote(ed.dateKey, ed.key) === ed.original) return;
   const day = withNote(state.entries[ed.dateKey] || {}, ed.key, ed.original);
   state.entries = { ...state.entries, [ed.dateKey]: day };
-  saveDay(ed.dateKey, day);
+  saveDay(ed.dateKey);
 }
 function openNoteEditor(key) {
   const dateKey = formatKey(state.currentDate);
@@ -3660,24 +3723,97 @@ async function updateHabitPayload(habit, changes) {
   return true;
 }
 
-async function saveDay(dateKey, dayData) {
+// --- Speichern eines Tages -------------------------------------------------
+// Ein Tag ist EIN verschlüsseltes Objekt (alle Werte + Notizen). Zwei Gefahren dabei:
+// 1. Mehrere Geräte: ein Gerät mit veraltetem Stand (App seit gestern im Hintergrund
+//    offen) würde beim Speichern die inzwischen anderswo eingetragenen Werte des Tages
+//    still überschreiben. Deshalb wird vor jedem Schreiben die aktuelle Zeile geholt; hat
+//    sie sich seit unserem letzten bekannten Stand (syncedEntries, erkennbar am IV) geändert,
+//    werden beide Stände Schlüssel für Schlüssel zusammengeführt (mergeDay).
+// 2. Schnelle Änderungen hintereinander: jede ist ein eigener Request - kämen sie in
+//    falscher Reihenfolge an, bliebe der ältere Stand gespeichert. Deshalb laufen die
+//    Speicherungen eines Tages nacheinander (daySaveChains), und jede schreibt den dann
+//    AKTUELLEN Stand aus state.entries (Aufrufer ändern state.entries immer vorher) - keine
+//    ältere Momentaufnahme.
+const syncedEntries = new Map(); // dateKey -> { day, iv } - zuletzt bekannter Server-Stand
+const daySaveChains = new Map(); // dateKey -> Promise der letzten eingereihten Speicherung
+function saveDay(dateKey) {
+  const prev = daySaveChains.get(dateKey) || Promise.resolve();
+  const next = prev.then(() => saveDayNow(dateKey));
+  daySaveChains.set(dateKey, next);
+  next.finally(() => { if (daySaveChains.get(dateKey) === next) daySaveChains.delete(dateKey); });
+  return next;
+}
+async function saveDayNow(dateKey) {
   if (undecryptableEntryDates.has(dateKey)) {
     state.entries = { ...state.entries, [dateKey]: {} }; // die Änderung nicht stehen lassen - sie ist ja nicht gespeichert
     state.notice = { type: 'error', text: t('notice.dayUndecryptable') };
     render();
     return;
   }
-  const encrypted = await encryptData(currentDek, dayData);
-  const { error } = await supabase
-    .from('habit_entries')
-    .upsert(
-      { user_id: state.session.user.id, entry_date: dateKey, data: encrypted, filled_slugs: filledFieldIds(dayData) },
-      { onConflict: 'user_id,entry_date' }
-    );
-  if (error) {
-    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+  if (!currentDek || !state.session) return; // inzwischen abgemeldet / Schlüssel verworfen
+  try {
+    const { data: row, error: fetchErr } = await supabase.from('habit_entries')
+      .select('data').eq('entry_date', dateKey).maybeSingle();
+    if (fetchErr) throw fetchErr;
+    const base = syncedEntries.get(dateKey) || { day: {}, iv: null };
+    let day = state.entries[dateKey] || {};
+    if ((row?.data?.iv ?? null) !== base.iv) {
+      // Seit unserem letzten Stand hat ein anderes Gerät diesen Tag gespeichert.
+      let server;
+      try {
+        server = row?.data ? await decryptData(currentDek, row.data) : {};
+      } catch {
+        undecryptableEntryDates.add(dateKey);
+        return saveDayNow(dateKey); // -> Meldung, nichts überschreiben
+      }
+      day = mergeDay(base.day, day, server);
+      state.entries = { ...state.entries, [dateKey]: day };
+      renderUnlessTyping();
+    }
+    if (!currentDek) return;
+    const encrypted = await encryptData(currentDek, day);
+    const { error } = await supabase
+      .from('habit_entries')
+      .upsert(
+        { user_id: state.session.user.id, entry_date: dateKey, data: encrypted, filled_slugs: filledFieldIds(day) },
+        { onConflict: 'user_id,entry_date' }
+      );
+    if (error) throw error;
+    syncedEntries.set(dateKey, { day, iv: encrypted.iv });
+  } catch (err) {
+    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(err?.message || String(err)) };
     render();
   }
+}
+// Dreiwege-Zusammenführung eines Tages: was WIR seit dem gemeinsamen Stand (base)
+// geändert haben, gewinnt; alles andere kommt vom Server (die Änderungen des anderen
+// Geräts). Pro Feld-Schlüssel und pro Notiz einzeln.
+function mergeDay(base, local, server) {
+  const pick = (b, l, s) => {
+    const out = {};
+    for (const k of new Set([...Object.keys(b), ...Object.keys(l), ...Object.keys(s)])) {
+      if (k === NOTES_KEY) continue;
+      const v = JSON.stringify(l[k]) !== JSON.stringify(b[k]) ? l[k] : s[k];
+      if (v !== undefined) out[k] = v;
+    }
+    return out;
+  };
+  const merged = pick(base, local, server);
+  const notes = pick(base[NOTES_KEY] || {}, local[NOTES_KEY] || {}, server[NOTES_KEY] || {});
+  if (Object.keys(notes).length) merged[NOTES_KEY] = notes;
+  return merged;
+}
+// Neu zeichnen - außer jemand tippt gerade (Fokus in einem Eingabefeld): render() baut
+// die Ansicht neu auf und würde Cursor/Tastatur mitten im Schreiben zurücksetzen. Der
+// zusammengeführte Stand erscheint dann beim nächsten regulären Neuzeichnen.
+function renderUnlessTyping() {
+  const el = document.activeElement;
+  if (el && app.contains(el) && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type !== 'checkbox' && el.type !== 'range'))) {
+    syncTodayOpenMarkers();
+    return;
+  }
+  render();
 }
 
 function handleSelect(dateKey, habitId, value) {
@@ -3687,7 +3823,7 @@ function handleSelect(dateKey, habitId, value) {
   state.entries = { ...state.entries, [dateKey]: day };
   haptic();
   render();
-  saveDay(dateKey, day);
+  saveDay(dateKey);
 }
 
 // Schieberegler: setzt immer (nie das Umschalten von handleSelect, wo derselbe Wert
@@ -3701,7 +3837,7 @@ function handleSetValue(dateKey, habitId, value) {
   state.entries = { ...state.entries, [dateKey]: day };
   haptic();
   render();
-  saveDay(dateKey, day);
+  saveDay(dateKey);
 }
 
 // Text-Felder (kind='text'): jeder Tastendruck aktualisiert sofort state.entries (ohne
@@ -3726,7 +3862,7 @@ function flushDaySave(dateKey) {
   clearTimeout(pendingDaySaves.get(dateKey));
   pendingDaySaves.delete(dateKey);
   if (!currentDek || !state.session) return;
-  saveDay(dateKey, state.entries[dateKey] || {});
+  saveDay(dateKey);
 }
 function flushAllDaySaves() {
   [...pendingDaySaves.keys()].forEach(flushDaySave);
@@ -3743,7 +3879,7 @@ function handleReset(dateKey) {
   state.entries = { ...state.entries, [dateKey]: {} };
   if (state.noteEditor?.dateKey === dateKey) state.noteEditor = null;
   render();
-  saveDay(dateKey, {});
+  saveDay(dateKey);
 }
 
 // Einzelnen Eintrag löschen (nicht den ganzen Tag) — für den Slider gebraucht, der
@@ -3755,7 +3891,7 @@ function handleClearValue(dateKey, habitId) {
   state.entries = { ...state.entries, [dateKey]: day };
   haptic();
   render();
-  saveDay(dateKey, day);
+  saveDay(dateKey);
 }
 
 function handleSaveNumber(dateKey, habitId, rawValue) {
@@ -3764,8 +3900,10 @@ function handleSaveNumber(dateKey, habitId, rawValue) {
   if (trimmed === '') {
     delete day[habitId];
   } else {
-    const num = parseFloat(trimmed);
-    if (Number.isNaN(num)) {
+    const num = Number(trimmed);
+    // Number statt parseFloat: "12abc" ist keine Zahl; isFinite: "1e400" wäre Infinity und
+    // würde als null gespeichert (JSON kennt kein Infinity).
+    if (!Number.isFinite(num)) {
       state.notice = { type: 'error', text: t('notice.invalidNumber') };
       render();
       return;
@@ -3774,7 +3912,7 @@ function handleSaveNumber(dateKey, habitId, rawValue) {
   }
   state.entries = { ...state.entries, [dateKey]: day };
   render();
-  saveDay(dateKey, day);
+  saveDay(dateKey);
 }
 
 function findLastValue(habitId, beforeOrOnDateKey) {
@@ -5023,8 +5161,13 @@ function renderYear() {
 }
 
 // --- Rendering: Gesamt (alle Einträge seit Beginn) ---------------------------
+// Tage mit mindestens einem Feldwert - ohne zurückgesetzte (leere) Tage, Tage mit nur
+// einer Notiz (_-Schlüssel) und nicht entschlüsselbare Tage.
+function dayHasValues(day) {
+  return Object.keys(day || {}).some((k) => !k.startsWith('_'));
+}
 function renderGlobal() {
-  const dateKeys = Object.keys(state.entries).sort();
+  const dateKeys = Object.keys(state.entries).filter((k) => dayHasValues(state.entries[k])).sort();
   const statsHabits = state.habits.filter(inStats);
   const stats = computeHabitStats(statsHabits.filter(isScoredKind), dateKeys);
   const rangeNote = dateKeys.length
@@ -7452,6 +7595,7 @@ function clearLoadedAccountState() {
   state.view = 'today';
   state.previousTabView = 'today';
   undecryptableEntryDates = new Set();
+  syncedEntries.clear();
   clearCurrentDek();
   spareKeyPending = false;
   state.unlockError = null;

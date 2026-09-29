@@ -151,6 +151,23 @@ Tabelle `habit_entries`: eine Zeile pro Nutzer und Kalendertag.
   unverschlüsselt ist; nicht Zuordenbares fällt weg.
 - RLS aktiv: jede Zeile nur für den eigenen `user_id` sicht-/änderbar (schützt Nutzer
   voreinander, nicht vor dem DB-Owner — dafür ist ja gerade die Verschlüsselung da).
+- **Speichern eines Tages** (`saveDay`, seit 2026-09-29): ein Tag ist ein einziges
+  verschlüsseltes Objekt – ein zweites Gerät mit veraltetem Stand würde sonst die
+  inzwischen anderswo eingetragenen Werte überschreiben. Deshalb holt jede Speicherung
+  zuerst die aktuelle Zeile; hat sie sich seit dem zuletzt bekannten Stand geändert
+  (`syncedEntries`, erkannt am IV), führt `mergeDay` beide Schlüssel für Schlüssel zusammen
+  (eigene Änderungen gewinnen, sonst der Server-Stand, Notizen einzeln). Speicherungen
+  eines Tages laufen nacheinander (`daySaveChains`) und schreiben immer den dann aktuellen
+  `state.entries`-Stand – Aufrufer ändern `state.entries` vorher und rufen nur
+  `saveDay(dateKey)`. Nicht entschlüsselbare Tage werden nie überschrieben
+  (`undecryptableEntryDates`, Meldung statt Speichern). Einträge laden seitenweise
+  (`fetchAllRows`, PostgREST kappt bei 1000 Zeilen).
+- **Rückkehr in die App** (`visibilitychange`): Schlüssel-Prüfung (`checkDekStillCurrent`),
+  Tageswechsel (`rollOverToNewDay`: wer auf dem damaligen "heute" bzw. dem laufenden
+  Zeitraum stand, landet auf dem neuen – sonst trüge man nach einer Nacht im Hintergrund in
+  den Vortag ein) und nach ≥ 5 Min. Abwesenheit Neuladen von Einträgen, Feldern und
+  Gruppen (`refreshAfterReturn`, nicht bei offenem Formular/Editor; verwirft das Ergebnis,
+  falls währenddessen schon etwas geändert wurde).
 
 Tabelle `push_subscriptions`: eine Zeile pro Browser/Gerät mit aktivierten Erinnerungen
 (Web-Push-Endpoint + Schlüssel). RLS wie oben. Endpoint nur `https://`, begrenzte Längen,
