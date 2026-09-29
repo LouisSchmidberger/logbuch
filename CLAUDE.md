@@ -68,8 +68,7 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
 
 ## Datenmodell
 
-Tabelle `habit_definitions`: eine Zeile pro Nutzer und Feld – **ersetzt die frühere feste
-`HABITS`-Konstante**. Jeder Nutzer verwaltet seine Felder selbst über "Felder verwalten"
+Tabelle `habit_definitions`: eine Zeile pro Nutzer und Feld. Jeder Nutzer verwaltet seine Felder selbst über "Felder verwalten"
 im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
 `renderManage` in `logbuch.js` – kein eigener Tab mehr, siehe Abschnitt "Design").
 **Seit 2026-09-27 größtenteils verschlüsselt** (siehe Abschnitt "Verschlüsselung" →
@@ -82,13 +81,14 @@ Eigenschaften unten gilt inhaltlich unverändert (im Client heißen sie gleich).
   `'computed'` ("Berechnet") oder `'text'`, siehe Skalen-/Farblogik unten), `min`/`max` (int, nur bei `kind='scale'`;
   neue Felder immer `min=1`, `max=<Stufenzahl>`; ältere können eine andere Basis haben), `labels` (jsonb, nur bei
   `kind='scale'`; `null` = nummerierte Stufen, sonst Array von Strings der Länge
-  `max-min+1`), `good` (`'high'`/`'low'`, nur bei `kind='scale'`), `unit` (text, nur bei
-  `kind='number'`, z.B. `'kg'`), `display_style` (`'buttons'`/`'slider'`, nur bei
-  `kind='scale'` mit `labels=null` relevant), `slider_show_value` (bool, nur bei
+  `max-min+1`), `good` (`'high'`/`'low'`/`null` = keine Wertung, nur bei `kind='scale'`),
+  `unit` (text, nur bei `kind='number'`, z.B. `'kg'`), `display_style`
+  (`'buttons'`/`'slider'`, nur bei `kind='scale'`), `slider_show_value` (bool, nur bei
   `display_style='slider'` relevant – steuert nur die Sichtbarkeit des aktuellen Werts
   während der Eingabe, der Regler zeigt **nie** eine Min/Max-Beschriftung),
   `group_members` (jsonb, nur bei `kind='computed'`: Array von Schlüsseln anderer
-  `kind='scale'`-Felder dieses Nutzers), `reminder_minute` (Minuten seit Mitternacht,
+  `kind='scale'`- bzw. – bei berechneten Feldern aus Zahlen – `kind='number'`-Felder
+  dieses Nutzers), `reminder_minute` (Minuten seit Mitternacht,
   0–1439, 15-Minuten-Raster, oder `null` = Standardzeit, siehe Erinnerungen – bei
   `kind='computed'` immer `null`, ein berechnetes Feld kann nie "fehlen"), `schedule` (jsonb,
   Wiederholung, `null` = täglich, bei `kind='computed'` immer `null` – siehe Abschnitt
@@ -107,22 +107,22 @@ Eigenschaften unten gilt inhaltlich unverändert (im Client heißen sie gleich).
   verwaisten Key im verschlüsselten JSON liegen zu lassen (passend zur Zero-Access-/
   Löschrecht-Ausrichtung der App – "Löschen" soll möglichst wenig übrig lassen).
   Läuft im Hintergrund über die bereits im Speicher gehaltenen, entschlüsselten
-  `state.entries` – kein zusätzlicher Fetch nötig.
-- **Feld-Typ (`kind`) und Skala (`min`/`max`/`labels`) sind nur änderbar, solange das
+  `state.entries` (gespeichert je Tag über `saveDay`).
+- **Feld-Typ (`kind`) und Stufenzahl (`min`/`max`) sind nur änderbar, solange das
   Feld noch keine Daten hat** (App-seitig gesperrt, siehe `habitHasData`/`f.locked`) –
   sonst würden alte Werte plötzlich etwas anderes bedeuten. Für eine neue Skala: altes
-  Feld archivieren, neues anlegen. `name`, `unit` und `reminder_minute` bleiben davon
-  unberührt, da sie keine historischen Werte umdeuten. Gilt **nicht** für `kind='computed'`:
+  Feld archivieren, neues anlegen. Alles andere (Name, Einheit, Bezeichnungen, Darstellung,
+  Bewertung, Wiederholung, Erinnerungszeit) bleibt änderbar, da es keine historischen Werte
+  umdeutet (Details siehe Skalen-/Farblogik → "Bearbeiten mit vorhandenen Daten"). Gilt **nicht** für `kind='computed'`:
   ein berechnetes Feld hält nie einen eigenen Eintrag in `habit_entries.data` (ihr Slug taucht
   dort nie als Key auf), ist deshalb nie "locked" – die Mitgliederliste (`group_members`)
   lässt sich jederzeit ändern, auch mit bestehender Historie. Das wirkt sich rückwirkend
   auf die gesamte bisherige Auswertung aus (der Durchschnitt wird bei jedem Rendern live
   aus den aktuellen Mitgliedern neu berechnet, nie gespeichert) – beabsichtigtes
   Verhalten, kein Bug.
-- **Kein automatisches Seeding mehr** (bis 2026-09-15: 13 feste Standardfelder +
-  "Gewicht" vorbelegt). Neue Nutzer starten komplett leer und werden stattdessen durch
-  das Onboarding-Tutorial (siehe Abschnitt unten) zu ihren eigenen, selbst gewählten
-  Feldern geführt.
+- **Kein automatisches Seeding** (bewusst, 2026-09-15 abgeschafft): neue Nutzer starten
+  komplett leer und werden durch das Onboarding-Tutorial (siehe unten) zu ihren eigenen,
+  selbst gewählten Feldern geführt.
 - RLS aktiv: jede Zeile nur für den eigenen `user_id` sicht-/änderbar – Felder eines
   Nutzers beeinflussen keinen anderen.
 
@@ -136,7 +136,8 @@ Tabelle `habit_entries`: eine Zeile pro Nutzer und Kalendertag.
   einzigen reservierten Schlüssel `_notes`: `{ mood: 3, _notes: { mood: "…", _day:
   "…" } }` – je Feld-Slug eine Notiz, `_day` für die Notiz zum ganzen Tag
   (`NOTES_KEY`/`DAY_NOTE_KEY`, `getNote`/`withNote` in `logbuch.js`). Kollidiert nie
-  mit einem Feld, da `slugify()` nur `a-z0-9` erzeugt; **Konvention: Schlüssel mit `_`
+  mit einem Feld, da Feld-Schlüssel nur aus `a-z0-9` bestehen (alte aus dem Namen
+  abgeleitete wie `mood`, neue zufällige aus `newHabitKey`); **Konvention: Schlüssel mit `_`
   am Anfang sind nie Feldwerte**. Ohne verbleibende Notiz verschwindet `_notes` wieder.
 - `filled_slugs` (jsonb, Array von Strings) – bewusst **unverschlüsselt**, nur die
   **IDs** (`habit_definitions.id`) der an dem Tag befüllten Felder, keine Werte und seit
@@ -201,7 +202,7 @@ Die Zeile wird bei Registrierung automatisch angelegt (Trigger
 Tabelle `user_encryption`: eine Zeile pro Nutzer, hält den zweifach "verpackten"
 Data Encryption Key (DEK) — nie den Schlüssel selbst im Klartext. Details siehe
 Abschnitt "Verschlüsselung". **Kein** automatischer Seed-Trigger bei Registrierung
-(anders als `habit_definitions`/`user_settings`) — die Einrichtung passiert bewusst
+(anders als `user_settings`) — die Einrichtung passiert bewusst
 erst beim ersten echten Login, da sie das Passwort im Klartext braucht. RLS wie oben.
 
 **Der Reminder-Check** (SQL-Funktion `get_due_notifications`, siehe Erinnerungen)
@@ -286,8 +287,9 @@ ab, unabhängig von der Richtung (`good: 'high'` vs. `good: 'low'`, z.B. bei
 laufen nie durch `normalize`/`scoreColor` (kein "gut/schlecht" bei einem Zahlenwert wie
 Gewicht) – sie bekommen stattdessen in "Heute" eine eigene Eingabebox und in den
 Auswertungs-Tabs einen Verlaufs-Graphen (`renderNumberChart`), statt in die Score-/
-Heatmap-Logik einzufließen. Es gibt keinen separaten Bool-Typ mehr – ein Ja/Nein-Feld ist
-einfach eine `scale` mit `min:0, max:1, labels:['Nein','Ja']`.
+Heatmap-Logik einzufließen. Es gibt keinen separaten Bool-Typ – ein Ja/Nein-Feld ist
+einfach eine `scale` mit 2 Stufen und Bezeichnungen (`min:1, max:2, labels:['Nein','Ja']`,
+so auch das Tutorial-Beispiel "Sport"; ältere Felder können `min:0, max:1` haben).
 
 **Darstellung von `scale`-Feldern (`display_style`)**: `buttons` (Standard) zeigt
 Auswahl-Buttons, `slider` einen Schieberegler (`renderHabitSlider`) – dafür wird beim
@@ -303,11 +305,10 @@ geht beim Regler über das ×). Zwei Wege dorthin: `change`, plus ein eigener
 schon mittig – zog man ihn und ließ ihn genau dort los, sah er eingetragen aus, war
 aber nicht gespeichert und hatte kein ×).
 
-**Bezeichnungen (`labels`) sind seit 2026-09-18 kein eigener Modus mehr, sondern ein
-optionaler Text-Overlay über denselben Stufen** – vorher waren "Nummerierte Stufen" und
-"Eigene Bezeichnungen" im Formular zwei sich ausschließende Zustände (`f.mode`), obwohl
-die DB nie zwischen ihnen unterschieden hat (`labels` ist einfach `null` oder ein Array
-über demselben `min`/`max`-Bereich). **Neue (bzw. noch unbefüllte) Skala-Felder starten
+**Bezeichnungen (`labels`) sind kein eigener Modus, sondern ein optionaler Text-Overlay
+über denselben Stufen** (seit 2026-09-18; zwei sich ausschließende Formular-Modi wurden
+verworfen, weil die DB nie zwischen ihnen unterschied – `labels` ist einfach `null` oder
+ein Array über demselben `min`/`max`-Bereich). **Neue (bzw. noch unbefüllte) Skala-Felder starten
 immer bei `min=1`** (kein frei wählbares "Von" mehr, unabhängig von Buttons/Schieberegler
 – wer andere Bezeichnungen will, nutzt dafür eigene Bezeichnungen statt eines
 verschobenen Zahlenbereichs). Das Formular (`scaleBody` in `renderHabitForm`) fragt
@@ -494,7 +495,7 @@ ist, rechnen unverändert mit (Nutzer-Entscheidung).
 
 **Ziel-Quote (`goal_threshold`, `kind='scale'`/`kind='computed'` aus Skalen)**: bei manchen Feldern ist
 eine 100%-Quote unrealistisch/gar nicht das eigentliche Ziel (z.B. "Kraftsport gemacht"
-jeden Tag). Pro Feld einstellbar (Formular "Ziel für volle Bewertung (%)", Standard 100 =
+jeden Tag). Pro Feld einstellbar (Formular "Ab wann als voll erreicht gilt (%)", Standard 100 =
 `goal_threshold: null`), ab welcher normalisierten Quote (0–1) ein Wert farblich als voll
 erreicht gilt. `applyGoal(habit, score)` staucht dafür den Score auf
 `min(1, score/threshold)`, bei Standard (1) unverändert (exakter Durchreicher). Wird NUR
@@ -511,8 +512,10 @@ Supabase-Dashboard/CLI) kann diese Werte grundsätzlich nicht einsehen — RLS s
 nur Nutzer voreinander, das hier zusätzlich vor dem DB-Owner selbst. Seit 2026-09-27
 zusätzlich die **Feld-Definitionen** (siehe unten) – der Betreiber soll auch nicht sehen,
 WORÜBER jemand Buch führt. Bewusst unverschlüsselt bleibt nur, was der Server für die
-Erinnerungen braucht: `habit_definitions.kind`/`reminder_minute`/`schedule`/`archived_at`
-und `habit_entries.filled_slugs` (nur Feld-IDs der befüllten Felder, keine Werte/Namen).
+Erinnerungen braucht bzw. reine Anordnung ist: `habit_definitions.kind`/`reminder_minute`/
+`schedule`/`archived_at`/`sort_order`/`section_id`, `habit_sections.reminder_minute`/
+`sort_order` und `habit_entries.filled_slugs` (nur Feld-IDs der befüllten Felder, keine
+Werte/Namen).
 Alle verschlüsselten Daten (Einträge wie Felder) werden vor dem Verschlüsseln auf ein
 Vielfaches von 256 Byte aufgefüllt (`encryptData`, Leerzeichen am JSON-Ende), damit die
 Länge nicht verrät, wie viel jemand eingetragen/geschrieben hat. Vorher gespeicherte Einträge
@@ -522,7 +525,8 @@ werden –, übersprungen wird jeder seit dem Laden geänderte Tag, Upsert nur m
 
 **Feld-Definitionen verschlüsselt** (seit 2026-09-27): `habit_definitions.enc` =
 `{iv, ciphertext}` mit demselben DEK, Inhalt `{key, name, unit, min, max, labels, good,
-displayStyle, sliderShowValue, groupMembers, goalThreshold, aggregate, hideInStats}` (`habitFromParts` baut
+displayStyle, sliderShowValue, groupMembers, goalThreshold, aggregate, hideInStats,
+archivedInStats}` (`habitFromParts` baut
 daraus das gewohnte Feld-Objekt). Die DB-Schutzregel
 `habit_definitions_enc_no_plaintext_check` lehnt eine verschlüsselte Zeile mit
 Klartext-Resten ab (`DEF_PLAINTEXT_CLEARED` = die geleerten Spalten). Bestehende Zeilen
@@ -545,7 +549,8 @@ alles native Web Crypto API, keine Library):
   (`encryptData`/`decryptData`). Ändert sich nie mehr, nachdem er einmal erzeugt
   wurde — auch nicht bei einem Passwort-Reset.
 - **KEK** (Key Encryption Key): aus dem Passwort abgeleitet (`deriveKek`, PBKDF2-
-  SHA256, 250.000 Iterationen, individueller Salt), "verpackt" (wrapped) den DEK
+  SHA256, `PBKDF2_ITERATIONS` = 600.000 nach OWASP – ältere Konten mit 250.000 stuft
+  `upgradePasswordWrap` beim nächsten Entsperren per Passwort still hoch; individueller Salt), "verpackt" (wrapped) den DEK
   (`wrapDek`/`unwrapDek`). Nur das verpackte Ergebnis (`wrapped_dek` in
   `user_encryption`) liegt serverseitig — nutzlos ohne Passwort.
 - **Recovery-Key** (in der App seit 2026-09-29 **"Ersatzschlüssel"**, englisch "spare
@@ -572,13 +577,20 @@ alles native Web Crypto API, keine Library):
 
 **Schlüssel-Lebenszyklus** (`currentDek`, Modul-Variable, nie Teil von `state`/
 `render()`):
-- `unlockEncryption(userId, password)`, aufgerufen aus `completeAuthFlow` direkt
-  nach erfolgreichem `signIn`/`signUp` (Passwort ist dort im Klartext verfügbar):
-  prüft zuerst den lokalen IndexedDB-Cache (`loadCachedDek`, schneller Pfad ohne
-  erneute PBKDF2-Ableitung); ohne Treffer wird die `user_encryption`-Zeile geladen —
-  existiert keine (Neu-Signup oder Bestandskonto vor diesem Umbau), richtet
-  `setupEncryption` alles neu ein (DEK, beide Wrappings, `migrateExistingEntries`
-  für schon vorhandene Klartext-Zeilen, Recovery-Key-Anzeige).
+- `unlockEncryption(userId, password, { verifyPassword })`, aufgerufen aus
+  `completeAuthFlow` direkt nach erfolgreichem `signIn`/`signUp` (Passwort ist dort im
+  Klartext verfügbar) bzw. aus der Entsperr-Maske: prüft zuerst den lokalen
+  IndexedDB-Cache (`usableCachedDek`, schneller Pfad ohne PBKDF2); ohne Treffer wird die
+  `user_encryption`-Zeile geladen und mit dem Passwort entpackt (falsch → `WRONG_PASSWORD`,
+  Meldung über `unlockErrorText`, Netzwerkfehler getrennt). Existiert keine Zeile
+  (Neu-Signup oder Bestandskonto vor diesem Umbau), richtet `setupEncryption` alles ein
+  (DEK, beide Wrappings, `migrateExistingEntries`; der Ersatzschlüssel kommt erst nach dem
+  Tutorial). Dabei **nur einfügen, nie überschreiben**: legt ein zweites Gerät fast
+  gleichzeitig ebenfalls an, gewinnt das erste (`KEY_EXISTS` → mit dem Passwort entsperren)
+  – sonst wäre, was das erste inzwischen verschlüsselt hat, unlesbar. Aus der
+  Entsperr-Maske (`verifyPassword`, z.B. nach dem Bestätigungslink im Browser) wird das
+  Passwort vor dem Einrichten per `signInWithPassword` geprüft – sonst würde ein
+  Tippfehler zum Schlüssel-Passwort.
 - Bei bestehender Supabase-Session ohne frisches Passwort (Browser-Reload): erst der
   IndexedDB-Cache, sonst `renderUnlockPrompt()` (Passwort erneut abfragen, unabhängig
   vom Supabase-Login — falsches Passwort erkennt man daran, dass `unwrapDek`
@@ -590,15 +602,20 @@ alles native Web Crypto API, keine Library):
 - Passwort-Reset über den E-Mail-Link (`renderPasswordRecovery`) verlangt zusätzlich
   den Recovery-Key, um den DEK zu erben und neu (mit dem neuen Passwort) zu
   verpacken — ohne Bestandsdaten neu zu verschlüsseln. Fallback "Recovery-Key auch
-  verloren" nur mit expliziter zweiter Bestätigung: neuer DEK (`setupEncryption`),
+  verloren" nur mit expliziter zweiter Bestätigung: neuer DEK (`setupEncryption` mit
+  `replace: true` – die einzige Stelle, die einen bestehenden Schlüssel ersetzt),
   danach löscht `deleteUndecryptableData` alles mit dem alten DEK Verschlüsselte
   (alle Einträge, Feld-Definitionen mit `enc`, alle Gruppen) – best effort, das neue
   Passwort ist dann schon gesetzt; bei einem Fehler Meldung `recovery.cleanupFailed`.
   Bewusst erst nach `setupEncryption`: scheitert die, bleibt der alte Stand samt
   Recovery-Wrapping erhalten.
-- Logout: `currentDek = null` (der IndexedDB-Cache bleibt für den nächsten Login auf
-  demselben Gerät), Erinnerungen des Geräts enden (`endPushForThisDevice`). Konto-Löschung
-  räumt den Cache zusätzlich explizit auf.
+- Logout: `clearLoadedAccountState` verwirft Schlüssel (`clearCurrentDek`), Daten und alles
+  Kontobezogene im State (offene Formulare, Entwürfe, Dialoge, Unterseite); der
+  IndexedDB-Cache bleibt für den nächsten Login auf demselben Gerät, die Erinnerungen des
+  Geräts enden (`endPushForThisDevice`). Konto-Löschung räumt den Cache zusätzlich auf.
+  `currentDekUserId` merkt sich, zu welchem Konto der geladene Schlüssel gehört – meldet
+  `onAuthStateChange` ein anderes Konto (z.B. anderer Tab), wird alles verworfen; bei
+  gleichem Konto (Token-Erneuerung) bewusst kein `render()`, das verwürfe Getipptes.
 - **Kennung des DEK** (`user_encryption.dek_id`, seit 2026-09-28): zufällige UUID, nicht
   geheim, neu nur wenn ein neuer DEK entsteht (`setupEncryption` – Einrichtung bzw. Reset
   "Recovery-Key auch verloren"). Der IndexedDB-Cache speichert sie neben dem DEK
@@ -617,8 +634,9 @@ alles native Web Crypto API, keine Library):
 **Was das für Änderungen an anderer Stelle bedeutet**: `state.entries` hält nach dem
 Laden (`loadEntries`) immer schon entschlüsselte Klartext-Objekte — die gesamte
 übrige App (Scores, Graphen, Statistiken, `saveDay`, Export) arbeitet unverändert
-damit. `currentDek` fassen nur `loadEntries`/`saveDay`/`handleExportData` (Einträge) sowie
-`loadHabits`/`migrateHabitDefinitions`/`handleHabitSaveInner` (Feld-Definitionen) direkt an.
+damit. `currentDek` fassen nur die Lade-/Speicher-/Export-Funktionen an, die ver- oder
+entschlüsseln (Einträge, Feld-Definitionen, Gruppen, Ersatzschlüssel) – gesetzt/geleert wird
+er ausschließlich über `setCurrentDek`/`clearCurrentDek`.
 
 ## Design
 
@@ -672,7 +690,8 @@ Feld-Formular) wird deren `<h1>` fokussiert (`tabindex="-1"`, screenreaderfreund
 Bestätigung der Navigation) – bewusst nur dann (`lastFocusedSubpageLevel`), nicht bei
 jedem `render()`, sonst warf jede Umschaltung im Formular den Tastatur-Fokus nach oben. Header (+ bei
 Tab-Ansichten auch die Tab-Leiste) sind über `.sticky-top` (`position: sticky`)
-angepinnt, damit Menü/Zurück/Tab-Wechsel beim Scrollen immer erreichbar bleiben. In "Über Logbuch" sind alle aufklappbaren
+angepinnt, damit Menü/Zurück/Tab-Wechsel beim Scrollen immer erreichbar bleiben (außer bei
+wenig Höhe, siehe Accessibility). In "Über Logbuch" sind alle aufklappbaren
 Abschnitte (hervorgehobene Bereiche und Tipp-Gruppen) bei **jedem** Öffnen der Seite
 zugeklappt (Nutzer-Wunsch 2026-09-27, `openAboutSections`, von `enterSubpage` zurückgesetzt) –
 was man aufklappt, bleibt nur für die Dauer des Besuchs offen, kein dauerhaftes Merken.
@@ -827,8 +846,7 @@ gar nicht erst angezeigt (`hapticsSupported`).
 **Verwaltungsliste entschlackt** (seit 2026-09-18, `renderManage` in `logbuch.js`):
 pro Feld-Zeile steht nur noch der Name plus – falls abweichend – Wiederholung und eigene
 Erinnerungszeit (`manageFieldMeta`); Skala/Bereich, Bezeichnungen, Gut/Schlecht-
-Richtung und Ziel-Quote werden dort nicht mehr aufgeführt (`formatScale` entfernt,
-keine andere Stelle nutzte es). Begründung: der Nutzer befüllt seine Felder täglich
+Richtung und Ziel-Quote werden dort bewusst nicht aufgeführt. Begründung: der Nutzer befüllt seine Felder täglich
 und kennt ihre Bedeutung bereits, eine Zusammenfassung pro Zeile ist redundant –
 nur die (unauffällige) eigene Erinnerungszeit ist erwähnenswert genug, um
 hervorgehoben zu bleiben (plus ggf. Wiederholung und "in der Auswertung ausgeblendet").
@@ -862,7 +880,7 @@ Tabs, deshalb absichtlich weniger empfindlich statt eines einheitlichen Schwelle
 
 **Dark Mode** (seit 2026-09-16): folgt standardmäßig `prefers-color-scheme`, im
 Burger-Menü überschreibbar (System/Hell/Dunkel als Pill-Toggle, gleiches Muster wie
-`f.kind`/`f.mode`/`f.good` im Habit-Formular). Override liegt in `localStorage`
+`f.kind`/`f.good` im Habit-Formular). Override liegt in `localStorage`
 (`themeOverride`, Werte `'light'`/`'dark'`/nicht gesetzt = System) — bewusst NICHT in
 `user_settings`, da geräte-lokal statt kontoweit gedacht (anders als die Sprache).
 `applyTheme()`/`getThemeOverride()`/`setThemeOverride()` in `logbuch.js`, direkt
@@ -888,8 +906,8 @@ Rot-Grün-Farbenblinde. Die Bestätigungs-Modals (Konto löschen, Tutorial über
 haben `role="dialog"`/Fokus-Trap/Escape-Schließen/Fokus-Rückgabe (siehe
 `focusModalIfOpen()`/`restoreModalFocus()`/`modalTriggerSelector`, gemeinsamer Schließ-Weg `closeModals()`). Meldungen laufen
 zentral über `renderNotice()` (Fehler `role="alert"`/assertive, Erfolg
-`role="status"`/polite) statt über 6 duplizierte Inline-Fragmente. Das Feld-Umsortieren
-hat mit Hoch/Runter-Buttons (`commitHabitOrder()`, gemeinsamer Persistenz-Pfad mit dem
+`role="status"`/polite). Das Umsortieren
+hat mit Hoch/Runter-Buttons (`commitLayoutOrder()`, gemeinsamer Persistenz-Pfad mit dem
 Pointer-Drag) eine Tastatur-Alternative. Beim Ziehen scrollt die Liste am oberen/unteren
 Bildschirmrand von selbst weiter (`updateDragAutoScroll`, schneller je näher am Rand), damit
 sich ein Feld in einem Zug weit verschieben lässt. Der Zahlenwert-Verlaufsgraph hat eine
@@ -929,7 +947,7 @@ Zurück-Taste nicht aushebeln).
 Seit 2026-09-16: Deutsch + Englisch, Deutsch bleibt Standard/Fallback. Zentraler
 Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
-  (`'auth.signupButton'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
+  (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
   identischer Key-Reihenfolge zum leichten Diffen. Aktuell 473 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
@@ -967,8 +985,9 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 
 Eine einzige Edge Function `send-notifications` läuft **alle 15 Minuten** (statt
 fester Zeitpunkte). Wer gerade was bekommt, entscheidet komplett die SQL-Funktion
-`public.get_due_notifications(p_now, p_after, p_limit)` (Migrationen
-`20260925150000_*`/`20260925160000_*`) – die Edge Function übersetzt deren Zeilen nur
+`public.get_due_notifications(p_now, p_after, p_limit)` (aktuelle Fassung in Migration
+`20260928100000_add_section_reminders`, Eingaben seit `20260929120000_harden_reminder_inputs`
+von der DB geprüft) – die Edge Function übersetzt deren Zeilen nur
 noch in Nachrichten (`PUSH_TEXTS`) und verschickt sie (parallel, `SEND_CONCURRENCY`).
 Alle Zeiten/Daten gelten in der **Ortszeit des jeweiligen Nutzers**
 (`user_settings.timezone`):
@@ -1152,7 +1171,8 @@ Umgesetzt:
   `20260927160000_cleanup_unconfirmed_users`.
 - Datenexport (Auskunftsrecht/Datenportabilität, Art. 15/20 DSGVO): "Meine Daten
   exportieren" im Burger-Menü (`handleExportData` in `logbuch.js`) lädt die eigenen
-  Rohdaten aus allen vier Tabellen (RLS scoped automatisch auf den eigenen Nutzer) direkt
+  Rohdaten aus allen fünf Tabellen mit Nutzerdaten (Felder, Einträge, Gruppen,
+  Einstellungen, Push-Abos; RLS scoped automatisch auf den eigenen Nutzer) direkt
   im Browser als eine JSON-Datei herunter — kein Server-Roundtrip über eine eigene
   Function nötig. Feedback (siehe unten) ist bewusst **nicht** Teil des Exports
   (Nutzer-Entscheidung 2026-09-25).
@@ -1200,15 +1220,11 @@ Umgesetzt:
   clientseitig geprüft und bewusst mit einer generischen Fehlermeldung abgelehnt
   (kein Hinweis, welcher Filter zuschlug). Ergänzt durch die ohnehin verpflichtende
   E-Mail-Bestätigung und Supabase's eingebautes Rate-Limiting pro IP.
-  - **Vorgeschichte**: zuerst mit Cloudflare Turnstile umgesetzt (Supabase Attack
-    Protection, `verify-captcha` Edge Function). Turnstile lud aber eine
-    Drittanbieter-Ressource (`challenges.cloudflare.com`), die von Adblockern/
-    Tracking-Schutz (u.a. Operas eingebauter Blocker) häufig blockiert wird —
-    strukturelles Problem der ganzen Kategorie (Turnstile/hCaptcha/reCAPTCHA
-    gleichermaßen betroffen), nicht Cloudflare-spezifisch. Deaktivieren des
-    Adblockers hat es im Test nicht zuverlässig behoben (vermutlich Blockierung auf
-    einer anderen Ebene, z.B. Private DNS). Turnstile-Widget, `verify-captcha`
-    Function und `TURNSTILE_SECRET_KEY` deshalb wieder vollständig entfernt.
+  - **Verworfen: sichtbares Captcha** (Cloudflare Turnstile war kurz eingebaut): lädt eine
+    Drittanbieter-Ressource, die Adblocker/Tracking-Schutz häufig blockieren – ein
+    Problem der ganzen Kategorie (Turnstile/hCaptcha/reCAPTCHA), das echte Nutzer an der
+    Registrierung hindert; inzwischen zusätzlich unvereinbar mit der CSP (keine
+    Drittanbieter zur Laufzeit).
   - Schwächer als ein echtes Captcha gegen gezielte Bot-Angriffe, aber reibungslos für
     echte Nutzer unabhängig von Adblocker/Netzwerk — passender Kompromiss für den
     aktuellen Rahmen (kleiner, wachsender Nutzerkreis, kein Hauptziel für organisierte
@@ -1246,8 +1262,10 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
   ohne Zeichenklassen-Zwang, `password_requirements` bleibt leer/"No required
   characters", da aktuelle Empfehlungen Länge über erzwungene Komplexität stellen).
   Zusätzlich im Dashboard aktiviert (Authentication → Sign In / Providers → Email,
-  **nicht** Teil von `config.toml`): "Require current password when updating" —
-  passt zur Zero-Access-Architektur, da das Passwort der einzige Schlüssel ist.
+  **nicht** Teil von `config.toml` und per `supabase config pull` nicht prüfbar): "Require
+  current password when updating" — passt zur Zero-Access-Architektur, da das Passwort der
+  einzige Schlüssel ist. Davon getrennt: `secure_password_change` (Neuanmeldung vor einer
+  Passwort-Änderung) ist live aus (`config.toml`, per `config pull` am 2026-09-29 bestätigt).
   "Leaked password protection" (HaveIBeenPwned-Abgleich) bleibt vorerst
   deaktiviert — nur ab Supabase Pro-Plan verfügbar, aktuell auf Free.
 
