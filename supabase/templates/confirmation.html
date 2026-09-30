@@ -1,0 +1,39 @@
+<!--
+  Vorlage der Registrierungs-Bestätigungsmail. Live liegt sie im Supabase-Dashboard
+  (Authentication → Emails → Templates → "Confirm signup"), diese Datei ist die Vorlage
+  zum Hineinkopieren - bei Änderungen beide Stellen gleich halten.
+  Betreff (Feld "Subject" im Dashboard):
+    {{ if and .Data.locale (eq .Data.locale "de") }}Bestätige deine Adresse für Logbuch{{ else }}Confirm your email for Logbuch{{ end }}
+  Sprache: die App schickt bei der Registrierung ihre Sprache als Nutzer-Metadaten mit
+  (.Data.locale). Deutsch nur bei "de", sonst - auch ohne Angabe - Englisch.
+  "and" vor "eq": fehlt locale (ältere Konten), bricht eq sonst mit einem Typfehler ab.
+  Der Knopf ist ein echter farbiger Button, kein unterstrichener Link (Links wurden von
+  wenig erfahrenen Menschen nicht als antippbar erkannt).
+-->
+{{ if and .Data.locale (eq .Data.locale "de") }}
+<div style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.5; color: #24261f; max-width: 480px;">
+  <p>Hallo!</p>
+  <p>Du hast dich gerade bei Logbuch registriert – schön, dass du da bist.</p>
+  <p>Tipp auf den Knopf, damit ich weiß, dass diese Adresse wirklich dir gehört:</p>
+  <p style="margin: 24px 0;">
+    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: #4b6b4f; color: #ffffff; text-decoration: none; font-weight: bold; padding: 14px 24px; border-radius: 6px;">E-Mail-Adresse bestätigen</a>
+  </p>
+  <p>Warum das nötig ist: Nur über diese Adresse kannst du später ein vergessenes Passwort zurücksetzen.</p>
+  <p>Danach geht's in der App weiter. Hast du Logbuch schon auf deinem Startbildschirm, öffne es am besten von dort.</p>
+  <p>Du hast dich gar nicht registriert? Dann ignorier diese Mail einfach, es passiert nichts weiter.</p>
+  <p>Louis von Logbuch</p>
+</div>
+{{ else }}
+<div style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.5; color: #24261f; max-width: 480px;">
+  <p>Hi!</p>
+  <p>You just signed up for Logbuch – great to have you here.</p>
+  <p>Tap the button so I know this address really belongs to you:</p>
+  <p style="margin: 24px 0;">
+    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: #4b6b4f; color: #ffffff; text-decoration: none; font-weight: bold; padding: 14px 24px; border-radius: 6px;">Confirm email address</a>
+  </p>
+  <p>Why this is needed: this address is the only way to reset a forgotten password later.</p>
+  <p>Then continue in the app. If Logbuch is already on your home screen, it's best to open it from there.</p>
+  <p>Didn't sign up? Just ignore this email, nothing else will happen.</p>
+  <p>Louis from Logbuch</p>
+</div>
+{{ end }}

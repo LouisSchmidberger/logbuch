@@ -250,6 +250,11 @@ pass = "env(RESEND_API_KEY)"
 admin_email = "noreply@mail.louis-schmidberger.de"
 sender_name = "Logbuch"
 
+# Registrierungs-Bestätigung (live im Dashboard gepflegt, siehe Kopf der Vorlage).
+[auth.email.template.confirmation]
+subject = '{{ if and .Data.locale (eq .Data.locale "de") }}Bestätige deine Adresse für Logbuch{{ else }}Confirm your email for Logbuch{{ end }}'
+content_path = "./supabase/templates/confirmation.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

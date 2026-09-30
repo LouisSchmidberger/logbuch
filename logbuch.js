@@ -4385,7 +4385,9 @@ function renderAuth() {
         }
         const { data, error } = await supabase.auth.signUp({
           email, password,
-          options: { emailRedirectTo: window.location.origin + window.location.pathname },
+          // locale landet in den Nutzer-Metadaten - die Vorlage der Bestätigungsmail
+          // (Supabase-Dashboard, siehe CLAUDE.md) wählt damit Deutsch oder Englisch.
+          options: { emailRedirectTo: window.location.origin + window.location.pathname, data: { locale: currentLocale } },
         });
         if (error) { state.authError = translateAuthError(error.message); render(); return; }
         if (!data.session) {

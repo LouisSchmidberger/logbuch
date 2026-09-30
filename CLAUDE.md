@@ -1282,6 +1282,11 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
   (`renderConfirmEmailHelp`, `state.confirmEmailFor`): Spam-Ordner-Hinweis, die verwendete
   Adresse (Tippfehler fallen auf) und "Mail nochmal senden" (`supabase.auth.resend`,
   Supabase erlaubt eine Mail pro Minute und Adresse – die Wartezeit wird angezeigt).
+  **Vorlage der Bestätigungsmail** (seit 2026-10-01): `supabase/templates/confirmation.html`
+  (Kopf der Datei: Betreff + Hinweise), live im Dashboard unter Authentication → Emails →
+  Templates → "Confirm signup" – beide Stellen gleich halten. Zweisprachig über
+  `.Data.locale` (von `signUp` als Nutzer-Metadaten mitgeschickt), Deutsch nur bei `de`,
+  sonst Englisch. Ton wie das Onboarding, echter Button statt Link.
 
 - **Passwort-Policy** (seit 2026-09-18): Mindestlänge auf 10 Zeichen angehoben
   (`auth.minimum_password_length` in `supabase/config.toml`, vorher 6 — bewusst
