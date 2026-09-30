@@ -1089,7 +1089,6 @@ const STRINGS = {
     'auth.welcome.new': 'Ich bin neu hier',
     'auth.welcome.newNote': 'Konto erstellen und Logbuch einrichten – dauert etwa 5 bis 15 Minuten.',
     'auth.welcome.existing': 'Ich habe schon ein Konto',
-    'auth.welcome.existingNote': 'Anmelden',
     'auth.backToLogin': 'Zurück zur Anmeldung',
     'auth.forgotPassword': 'Passwort vergessen?',
     'auth.resetLinkSent': 'Falls diese E-Mail bei uns registriert ist, haben wir einen Link zum Zurücksetzen geschickt.',
@@ -1577,7 +1576,6 @@ const STRINGS = {
     'auth.welcome.new': 'I’m new here',
     'auth.welcome.newNote': 'Create an account and set up Logbuch – takes about 5 to 15 minutes.',
     'auth.welcome.existing': 'I already have an account',
-    'auth.welcome.existingNote': 'Sign in',
     'auth.backToLogin': 'Back to sign in',
     'auth.forgotPassword': 'Forgot password?',
     'auth.resetLinkSent': 'If this email is registered with us, we have sent a link to reset your password.',
@@ -4318,8 +4316,7 @@ function renderAuthWelcome() {
       <p class="auth-welcome-lead">${t('auth.welcome.lead')}</p>
       <button type="button" class="auth-submit auth-choice" data-action="auth-choose" data-mode="signup" aria-describedby="auth-new-note">${t('auth.welcome.new')}</button>
       <p class="auth-choice-note" id="auth-new-note">${t('auth.welcome.newNote')}</p>
-      <button type="button" class="manage-new-btn manage-new-btn--secondary auth-choice" data-action="auth-choose" data-mode="signin" aria-describedby="auth-existing-note">${t('auth.welcome.existing')}</button>
-      <p class="auth-choice-note" id="auth-existing-note">${t('auth.welcome.existingNote')}</p>
+      <button type="button" class="manage-new-btn manage-new-btn--secondary auth-choice" data-action="auth-choose" data-mode="signin">${t('auth.welcome.existing')}</button>
     </div>
   `;
 }
