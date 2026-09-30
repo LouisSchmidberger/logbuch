@@ -734,7 +734,7 @@ const state = {
   weekAnchor: startOfWeek(new Date()),
   monthAnchor: (() => { const d = startOfDay(new Date()); d.setDate(1); return d; })(),
   yearAnchor: new Date().getFullYear(),
-  authMode: 'signin', // 'signin' | 'signup' | 'forgot'
+  authMode: signedInHereBefore() ? 'signin' : 'welcome', // 'welcome' | 'signin' | 'signup' | 'forgot'
   authError: null,
   authEmail: '', // bleibt über einen Re-Render (z.B. nach Fehler) hinweg erhalten,
   authPassword: '', // damit ein Tippfehler nicht das ganze Formular leert (siehe input-Listener).
@@ -1085,6 +1085,11 @@ const STRINGS = {
     'auth.login': 'Anmelden',
     'auth.haveAccount': 'Schon einen Account? Anmelden',
     'auth.noAccount': 'Noch keinen Account? Registrieren',
+    'auth.welcome.lead': 'Schön, dass du da bist!',
+    'auth.welcome.new': 'Ich bin neu hier',
+    'auth.welcome.newNote': 'Konto erstellen und Logbuch einrichten – dauert etwa 5 bis 15 Minuten.',
+    'auth.welcome.existing': 'Ich habe schon ein Konto',
+    'auth.welcome.existingNote': 'Anmelden',
     'auth.backToLogin': 'Zurück zur Anmeldung',
     'auth.forgotPassword': 'Passwort vergessen?',
     'auth.resetLinkSent': 'Falls diese E-Mail bei uns registriert ist, haben wir einen Link zum Zurücksetzen geschickt.',
@@ -1568,6 +1573,11 @@ const STRINGS = {
     'auth.login': 'Sign in',
     'auth.haveAccount': 'Already have an account? Sign in',
     'auth.noAccount': 'Do not have an account yet? Sign up',
+    'auth.welcome.lead': 'Great to have you here!',
+    'auth.welcome.new': 'I’m new here',
+    'auth.welcome.newNote': 'Create an account and set up Logbuch – takes about 5 to 15 minutes.',
+    'auth.welcome.existing': 'I already have an account',
+    'auth.welcome.existingNote': 'Sign in',
     'auth.backToLogin': 'Back to sign in',
     'auth.forgotPassword': 'Forgot password?',
     'auth.resetLinkSent': 'If this email is registered with us, we have sent a link to reset your password.',
@@ -4290,15 +4300,45 @@ async function resendConfirmEmail() {
   announce(state.confirmResend === 'sent' ? t('auth.confirmHelp.resent') : state.confirmResend.error);
 }
 
+// Startseite vor dem Anmelde-Formular: wer neu ist, landete vorher direkt bei
+// "Anmelden" - klingt für viele nach "ich bin neu, also melde ich mich an", und der Weg
+// zum Registrieren war nur ein kleiner Link. Die Knöpfe beschreiben deshalb die Lage der
+// Person statt des Fachbegriffs. Wer sich auf dem Gerät schon einmal angemeldet hat,
+// startet direkt beim Anmelden (signedInHereBefore).
+function signedInHereBefore() {
+  try { return localStorage.getItem('signedInHere') === 'true'; } catch { return false; }
+}
+function rememberSignedInHere() {
+  try { localStorage.setItem('signedInHere', 'true'); } catch { /* dann eben nicht */ }
+}
+function renderAuthWelcome() {
+  app.innerHTML = `
+    <div class="auth-box">
+      <h1 tabindex="-1">Logbuch</h1>
+      <p class="auth-welcome-lead">${t('auth.welcome.lead')}</p>
+      <button type="button" class="auth-submit auth-choice" data-action="auth-choose" data-mode="signup" aria-describedby="auth-new-note">${t('auth.welcome.new')}</button>
+      <p class="auth-choice-note" id="auth-new-note">${t('auth.welcome.newNote')}</p>
+      <button type="button" class="manage-new-btn manage-new-btn--secondary auth-choice" data-action="auth-choose" data-mode="signin" aria-describedby="auth-existing-note">${t('auth.welcome.existing')}</button>
+      <p class="auth-choice-note" id="auth-existing-note">${t('auth.welcome.existingNote')}</p>
+    </div>
+  `;
+}
+
 function renderAuth() {
+  if (state.authMode === 'welcome') { renderAuthWelcome(); return; }
   const isSignup = state.authMode === 'signup';
   const isForgot = state.authMode === 'forgot';
   const title = isForgot ? t('auth.title.forgot') : isSignup ? t('auth.title.signup') : t('auth.title.login');
 
   app.innerHTML = `
     <div class="auth-box">
+      ${!isForgot ? `
+        <button type="button" class="back-btn auth-back" data-action="auth-choose" data-mode="welcome" aria-label="${esc(t('ariaLabel.back'))}">
+          <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      ` : ''}
       <h1>Logbuch</h1>
-      <p class="sub">${title}</p>
+      <p class="sub" tabindex="-1">${title}</p>
       ${state.authError ? `<div class="notice" role="alert">${esc(state.authError)}</div>` : ''}
       ${renderNotice()}
       ${isForgot ? `<p class="habit-form-lock-note">${t('auth.forgotRecoveryNote')}</p>` : ''}
@@ -6588,7 +6628,15 @@ app.addEventListener('click', async (e) => {
   // state.rowMenu.
   if (action !== 'row-menu') state.rowMenu = null;
 
-  if (action === 'toggle-auth-mode') {
+  if (action === 'auth-choose') {
+    state.authMode = el.dataset.mode;
+    state.authError = null;
+    state.notice = null;
+    render();
+    // Neue Seite: Fokus auf ihren Titel (nicht ins E-Mail-Feld - das öffnete auf dem Handy
+    // sofort die Tastatur).
+    document.querySelector(state.authMode === 'welcome' ? '.auth-box h1' : '.auth-box .sub')?.focus({ preventScroll: true });
+  } else if (action === 'toggle-auth-mode') {
     state.authMode = state.authMode === 'signup' ? 'signin' : 'signup';
     state.authError = null;
     render();
@@ -7672,6 +7720,7 @@ async function completeAuthFlow(userId, password, { verifyPassword = false } = {
 
 supabase.auth.onAuthStateChange(async (event, session) => {
   state.session = session;
+  if (session) rememberSignedInHere();
   state.authError = null;
   if (event === 'PASSWORD_RECOVERY') {
     state.passwordRecovery = true;

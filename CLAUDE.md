@@ -67,6 +67,12 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
   (`#…type=signup`, vor dem Start von supabase-js gemerkt, `ARRIVED_VIA_SIGNUP_CONFIRM`)
   auf dem Handy im Browser an, zeigt `renderConfirmLanding` "E-Mail bestätigt – zurück zur
   App" statt der Anmeldung (Weitermachen im Browser bleibt möglich).
+- **Startseite vor dem Anmelden** (`renderAuthWelcome`, `authMode: 'welcome'`, seit
+  2026-10-01): zwei Knöpfe "Ich bin neu hier" / "Ich habe schon ein Konto" statt direkt
+  "Anmelden" (klang für Neulinge nach "ich bin neu, also melde ich mich an"; Registrieren
+  war nur ein kleiner Link). Die Formulare haben ein ← zurück dorthin. Wer sich auf dem
+  Gerät schon angemeldet hat (`localStorage` `signedInHere`), startet direkt beim Anmelden.
+  Vorgesehener Ort für die spätere Frage, wie vertraut jemand mit Handys ist.
 - **iOS-Zoom beim Antippen von Eingabefeldern**: Safari auf iOS/iPadOS zoomt bei Feldern mit
   < 16px Schrift automatisch heran und nie wieder heraus – deshalb bekommen dort alle
   Eingabefelder 16px (`@supports (-webkit-touch-callout: none)` im CSS, nur Apple-Touch-
@@ -967,7 +973,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 481 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 486 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
