@@ -1,0 +1,29 @@
+#!/bin/sh
+# Cache-Busting: logbuch.html lädt logbuch.js als "logbuch.js?v=<kennung>". Die Kennung
+# ist der Anfang des Git-Hashes der (gestagten) logbuch.js - ändert sich die Datei, ändert
+# sich die Adresse, und ein Browser mit neuer logbuch.html holt garantiert auch die neue
+# logbuch.js statt einer bis zu 10 Minuten alten aus dem Zwischenspeicher (GitHub Pages:
+# max-age=600). Aktiv über "git config core.hooksPath .githooks" (einmal pro Klon).
+#
+# Geändert wird die gestagte logbuch.html direkt im Index (nicht per "git add"), damit
+# nicht gestagte Änderungen an ihr nicht versehentlich mit in den Commit rutschen; die
+# Arbeitskopie bekommt dieselbe Ersetzung.
+set -e
+
+version=$(git rev-parse :logbuch.js | cut -c1-10)
+pattern='logbuch\.js?v=[0-9a-f]*'
+replacement="logbuch.js?v=$version"
+
+staged_html=$(git show :logbuch.html)
+if ! printf '%s\n' "$staged_html" | grep -q "$pattern"; then
+  echo "pre-commit: in logbuch.html fehlt 'logbuch.js?v=...' - Cache-Busting nicht möglich." >&2
+  exit 1
+fi
+if printf '%s\n' "$staged_html" | grep -q "$replacement\""; then
+  exit 0
+fi
+
+blob=$(printf '%s\n' "$staged_html" | sed "s/$pattern/$replacement/" | git hash-object -w --stdin)
+git update-index --cacheinfo "100644,$blob,logbuch.html"
+sed -i "s/$pattern/$replacement/" logbuch.html
+echo "pre-commit: logbuch.js-Version in logbuch.html auf $version gesetzt."

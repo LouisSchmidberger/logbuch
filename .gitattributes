@@ -1,0 +1,2 @@
+# Git-Hooks laufen unter sh - Windows-Zeilenenden würden sie kaputt machen.
+.githooks/* text eol=lf

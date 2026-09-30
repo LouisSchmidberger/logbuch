@@ -27,6 +27,13 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
   (bewusst nicht Google Fonts – übermittelte bei jedem Öffnen die IP an Google).
   Rendering per Template-Strings +
   Event-Delegation auf `#app` (kein virtuelles DOM, bewusst einfach gehalten).
+- **Cache-Busting** (seit 2026-10-01): GitHub Pages lässt Browser Dateien 10 Min.
+  zwischenspeichern – nach einem Update konnte so neue `logbuch.html` (mit dem CSS) auf alte
+  `logbuch.js` treffen. Deshalb lädt die HTML `logbuch.js?v=<Kennung>`, die Kennung (Anfang
+  des Git-Hashes von `logbuch.js`) setzt der Hook `.githooks/pre-commit` bei jedem Commit
+  selbst. **Pro Klon einmal nötig**: `git config core.hooksPath .githooks` (ohne das bleibt
+  die Kennung stehen). Umgekehrt (alte HTML, neue JS) nur teilweise abgedeckt – vollständig
+  ginge es nur mit einem Build-Schritt.
 - **Service Worker**: `sw.js` – nur für Web-Push-Empfang/-Klick, sonst nichts (kein Offline-
   Caching gebaut).
 - **Backend**: Supabase (Projekt-Ref `qdadoqcnqmrauhshvcts`, Region Europe) – Postgres-Tabellen,
