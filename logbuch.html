@@ -205,13 +205,19 @@
      einzelnen Felder ihre Schriftgröße über spezifischere Selektoren setzen. */
   @supports (-webkit-touch-callout: none) {
     input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea {
-      font-size: 16px !important;
+      font-size: 1rem !important; /* = 16px bei Normalgröße, wächst mit der Textgröße */
     }
   }
   .visually-hidden {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
     overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
   }
+  /* Textgröße (Menü → "Textgröße", pro Gerät, siehe applyTextSize): alle Schriftgrößen
+     und die Maße von Bedienelementen mit Text stehen in rem und hängen damit nur an dieser
+     einen Grundgröße. 100% = die Grundgröße des Browsers (meist 16px). */
+  html { font-size: 100%; }
+  :root[data-text-size="large"] { font-size: 112.5%; }
+  :root[data-text-size="xlarge"] { font-size: 125%; }
   body {
     margin: 0;
     font-family: 'IBM Plex Sans', sans-serif;
@@ -220,25 +226,25 @@
     overflow-x: hidden; /* Sicherheitsnetz: nichts soll je die ganze Seite breiter machen */
   }
   #app {
-    max-width: 480px;
+    max-width: 30rem; /* = 480px bei Normalgröße, wächst mit der Textgröße mit */
     margin: 0 auto;
     padding: 20px 18px 40px;
   }
 
   .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-  .header h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 22px; margin: 0; }
+  .header h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 1.5rem; margin: 0; }
   .subpage-header-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
   /* line-height/padding großzügig, da "overflow: hidden" (für die "…"-Kürzung bei
      langen Titeln) sonst die Oberlängen der kursiven Fraunces-Schrift abschneidet
      (z.B. die Ü-Punkte bei "Über Logbuch"). */
-  .subpage-header-title h1 { font-size: 19px; line-height: 1.5; padding: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; }
+  .subpage-header-title h1 { font-size: 1.3125rem; line-height: 1.5; padding: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; }
   /* Trennlinie + etwas mehr Innenabstand unten, da hier (anders als bei den Tabs, die
      ihre eigene Trennlinie mitbringen) nichts anderes den unteren Rand der Fläche
      markiert. Die SVG-Chevron statt eines "←"-Zeichens zentriert sich unabhängig von
      Font-Metriken zuverlässig exakt. */
   .subpage-header { border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 18px; }
   .back-btn {
-    background: var(--ink); border: none; border-radius: 50%; width: 32px; height: 32px;
+    background: var(--ink); border: none; border-radius: 50%; width: 2rem; height: 2rem;
     flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--paper);
     cursor: pointer;
   }
@@ -264,11 +270,11 @@
 
   .header-menu-wrap { position: relative; }
   .menu-btn {
-    background: none; border: 1px solid var(--line); border-radius: 50%; width: 30px; height: 30px;
-    display: flex; align-items: center; justify-content: center; color: var(--ink); cursor: pointer; font-size: 15px;
+    background: none; border: 1px solid var(--line); border-radius: 50%; width: 1.875rem; height: 1.875rem;
+    display: flex; align-items: center; justify-content: center; color: var(--ink); cursor: pointer; font-size: 1.0625rem;
   }
   .menu-panel {
-    position: absolute; top: 38px; right: 0; z-index: 10; width: 250px;
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 10; width: min(16rem, calc(100vw - 36px));
     max-height: calc(100vh - 54px); overflow-y: auto; overscroll-behavior: contain;
     display: flex; flex-direction: column; gap: 8px;
     background: var(--popover-bg); border: 1px solid var(--ink); border-radius: 4px; padding: 14px;
@@ -277,18 +283,18 @@
   .menu-panel .push-row { margin-bottom: 0; }
   .menu-group { display: flex; flex-direction: column; gap: 9px; }
   .menu-group-label {
-    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+    font-size: 0.8125rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
     color: var(--sand); margin: 0;
   }
   .menu-group-divider { border-top: 1px solid var(--line); margin: 2px 0; }
-  .menu-row { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--sand); }
-  .menu-row-note { font-size: 11px; color: var(--sand); margin: 0; }
+  .menu-row { display: flex; flex-direction: column; gap: 4px; font-size: 0.875rem; color: var(--sand); }
+  .menu-row-note { font-size: 0.8125rem; color: var(--sand); margin: 0; }
   .menu-row select {
-    font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
+    font-family: inherit; font-size: 0.9375rem; padding: 7px 9px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   .menu-item-btn {
-    font-family: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid var(--line);
+    font-family: inherit; font-size: 0.9375rem; padding: 8px 10px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink); cursor: pointer; text-align: left;
   }
   .menu-item-btn:hover, .menu-item-btn:focus-visible { background: rgba(var(--moss-rgb), 0.14); border-color: var(--moss); }
@@ -309,25 +315,25 @@
     background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
     padding: 18px; max-width: 340px; width: 100%; margin: auto;
   }
-  .modal-box h2 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 17px; margin: 0 0 10px; }
-  .modal-box p { font-size: 13px; line-height: 1.45; margin: 0 0 14px; }
+  .modal-box h2 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 1.1875rem; margin: 0 0 10px; }
+  .modal-box p { font-size: 0.9375rem; line-height: 1.45; margin: 0 0 14px; }
 
-  .push-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink); background: rgba(var(--moss-rgb), 0.08); border: 1px solid var(--line); border-radius: 3px; padding: 7px 10px; margin-bottom: 16px; }
+  .push-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.875rem; color: var(--ink); background: rgba(var(--moss-rgb), 0.08); border: 1px solid var(--line); border-radius: 3px; padding: 7px 10px; margin-bottom: 16px; }
   .push-row--muted { color: var(--sand); background: transparent; }
-  .push-toggle { background: none; border: none; color: var(--moss); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
+  .push-toggle { background: none; border: none; color: var(--moss); font-family: inherit; font-size: 0.875rem; text-decoration: underline; cursor: pointer; padding: 0; }
   .push-toggle--prominent {
     background: var(--ink); color: var(--paper); text-decoration: none; font-weight: 600;
     padding: 7px 12px; border-radius: 3px;
   }
 
   .install-hint {
-    display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.4; color: var(--ink);
+    display: flex; align-items: flex-start; gap: 8px; font-size: 0.875rem; line-height: 1.4; color: var(--ink);
     background: rgba(var(--rust-rgb), 0.08); border: 1px solid rgba(var(--rust-rgb), 0.3); border-radius: 3px;
     padding: 8px 10px; margin-bottom: 16px;
   }
   .install-hint span { flex: 1; }
   .install-hint-close {
-    background: none; border: none; color: var(--sand); font-size: 16px; line-height: 1; cursor: pointer;
+    background: none; border: none; color: var(--sand); font-size: 1.0625rem; line-height: 1; cursor: pointer;
     padding: 0 2px; flex-shrink: 0;
   }
 
@@ -337,7 +343,7 @@
   }
   .tabs::-webkit-scrollbar { display: none; }
   .tab {
-    background: none; border: none; padding: 6px 0 10px; font-family: inherit; font-size: 14px;
+    background: none; border: none; padding: 6px 0 10px; font-family: inherit; font-size: 1rem;
     color: var(--sand); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
     white-space: nowrap; flex-shrink: 0;
   }
@@ -345,12 +351,12 @@
 
   .day-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; position: relative; }
   .nav-btn {
-    background: none; border: 1px solid var(--line); border-radius: 50%; width: 30px; height: 30px;
-    display: flex; align-items: center; justify-content: center; color: var(--ink); cursor: pointer; font-size: 15px;
+    background: none; border: 1px solid var(--line); border-radius: 50%; width: 1.875rem; height: 1.875rem;
+    display: flex; align-items: center; justify-content: center; color: var(--ink); cursor: pointer; font-size: 1.0625rem;
   }
   .nav-btn:disabled { opacity: 0.35; cursor: default; }
   .day-label { display: flex; flex-direction: column; align-items: center; text-align: center; }
-  .day-weekday { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; position: relative; }
+  .day-weekday { font-family: 'Fraunces', serif; font-size: 1.1875rem; font-weight: 600; position: relative; }
   /* ⋮ zum Tag (renderDayMenuPanel): links vor dem Wochentag wie bei den Feldern, aber
      außerhalb des Textflusses, damit Wochentag und Datum mittig bleiben. */
   .day-weekday > .row-menu-btn { position: absolute; right: calc(100% + 2px); top: 50%; transform: translateY(-50%); }
@@ -369,11 +375,11 @@
   @media (prefers-reduced-motion: reduce) {
     .view-slide-next, .view-slide-prev { animation: view-fade 0.15s ease-out; }
   }
-  .day-date { font-size: 12px; color: var(--sand); }
+  .day-date { font-size: 0.875rem; color: var(--sand); }
 
   .today-jump {
     display: block; margin: 0 auto 14px; background: none; border: none; color: var(--moss);
-    font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0;
+    font-family: inherit; font-size: 0.875rem; text-decoration: underline; cursor: pointer; padding: 0;
   }
 
   .habit-list { display: flex; flex-direction: column; }
@@ -382,7 +388,7 @@
     padding: 11px 0; border-bottom: 1px solid var(--line);
   }
   .habit-row:first-child, .number-box:first-child { border-top: 1px solid var(--line); }
-  .habit-name { font-size: 13px; line-height: 1.35; flex: 1; min-width: 0; }
+  .habit-name { font-size: 0.9375rem; line-height: 1.35; flex: 1; min-width: 0; }
   .habit-options {
     display: flex; gap: 6px; flex-shrink: 1; min-width: 0; max-width: 60%;
     overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
@@ -398,12 +404,12 @@
   .habit-row--buttons > .habit-options { flex: 0 0 auto; max-width: 100%; margin-left: auto; }
 
   .opt-btn {
-    font-family: inherit; font-size: 12px; width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    font-family: inherit; font-size: 0.875rem; width: 1.75rem; height: 1.75rem; border-radius: 50%; flex-shrink: 0;
     border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease;
   }
   .opt-btn--text {
-    width: auto; min-width: 28px; height: 28px; border-radius: 14px; padding: 0 10px;
+    width: auto; min-width: 1.75rem; height: 1.75rem; border-radius: 999px; padding: 0 10px;
     white-space: nowrap;
   }
   .opt-btn--selected { color: var(--on-score); }
@@ -419,7 +425,7 @@
      unter dem letzten Feld), der Tag ("nicht geplant", Tagesnotiz) und eine Fußleiste mit
      Trennlinie für das, was nicht zum Tag gehört ("+ Neues Feld", umrandet wie "+ Neue
      Gruppe" in der Verwaltung). Alles linksbündig wie die Felder. */
-  .today-complete { margin: 10px 0 0; font-size: 13px; font-style: italic; color: var(--moss); }
+  .today-complete { margin: 10px 0 0; font-size: 0.9375rem; font-style: italic; color: var(--moss); }
   .today-footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); }
 
   /* Zahlenwert- und Text-Felder sind normale Zeilen wie alle anderen (Trennlinie statt
@@ -429,9 +435,9 @@
     padding: 11px 0; border-bottom: 1px solid var(--line);
     display: flex; align-items: center; gap: 10px;
   }
-  .number-box .number-last { display: block; font-size: 11px; color: var(--sand); margin-top: 2px; }
+  .number-box .number-last { display: block; font-size: 0.8125rem; color: var(--sand); margin-top: 2px; }
   .number-input {
-    width: 72px; font-family: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--line);
+    width: 72px; font-family: inherit; font-size: 1rem; padding: 6px 8px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
 
@@ -442,12 +448,12 @@
      Platz abgeben) - fühlte sich beim Ziehen wie eine Verzerrung an. Lange Texte werden
      stattdessen abgeschnitten (…), der volle Text bleibt im Datenmodell erhalten. */
   .slider-value {
-    font-size: 12px; color: var(--sand); width: 70px; text-align: right; flex-shrink: 0;
+    font-size: 0.875rem; color: var(--sand); width: 70px; text-align: right; flex-shrink: 0;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .slider-clear {
     flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line);
-    background: transparent; color: var(--sand); font-size: 13px; line-height: 1; cursor: pointer;
+    background: transparent; color: var(--sand); font-size: 0.9375rem; line-height: 1; cursor: pointer;
   }
   /* Ohne Wert: unsichtbarer Platzhalter in exakt derselben Größe statt gar nichts - sonst
      würde der Regler beim ersten Eintragen um die Breite des × schmaler (gleicher Grund
@@ -481,7 +487,7 @@
   }
 
   .habit-row--computed .computed-readout {
-    font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 12px; color: var(--on-score);
+    font-size: 0.875rem; font-weight: 600; padding: 3px 9px; border-radius: 12px; color: var(--on-score);
   }
   .habit-row--computed { flex-wrap: wrap; }
   .habit-row--computed .manage-meta { flex-basis: 100%; }
@@ -509,7 +515,7 @@
   .row-menu-name { cursor: pointer; }
   .row-menu-name--open { text-decoration: underline; text-decoration-color: var(--sand); text-underline-offset: 3px; }
   .row-menu {
-    position: absolute; top: calc(100% - 4px); left: 0; z-index: 5; min-width: 170px;
+    position: absolute; top: calc(100% - 4px); left: 0; z-index: 5; min-width: 11rem;
     display: flex; flex-direction: column; gap: 6px; padding: 10px;
     background: var(--popover-bg); border: 1px solid var(--ink); border-radius: 4px;
     box-shadow: 0 12px 32px var(--shadow);
@@ -520,26 +526,26 @@
      (max-width 60%) bzw. Zahlen-Eingabe passen weiterhin zusammen in die erste Zeile. */
   .habit-row, .number-box { flex-wrap: wrap; }
   .row-note {
-    width: 100%; text-align: left; font: inherit; font-size: 12px; font-style: italic; line-height: 1.45;
+    width: 100%; text-align: left; font: inherit; font-size: 0.875rem; font-style: italic; line-height: 1.45;
     color: var(--ink); background: none; border: none; border-left: 2px solid var(--line);
     padding: 1px 0 1px 8px; margin: 0; cursor: pointer; white-space: pre-wrap; overflow-wrap: anywhere;
   }
   .row-note:hover, .row-note:focus-visible { border-left-color: var(--moss); }
   .note-editor { width: 100%; display: flex; flex-direction: column; gap: 8px; }
   .note-input {
-    box-sizing: border-box; width: 100%; font-family: inherit; font-size: 14px; line-height: 1.45;
+    box-sizing: border-box; width: 100%; font-family: inherit; font-size: 1rem; line-height: 1.45;
     padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px;
     background: var(--input-bg); color: var(--ink); resize: vertical;
   }
   .note-editor-actions { display: flex; gap: 8px; }
   .note-save-btn {
-    flex: 1; font-family: inherit; font-size: 13px; font-weight: 600; padding: 10px;
+    flex: 1; font-family: inherit; font-size: 0.9375rem; font-weight: 600; padding: 10px;
     border: none; border-radius: 3px; background: var(--moss); color: var(--paper); cursor: pointer;
   }
   .day-note { margin-top: 16px; }
-  .day-note-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 14px; margin: 0 0 6px; }
+  .day-note-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 1rem; margin: 0 0 6px; }
   .day-note-add {
-    display: block; width: 100%; box-sizing: border-box; text-align: left; font-family: inherit; font-size: 13px;
+    display: block; width: 100%; box-sizing: border-box; text-align: left; font-family: inherit; font-size: 0.9375rem;
     color: var(--sand); padding: 10px 12px; background: none; border: 1px dashed var(--line); border-radius: 4px; cursor: pointer;
   }
   .day-note-add:hover, .day-note-add:focus-visible { border-color: var(--moss); color: var(--ink); }
@@ -554,14 +560,14 @@
   .month-cell.has-note::after { top: auto; bottom: 3px; right: 3px; }
 
   .member-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
-  .member-check { font-size: 13px; }
+  .member-check { font-size: 0.9375rem; }
   .member-check--blocked { opacity: 0.45; }
   /* Berechnetes Zahlen-Feld: Wert ohne Bewertung - neutral statt eingefärbt. */
   .habit-row--computed .computed-readout--number { color: var(--ink); border: 1px solid var(--line); background: transparent; }
 
   .number-chart-box { padding: 10px 0; border-bottom: 1px solid var(--line); }
   .number-chart-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
-  .number-chart-meta { font-size: 11px; color: var(--sand); flex-shrink: 0; white-space: nowrap; }
+  .number-chart-meta { font-size: 0.8125rem; color: var(--sand); flex-shrink: 0; white-space: nowrap; }
   .number-chart-svg { display: block; width: 100%; height: 56px; }
   .number-chart-plot { position: relative; }
 
@@ -569,7 +575,7 @@
      nicht geplanten Tagen in der Woche (schraffiert statt leer, damit "nicht dran"
      nicht wie "vergessen" aussieht), Formular-Bausteine. */
   .unplanned { margin-top: 14px; }
-  .unplanned > summary { font-size: 12px; color: var(--sand); cursor: pointer; padding: 6px 0; }
+  .unplanned > summary { font-size: 0.875rem; color: var(--sand); cursor: pointer; padding: 6px 0; }
   .unplanned > .habit-list { margin-top: 6px; }
   /* Die Zellfarbe kommt inline als background-color (bewusst NICHT die Kurzschreibweise
      "background:", die setzte auch diese Schraffur wieder zurück). */
@@ -585,10 +591,10 @@
     width: 34px; height: 34px; padding: 0; border-radius: 50%; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
   }
-  .schedule-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; }
+  .schedule-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-size: 0.9375rem; }
   .auth-field .schedule-inline select, .auth-field .schedule-inline input:not([type="checkbox"]) { width: auto; }
   .auth-field .schedule-inline input[type="number"] { width: 72px; }
-  .schedule-inline label, .schedule-inline span { font-size: 13px; color: var(--ink); }
+  .schedule-inline label, .schedule-inline span { font-size: 0.9375rem; color: var(--ink); }
   /* Kurzes Aufleuchten des Feldes nach einem Sprung aus der Auswertung (focusTodayField). */
   /* Hervorhebung nach einem Sprung (Feld in "Heute", Eintrag im Menü): erst eine Weile
      voll sichtbar, dann ausblenden - sonst ging sie leicht unter. */
@@ -606,14 +612,14 @@
      mitwachsen (wo unterstützt, sonst rows="2" + manuell vergrößerbar). */
   .text-box { flex-direction: column; align-items: stretch; gap: 8px; }
   .text-field-input {
-    box-sizing: border-box; width: 100%; font-family: inherit; font-size: 14px; line-height: 1.45;
+    box-sizing: border-box; width: 100%; font-family: inherit; font-size: 1rem; line-height: 1.45;
     padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px;
     background: var(--input-bg); color: var(--ink); resize: vertical;
     field-sizing: content; min-height: 3.6em; max-height: 50vh;
   }
   /* Rückblick-Listen (siehe renderTextReviews) - gleiche Abstände wie die Zahlen-Graphen. */
   .text-review { padding: 10px 0; border-bottom: 1px solid var(--line); }
-  .text-review-title { font-size: 13px; font-weight: 400; line-height: 1.35; margin: 0; }
+  .text-review-title { font-size: 0.9375rem; font-weight: 400; line-height: 1.35; margin: 0; }
   summary.text-review-title { cursor: pointer; }
   .text-review-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
   .text-review-entry {
@@ -621,8 +627,8 @@
     background: none; border: none; border-radius: 3px; padding: 6px 4px; cursor: pointer;
   }
   .text-review-entry:hover, .text-review-entry:focus-visible { background: rgba(var(--moss-rgb), 0.10); }
-  .text-review-date { flex-shrink: 0; width: 78px; font-size: 11px; color: var(--sand); padding-top: 2px; }
-  .text-review-text { font-size: 13px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .text-review-date { flex-shrink: 0; width: 78px; font-size: 0.8125rem; color: var(--sand); padding-top: 2px; }
+  .text-review-text { font-size: 0.9375rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
   /* Ring um Datenpunkte mit Notiz (siehe renderNumberChart) - gleiche Idee wie der
      Notiz-Punkt in Woche/Monat. */
   .number-chart-note {
@@ -635,52 +641,52 @@
   .number-chart-hit:hover, .number-chart-hit:active { background: rgba(var(--moss-rgb), 0.14); }
 
   .grid-scroll { overflow-x: auto; }
-  .grid-row { display: grid; grid-template-columns: minmax(58px, 80px) repeat(7, 1fr) minmax(30px, 38px); align-items: center; gap: 1px; }
+  .grid-row { display: grid; grid-template-columns: minmax(3.75rem, 5rem) repeat(7, 1fr) minmax(2.25rem, 2.75rem); align-items: center; gap: 1px; }
   .grid-row--header { padding-bottom: 6px; }
-  .grid-label { font-size: 10px; padding-right: 3px; line-height: 1.2; overflow-wrap: anywhere; }
-  .grid-col-header { display: flex; flex-direction: column; align-items: center; font-size: 9px; color: var(--sand); cursor: pointer; }
-  .grid-col-date { font-size: 10px; color: var(--ink); }
+  .grid-label { font-size: 0.75rem; padding-right: 3px; line-height: 1.2; overflow-wrap: anywhere; }
+  .grid-col-header { display: flex; flex-direction: column; align-items: center; font-size: 0.75rem; color: var(--sand); cursor: pointer; }
+  .grid-col-date { font-size: 0.8125rem; color: var(--ink); }
   .grid-col-header--avg { font-family: 'Fraunces', serif; font-style: italic; color: var(--ink); cursor: default; }
-  .grid-cell { height: 22px; margin: 1px; border-radius: 2px; border: 1px solid var(--line); cursor: pointer; }
+  .grid-cell { height: 1.5rem; margin: 1px; border-radius: 2px; border: 1px solid var(--line); cursor: pointer; }
   .grid-cell--blank { border-color: transparent; }
-  .grid-cell--avg { display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--on-score); font-weight: 600; cursor: default; }
+  .grid-cell--avg { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--on-score); font-weight: 600; cursor: default; }
 
   .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 20px; }
-  .month-weekday { font-size: 10px; color: var(--sand); text-align: center; padding-bottom: 4px; }
+  .month-weekday { font-size: 0.8125rem; color: var(--sand); text-align: center; padding-bottom: 4px; }
   .month-cell { aspect-ratio: 1; border-radius: 3px; border: 1px solid var(--line); display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px; cursor: pointer; }
   .month-cell--empty { border: none; cursor: default; }
   /* mix-blend-mode:multiply setzt auf einen hellen Seitenhintergrund, damit die
      Zahl unabhängig vom farbcodierten Zell-Hintergrund lesbar bleibt – funktioniert
      im Dark Mode nicht mehr (verdunkelt statt abzuheben), dort auf reine Ink-Farbe
      ohne Blend-Mode zurückfallen. */
-  .month-cell-num { font-size: 10px; color: var(--ink); mix-blend-mode: multiply; }
+  .month-cell-num { font-size: 0.75rem; color: var(--ink); mix-blend-mode: multiply; }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .month-cell-num { mix-blend-mode: normal; }
   }
   :root[data-theme="dark"] .month-cell-num { mix-blend-mode: normal; }
 
   .month-stats { border-top: 1px solid var(--line); padding-top: 8px; }
-  .month-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .month-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 0.875rem; }
   .month-stat-value { font-weight: 600; }
   .month-stat-count { font-weight: 400; color: var(--sand); }
 
   .year-grid { display: flex; flex-direction: column; gap: 3px; margin-bottom: 20px; }
   .year-month { display: flex; align-items: center; gap: 6px; }
-  .year-month-label { width: 24px; font-size: 9px; color: var(--sand); flex-shrink: 0; }
+  .year-month-label { width: 2.25rem; font-size: 0.75rem; color: var(--sand); flex-shrink: 0; }
   .year-month-grid { display: grid; grid-template-columns: repeat(31, 1fr); gap: 2px; flex: 1; }
   .year-day-cell { aspect-ratio: 1; border-radius: 1px; min-width: 0; cursor: pointer; }
 
   .notice {
-    font-size: 12px; padding: 8px 10px; border-radius: 3px; margin-bottom: 14px;
+    font-size: 0.875rem; padding: 8px 10px; border-radius: 3px; margin-bottom: 14px;
     background: rgba(var(--rust-rgb), 0.12); color: var(--rust); border: 1px solid rgba(var(--rust-rgb), 0.3);
   }
   .notice--ok { background: rgba(var(--moss-rgb), 0.12); color: var(--moss); border-color: rgba(var(--moss-rgb), 0.3); }
-  .loading { font-size: 13px; color: var(--sand); padding: 40px 0; text-align: center; }
+  .loading { font-size: 0.9375rem; color: var(--sand); padding: 40px 0; text-align: center; }
 
-  .auth-box { max-width: 320px; margin: 60px auto; }
-  .auth-box h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 24px; margin: 0 0 4px; text-align: center; }
-  .auth-box p.sub { font-size: 12px; color: var(--sand); text-align: center; margin: 0 0 24px; }
-  .tutorial-text { font-size: 13px; line-height: 1.5; margin: 0 0 16px; }
+  .auth-box { max-width: 20rem; margin: 60px auto; }
+  .auth-box h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 1.625rem; margin: 0 0 4px; text-align: center; }
+  .auth-box p.sub { font-size: 0.875rem; color: var(--sand); text-align: center; margin: 0 0 24px; }
+  .tutorial-text { font-size: 0.9375rem; line-height: 1.5; margin: 0 0 16px; }
   /* Tutorial-Bausteine (siehe tutorialScreen): Punkte statt "Schritt X von Y", der
      aktuelle Punkt länger (Form statt nur Farbe); "Warum?"-Kasten als wiedererkennbares
      Element für Begründungen. */
@@ -688,7 +694,7 @@
   .onb-dot { width: 8px; height: 8px; border-radius: 4px; border: 1.5px solid var(--sand); box-sizing: border-box; }
   .onb-dot--done { background: var(--sand); }
   .onb-dot--current { width: 22px; background: var(--moss); border-color: var(--moss); }
-  .onb-icon { font-size: 40px; line-height: 1; text-align: center; margin: 0 0 10px; }
+  .onb-icon { font-size: 2.5rem; line-height: 1; text-align: center; margin: 0 0 10px; }
   .onb h1 { margin-bottom: 16px; outline: none; }
   .onb .tutorial-text strong { font-weight: 600; }
   .onb-center { text-align: center; }
@@ -697,7 +703,7 @@
     margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--line);
   }
   .onb-nav-btn {
-    font-family: inherit; font-size: 13px; color: var(--ink); background: none; border: none;
+    font-family: inherit; font-size: 0.9375rem; color: var(--ink); background: none; border: none;
     padding: 8px 4px; cursor: pointer;
   }
   /* Farbe bewusst --ink: der blasse Sandton erreicht bei 13px nur ~3:1 Kontrast. Nebensache
@@ -705,34 +711,34 @@
   .onb-nav-btn:hover, .onb-nav-btn:focus-visible { text-decoration: underline; }
   /* Kurze Hinweise im Tutorial: bewusst normale Schriftfarbe statt des blassen Sandtons
      der Formular-Hinweise - hier stehen Dinge, die man wirklich lesen soll. */
-  .onb-hint { font-size: 12px; line-height: 1.45; color: var(--ink); margin: 0 0 10px; }
+  .onb-hint { font-size: 0.875rem; line-height: 1.45; color: var(--ink); margin: 0 0 10px; }
   .onb-hint--after { margin: 6px 0 0; }
   .why-box {
     margin: 0 0 18px; padding: 10px 12px; border-left: 3px solid var(--moss); border-radius: 4px;
-    background: rgba(var(--moss-rgb), 0.09); font-size: 13px; line-height: 1.5;
+    background: rgba(var(--moss-rgb), 0.09); font-size: 0.9375rem; line-height: 1.5;
   }
   .why-box p { margin: 0; }
   .why-box .why-box-title { font-weight: 600; margin-bottom: 2px; }
-  .onb-more { margin: 0 0 16px; font-size: 13px; line-height: 1.5; }
+  .onb-more { margin: 0 0 16px; font-size: 0.9375rem; line-height: 1.5; }
   .onb-more summary { cursor: pointer; color: var(--moss); font-weight: 600; }
   .onb-more p { margin: 6px 0 0; }
   .onb .recovery-key-code { margin-top: 4px; }
   .onb .habit-form-actions { margin-bottom: 18px; }
-  .onb-steps { margin: 0 0 18px; padding-left: 22px; font-size: 13px; line-height: 1.5; display: flex; flex-direction: column; gap: 8px; }
+  .onb-steps { margin: 0 0 18px; padding-left: 22px; font-size: 0.9375rem; line-height: 1.5; display: flex; flex-direction: column; gap: 8px; }
   .onb-inline-icon { vertical-align: -4px; color: var(--ink); }
   .onb-promises { list-style: none; padding: 0; margin: 0 0 24px; display: flex; flex-direction: column; gap: 12px; }
-  .onb-promises li { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.5; }
-  .onb-promise-icon { font-size: 18px; line-height: 1.3; flex-shrink: 0; }
+  .onb-promises li { display: flex; gap: 10px; align-items: flex-start; font-size: 0.9375rem; line-height: 1.5; }
+  .onb-promise-icon { font-size: 1.25rem; line-height: 1.3; flex-shrink: 0; }
   .onb-examples { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 18px; }
   .onb-chip {
-    font-family: inherit; font-size: 13px; padding: 7px 14px; border-radius: 16px; cursor: pointer;
+    font-family: inherit; font-size: 0.9375rem; padding: 7px 14px; border-radius: 16px; cursor: pointer;
     border: 1px solid var(--line); background: var(--input-bg); color: var(--ink);
   }
   .onb-chip:hover, .onb-chip:focus-visible { border-color: var(--moss); }
   .auth-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
-  .auth-field label { font-size: 12px; color: var(--sand); }
+  .auth-field label { font-size: 0.875rem; color: var(--sand); }
   .auth-field input:not([type="checkbox"]), .auth-field select {
-    font-family: inherit; font-size: 14px; padding: 9px 10px; border: 1px solid var(--line);
+    font-family: inherit; font-size: 1rem; padding: 9px 10px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink); width: 100%;
   }
   .auth-field-label-row { display: flex; align-items: center; justify-content: space-between; }
@@ -740,25 +746,25 @@
   .input-clear-wrap input { padding-right: 30px; }
   .input-clear-btn {
     position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
-    background: none; border: none; color: var(--sand); font-size: 17px; line-height: 1;
+    background: none; border: none; color: var(--sand); font-size: 1.1875rem; line-height: 1;
     cursor: pointer; padding: 6px;
   }
   .auth-submit {
-    width: 100%; padding: 10px; margin-top: 8px; font-family: inherit; font-size: 14px; font-weight: 600;
+    width: 100%; padding: 10px; margin-top: 8px; font-family: inherit; font-size: 1rem; font-weight: 600;
     background: var(--ink); color: var(--paper); border: none; border-radius: 3px; cursor: pointer;
   }
   .auth-submit:disabled { background: var(--sand); cursor: default; }
   /* Hilfe "Keine Mail da?" nach der Registrierung (renderConfirmEmailHelp). Normale
      Schriftfarbe statt Sand - das hier soll man wirklich lesen. */
-  .confirm-help { margin: 0 0 20px; padding: 12px; border: 1px solid var(--line); border-radius: 4px; font-size: 13px; line-height: 1.45; }
+  .confirm-help { margin: 0 0 20px; padding: 12px; border: 1px solid var(--line); border-radius: 4px; font-size: 0.9375rem; line-height: 1.45; }
   .confirm-help p { margin: 0 0 10px; overflow-wrap: anywhere; }
   .confirm-help .confirm-help-status { margin: 8px 0 0; color: var(--moss); }
   /* Startseite vor dem Anmelden (renderAuthWelcome). */
-  .auth-welcome-lead { text-align: center; font-size: 15px; margin: 8px 0 28px; }
-  .auth-box .auth-choice { margin-top: 0; padding: 14px; font-size: 15px; } /* .auth-box: gegen .manage-new-btn weiter unten */
-  .auth-choice-note { font-size: 13px; line-height: 1.45; color: var(--ink); text-align: center; margin: 8px 0 24px; }
+  .auth-welcome-lead { text-align: center; font-size: 1.0625rem; margin: 8px 0 28px; }
+  .auth-box .auth-choice { margin-top: 0; padding: 14px; font-size: 1.0625rem; } /* .auth-box: gegen .manage-new-btn weiter unten */
+  .auth-choice-note { font-size: 0.9375rem; line-height: 1.45; color: var(--ink); text-align: center; margin: 8px 0 24px; }
   .auth-back { margin-bottom: 8px; }
-  .auth-toggle { display: block; margin: 14px auto 0; background: none; border: none; color: var(--moss); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; text-align: center; width: 100%; }
+  .auth-toggle { display: block; margin: 14px auto 0; background: none; border: none; color: var(--moss); font-family: inherit; font-size: 0.875rem; text-decoration: underline; cursor: pointer; text-align: center; width: 100%; }
 
   .manage-list { display: flex; flex-direction: column; margin-bottom: 18px; }
   .manage-row {
@@ -770,9 +776,9 @@
   .manage-row--confirm-delete { opacity: 1; flex-wrap: wrap; }
   .manage-row--dragging { position: relative; z-index: 5; background: var(--surface); box-shadow: 0 4px 10px var(--shadow); }
   .manage-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-  .manage-name { font-size: 13px; }
-  .manage-meta { font-size: 11px; color: var(--sand); }
-  .manage-delete-warning { font-size: 11px; color: var(--rust); }
+  .manage-name { font-size: 0.9375rem; }
+  .manage-meta { font-size: 0.8125rem; color: var(--sand); }
+  .manage-delete-warning { font-size: 0.8125rem; color: var(--rust); }
   .manage-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
   .drag-handle {
     position: relative; display: flex; flex-direction: column; justify-content: center; gap: 3px; width: 16px; height: 22px;
@@ -793,19 +799,19 @@
      trifft statt zu "verzugestopft" zu wirken. */
   .move-buttons { display: flex; flex-direction: row; gap: 5px; flex-shrink: 0; }
   .move-btn {
-    position: relative; font-family: inherit; font-size: 11px; line-height: 1; width: 22px; height: 22px;
+    position: relative; font-family: inherit; font-size: 0.8125rem; line-height: 1; width: 22px; height: 22px;
     border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--ink); cursor: pointer;
   }
   .move-btn::after { content: ''; position: absolute; inset: -4px; }
   .move-btn:disabled { opacity: 0.3; cursor: default; }
   .manage-btn {
-    font-family: inherit; font-size: 11px; padding: 5px 9px; border-radius: 12px;
+    font-family: inherit; font-size: 0.8125rem; padding: 5px 9px; border-radius: 12px;
     border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
   }
   .manage-btn--danger { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.4); }
   .manage-btn--warn { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.25); background: rgba(var(--rust-rgb), 0.06); }
   .manage-new-btn {
-    display: block; width: 100%; margin-top: 4px; padding: 11px; font-family: inherit; font-size: 14px; font-weight: 600;
+    display: block; width: 100%; margin-top: 4px; padding: 11px; font-family: inherit; font-size: 1rem; font-weight: 600;
     border: none; border-radius: 4px; background: var(--moss); color: var(--paper); cursor: pointer;
   }
   /* "+ Neues Feld" bleibt die primäre Aktion, "+ Neue Gruppe" daneben als zweite. */
@@ -817,18 +823,18 @@
   .manage-section-children { margin: 0 0 8px 20px; }
   .manage-section-children .manage-row:last-child { border-bottom: none; }
   .manage-section-empty { margin: 4px 0 6px; }
-  .manage-inline-check { font-size: 12px; margin-top: 4px; }
+  .manage-inline-check { font-size: 0.875rem; margin-top: 4px; }
   .manage-section--drag-collapsed .manage-section-children { display: none; }
   /* Einklappbare Gruppen-Überschrift ("Heute" und Auswertung). */
   .section-toggle {
     display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; cursor: pointer;
-    font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 15px; color: var(--ink);
+    font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 1.0625rem; color: var(--ink);
     background: none; border: none; border-bottom: 1px solid var(--line); padding: 12px 0 6px;
   }
   .section-chevron { flex-shrink: 0; color: var(--sand); transition: transform 0.15s ease; }
   .section-toggle[aria-expanded="true"] .section-chevron { transform: rotate(90deg); }
   @media (prefers-reduced-motion: reduce) { .section-chevron { transition: none; } }
-  .section-block--stats > .section-toggle { font-size: 13px; padding-top: 10px; }
+  .section-block--stats > .section-toggle { font-size: 0.9375rem; padding-top: 10px; }
   /* "Heute": ⋮-Button links neben der Überschrift, die Linie trägt dann der Kopf. */
   .section-head { display: flex; align-items: center; border-bottom: 1px solid var(--line); padding-top: 6px; }
   .section-head > .row-menu-btn { margin-left: -8px; }
@@ -847,11 +853,11 @@
   .manage-new-row .manage-new-btn { flex: 1; }
   .manage-new-btn--secondary { background: transparent; color: var(--moss); border: 1px solid var(--moss); }
   .manage-tag {
-    display: inline-block; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    display: inline-block; font-size: 0.8125rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
     padding: 1px 5px; border: 1px solid var(--line); border-radius: 3px; color: var(--sand);
   }
   .feedback-form textarea {
-    font-family: inherit; font-size: 14px; line-height: 1.5; padding: 9px 10px; border: 1px solid var(--line);
+    font-family: inherit; font-size: 1rem; line-height: 1.5; padding: 9px 10px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink); width: 100%; min-height: 180px; resize: vertical;
   }
   .feedback-intro { margin-bottom: 14px; }
@@ -860,18 +866,18 @@
     font-family: inherit; font-size: inherit; padding: 0; border: none; background: none; color: var(--moss);
     text-decoration: underline; cursor: pointer; font-style: normal; font-weight: 600;
   }
-  .tip-link { font-size: 12px; margin-top: 4px; }
+  .tip-link { font-size: 0.875rem; margin-top: 4px; }
   .manage-section-divider { border-top: 1px solid var(--line); margin: 22px 0 14px; }
-  .manage-section-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 15px; margin: 0 0 4px; }
-  .about-status { font-size: 13px; line-height: 1.5; color: var(--ink); font-weight: 600; margin: 0 0 10px; }
+  .manage-section-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 1.0625rem; margin: 0 0 4px; }
+  .about-status { font-size: 0.9375rem; line-height: 1.5; color: var(--ink); font-weight: 600; margin: 0 0 10px; }
   .about-status--secondary { font-weight: 400; color: var(--sand); margin: 0 0 10px; }
-  .about-intro { font-size: 13px; line-height: 1.5; color: var(--sand); margin: 0 0 22px; }
+  .about-intro { font-size: 0.9375rem; line-height: 1.5; color: var(--sand); margin: 0 0 22px; }
   .tip-group summary.manage-section-title { cursor: pointer; margin-bottom: 0; }
   .tip-group[open] summary.manage-section-title { margin-bottom: 12px; }
   .tip { margin-bottom: 16px; }
   .tip:last-child { margin-bottom: 0; }
-  .tip-title { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
-  .tip-body { font-size: 13px; line-height: 1.5; color: var(--sand); margin: 0; }
+  .tip-title { font-size: 0.9375rem; font-weight: 600; margin: 0 0 2px; }
+  .tip-body { font-size: 0.9375rem; line-height: 1.5; color: var(--sand); margin: 0; }
   .a11y-highlight {
     background: rgba(var(--moss-rgb), 0.08); border: 1px solid rgba(var(--moss-rgb), 0.3);
     border-radius: 6px; padding: 16px;
@@ -906,7 +912,7 @@
   .mental-health-crisis .tip-body a { color: var(--moss); text-decoration: underline; }
   .crisis-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   .crisis-action-button {
-    display: inline-block; padding: 8px 14px; font-family: inherit; font-size: 13px;
+    display: inline-block; padding: 8px 14px; font-family: inherit; font-size: 0.9375rem;
     font-weight: 600; text-decoration: none; color: var(--paper); background: var(--rust);
     border-radius: 4px;
   }
@@ -914,16 +920,16 @@
   .mental-health-feedback { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(var(--moss-rgb), 0.3); font-style: italic; }
 
   .habit-form { border: 1px solid var(--line); border-radius: 4px; padding: 14px; margin-bottom: 18px; }
-  .habit-form h2 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 16px; margin: 0 0 12px; }
+  .habit-form h2 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 1.0625rem; margin: 0 0 12px; }
   .habit-form .auth-field { margin-bottom: 10px; }
-  .habit-form-lock-note { font-size: 11px; color: var(--sand); margin: -4px 0 12px; }
+  .habit-form-lock-note { font-size: 0.8125rem; color: var(--sand); margin: -4px 0 12px; }
   /* Innerhalb eines Formularfelds (direkt unter Auswahl/Eingabe) etwas Luft statt des
      negativen Abstands, der für Hinweise zwischen zwei Feldern gedacht ist - sonst klebte
      der Text an der Auswahl darüber. */
   .auth-field > .habit-form-lock-note { margin: 4px 0 0; line-height: 1.45; }
   .pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
   .pill-toggle {
-    font-family: inherit; font-size: 12px; padding: 7px 12px; border-radius: 14px;
+    font-family: inherit; font-size: 0.875rem; padding: 7px 12px; border-radius: 14px;
     border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
   }
   .pill-toggle--active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
@@ -931,11 +937,11 @@
 
   .stepper-row { display: flex; align-items: center; gap: 8px; }
   .stepper-row input[type="number"] {
-    width: 60px; text-align: center; font-family: inherit; font-size: 14px; padding: 6px 4px;
+    width: 60px; text-align: center; font-family: inherit; font-size: 1rem; padding: 6px 4px;
     border: 1px solid var(--line); border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   .stepper-btn {
-    width: 30px; height: 30px; flex-shrink: 0; font-family: inherit; font-size: 16px; line-height: 1;
+    width: 1.875rem; height: 1.875rem; flex-shrink: 0; font-family: inherit; font-size: 1.0625rem; line-height: 1;
     border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer;
   }
   .stepper-btn:disabled { opacity: 0.4; cursor: default; }
@@ -947,15 +953,15 @@
   .info-tip summary {
     display: inline-flex; align-items: center; justify-content: center; list-style: none; user-select: none;
     width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--sand); color: var(--sand);
-    font-size: 10px; cursor: pointer;
+    font-size: 0.8125rem; cursor: pointer;
   }
   .info-tip summary::-webkit-details-marker { display: none; }
   .info-tip[open] summary { color: var(--ink); border-color: var(--ink); }
-  .info-tip p { font-size: 11px; color: var(--sand); margin: 6px 0 10px; }
+  .info-tip p { font-size: 0.8125rem; color: var(--sand); margin: 6px 0 10px; }
 
   .label-inputs { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
   .label-inputs input {
-    font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
+    font-family: inherit; font-size: 0.9375rem; padding: 7px 9px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   .field-preview { padding: 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--input-bg); }
@@ -964,10 +970,10 @@
   .field-preview .habit-options { max-width: 100%; }
   .field-preview-note { margin: 8px 0 0; }
   .habit-form select {
-    font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
+    font-family: inherit; font-size: 0.9375rem; padding: 7px 9px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
-  .checkbox-field { display: flex; align-items: center; gap: 7px; font-size: 13px; margin-bottom: 4px; }
+  .checkbox-field { display: flex; align-items: center; gap: 7px; font-size: 0.9375rem; margin-bottom: 4px; }
   /* Gruppen-Formular: die Erinnerungszeit klar von der Mitglieder-Checkliste darüber absetzen */
   .section-form-reminder { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 20px; }
   .checkbox-field input { margin: 0; }
@@ -979,11 +985,11 @@
   .habit-form-actions { display: flex; gap: 8px; margin-top: 14px; }
   .habit-form-actions .auth-submit { margin-top: 0; width: auto; flex: 1; }
   .habit-form-cancel {
-    flex: 1; font-family: inherit; font-size: 13px; padding: 10px; background: none; border: 1px solid var(--line);
+    flex: 1; font-family: inherit; font-size: 0.9375rem; padding: 10px; background: none; border: 1px solid var(--line);
     border-radius: 3px; color: var(--ink); cursor: pointer;
   }
   .recovery-key-code {
-    font-family: monospace; font-size: 13px; line-height: 1.6; word-break: break-all;
+    font-family: monospace; font-size: 0.9375rem; line-height: 1.6; word-break: break-all;
     background: var(--input-bg); border: 1px solid var(--line); border-radius: 3px; padding: 10px;
     margin: 4px 0 14px;
   }
@@ -996,6 +1002,6 @@
 <div id="app"><div class="loading">Lädt …</div></div>
 <div id="sr-announcer" class="visually-hidden" aria-live="polite"></div>
 
-<script type="module" src="./logbuch.js?v=197fc76f84"></script>
+<script type="module" src="./logbuch.js?v=1eaf8acd4e"></script>
 </body>
 </html>

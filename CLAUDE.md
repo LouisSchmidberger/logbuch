@@ -904,6 +904,16 @@ bei Heute/Woche/Monat/Jahr nur den Zeitraum wechselt – dort war versehentliche
 Auslösen (z.B. beim Scrollen in einer langen Feldliste) spürbar störender als bei den
 Tabs, deshalb absichtlich weniger empfindlich statt eines einheitlichen Schwellenwerts.
 
+**Textgröße** (seit 2026-10-01, `getTextSize`/`setTextSize`/`applyTextSize`): alle
+Schriftgrößen im CSS stehen in `rem` (dabei gegenüber den früheren px-Werten angehoben –
+Fließtext 15–16px, kaum etwas unter 13px, nur in den engen Kalender-Rastern 12px), ebenso die
+Maße von Bedienelementen mit Text (Wert-Buttons, runde Knöpfe, Raster-Spalten,
+`#app`-Breite 30rem). Im Menü "Textgröße" Normal/Groß/Sehr groß setzt nur `data-text-size`
+auf `<html>` (100/112,5/125 %), pro Gerät per `localStorage` `textSize` wie das Theme.
+Neue CSS-Größen deshalb immer in `rem`, nie in px. Grund: Zwei-Finger-Zoom vergrößert wie
+eine Lupe (seitlich schieben), und in der installierten App fehlt die Browser-Leiste mit
+ihrer eigenen Schriftgrößen-Einstellung.
+
 **Dark Mode** (seit 2026-09-16): folgt standardmäßig `prefers-color-scheme`, im
 Burger-Menü überschreibbar (System/Hell/Dunkel als Pill-Toggle, gleiches Muster wie
 `f.kind`/`f.good` im Habit-Formular). Override liegt in `localStorage`
@@ -977,7 +987,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 489 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 495 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

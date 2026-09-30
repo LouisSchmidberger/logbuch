@@ -1397,6 +1397,10 @@ const STRINGS = {
     'theme.system': 'System',
     'theme.light': 'Hell',
     'theme.dark': 'Dunkel',
+    'textSize.label': 'Textgröße',
+    'textSize.normal': 'Normal',
+    'textSize.large': 'Groß',
+    'textSize.xlarge': 'Sehr groß',
     'pattern.enableLabel': 'Muster zusätzlich zur Farbe anzeigen',
     'haptics.enableLabel': 'Beim Eintragen vibrieren',
     'pattern.explain': 'Etwa 1 von 12 Männern und 1 von 200 Frauen hat eine Rot-Grün-Sehschwäche – oft unbemerkt, da sie selten diagnostiziert wird. Damit Bewertungen (rot bis grün) nicht ausschließlich über die Farbe erkennbar sind, zeigt Logbuch standardmäßig zusätzlich ein feines Streifenmuster: je dichter, desto besser der Wert. Rein optisch abschaltbar, falls du es nicht brauchst und nicht magst.',
@@ -1494,6 +1498,8 @@ const STRINGS = {
     'about.tip.archiveVsDelete.body': 'Archivierte Felder verschwinden aus der Tageseingabe und standardmäßig auch aus der Auswertung – ihre bisherigen Werte bleiben aber erhalten. Willst du sie weiter sehen (z. B. die Vorgeschichte eines Feldes, das du durch ein neues ersetzt hast), setz in „Felder verwalten“ beim archivierten Feld den Haken „In der Auswertung anzeigen“. Archivierte Felder lassen sich jederzeit reaktivieren; endgültiges Löschen entfernt dagegen auch die bisherigen Werte.',
     'about.tip.theme.title': 'Dark Mode',
     'about.tip.theme.body': 'Folgt automatisch deiner Systemeinstellung, lässt sich im Menü aber auch fest auf Hell oder Dunkel stellen.',
+    'about.tip.textSize.title': 'Größere Schrift',
+    'about.tip.textSize.body': 'Im Menü unter „Textgröße“ lässt sich die Schrift in der ganzen App vergrößern – gilt für dieses Gerät.',
     'about.tip.language.title': 'Sprache',
     'about.tip.language.body': 'Logbuch gibt\'s auf Deutsch und Englisch, umstellbar im Menü.',
     'menu.exportData': 'Meine Daten exportieren',
@@ -1888,6 +1894,10 @@ const STRINGS = {
     'theme.system': 'System',
     'theme.light': 'Light',
     'theme.dark': 'Dark',
+    'textSize.label': 'Text size',
+    'textSize.normal': 'Normal',
+    'textSize.large': 'Large',
+    'textSize.xlarge': 'Extra large',
     'pattern.enableLabel': 'Show pattern in addition to color',
     'haptics.enableLabel': 'Vibrate when entering values',
     'pattern.explain': 'About 1 in 12 men and 1 in 200 women has red-green color vision deficiency – often unnoticed, since it is rarely diagnosed. So that ratings (red to green) are not recognizable through color alone, Logbuch shows a subtle stripe pattern in addition by default: the denser it is, the better the value. Purely a visual choice, switch it off if you do not need or want it.',
@@ -1985,6 +1995,8 @@ const STRINGS = {
     'about.tip.archiveVsDelete.body': 'Archived fields disappear from daily entry and, by default, from the statistics too – but their existing values are kept. If you still want to see them (e.g. the history of a field you replaced with a new one), tick “Show in statistics” for the archived field under “Manage fields”. Archived fields can be reactivated anytime; permanent deletion, on the other hand, also removes the existing values.',
     'about.tip.theme.title': 'Dark mode',
     'about.tip.theme.body': 'Follows your system setting automatically, but can also be fixed to light or dark in the menu.',
+    'about.tip.textSize.title': 'Larger text',
+    'about.tip.textSize.body': 'Under “Text size” in the menu you can enlarge the text throughout the app – applies to this device.',
     'about.tip.language.title': 'Language',
     'about.tip.language.body': 'Logbuch is available in German and English, switchable in the menu.',
     'menu.exportData': 'Export my data',
@@ -2110,6 +2122,27 @@ function setThemeOverride(value) {
     else localStorage.removeItem('themeOverride');
   } catch { /* z.B. privater Modus — Override wirkt dann nur für die laufende Sitzung */ }
   applyTheme(value);
+}
+
+// Textgröße, pro Gerät wie das Theme (localStorage 'textSize': 'large' | 'xlarge' | nicht
+// gesetzt = Normal). Setzt nur die Grundgröße auf <html> - alle Schriftgrößen im CSS
+// stehen in rem und wachsen mit. Zwei-Finger-Zoom ist kein Ersatz (vergrößert wie eine
+// Lupe, man muss seitlich schieben), und in der installierten App fehlt die
+// Browser-Leiste mit ihrer eigenen Schriftgrößen-Einstellung.
+const TEXT_SIZES = ['', 'large', 'xlarge'];
+function getTextSize() {
+  try { const v = localStorage.getItem('textSize'); return TEXT_SIZES.includes(v) ? v : ''; } catch { return ''; }
+}
+function applyTextSize(size) {
+  if (size) document.documentElement.setAttribute('data-text-size', size);
+  else document.documentElement.removeAttribute('data-text-size');
+}
+function setTextSize(size) {
+  try {
+    if (size) localStorage.setItem('textSize', size);
+    else localStorage.removeItem('textSize');
+  } catch { /* dann eben nur für diese Sitzung */ }
+  applyTextSize(size);
 }
 
 // Streifenmuster (siehe scorePatternStyle) ist bewusst Standard, nicht opt-in — die
@@ -5486,6 +5519,7 @@ function renderAbout() {
     <div class="manage-section-divider"></div>
     ${tipGroup('about.group.appearance', [
       ['about.tip.theme.title', 'about.tip.theme.body', { menu: 'theme' }],
+      ['about.tip.textSize.title', 'about.tip.textSize.body', { menu: 'text-size' }],
       ['about.tip.language.title', 'about.tip.language.body', { menu: 'language' }],
     ])}
   `;
@@ -6363,6 +6397,12 @@ function renderMenu() {
           </div>
         </div>
         <div class="menu-row">
+          <label id="menu-text-size-label">${t('textSize.label')}</label>
+          <div class="pill-group" role="group" aria-labelledby="menu-text-size-label" data-menu-target="text-size">
+            ${TEXT_SIZES.map((size) => `<button type="button" class="pill-toggle${getTextSize() === size ? ' pill-toggle--active' : ''}" data-action="text-size-set" data-size="${size}" aria-pressed="${getTextSize() === size}">${t('textSize.' + (size || 'normal'))}</button>`).join('')}
+          </div>
+        </div>
+        <div class="menu-row">
           <label class="checkbox-field">
             <input type="checkbox" data-action="pattern-toggle" data-menu-target="pattern" ${isPatternDisabled() ? '' : 'checked'} />
             ${t('pattern.enableLabel')}
@@ -6761,6 +6801,9 @@ app.addEventListener('click', async (e) => {
     render();
   } else if (action === 'toggle-menu') {
     state.menuOpen = !state.menuOpen;
+    render();
+  } else if (action === 'text-size-set') {
+    setTextSize(el.dataset.size);
     render();
   } else if (action === 'theme-set') {
     setThemeOverride(el.dataset.theme || null);
@@ -7879,6 +7922,7 @@ resetIOSZoomOnStandaloneStart();
 state.confirmLanding = ARRIVED_VIA_SIGNUP_CONFIRM && isMobileDevice() && !isStandaloneDisplay() && !isInstallGateSkipped();
 applyLocale(detectInitialLocale());
 applyTheme(getThemeOverride());
+applyTextSize(getTextSize());
 try {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if (!getThemeOverride()) applyTheme(null); // nur relevant, wenn "System" aktiv ist
