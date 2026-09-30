@@ -934,7 +934,9 @@ statt eines reinen `aria-label`.
 Element (id bzw. `data-action` + übrige `data-*`-Merkmale) und fokussiert danach das
 entsprechende neue, sofern nichts anderes (Dialog, Unterseiten-Überschrift) den Fokus
 bekommen hat. Neue klickbare Elemente brauchen deshalb stabile, eindeutige `data-*`-
-Merkmale bzw. eine id. Fehlermeldungen auf Anmelde-/Entsperr-/Reset-Seite mit
+Merkmale bzw. eine id. Ausnahme: Auswahllisten (`<select>`) werden nach Bedienung per Finger
+nie per Skript fokussiert (`focusReopensPicker`) – auf iOS öffnet das sofort wieder ihr
+Auswahl-Menü, man musste scheinbar zweimal wählen. Fehlermeldungen auf Anmelde-/Entsperr-/Reset-Seite mit
 `role="alert"`. Burger-Menü: `aria-expanded`, Escape schließt. **Wenig Höhe** (Handy quer,
 Zoom; `@media (max-height: 500px)`): Kopf und Tab-Leiste nicht angepinnt
 (`stickyHeaderBottom()` liefert dann 0), Dialoge scrollen, wenn sie höher als der

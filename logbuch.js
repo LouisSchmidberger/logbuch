@@ -6308,8 +6308,7 @@ function renderDeleteConfirm() {
 // Link aus "Über Logbuch" (siehe renderTip): Menü ist schon offen - zum Eintrag
 // scrollen (nur innerhalb des Panels: ein Fenster-Scroll würde das Menü schließen, siehe
 // scroll-Listener), kurz hervorheben und fokussieren. Bei einer Pill-Gruppe die gerade
-// aktive Pill. Eine Auswahlliste nicht per Finger fokussieren - auf iOS öffnete das
-// sofort deren Auswahl-Menü (siehe habit-form-schedule-type).
+// aktive Pill (Auswahllisten nicht nach Bedienung per Finger, siehe focusReopensPicker).
 function focusMenuTarget(target) {
   const panel = document.querySelector('.menu-panel');
   const el = panel?.querySelector(`[data-menu-target="${target}"]`);
@@ -6321,7 +6320,7 @@ function focusMenuTarget(target) {
   row.classList.add('field-highlight');
   row.addEventListener('animationend', () => row.classList.remove('field-highlight'), { once: true });
   const focusEl = el.matches('button, input, select') ? el : el.querySelector('[aria-pressed="true"]') || el.querySelector('button');
-  if (focusEl && !(focusEl.tagName === 'SELECT' && lastPointerType !== 'mouse')) focusEl.focus({ preventScroll: true });
+  if (focusEl && !focusReopensPicker(focusEl)) focusEl.focus({ preventScroll: true });
 }
 
 // Header+☰-Menü sind für Tabs und Unterseiten identisch aufgebaut (nur der linke Teil
@@ -6465,7 +6464,16 @@ function focusKeyOf(el) {
 function restoreFocus(key) {
   const active = document.activeElement;
   if (!key || (active && active !== document.body && app.contains(active))) return;
-  try { app.querySelector(key)?.focus({ preventScroll: true }); } catch { /* ungültiger Selektor - egal */ }
+  let el = null;
+  try { el = app.querySelector(key); } catch { /* ungültiger Selektor - egal */ }
+  if (el && !focusReopensPicker(el)) el.focus({ preventScroll: true });
+}
+// Eine Auswahlliste (<select>) nach einer Bedienung per Finger nicht per Skript
+// fokussieren: auf iOS öffnet das sofort wieder ihr Auswahl-Menü - nach jeder Auswahl, die
+// ein render() auslöst, sah es aus, als müsse man zweimal wählen. Tastatur-Nutzer (letzte
+// Zeige-Eingabe Maus bzw. keine) behalten ihren Platz.
+function focusReopensPicker(el) {
+  return el.tagName === 'SELECT' && lastPointerType !== 'mouse';
 }
 
 function render() {
@@ -6893,11 +6901,7 @@ app.addEventListener('change', async (e) => {
   if (e.target.id === 'habit-form-schedule-type' && state.habitForm) {
     syncHabitFormFromDom();
     state.habitForm.schedule.type = e.target.value;
-    render();
-    // Fokus zurück (siehe habit-schedule-day) - aber nicht nach einer Auswahl per Finger:
-    // auf iOS öffnet das Fokussieren einer Auswahlliste sofort wieder deren Auswahl-Menü,
-    // es sah aus, als bliebe es nach der Auswahl offen. Tastatur-Nutzer behalten ihren Platz.
-    if (lastPointerType === 'mouse') document.getElementById('habit-form-schedule-type')?.focus();
+    render(); // Fokus: siehe restoreFocus/focusReopensPicker
     return;
   }
   if (e.target.classList?.contains('text-field-input')) {
