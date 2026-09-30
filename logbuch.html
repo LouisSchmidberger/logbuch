@@ -354,7 +354,8 @@
   /* ⋮ zum Tag (renderDayMenuPanel): links vor dem Wochentag wie bei den Feldern, aber
      außerhalb des Textflusses, damit Wochentag und Datum mittig bleiben. */
   .day-weekday > .row-menu-btn { position: absolute; right: calc(100% + 2px); top: 50%; transform: translateY(-50%); }
-  .day-menu { top: calc(100% + 4px); left: 50%; transform: translateX(-50%); }
+  /* Doppelte Klasse: .row-menu steht weiter unten und setzte sonst left: 0 zurück. */
+  .row-menu.day-menu { top: calc(100% + 4px); left: 50%; transform: translateX(-50%); }
   .day-relative { color: var(--moss); font-weight: 600; }
   /* Rutsch-Animation beim Zeitraum-Wechsel (siehe shiftPeriod/renderApp). Ohne
      fill-mode: danach bleibt keine Verschiebung am Element hängen (die würde z.B. das
