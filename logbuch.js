@@ -762,6 +762,7 @@ const state = {
   userSettings: { defaultReminderMinute: 1320, onboardingCompleted: true, locale: 'de', summaryNotifications: true, timezone: 'Europe/Berlin' },
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
   regenKeyConfirm: false, // Rückfrage vor "Ersatzschlüssel neu erzeugen" offen
+  logoutConfirm: false,   // Rückfrage vor "Abmelden" (aus dem Menü) offen
   habitDeleteConfirm: null, // defId eines archivierten Feldes mit Daten, dessen Löschen gerade bestätigt wird
   tutorialStep: null, // 1-4 (TUTORIAL_STEPS) während das Onboarding-Tutorial für neue Accounts läuft, sonst null
   tutorialSkipConfirm: false, // Bestätigungsdialog "Tutorial überspringen?" offen
@@ -819,6 +820,7 @@ function closeModals() {
   state.tutorialSkipConfirm = false;
   state.resetConfirm = null;
   state.regenKeyConfirm = false;
+  state.logoutConfirm = false;
 }
 
 // --- Android-Zurück-Taste schließt offene Overlays/Unterseiten statt die App zu
@@ -864,7 +866,7 @@ function leaveSubpage() {
   state.view = state.previousTabView || 'today';
 }
 function isOverlayOpen() {
-  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.regenKeyConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
+  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.regenKeyConfirm || !!state.logoutConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
 }
 // Der Notiz-Editor gehört zu einem bestimmten Tag in "Heute" und ist nur offen, solange
 // er dort auch sichtbar ist - wechselt man Tag/Tab, speichert render() den Entwurf und
@@ -924,7 +926,7 @@ function subpageBack() {
 // Overlays gleichzeitig offen, da z.B. die Menü-Aktionen state.menuOpen beim Öffnen
 // eines anderen Overlays bereits selbst auf false setzen.
 function closeTopLayer() {
-  if (state.deleteConfirm || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm) {
+  if (state.deleteConfirm || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm) {
     closeModals();
     restoreModalFocus();
   } else if (state.menuOpen) {
@@ -1061,7 +1063,7 @@ const STRINGS = {
     'habitForm.error.fillAllLabels': 'Bitte alle Bezeichnungen ausfüllen.',
     'habitForm.error.nameRequired': 'Bitte einen Namen eingeben.',
     'ariaLabel.dismissHint': 'Hinweis schließen',
-    'installHint.ios': 'Für Erinnerungen per Push: Tippe auf das Teilen-Symbol (Quadrat mit Pfeil nach oben – je nach Einstellung oben in der Adressleiste oder unten in der Leiste) und dann „Zum Home-Bildschirm“. Auf dem iPhone funktionieren Benachrichtigungen sonst leider gar nicht.',
+    'installHint.ios': 'Damit Erinnerungen ankommen: Tippe auf das Teilen-Symbol (Quadrat mit Pfeil nach oben – je nach Einstellung oben in der Adressleiste oder unten in der Leiste) und dann „Zum Home-Bildschirm“. Auf dem iPhone funktionieren Benachrichtigungen sonst leider gar nicht.',
     'installHint.other': 'Für die beste Erfahrung (u.a. zuverlässigere Erinnerungen): füge Logbuch über das Browser-Menü zum Home-Bildschirm hinzu.',
     'notice.pushPermissionDenied': 'Ohne Benachrichtigungs-Erlaubnis im Browser geht das leider nicht.',
     'notice.pushEnabled': 'Erinnerungen sind aktiv.',
@@ -1074,19 +1076,17 @@ const STRINGS = {
     'deleteAccount.confirmWord': 'LÖSCHEN',
     'deleteAccount.confirmMismatch': 'Bitte tippe genau „{word}“ zur Bestätigung.',
     'auth.title.forgot': 'Passwort zurücksetzen',
-    'auth.title.signup': 'Neuen Account anlegen',
+    'auth.title.signup': 'Neues Konto anlegen',
     'auth.title.login': 'Anmelden',
     'auth.forgotRecoveryNote': 'Zum eigentlichen Zurücksetzen brauchst du im nächsten Schritt deinen Ersatzschlüssel (den du nach der Einrichtung bekommen bzw. zuletzt im Menü neu erzeugt hast) – nur damit bleiben deine bisherigen Daten erhalten.',
     'auth.email': 'E-Mail',
     'auth.password': 'Passwort',
-    'auth.passwordHint': 'Deine Einträge werden auf deinem Gerät verschlüsselt, bevor sie gespeichert werden. Dein Passwort ist der Schlüssel dazu. Wähle deshalb eines, das du sonst nirgends verwendest.',
+    'auth.passwordHint': '<strong>Mindestens {min} Zeichen.</strong> Deine Einträge werden auf deinem Gerät verschlüsselt, bevor sie gespeichert werden. Dein Passwort ist der Schlüssel dazu. Wähle deshalb eines, das du sonst nirgends verwendest.',
     'auth.hide': 'Verbergen',
     'auth.show': 'Anzeigen',
     'auth.sendResetLink': 'Link zum Zurücksetzen senden',
-    'auth.createAccount': 'Account erstellen',
+    'auth.createAccount': 'Konto erstellen',
     'auth.login': 'Anmelden',
-    'auth.haveAccount': 'Schon einen Account? Anmelden',
-    'auth.noAccount': 'Noch keinen Account? Registrieren',
     'auth.welcome.lead': 'Schön, dass du da bist!',
     'auth.welcome.new': 'Ich bin neu hier',
     'auth.welcome.newNote': 'Konto erstellen und Logbuch einrichten – dauert etwa 5 bis 10 Minuten.',
@@ -1095,7 +1095,7 @@ const STRINGS = {
     'auth.forgotPassword': 'Passwort vergessen?',
     'auth.resetLinkSent': 'Falls diese E-Mail bei uns registriert ist, haben wir einen Link zum Zurücksetzen geschickt.',
     'auth.signupFailedGeneric': 'Registrierung fehlgeschlagen. Bitte versuche es erneut.',
-    'auth.confirmEmailNotice': 'Ich hab dir eine Mail geschickt – tipp auf den Link darin. So ist sicher, dass die Adresse dir gehört, und nur so kannst du später ein vergessenes Passwort zurücksetzen. Danach meldest du dich hier an.',
+    'auth.confirmEmailNotice': 'Ich hab dir eine Mail geschickt – tipp auf den Knopf darin. So ist sicher, dass die Adresse dir gehört, und nur so kannst du später ein vergessenes Passwort zurücksetzen. Danach meldest du dich hier an.',
     'auth.confirmHelp.spam': 'Keine Mail da? Schau auch im <strong>Spam-Ordner</strong> nach – je nach Anbieter heißt er auch „Werbung“ oder „Junk“. Manchmal dauert es ein paar Minuten.',
     'auth.confirmHelp.sentTo': 'Die Mail ging an: <strong>{email}</strong>. Stimmt die Adresse nicht? Dann registriere dich einfach nochmal mit der richtigen.',
     'auth.confirmHelp.resend': 'Mail nochmal senden',
@@ -1192,6 +1192,8 @@ const STRINGS = {
     'regenKeyConfirm.title': 'Neuen Ersatzschlüssel erzeugen?',
     'regenKeyConfirm.body': 'Dein bisheriger Ersatzschlüssel funktioniert danach <strong>nicht mehr</strong> – auch nicht der, den du aufgeschrieben oder gespeichert hast. Mach das nur, wenn du ihn verloren hast oder jemand anderes ihn kennen könnte.',
     'regenKeyConfirm.confirm': 'Neuen erzeugen',
+    'logoutConfirm.title': 'Abmelden?',
+    'logoutConfirm.body': 'Auf diesem Gerät kommen dann keine Erinnerungen mehr. Zum erneuten Anmelden brauchst du dein Passwort. Deine Einträge bleiben erhalten.',
     'notice.fieldArchived': 'Feld archiviert. Unter „Felder verwalten“ kannst du es jederzeit wieder aktivieren.',
     'common.archived': 'archiviert',
     'global.rangeNote': 'Seit {since} · {count} Tage mit Eintrag',
@@ -1208,6 +1210,7 @@ const STRINGS = {
     'habitForm.goalLabel': 'Ab wann als voll erreicht gilt (%)',
     'habitForm.goalExplain': 'Bei unter 100%: schon eine niedrigere Quote/Wert zählt farblich als voll erreicht (grün) – z. B. bei "Kraftsport gemacht" reichen vielleicht schon 3 von 7 Tagen die Woche als Ziel. Ändert nur die Farbe, nie die angezeigte Prozentzahl. Wirkt sich nicht auf „Heute“ aus. Standard 100% = nur der Maximalwert zählt als voll erreicht.',
     'habitForm.ownLabels': 'Eigene Bezeichnungen verwenden',
+    'habitForm.labelForStep': 'Bezeichnung für Stufe {step}',
     'habitForm.preview': 'Vorschau',
     'habitForm.previewNote': 'Zum Ausprobieren – hier wird nichts gespeichert.',
     'habitForm.display': 'Darstellung',
@@ -1235,7 +1238,7 @@ const STRINGS = {
     'habitForm.title.newGroup': 'Neue Gruppe',
     'habitForm.title.editField': 'Feld bearbeiten',
     'habitForm.title.newField': 'Neues Feld',
-    'habitForm.lockedNote': 'Für dieses Feld gibt es bereits Einträge – Feld-Typ und Skala (Von/Bis bzw. Anzahl Stufen) sind gesperrt. Bezeichnungen lassen sich trotzdem noch an-/abschalten und bearbeiten. Für eine andere Skala: archivieren und neu anlegen.',
+    'habitForm.lockedNote': 'Für dieses Feld gibt es bereits Einträge – Feld-Typ und Anzahl Stufen sind gesperrt. Bezeichnungen lassen sich trotzdem noch an-/abschalten und bearbeiten. Für eine andere Skala: archivieren und neu anlegen.',
     'habitForm.name': 'Name',
     'habitForm.fieldType': 'Feld-Typ',
     'habitForm.kindScale': 'Skala',
@@ -1324,7 +1327,7 @@ const STRINGS = {
     'tutorial.skipConfirm.title': 'Tutorial überspringen?',
     'tutorial.skipConfirm.body': 'Klar – Felder kannst du jederzeit über Menü → „Felder verwalten“ anlegen.',
     'tutorial.skipConfirm.confirmButton': 'Ja, überspringen',
-    'tutorial.hello.title': 'Schön, dass du da bist.',
+    'tutorial.hello.title': 'Willkommen bei Logbuch.',
     'tutorial.hello.body': 'Logbuch hilft dir, jeden Tag kurz festzuhalten, wie es dir geht und was du tust – und mit der Zeit zu sehen, was dir guttut.',
     'tutorial.hello.privateTitle': 'Privat.',
     'tutorial.hello.privateBody': 'Deine Einträge werden auf deinem Gerät verschlüsselt. Nicht mal ich kann sie lesen.',
@@ -1364,7 +1367,7 @@ const STRINGS = {
     'tutorial.done.start': 'Loslegen',
     'tutorial.done.addMore': 'Noch ein Feld anlegen',
     'installGate.title': 'Erst mal ein Zuhause für Logbuch',
-    'installGate.body': 'Logbuch gibt es in keinem App-Store – es läuft direkt im Browser. <strong>Hol es dir auf deinen Home-Bildschirm</strong>, dann fühlt es sich an wie eine richtige App. Dauert keine halbe Minute.',
+    'installGate.body': 'Logbuch gibt es in keinem App-Store – es läuft direkt im Browser. <strong>Hol es dir auf deinen Home-Bildschirm</strong>, dann fühlt es sich an wie eine richtige App.',
     'installGate.whyTitle': 'Warum?',
     'installGate.whyIos': 'Auf dem iPhone kommen Erinnerungen nur an, wenn Logbuch auf dem Home-Bildschirm liegt – so hat Apple das geregelt.',
     'installGate.whyAndroid': 'Dann öffnet sich Logbuch wie eine App – ohne Browser-Leisten, mit einem Tipp auf dem Startbildschirm, statt es jedes Mal im Browser suchen zu müssen.',
@@ -1551,7 +1554,7 @@ const STRINGS = {
     'habitForm.error.fillAllLabels': 'Please fill in all labels.',
     'habitForm.error.nameRequired': 'Please enter a name.',
     'ariaLabel.dismissHint': 'Dismiss hint',
-    'installHint.ios': 'For push reminders: tap the share icon (a square with an arrow pointing up – depending on your settings, either at the top in the address bar or at the bottom in the toolbar) and then "Add to Home Screen". Notifications unfortunately do not work at all on iPhone otherwise.',
+    'installHint.ios': 'So reminders can reach you: tap the share icon (a square with an arrow pointing up – depending on your settings, either at the top in the address bar or at the bottom in the toolbar) and then "Add to Home Screen". Notifications unfortunately do not work at all on iPhone otherwise.',
     'installHint.other': 'For the best experience (incl. more reliable reminders): add Logbuch to your home screen via the browser menu.',
     'notice.pushPermissionDenied': 'Without notification permission in the browser this unfortunately does not work.',
     'notice.pushEnabled': 'Reminders are active.',
@@ -1569,14 +1572,12 @@ const STRINGS = {
     'auth.forgotRecoveryNote': 'To actually reset your password, you will need your spare key in the next step (the one you got after setup, or last regenerated in the menu) – only with it is your existing data kept.',
     'auth.email': 'Email',
     'auth.password': 'Password',
-    'auth.passwordHint': 'Your entries are encrypted on your device before they are stored. Your password is the key to them. Choose one you don’t use anywhere else.',
+    'auth.passwordHint': '<strong>At least {min} characters.</strong> Your entries are encrypted on your device before they are stored. Your password is the key to them. Choose one you don’t use anywhere else.',
     'auth.hide': 'Hide',
     'auth.show': 'Show',
     'auth.sendResetLink': 'Send reset link',
     'auth.createAccount': 'Create account',
     'auth.login': 'Sign in',
-    'auth.haveAccount': 'Already have an account? Sign in',
-    'auth.noAccount': 'Do not have an account yet? Sign up',
     'auth.welcome.lead': 'Great to have you here!',
     'auth.welcome.new': 'I’m new here',
     'auth.welcome.newNote': 'Create an account and set up Logbuch – takes about 5 to 10 minutes.',
@@ -1585,7 +1586,7 @@ const STRINGS = {
     'auth.forgotPassword': 'Forgot password?',
     'auth.resetLinkSent': 'If this email is registered with us, we have sent a link to reset your password.',
     'auth.signupFailedGeneric': 'Sign-up failed. Please try again.',
-    'auth.confirmEmailNotice': 'I have sent you an email – tap the link in it. That way we know the address is yours, and only then can you reset a forgotten password later. Afterwards, sign in here.',
+    'auth.confirmEmailNotice': 'I have sent you an email – tap the button in it. That way we know the address is yours, and only then can you reset a forgotten password later. Afterwards, sign in here.',
     'auth.confirmHelp.spam': 'No email? Also check your <strong>spam folder</strong> – depending on your provider it may be called “Junk” or “Promotions”. Sometimes it takes a few minutes.',
     'auth.confirmHelp.sentTo': 'The email went to: <strong>{email}</strong>. Wrong address? Just sign up again with the right one.',
     'auth.confirmHelp.resend': 'Send the email again',
@@ -1682,6 +1683,8 @@ const STRINGS = {
     'regenKeyConfirm.title': 'Create a new spare key?',
     'regenKeyConfirm.body': 'Your current spare key will <strong>stop working</strong> – including the one you wrote down or saved. Only do this if you lost it or someone else might know it.',
     'regenKeyConfirm.confirm': 'Create new key',
+    'logoutConfirm.title': 'Sign out?',
+    'logoutConfirm.body': 'This device will then stop receiving reminders. To sign in again you’ll need your password. Your entries are kept.',
     'notice.fieldArchived': 'Field archived. You can reactivate it anytime under “Manage fields”.',
     'common.archived': 'archived',
     'global.rangeNote': 'Since {since} · {count} days with entry',
@@ -1698,6 +1701,7 @@ const STRINGS = {
     'habitForm.goalLabel': 'Counts as fully reached from (%)',
     'habitForm.goalExplain': 'Below 100%: even a lower ratio/value already counts as fully reached (green) in terms of color – e.g. for "did strength training", maybe 3 out of 7 days a week is already the goal. Only changes the color, never the displayed percentage. Has no effect on "Today". Default 100% = only the maximum value counts as fully reached.',
     'habitForm.ownLabels': 'Use custom labels',
+    'habitForm.labelForStep': 'Label for step {step}',
     'habitForm.preview': 'Preview',
     'habitForm.previewNote': 'Try it out – nothing is saved here.',
     'habitForm.display': 'Display',
@@ -1725,7 +1729,7 @@ const STRINGS = {
     'habitForm.title.newGroup': 'New group',
     'habitForm.title.editField': 'Edit field',
     'habitForm.title.newField': 'New field',
-    'habitForm.lockedNote': 'This field already has entries – field type and scale (from/to or number of steps) are locked. Labels can still be switched on/off and edited. For a different scale: archive and create a new one.',
+    'habitForm.lockedNote': 'This field already has entries – field type and number of steps are locked. Labels can still be switched on/off and edited. For a different scale: archive and create a new one.',
     'habitForm.name': 'Name',
     'habitForm.fieldType': 'Field type',
     'habitForm.kindScale': 'Scale',
@@ -1814,7 +1818,7 @@ const STRINGS = {
     'tutorial.skipConfirm.title': 'Skip tutorial?',
     'tutorial.skipConfirm.body': 'Sure – you can create fields anytime via menu → “Manage fields”.',
     'tutorial.skipConfirm.confirmButton': 'Yes, skip',
-    'tutorial.hello.title': 'Great to have you here.',
+    'tutorial.hello.title': 'Welcome to Logbuch.',
     'tutorial.hello.body': 'Logbuch helps you jot down every day how you are doing and what you do – and over time see what does you good.',
     'tutorial.hello.privateTitle': 'Private.',
     'tutorial.hello.privateBody': 'Your entries are encrypted on your device. Not even I can read them.',
@@ -1854,7 +1858,7 @@ const STRINGS = {
     'tutorial.done.start': 'Get started',
     'tutorial.done.addMore': 'Add another field',
     'installGate.title': 'First, a home for Logbuch',
-    'installGate.body': 'Logbuch is not in any app store – it runs right in your browser. <strong>Put it on your home screen</strong> and it feels like a real app. Takes less than half a minute.',
+    'installGate.body': 'Logbuch is not in any app store – it runs right in your browser. <strong>Put it on your home screen</strong> and it feels like a real app.',
     'installGate.whyTitle': 'Why?',
     'installGate.whyIos': 'On iPhone, reminders only arrive when Logbuch is on your home screen – that is how Apple set it up.',
     'installGate.whyAndroid': 'Then Logbuch opens like an app – without browser bars, with one tap on your home screen instead of looking for it in the browser every time.',
@@ -2190,7 +2194,7 @@ const AUTH_MIN_PASSWORD_LENGTH = 10;
 const AUTH_ERROR_TRANSLATIONS = {
   de: {
     'Invalid login credentials': 'E-Mail oder Passwort falsch.',
-    'User already registered': 'Für diese E-Mail existiert bereits ein Account.',
+    'User already registered': 'Für diese E-Mail gibt es schon ein Konto.',
     'Email not confirmed': 'Bitte bestätige zuerst deine E-Mail-Adresse über den Link, den wir dir geschickt haben.',
   },
   en: {
@@ -4365,7 +4369,7 @@ function renderAuth() {
               showVisibilityToggle: true,
               visible: state.authPasswordVisible,
             })}
-            ${isSignup ? `<p class="habit-form-lock-note">${t('auth.passwordHint')}</p>` : ''}
+            ${isSignup ? `<p class="habit-form-lock-note">${t('auth.passwordHint', { min: AUTH_MIN_PASSWORD_LENGTH })}</p>` : ''}
           </div>
         ` : ''}
         ${isSignup ? `
@@ -4376,11 +4380,6 @@ function renderAuth() {
         ` : ''}
         <button type="submit" class="auth-submit">${isForgot ? t('auth.sendResetLink') : isSignup ? t('auth.createAccount') : t('auth.login')}</button>
       </form>
-      ${!isForgot ? `
-        <button type="button" class="auth-toggle" data-action="toggle-auth-mode">
-          ${isSignup ? t('auth.haveAccount') : t('auth.noAccount')}
-        </button>
-      ` : ''}
       ${!isSignup ? `
         <button type="button" class="auth-toggle" data-action="${isForgot ? 'cancel-forgot' : 'start-forgot'}">
           ${isForgot ? t('auth.backToLogin') : t('auth.forgotPassword')}
@@ -5751,10 +5750,10 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       </label>
       ${labelsBlocked && !buttonsBlocked ? lockedCapNote : ''}
     </div>
-    ${f.displayStyle === 'buttons' || f.labelsEnabled ? `
+    ${f.labelsEnabled ? `
       <div class="auth-field">
         <div class="label-inputs">
-          ${currentLabels.map((l, i) => `<input type="text" data-label-index="${i}" value="${esc(f.labelsEnabled ? l : String(habitFormStepValue(f, i)))}" maxlength="20" ${f.labelsEnabled ? '' : 'disabled'} />`).join('')}
+          ${currentLabels.map((l, i) => `<input type="text" data-label-index="${i}" value="${esc(l)}" maxlength="20" aria-label="${esc(t('habitForm.labelForStep', { step: habitFormStepValue(f, i) }))}" />`).join('')}
         </div>
       </div>
     ` : ''}
@@ -5913,6 +5912,14 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   `;
 
   const isComputed = f.kind === 'computed';
+  // "Berechnet" nur anbieten, wenn es etwas zu berechnen gibt (mind. 2 passende Felder) -
+  // beim allerersten Feld im Tutorial führte die Auswahl sonst nur zu "noch keine Felder".
+  const others = state.habits.filter((h) => !h.archivedAt && h.defId !== f.defId);
+  const computedPossible = isComputed
+    || others.filter((h) => h.kind === 'scale' && !isNeutralScale(h)).length >= 2
+    || others.filter((h) => h.kind === 'number').length >= 2;
+  const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber'], ['text', 'habitForm.kindText']]
+    .concat(computedPossible ? [['computed', 'habitForm.kindComputed']] : []);
   return `
     <div class="habit-form" id="habit-form">
       ${titleInHeader ? '' : `<h2>${t(habitFormTitleKey(f))}</h2>`}
@@ -5924,7 +5931,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       <div class="auth-field">
         <label id="habit-form-kind-label">${t('habitForm.fieldType')}</label>
         <div class="pill-group" role="group" aria-labelledby="habit-form-kind-label">
-          ${[['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber'], ['text', 'habitForm.kindText'], ['computed', 'habitForm.kindComputed']].map(([kind, key]) => `
+          ${kinds.map(([kind, key]) => `
             <button type="button" class="pill-toggle${f.kind === kind ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="${kind}" aria-pressed="${f.kind === kind}" ${f.locked ? 'disabled' : ''}>${t(key)}</button>
           `).join('')}
         </div>
@@ -6377,7 +6384,7 @@ function renderMenu() {
         <button type="button" class="menu-item-btn" data-action="export-data" data-menu-target="export">${t('menu.exportData')}</button>
         <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key" data-menu-target="recovery-key">${t('menu.regenerateRecoveryKey')}</button>
         <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="open-delete-confirm">${t('menu.deleteAccount')}</button>
-        <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="logout">${t('common.logout')}</button>
+        <button type="button" class="menu-item-btn" data-action="logout-arm">${t('common.logout')}</button>
       </div>
     </div>
   `;
@@ -6409,6 +6416,23 @@ function renderRegenKeyConfirm() {
         <div class="habit-form-actions">
           <button type="button" class="habit-form-cancel" data-action="regen-key-cancel">${t('common.cancel')}</button>
           <button type="button" class="manage-btn manage-btn--danger" data-action="regen-key-confirm">${t('regenKeyConfirm.confirm')}</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Abmelden beendet die Erinnerungen auf diesem Gerät und verlangt danach wieder das
+// Passwort - beides sollte man vorher wissen (und nicht per Versehen auslösen).
+function renderLogoutConfirm() {
+  return `
+    <div class="modal-overlay">
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="logout-confirm-title">
+        <h2 id="logout-confirm-title">${t('logoutConfirm.title')}</h2>
+        <p>${t('logoutConfirm.body')}</p>
+        <div class="habit-form-actions">
+          <button type="button" class="habit-form-cancel" data-action="logout-cancel">${t('common.cancel')}</button>
+          <button type="button" class="auth-submit" data-action="logout">${t('common.logout')}</button>
         </div>
       </div>
     </div>
@@ -6532,6 +6556,7 @@ function renderApp() {
     ${state.deleteConfirm ? renderDeleteConfirm() : ''}
     ${state.resetConfirm ? renderResetConfirm() : ''}
     ${state.regenKeyConfirm ? renderRegenKeyConfirm() : ''}
+    ${state.logoutConfirm ? renderLogoutConfirm() : ''}
   `;
   // preventScroll: der Header ist ohnehin (sticky) sichtbar - der native
   // Scroll-in-View-Effekt beim Fokussieren kennt "position: sticky" nicht und hat
@@ -6659,10 +6684,6 @@ app.addEventListener('click', async (e) => {
     // Neue Seite: Fokus auf ihren Titel (nicht ins E-Mail-Feld - das öffnete auf dem Handy
     // sofort die Tastatur).
     document.querySelector(state.authMode === 'welcome' ? '.auth-box h1' : '.auth-box .sub')?.focus({ preventScroll: true });
-  } else if (action === 'toggle-auth-mode') {
-    state.authMode = state.authMode === 'signup' ? 'signin' : 'signup';
-    state.authError = null;
-    render();
   } else if (action === 'resend-confirm') {
     if (state.confirmEmailFor && state.confirmResend !== 'sending') resendConfirmEmail();
   } else if (action === 'start-forgot') {
@@ -6716,7 +6737,18 @@ app.addEventListener('click', async (e) => {
     state.regenKeyConfirm = false;
     modalTriggerSelector = null; // danach kommt die Anzeige des neuen Schlüssels
     await regenerateRecoveryKey();
+  } else if (action === 'logout-arm') {
+    modalTriggerSelector = '.menu-btn';
+    state.logoutConfirm = true;
+    state.menuOpen = false;
+    render();
+  } else if (action === 'logout-cancel') {
+    state.logoutConfirm = false;
+    render();
+    restoreModalFocus();
   } else if (action === 'logout') {
+    state.logoutConfirm = false;
+    modalTriggerSelector = null;
     flushAllDaySaves(); // ausstehende Text-Feld-Speicherungen noch mit dem Schlüssel verschicken
     await endPushForThisDevice();
     clearCurrentDek();
@@ -7720,7 +7752,7 @@ if ('serviceWorker' in navigator) {
       state.habitForm = null;
       state.habitDeleteConfirm = null;
       state.sectionForm = null;
-      if (state.deleteConfirm || state.resetConfirm || state.regenKeyConfirm) { closeModals(); modalTriggerSelector = null; }
+      if (state.deleteConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm) { closeModals(); modalTriggerSelector = null; }
     }
     window.scrollTo(0, 0); // vor render() - das scrollt ggf. danach zum Feld (consumePendingFieldFocus)
     render();
@@ -7821,6 +7853,7 @@ function clearLoadedAccountState() {
   state.habitDeleteConfirm = null;
   state.deleteConfirm = null;
   state.regenKeyConfirm = false;
+  state.logoutConfirm = false;
   state.menuOpen = false;
   state.recoveryKeyToShow = null;
   state.unplannedOpenFor = null;

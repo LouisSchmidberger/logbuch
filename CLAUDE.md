@@ -70,7 +70,8 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
 - **Startseite vor dem Anmelden** (`renderAuthWelcome`, `authMode: 'welcome'`, seit
   2026-10-01): zwei Knöpfe "Ich bin neu hier" / "Ich habe schon ein Konto" statt direkt
   "Anmelden" (klang für Neulinge nach "ich bin neu, also melde ich mich an"; Registrieren
-  war nur ein kleiner Link). Die Formulare haben ein ← zurück dorthin. Wer sich auf dem
+  war nur ein kleiner Link). Die Formulare haben ein ← zurück dorthin (die früheren Umschalt-Links "Schon einen
+Account?/Noch keinen Account?" sind damit entfallen). Wer sich auf dem
   Gerät schon angemeldet hat (`localStorage` `signedInHere`), startet direkt beim Anmelden.
   Vorgesehener Ort für die spätere Frage, wie vertraut jemand mit Handys ist.
 - **iOS-Zoom beim Antippen von Eingabefeldern**: Safari auf iOS/iPadOS zoomt bei Feldern mit
@@ -329,8 +330,9 @@ verschobenen Zahlenbereichs). Das Formular (`scaleBody` in `renderHabitForm`) fr
 jetzt in dieser Reihenfolge: Darstellung (Buttons/Schieberegler) → **eine** gemeinsame
 "Anzahl Stufen"-Eingabe → Checkbox "Eigene Bezeichnungen
 verwenden", darunter
-bei Buttons immer, beim Schieberegler nur bei aktivierten Bezeichnungen eine Zeile pro
-Stufe (deaktiviertes Textfeld mit der Zahl, oder editierbar mit der Zahl als Startwert)
+nur bei aktivierten Bezeichnungen eine Zeile pro Stufe (Textfeld, die Zahl als Startwert;
+seit 2026-10-01 keine ausgegrauten Zahlen-Felder mehr bei Buttons ohne Bezeichnungen – sie
+wirkten wie kaputte Eingabefelder, die Zahlen zeigt ohnehin die Vorschau)
 → Live-Vorschau (rendert `renderHabitOptions`/`renderHabitSlider` mit einem
 synthetischen Habit-Objekt aus dem Formular-Stand, `previewHabitFromForm`; seit
 2026-09-28 zum Ausprobieren bedienbar, verhält sich exakt wie in "Heute" – der Wert lebt nur
@@ -421,7 +423,8 @@ am Feld-Objekt im Client heißt sie `members`.
 
 **Berechnete Felder (`kind='computed'`)**: ganz normale Felder (in Gruppen einsortierbar,
 in der Auswertung ausblendbar), die man nur nicht selbst ausfüllen kann – im Feld-Formular
-der vierte Typ neben Skala/Zahl/Text ("Berechnet"), mit Art der Mitglieder, ggf.
+der vierte Typ neben Skala/Zahl/Text ("Berechnet", nur angeboten, wenn es mindestens zwei
+passende Felder gibt – beim ersten Feld im Tutorial führte er sonst ins Leere), mit Art der Mitglieder, ggf.
 Berechnung und Mitglieder-Auswahl. **Aus Skalen**: fassen mehrere `kind='scale'`-Felder
 zu einem Durchschnittswert zusammen (z.B. "Sport gemacht" = Ø aus "Ausdauersport" +
 "Kraftsport"). Kein Eintrag in `habit_entries.data`, kein eigener `good`, keine
@@ -925,7 +928,7 @@ Tastatur erreichbar (`tabindex="0" role="button"`, Enter/Space über einen
 generalisierten `data-action`-Keydown-Dispatch, der einen echten Klick auslöst statt
 Aktionen zu duplizieren) und tragen zusätzlich zur Farbe ein Streifenmuster
 (`scorePatternStyle()`, diskrete Stufen, gröber in der Jahres-Ansicht) für
-Rot-Grün-Farbenblinde. Die Bestätigungs-Modals (Konto löschen, Tutorial überspringen, Tag zurücksetzen, Ersatzschlüssel neu erzeugen)
+Rot-Grün-Farbenblinde. Die Bestätigungs-Modals (Konto löschen, Tutorial überspringen, Tag zurücksetzen, Ersatzschlüssel neu erzeugen, Abmelden aus dem Menü – beendet die Erinnerungen des Geräts und verlangt danach das Passwort)
 haben `role="dialog"`/Fokus-Trap/Escape-Schließen/Fokus-Rückgabe (siehe
 `focusModalIfOpen()`/`restoreModalFocus()`/`modalTriggerSelector`, gemeinsamer Schließ-Weg `closeModals()`). Meldungen laufen
 zentral über `renderNotice()` (Fehler `role="alert"`/assertive, Erfolg
@@ -974,7 +977,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 488 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 489 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
