@@ -967,7 +967,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 473 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 481 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -1274,6 +1274,14 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
   Resend — genau das war am 2026-09-23 die Ursache, als zwei Test-Registrierungen
   keine Mail bekamen. Erst danach im Resend-Dashboard ("Emails"-Tab) nachsehen,
   ob die konkrete Adresse einen Bounce/Fehler zeigt.
+  **Bestätigungsmail im Spam** (bei GMX beobachtet, 2026-10-01): SPF/DKIM/DMARC sind korrekt
+  eingerichtet – Ursache ist der noch geringe Ruf der Absender-Domain, die kurze
+  Standardvorlage und dass Absender (`louis-schmidberger.de`), Link (`supabase.co`) und Ziel
+  (`github.io`) verschiedene Domains sind. Deshalb zeigt die Anmelde-Seite nach der
+  Registrierung bzw. beim Anmelden mit unbestätigter Adresse eine Hilfe
+  (`renderConfirmEmailHelp`, `state.confirmEmailFor`): Spam-Ordner-Hinweis, die verwendete
+  Adresse (Tippfehler fallen auf) und "Mail nochmal senden" (`supabase.auth.resend`,
+  Supabase erlaubt eine Mail pro Minute und Adresse – die Wartezeit wird angezeigt).
 
 - **Passwort-Policy** (seit 2026-09-18): Mindestlänge auf 10 Zeichen angehoben
   (`auth.minimum_password_length` in `supabase/config.toml`, vorher 6 — bewusst

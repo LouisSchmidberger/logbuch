@@ -748,6 +748,11 @@
     background: var(--ink); color: var(--paper); border: none; border-radius: 3px; cursor: pointer;
   }
   .auth-submit:disabled { background: var(--sand); cursor: default; }
+  /* Hilfe "Keine Mail da?" nach der Registrierung (renderConfirmEmailHelp). Normale
+     Schriftfarbe statt Sand - das hier soll man wirklich lesen. */
+  .confirm-help { margin: 0 0 20px; padding: 12px; border: 1px solid var(--line); border-radius: 4px; font-size: 13px; line-height: 1.45; }
+  .confirm-help p { margin: 0 0 10px; overflow-wrap: anywhere; }
+  .confirm-help .confirm-help-status { margin: 8px 0 0; color: var(--moss); }
   .auth-toggle { display: block; margin: 14px auto 0; background: none; border: none; color: var(--moss); font-family: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; text-align: center; width: 100%; }
 
   .manage-list { display: flex; flex-direction: column; margin-bottom: 18px; }
@@ -987,6 +992,6 @@
 <div id="app"><div class="loading">Lädt …</div></div>
 <div id="sr-announcer" class="visually-hidden" aria-live="polite"></div>
 
-<script type="module" src="./logbuch.js?v=4516a6da6f"></script>
+<script type="module" src="./logbuch.js?v=291ec9badf"></script>
 </body>
 </html>

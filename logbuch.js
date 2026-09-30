@@ -739,6 +739,10 @@ const state = {
   authEmail: '', // bleibt über einen Re-Render (z.B. nach Fehler) hinweg erhalten,
   authPassword: '', // damit ein Tippfehler nicht das ganze Formular leert (siehe input-Listener).
   authPasswordVisible: false,
+  // Adresse, an die gerade eine Bestätigungsmail ging (nach der Registrierung bzw. beim
+  // Anmelden mit noch unbestätigter Adresse) - blendet die Hilfe "Keine Mail da?" ein.
+  confirmEmailFor: null,
+  confirmResend: null, // null | 'sending' | 'sent' | { error: text }
   passwordRecovery: false, // true zwischen Klick auf den Passwort-Reset-Link und neuem Passwort
   pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy'
   habits: [],         // alle Felder des Nutzers (aktiv + archiviert), sort_order-sortiert
@@ -1086,6 +1090,13 @@ const STRINGS = {
     'auth.resetLinkSent': 'Falls diese E-Mail bei uns registriert ist, haben wir einen Link zum Zurücksetzen geschickt.',
     'auth.signupFailedGeneric': 'Registrierung fehlgeschlagen. Bitte versuche es erneut.',
     'auth.confirmEmailNotice': 'Ich hab dir eine Mail geschickt – tipp auf den Link darin. So ist sicher, dass die Adresse dir gehört, und nur so kannst du später ein vergessenes Passwort zurücksetzen. Danach meldest du dich hier an.',
+    'auth.confirmHelp.spam': 'Keine Mail da? Schau auch im <strong>Spam-Ordner</strong> nach – je nach Anbieter heißt er auch „Werbung“ oder „Junk“. Manchmal dauert es ein paar Minuten.',
+    'auth.confirmHelp.sentTo': 'Die Mail ging an: <strong>{email}</strong>. Stimmt die Adresse nicht? Dann registriere dich einfach nochmal mit der richtigen.',
+    'auth.confirmHelp.resend': 'Mail nochmal senden',
+    'auth.confirmHelp.resending': 'Wird gesendet …',
+    'auth.confirmHelp.resent': 'Eine neue Mail ist unterwegs.',
+    'auth.confirmHelp.wait': 'Bitte warte noch {seconds} Sekunden, dann kannst du es nochmal versuchen.',
+    'auth.confirmHelp.failed': 'Das Senden hat nicht geklappt. Bitte versuch es gleich nochmal.',
     'auth.error.passwordTooShort': 'Das Passwort muss mindestens {min} Zeichen lang sein.',
     'recovery.title': 'Neues Passwort setzen',
     'recovery.newPassword': 'Neues Passwort',
@@ -1562,6 +1573,13 @@ const STRINGS = {
     'auth.resetLinkSent': 'If this email is registered with us, we have sent a link to reset your password.',
     'auth.signupFailedGeneric': 'Sign-up failed. Please try again.',
     'auth.confirmEmailNotice': 'I have sent you an email – tap the link in it. That way we know the address is yours, and only then can you reset a forgotten password later. Afterwards, sign in here.',
+    'auth.confirmHelp.spam': 'No email? Also check your <strong>spam folder</strong> – depending on your provider it may be called “Junk” or “Promotions”. Sometimes it takes a few minutes.',
+    'auth.confirmHelp.sentTo': 'The email went to: <strong>{email}</strong>. Wrong address? Just sign up again with the right one.',
+    'auth.confirmHelp.resend': 'Send the email again',
+    'auth.confirmHelp.resending': 'Sending …',
+    'auth.confirmHelp.resent': 'A new email is on its way.',
+    'auth.confirmHelp.wait': 'Please wait another {seconds} seconds, then you can try again.',
+    'auth.confirmHelp.failed': 'Sending did not work. Please try again in a moment.',
     'auth.error.passwordTooShort': 'The password must be at least {min} characters long.',
     'recovery.title': 'Set new password',
     'recovery.newPassword': 'New password',
@@ -4237,6 +4255,41 @@ const SIGNUP_MIN_FILL_MS = 1500;
 let signupFormShownAt = null;
 
 // --- Rendering: Auth -------------------------------------------------------
+// Hilfe, falls die Bestätigungsmail nicht ankommt: sie landet bei manchen Anbietern im
+// Spam (neue Absender-Domain, Link auf eine andere Domain), und wer das nicht weiß, kommt
+// ohne diesen Hinweis nicht weiter. Die Adresse steht dabei, damit ein Tippfehler auffällt.
+function renderConfirmEmailHelp() {
+  const r = state.confirmResend;
+  const status = r === 'sent' ? t('auth.confirmHelp.resent') : r?.error ? esc(r.error) : '';
+  return `
+    <div class="confirm-help">
+      <p>${t('auth.confirmHelp.spam')}</p>
+      <p>${t('auth.confirmHelp.sentTo', { email: state.confirmEmailFor })}</p>
+      <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="resend-confirm">${r === 'sending' ? t('auth.confirmHelp.resending') : t('auth.confirmHelp.resend')}</button>
+      ${status ? `<p class="confirm-help-status">${status}</p>` : ''}
+    </div>
+  `;
+}
+async function resendConfirmEmail() {
+  state.confirmResend = 'sending';
+  render();
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: state.confirmEmailFor,
+    options: { emailRedirectTo: window.location.origin + window.location.pathname },
+  });
+  if (!error) state.confirmResend = 'sent';
+  else {
+    // Supabase erlaubt eine Mail pro Minute und Adresse (auth.email.max_frequency).
+    const wait = /after (\d+) seconds?/.exec(error.message);
+    state.confirmResend = { error: wait ? tPlain('auth.confirmHelp.wait', { seconds: wait[1] }) : t('auth.confirmHelp.failed') };
+  }
+  render();
+  // Bewusst nicht deaktiviert, solange gesendet wird (ein doppelter Klick wird oben
+  // abgefangen) - ein deaktivierter Button verlöre den Tastatur-Fokus.
+  announce(state.confirmResend === 'sent' ? t('auth.confirmHelp.resent') : state.confirmResend.error);
+}
+
 function renderAuth() {
   const isSignup = state.authMode === 'signup';
   const isForgot = state.authMode === 'forgot';
@@ -4249,6 +4302,7 @@ function renderAuth() {
       ${state.authError ? `<div class="notice" role="alert">${esc(state.authError)}</div>` : ''}
       ${renderNotice()}
       ${isForgot ? `<p class="habit-form-lock-note">${t('auth.forgotRecoveryNote')}</p>` : ''}
+      ${!isSignup && !isForgot && state.confirmEmailFor ? renderConfirmEmailHelp() : ''}
       <form id="auth-form">
         <div class="auth-field">
           <label for="email">${t('auth.email')}</label>
@@ -4336,6 +4390,8 @@ function renderAuth() {
         if (error) { state.authError = translateAuthError(error.message); render(); return; }
         if (!data.session) {
           state.notice = { type: 'ok', text: t('auth.confirmEmailNotice') };
+          state.confirmEmailFor = email;
+          state.confirmResend = null;
           state.authMode = 'signin';
           render();
           return;
@@ -4345,7 +4401,17 @@ function renderAuth() {
         await completeAuthFlow(data.user.id, password);
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) { state.authError = translateAuthError(error.message); render(); return; }
+        if (error) {
+          state.authError = translateAuthError(error.message);
+          if (error.message === 'Email not confirmed' && state.confirmEmailFor !== email) {
+            state.confirmEmailFor = email;
+            state.confirmResend = null;
+          }
+          render();
+          return;
+        }
+        state.confirmEmailFor = null;
+        state.confirmResend = null;
         await completeAuthFlow(data.user.id, password);
       }
     } catch (err) {
@@ -6524,6 +6590,8 @@ app.addEventListener('click', async (e) => {
     state.authMode = state.authMode === 'signup' ? 'signin' : 'signup';
     state.authError = null;
     render();
+  } else if (action === 'resend-confirm') {
+    if (state.confirmEmailFor && state.confirmResend !== 'sending') resendConfirmEmail();
   } else if (action === 'start-forgot') {
     state.authMode = 'forgot';
     state.authError = null;
