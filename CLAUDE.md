@@ -831,7 +831,14 @@ bewusst nicht, dort läge ~1px pro Tag);
 Monat – Punkt in der Tageszelle; Jahr – bewusst keiner (Zellen zu klein). Screenreader:
 "mit Notiz" im Label der Tages-Zelle. **"Tag zurücksetzen"** löscht Werte UND Notizen
 und fragt deshalb seitdem immer nach (`renderResetConfirm`, `state.resetConfirm` =
-dateKey), auch ohne vorhandene Notizen.
+dateKey), auch ohne vorhandene Notizen. Erreichbar über ein ⋮ vor dem Wochentag oben
+(`renderDayMenuPanel`, `DAY_MENU_KEY` im selben Zeilen-Menü-Mechanismus, seit 2026-10-01),
+nicht mehr als Link unter der Liste.
+
+**Ende von "Heute"** (seit 2026-10-01): drei erkennbare Teile statt fünf verschieden
+gestalteter Elemente untereinander – "Alles eingetragen" direkt als Abschluss der Liste,
+darunter der Tag ("Heute nicht geplant", Tagesnotiz), zuletzt eine Fußleiste mit
+Trennlinie für "+ Neues Feld" (`.today-footer`, gehört nicht zum Tag). Alles linksbündig.
 
 **Haptisches Feedback** (seit 2026-09-27, `haptic()` in `logbuch.js`): kurzes
 Vibrieren beim Setzen/Entfernen eines Werts (Buttons, Schieberegler erst beim

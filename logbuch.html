@@ -343,14 +343,18 @@
   }
   .tab--active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
 
-  .day-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .day-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; position: relative; }
   .nav-btn {
     background: none; border: 1px solid var(--line); border-radius: 50%; width: 30px; height: 30px;
     display: flex; align-items: center; justify-content: center; color: var(--ink); cursor: pointer; font-size: 15px;
   }
   .nav-btn:disabled { opacity: 0.35; cursor: default; }
   .day-label { display: flex; flex-direction: column; align-items: center; text-align: center; }
-  .day-weekday { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; }
+  .day-weekday { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; position: relative; }
+  /* ⋮ zum Tag (renderDayMenuPanel): links vor dem Wochentag wie bei den Feldern, aber
+     außerhalb des Textflusses, damit Wochentag und Datum mittig bleiben. */
+  .day-weekday > .row-menu-btn { position: absolute; right: calc(100% + 2px); top: 50%; transform: translateY(-50%); }
+  .day-menu { top: calc(100% + 4px); left: 50%; transform: translateX(-50%); }
   .day-relative { color: var(--moss); font-weight: 600; }
   /* Rutsch-Animation beim Zeitraum-Wechsel (siehe shiftPeriod/renderApp). Ohne
      fill-mode: danach bleibt keine Verschiebung am Element hängen (die würde z.B. das
@@ -410,16 +414,17 @@
     display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--moss);
     margin-left: 6px; vertical-align: middle;
   }
-  .today-complete { margin: 14px 0 0; text-align: center; font-size: 13px; font-style: italic; color: var(--moss); }
+  /* Ende von "Heute" in drei Teilen: Abschluss der Liste ("Alles eingetragen", direkt
+     unter dem letzten Feld), der Tag ("nicht geplant", Tagesnotiz) und eine Fußleiste mit
+     Trennlinie für das, was nicht zum Tag gehört ("+ Neues Feld", wie die Fußleiste im
+     Tutorial). Alles linksbündig wie die Felder. */
+  .today-complete { margin: 10px 0 0; font-size: 13px; font-style: italic; color: var(--moss); }
+  .today-footer { margin-top: 28px; padding-top: 6px; border-top: 1px solid var(--line); }
   .today-new-field-btn {
-    display: block; margin: 14px auto 0; background: none; border: none; color: var(--moss);
-    font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 10px;
+    background: none; border: none; color: var(--moss);
+    font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 8px 0;
   }
   .today-new-field-btn:hover, .today-new-field-btn:focus-visible { text-decoration: underline; }
-  .reset-btn {
-    display: block; margin: 18px auto 0; background: none; border: none; color: var(--sand);
-    font-family: inherit; font-size: 12px; cursor: pointer; text-decoration: underline;
-  }
 
   .number-box {
     border: 1px solid var(--line); border-radius: 4px; padding: 12px; margin-bottom: 16px;

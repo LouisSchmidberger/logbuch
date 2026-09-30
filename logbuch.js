@@ -748,7 +748,7 @@ const state = {
   habitForm: null,    // { defId, locked, name, mode: 'numeric'|'labels', min, max, steps, labels, good }
   habitFormSaving: false, // true während handleHabitSave() läuft, verhindert Doppel-Submits
   menuOpen: false,
-  rowMenu: null,      // slug des Feldes, dessen Zeilen-Menü in "Heute" gerade offen ist
+  rowMenu: null,      // offenes Zeilen-Menü in "Heute": Feld-id, 'section:<id>' oder DAY_MENU_KEY
   noteEditor: null,   // { dateKey, key, draft } - offener Notiz-Editor (key = slug oder DAY_NOTE_KEY)
   resetConfirm: null, // dateKey, während die Rückfrage "Tag zurücksetzen?" offen ist
   unplannedOpenFor: null, // dateKey, an dem "Heute nicht geplant" aufgeklappt wurde
@@ -1159,6 +1159,7 @@ const STRINGS = {
     'today.newField': '+ Neues Feld',
     'today.resetDay': 'Tag zurücksetzen',
     'today.fieldOptions': 'Optionen für {name}',
+    'today.dayOptions': 'Optionen für diesen Tag',
     'today.sectionOptions': 'Optionen für Gruppe {name}',
     'note.add': 'Notiz hinzufügen',
     'note.edit': 'Notiz bearbeiten',
@@ -1449,7 +1450,7 @@ const STRINGS = {
     'about.tip.textFields.title': 'Freie Text-Felder',
     'about.tip.textFields.body': 'Für Fragen wie „Wofür bin ich heute dankbar?“ gibt es den Feld-Typ „Text“. In „Heute“ steht dafür ein Textfeld, das automatisch speichert. Die Antworten fließen nicht in die Auswertung ein, lassen sich aber in Woche, Monat, Jahr und Gesamt aufklappen und nachlesen — ein Tipp auf einen Eintrag führt zu seinem Tag.',
     'about.tip.fieldMenu.title': 'Notizen & Felder direkt bearbeiten',
-    'about.tip.fieldMenu.body': 'Über die drei Punkte ⋮ vor jedem Feld in „Heute“ kannst du eine Notiz dazu schreiben — etwa „heute erst nach dem Frühstück gewogen“ — oder das Feld direkt dort bearbeiten bzw. archivieren; vor einer Gruppe entsprechend die Gruppe bearbeiten. Schneller geht es, wenn du auf den Feldnamen tippst oder die Zeile kurz gedrückt hältst. Notizen fließen nicht in die Auswertung ein, in Woche und Monat zeigt ein kleiner Punkt, wo es eine gibt.',
+    'about.tip.fieldMenu.body': 'Über die drei Punkte ⋮ vor jedem Feld in „Heute“ kannst du eine Notiz dazu schreiben — etwa „heute erst nach dem Frühstück gewogen“ — oder das Feld direkt dort bearbeiten bzw. archivieren; vor einer Gruppe entsprechend die Gruppe bearbeiten, vor dem Wochentag oben den ganzen Tag zurücksetzen. Schneller geht es, wenn du auf den Feldnamen tippst oder die Zeile kurz gedrückt hältst. Notizen fließen nicht in die Auswertung ein, in Woche und Monat zeigt ein kleiner Punkt, wo es eine gibt.',
     'about.tip.reorder.title': 'Felder umsortieren',
     'about.tip.reorder.body': 'In „Felder verwalten“ kannst du Felder per Ziehen am Griff-Symbol oder mit den ↑/↓-Buttons neu anordnen.',
     'about.tip.noValuation.title': 'Felder ohne Wertung',
@@ -1634,6 +1635,7 @@ const STRINGS = {
     'today.newField': '+ New field',
     'today.resetDay': 'Reset day',
     'today.fieldOptions': 'Options for {name}',
+    'today.dayOptions': 'Options for this day',
     'today.sectionOptions': 'Options for group {name}',
     'note.add': 'Add note',
     'note.edit': 'Edit note',
@@ -1924,7 +1926,7 @@ const STRINGS = {
     'about.tip.textFields.title': 'Free text fields',
     'about.tip.textFields.body': 'For questions like "What am I grateful for today?" there is the "Text" field type. "Today" shows a text box for it that saves automatically. The answers are not part of the statistics, but you can expand and read them back in the week, month, year, and overall views — tapping an entry takes you to its day.',
     'about.tip.fieldMenu.title': 'Notes & editing fields directly',
-    'about.tip.fieldMenu.body': 'In "Today", the three dots ⋮ in front of each field let you write a note about it — say, "weighed myself after breakfast today" — or edit or archive the field right there; in front of a group, they let you edit the group. For a shortcut, tap the field name or briefly press and hold its row. Notes are not part of the statistics; in the week and month views a small dot shows where there is one.',
+    'about.tip.fieldMenu.body': 'In "Today", the three dots ⋮ in front of each field let you write a note about it — say, "weighed myself after breakfast today" — or edit or archive the field right there; in front of a group, they let you edit the group, and in front of the weekday at the top, reset the whole day. For a shortcut, tap the field name or briefly press and hold its row. Notes are not part of the statistics; in the week and month views a small dot shows where there is one.',
     'about.tip.reorder.title': 'Reordering fields',
     'about.tip.reorder.body': 'In "Manage fields" you can reorder fields by dragging the handle or using the ↑/↓ buttons.',
     'about.tip.noValuation.title': 'Fields without valuation',
@@ -4795,7 +4797,8 @@ function renderComputedInfo(habit, dateKey) {
 // die Zeile (siehe "Zeilen-Menü per Long-Press" weiter unten). Disclosure-Muster
 // (aria-expanded + normale Buttons) statt role="menu", da letzteres eine eigene
 // Pfeiltasten-Navigation verlangen würde.
-// state.rowMenu / data-menu: bei Feldern deren id, bei Gruppen 'section:<id>'.
+// state.rowMenu / data-menu: bei Feldern deren id, bei Gruppen 'section:<id>', beim Tag
+// DAY_MENU_KEY (siehe renderDayMenuPanel).
 function renderRowMenuButton(key, label) {
   const open = state.rowMenu === key;
   return `<button type="button" class="row-menu-btn row-menu-trigger" data-action="row-menu" data-menu="${key}" aria-expanded="${open}"${open ? ` aria-controls="row-menu-${key}"` : ''} aria-label="${label}"><svg width="4" height="16" viewBox="0 0 4 16" aria-hidden="true"><circle cx="2" cy="2" r="1.6"/><circle cx="2" cy="8" r="1.6"/><circle cx="2" cy="14" r="1.6"/></svg></button>`;
@@ -4827,6 +4830,18 @@ function renderRowMenuPanel(h) {
       ${!isTextKind(h) ? `<button type="button" class="menu-item-btn" data-action="note-edit" data-note="${h.id}">${getNote(formatKey(state.currentDate), h.id) ? t('note.edit') : t('note.add')}</button>` : ''}
       <button type="button" class="menu-item-btn" data-action="row-menu-edit" data-id="${h.defId}">${t('common.edit')}</button>
       <button type="button" class="menu-item-btn menu-item-btn--warn" data-action="row-menu-archive" data-id="${h.defId}">${t('manage.archive')}</button>
+    </div>
+  `;
+}
+// Menü zum ganzen Tag (⋮ vor dem Wochentag). Hält bewusst nur Seltenes/Zerstörerisches
+// wie "Tag zurücksetzen" - das stand vorher als eigener Link unter der Feldliste und
+// machte das Ende von "Heute" unruhig. Die Tagesnotiz bleibt dagegen unten sichtbar.
+const DAY_MENU_KEY = 'day';
+function renderDayMenuPanel() {
+  if (state.rowMenu !== DAY_MENU_KEY) return '';
+  return `
+    <div class="row-menu day-menu" id="row-menu-${DAY_MENU_KEY}" role="group" aria-label="${t('today.dayOptions')}">
+      <button type="button" class="menu-item-btn menu-item-btn--warn" data-action="reset-day-arm">${t('today.resetDay')}</button>
     </div>
   `;
 }
@@ -5036,10 +5051,11 @@ function renderToday() {
     <div class="day-nav">
       <button type="button" class="nav-btn" data-action="nav-day" data-dir="-1" aria-label="${esc(t('ariaLabel.prevDay'))}">‹</button>
       <div class="day-label">
-        <span class="day-weekday">${weekdayLong(state.currentDate)}</span>
+        <span class="day-weekday">${renderRowMenuButton(DAY_MENU_KEY, t('today.dayOptions'))}${weekdayLong(state.currentDate)}</span>
         <span class="day-date">${relativeDay ? `<span class="day-relative">${relativeDay}</span> · ` : ''}${longDate(state.currentDate)}</span>
       </div>
       <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" aria-label="${esc(t('ariaLabel.nextDay'))}">›</button>
+      ${renderDayMenuPanel()}
     </div>
     ${!isToday ? `<button type="button" class="today-jump" data-action="jump-today">${t('today.jumpToday')}</button>` : ''}
     <div class="habit-list">
@@ -5054,8 +5070,9 @@ function renderToday() {
       </details>
     ` : ''}
     ${renderDayNote(dateKey)}
-    <button type="button" class="today-new-field-btn" data-action="today-new-field">${t('today.newField')}</button>
-    <button type="button" class="reset-btn" data-action="reset-day-arm">${t('today.resetDay')}</button>
+    <div class="today-footer">
+      <button type="button" class="today-new-field-btn" data-action="today-new-field">${t('today.newField')}</button>
+    </div>
   `;
 }
 
@@ -5323,7 +5340,7 @@ function renderPrivacySection() {
 // automatisch aus Git ableiten könnte, und ein Datum genügt hier als Rückverfolgbarkeit
 // (siehe Diskussion in CLAUDE.md-Kontext: keine echte Versionsnummer nötig, solange es
 // keine Release-Branches/nennenswerten externen Nutzerkreis gibt).
-const APP_STATUS_DATE = '2026-09-29';
+const APP_STATUS_DATE = '2026-10-01';
 
 function renderAbout() {
   return `
@@ -6612,7 +6629,8 @@ app.addEventListener('click', async (e) => {
     const value = JSON.parse(el.dataset.value);
     handleSelect(dateKey, el.dataset.habit, value);
   } else if (action === 'reset-day-arm') {
-    modalTriggerSelector = '[data-action="reset-day-arm"]';
+    // Das Menü ist nach dem Dialog zu - der Fokus kehrt deshalb auf dessen ⋮ zurück.
+    modalTriggerSelector = `.row-menu-trigger[data-menu="${DAY_MENU_KEY}"]`;
     state.resetConfirm = formatKey(state.currentDate);
     render();
   } else if (action === 'reset-day-cancel') {
