@@ -761,6 +761,7 @@ const state = {
   // dass das Tutorial kurz aufblitzt, bevor die tatsächlichen Einstellungen geladen sind.
   userSettings: { defaultReminderMinute: 1320, onboardingCompleted: true, locale: 'de', summaryNotifications: true, timezone: 'Europe/Berlin' },
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
+  regenKeyConfirm: false, // Rückfrage vor "Ersatzschlüssel neu erzeugen" offen
   habitDeleteConfirm: null, // defId eines archivierten Feldes mit Daten, dessen Löschen gerade bestätigt wird
   tutorialStep: null, // 1-4 (TUTORIAL_STEPS) während das Onboarding-Tutorial für neue Accounts läuft, sonst null
   tutorialSkipConfirm: false, // Bestätigungsdialog "Tutorial überspringen?" offen
@@ -817,6 +818,7 @@ function closeModals() {
   state.deleteConfirm = null;
   state.tutorialSkipConfirm = false;
   state.resetConfirm = null;
+  state.regenKeyConfirm = false;
 }
 
 // --- Android-Zurück-Taste schließt offene Overlays/Unterseiten statt die App zu
@@ -862,7 +864,7 @@ function leaveSubpage() {
   state.view = state.previousTabView || 'today';
 }
 function isOverlayOpen() {
-  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
+  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.regenKeyConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
 }
 // Der Notiz-Editor gehört zu einem bestimmten Tag in "Heute" und ist nur offen, solange
 // er dort auch sichtbar ist - wechselt man Tag/Tab, speichert render() den Entwurf und
@@ -922,7 +924,7 @@ function subpageBack() {
 // Overlays gleichzeitig offen, da z.B. die Menü-Aktionen state.menuOpen beim Öffnen
 // eines anderen Overlays bereits selbst auf false setzen.
 function closeTopLayer() {
-  if (state.deleteConfirm || state.tutorialSkipConfirm || state.resetConfirm) {
+  if (state.deleteConfirm || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm) {
     closeModals();
     restoreModalFocus();
   } else if (state.menuOpen) {
@@ -1187,6 +1189,9 @@ const STRINGS = {
     'resetConfirm.title': 'Tag zurücksetzen?',
     'resetConfirm.body': 'Alle Werte und Notizen vom {date} werden gelöscht. Das lässt sich nicht rückgängig machen.',
     'resetConfirm.confirm': 'Zurücksetzen',
+    'regenKeyConfirm.title': 'Neuen Ersatzschlüssel erzeugen?',
+    'regenKeyConfirm.body': 'Dein bisheriger Ersatzschlüssel funktioniert danach <strong>nicht mehr</strong> – auch nicht der, den du aufgeschrieben oder gespeichert hast. Mach das nur, wenn du ihn verloren hast oder jemand anderes ihn kennen könnte.',
+    'regenKeyConfirm.confirm': 'Neuen erzeugen',
     'notice.fieldArchived': 'Feld archiviert. Unter „Felder verwalten“ kannst du es jederzeit wieder aktivieren.',
     'common.archived': 'archiviert',
     'global.rangeNote': 'Seit {since} · {count} Tage mit Eintrag',
@@ -1674,6 +1679,9 @@ const STRINGS = {
     'resetConfirm.title': 'Reset day?',
     'resetConfirm.body': 'All values and notes from {date} will be deleted. This cannot be undone.',
     'resetConfirm.confirm': 'Reset',
+    'regenKeyConfirm.title': 'Create a new spare key?',
+    'regenKeyConfirm.body': 'Your current spare key will <strong>stop working</strong> – including the one you wrote down or saved. Only do this if you lost it or someone else might know it.',
+    'regenKeyConfirm.confirm': 'Create new key',
     'notice.fieldArchived': 'Field archived. You can reactivate it anytime under “Manage fields”.',
     'common.archived': 'archived',
     'global.rangeNote': 'Since {since} · {count} days with entry',
@@ -6390,6 +6398,23 @@ function renderResetConfirm() {
   `;
 }
 
+// Ein neuer Ersatzschlüssel macht den alten sofort ungültig - auch den, den man
+// aufgeschrieben oder abgelegt hat. Ohne Rückfrage genügte ein neugieriger Tipp im Menü.
+function renderRegenKeyConfirm() {
+  return `
+    <div class="modal-overlay">
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="regen-key-confirm-title">
+        <h2 id="regen-key-confirm-title">${t('regenKeyConfirm.title')}</h2>
+        <p>${t('regenKeyConfirm.body')}</p>
+        <div class="habit-form-actions">
+          <button type="button" class="habit-form-cancel" data-action="regen-key-cancel">${t('common.cancel')}</button>
+          <button type="button" class="manage-btn manage-btn--danger" data-action="regen-key-confirm">${t('regenKeyConfirm.confirm')}</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderDeleteConfirm() {
   const busy = state.deleteConfirm.busy;
   return `
@@ -6506,6 +6531,7 @@ function renderApp() {
     <div class="view-body${slideClass}">${body}</div>
     ${state.deleteConfirm ? renderDeleteConfirm() : ''}
     ${state.resetConfirm ? renderResetConfirm() : ''}
+    ${state.regenKeyConfirm ? renderRegenKeyConfirm() : ''}
   `;
   // preventScroll: der Header ist ohnehin (sticky) sichtbar - der native
   // Scroll-in-View-Effekt beim Fokussieren kennt "position: sticky" nicht und hat
@@ -6678,6 +6704,17 @@ app.addEventListener('click', async (e) => {
     if (!document.getElementById('recovery-key-confirm')?.checked) return; // Button ist sonst disabled
     await confirmSpareKey();
   } else if (action === 'regenerate-recovery-key') {
+    modalTriggerSelector = '.menu-btn'; // wie beim Konto löschen: das Menü ist danach zu
+    state.regenKeyConfirm = true;
+    state.menuOpen = false;
+    render();
+  } else if (action === 'regen-key-cancel') {
+    state.regenKeyConfirm = false;
+    render();
+    restoreModalFocus();
+  } else if (action === 'regen-key-confirm') {
+    state.regenKeyConfirm = false;
+    modalTriggerSelector = null; // danach kommt die Anzeige des neuen Schlüssels
     await regenerateRecoveryKey();
   } else if (action === 'logout') {
     flushAllDaySaves(); // ausstehende Text-Feld-Speicherungen noch mit dem Schlüssel verschicken
@@ -7683,7 +7720,7 @@ if ('serviceWorker' in navigator) {
       state.habitForm = null;
       state.habitDeleteConfirm = null;
       state.sectionForm = null;
-      if (state.deleteConfirm || state.resetConfirm) { state.deleteConfirm = null; state.resetConfirm = null; modalTriggerSelector = null; }
+      if (state.deleteConfirm || state.resetConfirm || state.regenKeyConfirm) { closeModals(); modalTriggerSelector = null; }
     }
     window.scrollTo(0, 0); // vor render() - das scrollt ggf. danach zum Feld (consumePendingFieldFocus)
     render();
@@ -7783,6 +7820,7 @@ function clearLoadedAccountState() {
   state.habitFormSaving = false;
   state.habitDeleteConfirm = null;
   state.deleteConfirm = null;
+  state.regenKeyConfirm = false;
   state.menuOpen = false;
   state.recoveryKeyToShow = null;
   state.unplannedOpenFor = null;

@@ -587,7 +587,8 @@ alles native Web Crypto API, keine Library):
   dann noch funktionierende Mechanismus wäre zwangsläufig ein serverseitiger
   Zugriffsweg). Im Burger-Menü jederzeit neu erzeugbar (`regenerateRecoveryKey`,
   macht den alten Code ungültig, braucht kein Passwort, da der DEK ja schon im
-  Speicher liegt).
+  Speicher liegt). Fragt vorher nach (`renderRegenKeyConfirm`, seit 2026-10-01) – der alte
+  Code ist sofort ungültig, auch der aufgeschriebene.
 
 **Schlüssel-Lebenszyklus** (`currentDek`, Modul-Variable, nie Teil von `state`/
 `render()`):
@@ -924,7 +925,7 @@ Tastatur erreichbar (`tabindex="0" role="button"`, Enter/Space über einen
 generalisierten `data-action`-Keydown-Dispatch, der einen echten Klick auslöst statt
 Aktionen zu duplizieren) und tragen zusätzlich zur Farbe ein Streifenmuster
 (`scorePatternStyle()`, diskrete Stufen, gröber in der Jahres-Ansicht) für
-Rot-Grün-Farbenblinde. Die Bestätigungs-Modals (Konto löschen, Tutorial überspringen, Tag zurücksetzen)
+Rot-Grün-Farbenblinde. Die Bestätigungs-Modals (Konto löschen, Tutorial überspringen, Tag zurücksetzen, Ersatzschlüssel neu erzeugen)
 haben `role="dialog"`/Fokus-Trap/Escape-Schließen/Fokus-Rückgabe (siehe
 `focusModalIfOpen()`/`restoreModalFocus()`/`modalTriggerSelector`, gemeinsamer Schließ-Weg `closeModals()`). Meldungen laufen
 zentral über `renderNotice()` (Fehler `role="alert"`/assertive, Erfolg
@@ -973,7 +974,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 485 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 488 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
