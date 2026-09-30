@@ -5071,7 +5071,7 @@ function renderToday() {
     ` : ''}
     ${renderDayNote(dateKey)}
     <div class="today-footer">
-      <button type="button" class="today-new-field-btn" data-action="today-new-field">${t('today.newField')}</button>
+      <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="today-new-field">${t('today.newField')}</button>
     </div>
   `;
 }

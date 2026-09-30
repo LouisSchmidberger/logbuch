@@ -292,7 +292,8 @@ in "Über Logbuch" (`about.tip.textFields`). DB-Constraints `habit_definitions_k
 ab, unabhängig von der Richtung (`good: 'high'` vs. `good: 'low'`, z.B. bei
 "Gekifft"/"Gevaped"). `scoreColor(score)` färbt danach rot→grau→grün. `number`-Felder
 laufen nie durch `normalize`/`scoreColor` (kein "gut/schlecht" bei einem Zahlenwert wie
-Gewicht) – sie bekommen stattdessen in "Heute" eine eigene Eingabebox und in den
+Gewicht) – sie bekommen stattdessen in "Heute" ein Eingabefeld (als normale Zeile wie alle
+Felder, seit 2026-10-01 ohne eigenen Kasten – ebenso Text-Felder) und in den
 Auswertungs-Tabs einen Verlaufs-Graphen (`renderNumberChart`), statt in die Score-/
 Heatmap-Logik einzufließen. Es gibt keinen separaten Bool-Typ – ein Ja/Nein-Feld ist
 einfach eine `scale` mit 2 Stufen und Bezeichnungen (`min:1, max:2, labels:['Nein','Ja']`,
@@ -743,9 +744,9 @@ will man meist etwas anderes ändern, dort bleibt der Fokus auf der Überschrift
 Ende von `render()` eingelöst) – man landet nach Speichern/Abbrechen wieder an der
 Stelle der Liste bzw. von "Heute", von der man kam.
 
-**"+ Neues Feld"-Shortcut in "Heute"** (seit 2026-09-25): dezenter Text-Button unter der
-Feldliste (bewusst kein ausgefüllter Button – "Heute" ist die tägliche Eintrags-Ansicht,
-nicht die Verwaltung). Öffnet die Verwaltung mit schon offenem "Neues Feld"-Formular
+**"+ Neues Feld"-Shortcut in "Heute"** (seit 2026-09-25): umrandeter Button in der
+Fußleiste von "Heute" (wie "+ Neue Gruppe" in der Verwaltung; bewusst nicht ausgefüllt –
+"Heute" ist die tägliche Eintrags-Ansicht, nicht die Verwaltung). Öffnet die Verwaltung mit schon offenem "Neues Feld"-Formular
 (Typ-Auswahl wie immer). Das Formular trägt dabei `returnToTab: true` im eigenen
 Zustand – `closeHabitForm()` (einziger Schließ-Weg: Speichern, Abbrechen,
 Android-Zurück) springt dann direkt zurück zum Tab statt in der Verwaltung zu bleiben,
@@ -846,6 +847,7 @@ nicht mehr als Link unter der Liste.
 gestalteter Elemente untereinander – "Alles eingetragen" direkt als Abschluss der Liste,
 darunter der Tag ("Heute nicht geplant", Tagesnotiz), zuletzt eine Fußleiste mit
 Trennlinie für "+ Neues Feld" (`.today-footer`, gehört nicht zum Tag). Alles linksbündig.
+Verworfen: "+ Neues Feld" dort als reiner Text-Link (wirkte allein unter der Linie verloren).
 
 **Haptisches Feedback** (seit 2026-09-27, `haptic()` in `logbuch.js`): kurzes
 Vibrieren beim Setzen/Entfernen eines Werts (Buttons, Schieberegler erst beim

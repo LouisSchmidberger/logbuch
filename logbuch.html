@@ -381,7 +381,7 @@
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     padding: 11px 0; border-bottom: 1px solid var(--line);
   }
-  .habit-row:first-child { border-top: 1px solid var(--line); }
+  .habit-row:first-child, .number-box:first-child { border-top: 1px solid var(--line); }
   .habit-name { font-size: 13px; line-height: 1.35; flex: 1; min-width: 0; }
   .habit-options {
     display: flex; gap: 6px; flex-shrink: 1; min-width: 0; max-width: 60%;
@@ -417,18 +417,16 @@
   }
   /* Ende von "Heute" in drei Teilen: Abschluss der Liste ("Alles eingetragen", direkt
      unter dem letzten Feld), der Tag ("nicht geplant", Tagesnotiz) und eine Fußleiste mit
-     Trennlinie für das, was nicht zum Tag gehört ("+ Neues Feld", wie die Fußleiste im
-     Tutorial). Alles linksbündig wie die Felder. */
+     Trennlinie für das, was nicht zum Tag gehört ("+ Neues Feld", umrandet wie "+ Neue
+     Gruppe" in der Verwaltung). Alles linksbündig wie die Felder. */
   .today-complete { margin: 10px 0 0; font-size: 13px; font-style: italic; color: var(--moss); }
-  .today-footer { margin-top: 28px; padding-top: 6px; border-top: 1px solid var(--line); }
-  .today-new-field-btn {
-    background: none; border: none; color: var(--moss);
-    font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 8px 0;
-  }
-  .today-new-field-btn:hover, .today-new-field-btn:focus-visible { text-decoration: underline; }
+  .today-footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); }
 
+  /* Zahlenwert- und Text-Felder sind normale Zeilen wie alle anderen (Trennlinie statt
+     eigenem Kasten - der stammte noch aus der Zeit, als Gewicht ein fester Sonderfall über
+     der Liste war). Nur das Eingabefeld selbst ist umrandet. */
   .number-box {
-    border: 1px solid var(--line); border-radius: 4px; padding: 12px; margin-bottom: 16px;
+    padding: 11px 0; border-bottom: 1px solid var(--line);
     display: flex; align-items: center; gap: 10px;
   }
   .number-box .number-last { display: block; font-size: 11px; color: var(--sand); margin-top: 2px; }
@@ -834,7 +832,7 @@
   .section-content { padding-left: 19px; }
   .grid-scroll .section-content { padding-left: 0; }
   /* Die Gruppen-Überschrift hat schon eine Linie unten - sonst doppelt mit der oberen Linie der ersten Zeile. */
-  .section-content > .habit-row:first-child { border-top: none; }
+  .section-content > .habit-row:first-child, .section-content > .number-box:first-child { border-top: none; }
   .grid-scroll .section-content .grid-label { padding-left: 17px; }
   .manage-new-row .manage-new-btn { flex: 1; }
   .manage-new-btn--secondary { background: transparent; color: var(--moss); border: 1px solid var(--moss); }
@@ -989,6 +987,6 @@
 <div id="app"><div class="loading">Lädt …</div></div>
 <div id="sr-announcer" class="visually-hidden" aria-live="polite"></div>
 
-<script type="module" src="./logbuch.js?v=b9af51b949"></script>
+<script type="module" src="./logbuch.js?v=73a197e2fc"></script>
 </body>
 </html>
