@@ -1398,6 +1398,7 @@ const STRINGS = {
     'theme.light': 'Hell',
     'theme.dark': 'Dunkel',
     'textSize.label': 'Textgröße',
+    'textSize.small': 'Klein',
     'textSize.normal': 'Normal',
     'textSize.large': 'Groß',
     'textSize.xlarge': 'Sehr groß',
@@ -1895,6 +1896,7 @@ const STRINGS = {
     'theme.light': 'Light',
     'theme.dark': 'Dark',
     'textSize.label': 'Text size',
+    'textSize.small': 'Small',
     'textSize.normal': 'Normal',
     'textSize.large': 'Large',
     'textSize.xlarge': 'Extra large',
@@ -2124,12 +2126,12 @@ function setThemeOverride(value) {
   applyTheme(value);
 }
 
-// Textgröße, pro Gerät wie das Theme (localStorage 'textSize': 'large' | 'xlarge' | nicht
-// gesetzt = Normal). Setzt nur die Grundgröße auf <html> - alle Schriftgrößen im CSS
+// Textgröße, pro Gerät wie das Theme (localStorage 'textSize': 'small' | 'large' | 'xlarge'
+// | nicht gesetzt = Normal; "Klein" für alle, die lieber mehr auf einmal sehen). Setzt nur die Grundgröße auf <html> - alle Schriftgrößen im CSS
 // stehen in rem und wachsen mit. Zwei-Finger-Zoom ist kein Ersatz (vergrößert wie eine
 // Lupe, man muss seitlich schieben), und in der installierten App fehlt die
 // Browser-Leiste mit ihrer eigenen Schriftgrößen-Einstellung.
-const TEXT_SIZES = ['', 'large', 'xlarge'];
+const TEXT_SIZES = ['small', '', 'large', 'xlarge'];
 function getTextSize() {
   try { const v = localStorage.getItem('textSize'); return TEXT_SIZES.includes(v) ? v : ''; } catch { return ''; }
 }

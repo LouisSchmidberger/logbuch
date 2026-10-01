@@ -908,8 +908,9 @@ Tabs, deshalb absichtlich weniger empfindlich statt eines einheitlichen Schwelle
 Schriftgrößen im CSS stehen in `rem` (dabei gegenüber den früheren px-Werten angehoben –
 Fließtext 15–16px, kaum etwas unter 13px, nur in den engen Kalender-Rastern 12px), ebenso die
 Maße von Bedienelementen mit Text (Wert-Buttons, runde Knöpfe, Raster-Spalten,
-`#app`-Breite 30rem). Im Menü "Textgröße" Normal/Groß/Sehr groß setzt nur `data-text-size`
-auf `<html>` (100/112,5/125 %), pro Gerät per `localStorage` `textSize` wie das Theme.
+`#app`-Breite 30rem). Im Menü "Textgröße" Klein/Normal/Groß/Sehr groß setzt nur
+`data-text-size` auf `<html>` (87,5/100/112,5/125 %; "Klein" etwa die frühere Größe, für alle,
+die lieber mehr auf einmal sehen), pro Gerät per `localStorage` `textSize` wie das Theme.
 Neue CSS-Größen deshalb immer in `rem`, nie in px. Grund: Zwei-Finger-Zoom vergrößert wie
 eine Lupe (seitlich schieben), und in der installierten App fehlt die Browser-Leiste mit
 ihrer eigenen Schriftgrößen-Einstellung.
@@ -1001,7 +1002,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 495 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 496 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

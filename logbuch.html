@@ -216,6 +216,7 @@
      und die Maße von Bedienelementen mit Text stehen in rem und hängen damit nur an dieser
      einen Grundgröße. 100% = die Grundgröße des Browsers (meist 16px). */
   html { font-size: 100%; }
+  :root[data-text-size="small"] { font-size: 87.5%; }
   :root[data-text-size="large"] { font-size: 112.5%; }
   :root[data-text-size="xlarge"] { font-size: 125%; }
   body {
@@ -1043,6 +1044,6 @@
 <div id="app"><div class="loading">Lädt …</div></div>
 <div id="sr-announcer" class="visually-hidden" aria-live="polite"></div>
 
-<script type="module" src="./logbuch.js?v=eab554780a"></script>
+<script type="module" src="./logbuch.js?v=805f200d7f"></script>
 </body>
 </html>
