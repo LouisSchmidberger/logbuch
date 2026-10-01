@@ -764,6 +764,7 @@ const state = {
   confirmEmailFor: null,
   confirmResend: null, // null | 'sending' | 'sent' | { error: text }
   passwordRecovery: false, // true zwischen Klick auf den Passwort-Reset-Link und neuem Passwort
+  todayIntroStep: 0, // aktuelle Karte der einmaligen Erklärung in "Heute" (renderTodayIntro)
   pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy' | 'blocked' (Mitteilungen im Browser/Handy verboten)
   habits: [],         // alle Felder des Nutzers (aktiv + archiviert), sort_order-sortiert
   sections: [],       // Gruppen (intern "sections"): { id, name, sortOrder } (siehe layoutBlocks)
@@ -1358,6 +1359,11 @@ const STRINGS = {
     'today.sectionHasOpen': '(enthält noch offene Felder)',
     'today.allDoneToday': 'Alles eingetragen für heute.',
     'today.allDoneDay': 'Alles eingetragen für diesen Tag.',
+    'todayIntro.label': 'Kurz erklärt',
+    'todayIntro.enter': '👋 <strong>So trägst du ein:</strong> Tipp auf einen Wert – nochmal tippen nimmt ihn wieder weg. Der grüne Punkt hinter einem Namen zeigt, was heute noch offen ist.',
+    'todayIntro.days': '📅 <strong>Andere Tage:</strong> Wisch nach links oder rechts – oder tipp auf die Pfeile oben –, um einen anderen Tag einzutragen oder nachzutragen.',
+    'todayIntro.menu': '⋮ <strong>Mehr:</strong> Über die drei Punkte vor einem Feld schreibst du eine Notiz dazu oder bearbeitest es. Unter <strong>☰ Menü</strong> oben rechts findest du deine Felder, die Einstellungen und Erklärungen zu allem.',
+    'todayIntro.done': 'Verstanden',
     'schedule.summary.monthly': 'monatlich am {day}.',
     'schedule.summary.monthlyLast': 'monatlich am Monatsletzten',
     'schedule.summary.yearly': 'jährlich am {date}',
@@ -1978,6 +1984,11 @@ const STRINGS = {
     'today.sectionHasOpen': '(has fields not filled in yet)',
     'today.allDoneToday': 'Everything filled in for today.',
     'today.allDoneDay': 'Everything filled in for this day.',
+    'todayIntro.label': 'Quick explanation',
+    'todayIntro.enter': '👋 <strong>How to enter things:</strong> tap a value – tap it again to remove it. The green dot after a name shows what is still open today.',
+    'todayIntro.days': '📅 <strong>Other days:</strong> swipe left or right – or tap the arrows at the top – to fill in another day.',
+    'todayIntro.menu': '⋮ <strong>More:</strong> the three dots in front of a field let you add a note or edit it. Under <strong>☰ Menu</strong> at the top right you find your fields, the settings and explanations for everything.',
+    'todayIntro.done': 'Got it',
     'schedule.summary.monthly': 'monthly on day {day}',
     'schedule.summary.monthlyLast': 'monthly on the last day',
     'schedule.summary.yearly': 'yearly on {date}',
@@ -3291,6 +3302,7 @@ async function confirmSpareKey() {
     return;
   }
   spareKeyPending = false;
+  if (isOnbInProgress()) setTodayIntroPending(true); // danach einmal die Karte(n) in "Heute"
   setOnbInProgress(false); // Einrichten abgeschlossen
 }
 
@@ -4652,7 +4664,7 @@ async function handleExportData() {
 // Textgröße, Streifenmuster, Vibration) bleiben bewusst erhalten.
 function clearDeviceAccountTraces() {
   try {
-    ['signedInHere', 'onboardingMode', 'onboardingInProgress', 'onboardingWithInstall', 'installGateSkipped', 'installHintDismissed']
+    ['signedInHere', 'onboardingMode', 'onboardingInProgress', 'onboardingWithInstall', 'installGateSkipped', 'installHintDismissed', 'todayIntroPending']
       .forEach((key) => localStorage.removeItem(key));
     Object.keys(localStorage).filter((key) => key.startsWith('sectionCollapsed:')).forEach((key) => localStorage.removeItem(key));
   } catch { /* nichts gespeichert oder kein Zugriff - dann gibt es auch nichts zu löschen */ }
@@ -5847,6 +5859,31 @@ function renderDayNote(dateKey) {
   `;
 }
 
+// Einmalige Karte(n) oben in "Heute" direkt nach dem Einrichten eines neuen Kontos (nicht
+// für Bestandsnutzer): Kurz und knapp eine Karte, Schritt für Schritt drei nacheinander.
+// Erklärungen gehören dorthin, wo man sie braucht - vorher standen sie nur in "Über Logbuch".
+function isTodayIntroPending() {
+  try { return localStorage.getItem('todayIntroPending') === 'true'; } catch { return false; }
+}
+function setTodayIntroPending(on) {
+  try { if (on) localStorage.setItem('todayIntroPending', 'true'); else localStorage.removeItem('todayIntroPending'); } catch { /* dann eben ohne Karte */ }
+}
+function renderTodayIntro() {
+  if (!isTodayIntroPending() || !activeHabits().length) return '';
+  const cards = isGuided() ? ['enter', 'days', 'menu'] : ['enter'];
+  const i = Math.min(state.todayIntroStep || 0, cards.length - 1);
+  const last = i === cards.length - 1;
+  return `
+    <div class="today-intro" role="region" aria-label="${esc(t('todayIntro.label'))}">
+      <p>${t(`todayIntro.${cards[i]}`)}</p>
+      <div class="today-intro-actions">
+        ${cards.length > 1 ? `<span class="today-intro-count">${i + 1}/${cards.length}</span>` : ''}
+        <button type="button" class="push-toggle" data-action="today-intro-next">${t(last ? 'todayIntro.done' : 'common.next')}</button>
+      </div>
+    </div>
+  `;
+}
+
 function renderToday() {
   const dateKey = formatKey(state.currentDate);
   const isToday = dateKey === formatKey(new Date());
@@ -5879,6 +5916,7 @@ function renderToday() {
       ${renderDayMenuPanel()}
     </div>
     ${!isToday ? `<button type="button" class="today-jump" data-action="jump-today">${t('today.jumpToday')}</button>` : ''}
+    ${renderTodayIntro()}
     <div class="habit-list">
       ${renderBySection(planned, 'today', (list) => list.map(renderPlannedRow).join(''))}
       ${!habits.length ? `<p class="manage-meta">${t('today.noFields')}</p>` : !planned.length ? `<p class="manage-meta">${t('today.nothingPlanned')}</p>` : ''}
@@ -7483,6 +7521,13 @@ app.addEventListener('click', async (e) => {
     state.authMode = el.dataset.mode === 'guided' && state.authMode === 'mode' ? 'overview' : 'signup';
     render();
     document.querySelector('.auth-box h1, .auth-box .sub')?.focus({ preventScroll: true });
+  } else if (action === 'today-intro-next') {
+    // Ohne data-Merkmal für "letzte Karte", damit der Fokus beim Weiterblättern auf dem
+    // Knopf bleibt (restoreFocus findet ihn über data-action).
+    const lastStep = (isGuided() ? 3 : 1) - 1;
+    if ((state.todayIntroStep || 0) >= lastStep) { setTodayIntroPending(false); state.todayIntroStep = 0; }
+    else state.todayIntroStep = (state.todayIntroStep || 0) + 1;
+    render();
   } else if (action === 'check-mail-done') {
     // Die Hilfe beim Anmelden erscheint wieder, falls die Adresse doch noch nicht bestätigt ist.
     state.confirmEmailFor = null;

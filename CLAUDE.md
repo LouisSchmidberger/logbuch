@@ -771,6 +771,12 @@ Zustand – `closeHabitForm()` (einziger Schließ-Weg: Speichern, Abbrechen,
 Android-Zurück) springt dann direkt zurück zum Tab statt in der Verwaltung zu bleiben,
 da die Absicht beim Shortcut "jetzt tracken" ist, nicht "verwalten".
 
+**Einmalige Erklär-Karte(n) in "Heute"** (seit 2026-10-01, `renderTodayIntro`): nur direkt
+nach dem Einrichten eines neuen Kontos (`localStorage` `todayIntroPending`, gesetzt in
+`confirmSpareKey`, nicht für Bestandsnutzer). Kurz und knapp: eine Karte (eintragen,
+nochmal tippen entfernt, Punkt = offen); Schritt für Schritt: drei nacheinander (+ andere
+Tage, ⋮ und Menü). Erklärungen dorthin, wo man sie braucht – vorher nur in "Über Logbuch".
+
 **"Noch offen" in "Heute"** (seit 2026-09-29, `isOpenToday`/`openMarkerHtml`/
 `todayAllDone`): ein kleiner Punkt (`.open-dot`, Moos, Form statt Farbe als Unterscheidung)
 hinter dem Namen jedes heute geplanten, direkt ausfüllbaren Felds (nicht berechnet) ohne
@@ -1021,7 +1027,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 618 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 623 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

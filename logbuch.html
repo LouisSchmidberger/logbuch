@@ -451,6 +451,14 @@
      unter dem letzten Feld), der Tag ("nicht geplant", Tagesnotiz) und eine Fußleiste mit
      Trennlinie für das, was nicht zum Tag gehört ("+ Neues Feld", umrandet wie "+ Neue
      Gruppe" in der Verwaltung). Alles linksbündig wie die Felder. */
+  /* Einmalige Karte(n) nach dem Einrichten (renderTodayIntro). */
+  .today-intro {
+    margin: 0 0 1rem; padding: 0.875rem; border-radius: 6px; border: 1px solid var(--moss);
+    background: rgba(var(--moss-rgb), 0.09); font-size: 0.9375rem; line-height: 1.5;
+  }
+  .today-intro p { margin: 0 0 0.625rem; }
+  .today-intro-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; }
+  .today-intro-count { font-size: 0.875rem; color: var(--sand); }
   .today-complete { margin: 10px 0 0; font-size: 0.9375rem; font-style: italic; color: var(--moss); }
   .today-footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); }
 
@@ -1149,6 +1157,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=85dc8d5dca"></script>
+<script type="module" src="./logbuch.js?v=e83143dea4"></script>
 </body>
 </html>
