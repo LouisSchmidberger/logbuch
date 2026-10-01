@@ -646,6 +646,11 @@
      Silbengrenzen (hyphens, Sprache aus <html lang>), mitten im Wort nur als Notlösung. */
   .grid-row { display: grid; grid-template-columns: minmax(0, 35%) repeat(7, minmax(0, 1fr)) minmax(2.25rem, 2.75rem); align-items: center; gap: 1px; }
   .grid-row--header { padding-bottom: 6px; }
+  /* Zeilen besser auseinanderhalten: Trennlinie + jede zweite Zeile leicht getönt (Ton
+     statt Schraffur - schraffiert sind schon die nicht geplanten Tage, und das
+     Streifenmuster kodiert die Bewertung). Gezählt nur über Feld-Zeilen, je Behälter. */
+  .grid-scroll .grid-row:not(.grid-row--header) { border-bottom: 1px solid var(--line); padding: 2px 0; }
+  .grid-scroll .grid-row:nth-child(even of .grid-row:not(.grid-row--header)) { background: color-mix(in srgb, var(--ink) 6%, transparent); }
   .grid-label { font-size: 0.75rem; padding-right: 3px; line-height: 1.2; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
   .grid-col-header { display: flex; flex-direction: column; align-items: center; font-size: 0.75rem; color: var(--sand); cursor: pointer; }
   .grid-col-date { font-size: 0.8125rem; color: var(--ink); }
