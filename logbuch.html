@@ -802,19 +802,22 @@
   }
 
   .manage-list { display: flex; flex-direction: column; margin-bottom: 18px; }
+  /* Passen Name (mind. 8rem) und Knöpfe nicht nebeneinander, rutschen die Knöpfe
+     rechtsbündig in eine eigene Zeile darunter - wie die Wert-Buttons in "Heute". Vorher
+     überlappten sich Name und Knöpfe auf schmalen Handys bzw. bei großer Schrift. */
   .manage-row {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 10px;
     padding: 7px 0; border-bottom: 1px solid var(--line);
   }
   .manage-row:first-child { border-top: 1px solid var(--line); }
   .manage-row--archived { opacity: 0.55; }
   .manage-row--confirm-delete { opacity: 1; flex-wrap: wrap; }
   .manage-row--dragging { position: relative; z-index: 5; background: var(--surface); box-shadow: 0 4px 10px var(--shadow); }
-  .manage-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-  .manage-name { font-size: 0.9375rem; }
+  .manage-info { display: flex; flex-direction: column; gap: 2px; flex: 1 1 8rem; min-width: 0; }
+  .manage-name { font-size: 0.9375rem; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
   .manage-meta { font-size: 0.8125rem; color: var(--sand); }
   .manage-delete-warning { font-size: 0.8125rem; color: var(--rust); }
-  .manage-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .manage-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
   .drag-handle {
     position: relative; display: flex; flex-direction: column; justify-content: center; gap: 3px; width: 16px; height: 22px;
     flex-shrink: 0; cursor: grab; touch-action: none;
