@@ -914,6 +914,17 @@ Neue CSS-Größen deshalb immer in `rem`, nie in px. Grund: Zwei-Finger-Zoom ver
 eine Lupe (seitlich schieben), und in der installierten App fehlt die Browser-Leiste mit
 ihrer eigenen Schriftgrößen-Einstellung.
 
+**Knöpfe statt Links, Tippflächen** (seit 2026-10-01, nach einem Onboarding-Test mit einer
+wenig handy-erfahrenen Person, die unterstrichenen Text nicht als antippbar erkannte): alles,
+was etwas tut, sieht wie ein Knopf aus – Hauptaktion ausgefüllt, Nebenaktionen umrandet
+(`.auth-toggle`, `.onb-nav-btn`, `.today-jump`, `.push-toggle`, `.tip-link`); unterstrichen
+(`.link-btn`) nur noch mitten im Fließtext. Knopf-Rahmen in `--sand` (≥3:1), nicht `--line`
+(zu blass, um einen Knopf zu erkennen). Tippflächen: kleine Symbol-Knöpfe (‹ ›, ☰, ←, ⋮,
++/−, ↑↓, ×, kleine Knöpfe in der Verwaltung) bleiben optisch kompakt, ein unsichtbares
+`::after` vergrößert die Fläche auf mind. 2.75rem (44px); Wert-Buttons sichtbar 2rem mit
+0.5rem Abstand, Tippfläche bis in die halbe Lücke (~40px, ohne Überlappung – WCAG AA verlangt
+24px). Neue Knöpfe entsprechend.
+
 **Dark Mode** (seit 2026-09-16): folgt standardmäßig `prefers-color-scheme`, im
 Burger-Menü überschreibbar (System/Hell/Dunkel als Pill-Toggle, gleiches Muster wie
 `f.kind`/`f.good` im Habit-Formular). Override liegt in `localStorage`
