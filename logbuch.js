@@ -1258,7 +1258,6 @@ const STRINGS = {
     'numberBox.last': 'zuletzt: {value} ({date})',
     'today.jumpToday': 'Zu heute springen',
     'today.noFields': 'Noch keine Felder angelegt.',
-    'today.newField': '+ Neues Feld',
     'today.resetDay': 'Tag zurücksetzen',
     'today.fieldOptions': 'Optionen für {name}',
     'today.dayOptions': 'Optionen für diesen Tag',
@@ -1913,7 +1912,6 @@ const STRINGS = {
     'numberBox.last': 'last: {value} ({date})',
     'today.jumpToday': 'Jump to today',
     'today.noFields': 'No fields created yet.',
-    'today.newField': '+ New field',
     'today.resetDay': 'Reset day',
     'today.fieldOptions': 'Options for {name}',
     'today.dayOptions': 'Options for this day',
@@ -6052,7 +6050,7 @@ function renderToday() {
     ` : ''}
     ${renderDayNote(dateKey)}
     <div class="today-footer">
-      <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="today-new-field">${t('today.newField')}</button>
+      <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="today-new-field">${icon('newField')}${t('habitForm.title.newField')}</button>
     </div>
   `;
 }
@@ -6268,11 +6266,11 @@ function renderTip([titleKey, bodyKey, link], bodyTag = 'p') {
     </div>
   `;
 }
-function tipGroup(groupTitleKey, tips) {
+function tipGroup(groupTitleKey, tips, iconName) {
   const collapseKey = `tipGroup:${groupTitleKey}`;
   return `
     <details class="tip-group" data-collapse-key="${collapseKey}" ${isAboutSectionCollapsed(collapseKey) ? '' : 'open'}>
-      <summary class="manage-section-title">${t(groupTitleKey)}</summary>
+      <summary class="manage-section-title">${iconName ? icon(iconName) : ''}${t(groupTitleKey)}</summary>
       ${tips.map((tip) => renderTip(tip)).join('')}
     </details>
   `;
@@ -6294,7 +6292,7 @@ function renderA11ySection() {
   ];
   return `
     <details class="a11y-highlight" data-collapse-key="aboutA11yCollapsed" ${isAboutSectionCollapsed('aboutA11yCollapsed') ? '' : 'open'}>
-      <summary class="manage-section-title">${t('about.a11y.title')}</summary>
+      <summary class="manage-section-title">${icon('a11y')}${t('about.a11y.title')}</summary>
       <p class="tip-body">${t('about.a11y.intro')}</p>
       ${items.map((tip) => renderTip(tip)).join('')}
       <p class="tip-body a11y-feedback">${t('about.a11y.feedback')} <button type="button" class="link-btn" data-action="open-feedback">${t('menu.feedback')}</button></p>
@@ -6314,7 +6312,7 @@ function renderMentalHealthSection() {
   ];
   return `
     <details class="mental-health-highlight" data-collapse-key="aboutMentalHealthCollapsed" ${isAboutSectionCollapsed('aboutMentalHealthCollapsed') ? '' : 'open'}>
-      <summary class="manage-section-title">${t('about.mentalHealth.title')}</summary>
+      <summary class="manage-section-title">${icon('mentalHealth')}${t('about.mentalHealth.title')}</summary>
       <p class="tip-body">${t('about.mentalHealth.intro')}</p>
       ${items.map((tip) => renderTip(tip)).join('')}
       <div class="tip mental-health-crisis">
@@ -6350,7 +6348,7 @@ function renderPrivacySection() {
   ];
   return `
     <details class="privacy-highlight" data-collapse-key="aboutPrivacyCollapsed" ${isAboutSectionCollapsed('aboutPrivacyCollapsed') ? '' : 'open'}>
-      <summary class="manage-section-title">${t('about.privacy.title')}</summary>
+      <summary class="manage-section-title">${icon('privacy')}${t('about.privacy.title')}</summary>
       <p class="tip-body">${t('about.privacy.intro')}</p>
       ${items.map((tip) => renderTip(tip, 'div')).join('')}
       <p class="tip-body privacy-feedback">${t('about.privacy.feedback')} <button type="button" class="link-btn" data-action="open-feedback">${t('menu.feedback')}</button></p>
@@ -6380,7 +6378,7 @@ function renderAbout() {
       ['about.tip.openDot.title', 'about.tip.openDot.body'],
       ['about.tip.fieldMenu.title', 'about.tip.fieldMenu.body'],
       ['about.tip.reorder.title', 'about.tip.reorder.body', { manage: true }],
-    ])}
+    ], 'usage')}
     <div class="manage-section-divider"></div>
     ${tipGroup('about.group.fields', [
       ['about.tip.noValuation.title', 'about.tip.noValuation.body'],
@@ -6392,13 +6390,13 @@ function renderAbout() {
       ['about.tip.sections.title', 'about.tip.sections.body', { manage: true }],
       ['about.tip.schedule.title', 'about.tip.schedule.body', { manage: true }],
       ['about.tip.archiveVsDelete.title', 'about.tip.archiveVsDelete.body', { manage: true }],
-    ])}
+    ], 'fields')}
     <div class="manage-section-divider"></div>
     ${tipGroup('about.group.appearance', [
       ['about.tip.theme.title', 'about.tip.theme.body', { menu: 'theme' }],
       ['about.tip.textSize.title', 'about.tip.textSize.body', { menu: 'text-size' }],
       ['about.tip.language.title', 'about.tip.language.body', { menu: 'language' }],
-    ])}
+    ], 'appearance')}
   `;
 }
 
@@ -7028,8 +7026,8 @@ function renderManage() {
 
   return `
     <div class="manage-new-row">
-      <button type="button" class="manage-new-btn" data-action="habit-new">+ ${t('habitForm.title.newField')}</button>
-      <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="group-new">+ ${t('habitForm.title.newGroup')}</button>
+      <button type="button" class="manage-new-btn" data-action="habit-new">${icon('newField')}${t('habitForm.title.newField')}</button>
+      <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="group-new">${icon('newGroup')}${t('habitForm.title.newGroup')}</button>
     </div>
     <div class="manage-list">${activeBlocks.map((b, i) => (b.type === 'habit' ? row(b.habit, i, activeBlocks) : sectionBlock(b, i, activeBlocks))).join('')}</div>
     ${archived.length ? `
@@ -7246,6 +7244,20 @@ function renderPushRow(prominent = false) {
   `;
 }
 
+// Symbole an Menüpunkten, Seitenköpfen und Abschnitts-Überschriften - alle an EINER Stelle,
+// damit der geplante Wechsel von Emojis zu eigenen, gezeichneten Symbolen (Gestaltungs-
+// Durchgang) nur hier passiert. Dekorativ (aria-hidden), der Text daneben sagt dasselbe.
+const ICONS = {
+  manage: '✏️', settings: '⚙️', about: '📖', feedback: '💬',
+  newField: '✏️', newGroup: '📁',
+  reminders: '🔔', display: '🎨', account: '👤',
+  a11y: '♿', mentalHealth: '💚', privacy: '🔒',
+  usage: '👆', fields: '✏️', appearance: '🎨',
+};
+function icon(name) {
+  return `<span class="item-icon" aria-hidden="true">${ICONS[name]}</span>`;
+}
+
 // Das ☰-Menü enthält seit 2026-10-01 nur noch die Ziele; alle Einstellungen und
 // Konto-Aktionen stehen auf der eigenen Seite "Einstellungen" (renderSettings). Vorher
 // steckte alles in diesem schmalen Fenster, das dafür in sich scrollen musste (klappte
@@ -7253,8 +7265,8 @@ function renderPushRow(prominent = false) {
 function renderMenu() {
   return `
     <div class="menu-panel">
-      ${[['open-manage', '✏️', 'menu.manageFields'], ['open-settings', '⚙️', 'menu.settings'], ['open-about', '📖', 'menu.about'], ['open-feedback', '💬', 'menu.feedback']]
-        .map(([action, icon, key]) => `<button type="button" class="menu-item-btn" data-action="${action}"><span class="item-icon" aria-hidden="true">${icon}</span>${t(key)}</button>`).join('')}
+      ${[['open-manage', 'manage', 'menu.manageFields'], ['open-settings', 'settings', 'menu.settings'], ['open-about', 'about', 'menu.about'], ['open-feedback', 'feedback', 'menu.feedback']]
+        .map(([action, iconName, key]) => `<button type="button" class="menu-item-btn" data-action="${action}">${icon(iconName)}${t(key)}</button>`).join('')}
     </div>
   `;
 }
@@ -7264,7 +7276,7 @@ function renderMenu() {
 // target: Sprungziel für die Links aus "Über Logbuch" (focusSettingsTarget).
 function renderSettings() {
   return `
-    ${settingsSectionStart('reminders', '🔔', 'settings.reminders')}
+    ${settingsSectionStart('reminders', 'settings.reminders')}
       <div data-menu-target="push">${renderPushRow()}</div>
       <div class="settings-row">
         <span class="settings-label" id="menu-default-time-label">${t('menu.defaultReminderTime')}</span>
@@ -7280,7 +7292,7 @@ function renderSettings() {
       </div>
     </details>
     <div class="manage-section-divider"></div>
-    ${settingsSectionStart('display', '🎨', 'settings.display')}
+    ${settingsSectionStart('display', 'settings.display')}
       <div class="settings-row" data-menu-target="text-size">
         <span class="settings-label" id="menu-text-size-label">${t('textSize.label')}</span>
         <div class="pill-group" role="group" aria-labelledby="menu-text-size-label">
@@ -7319,7 +7331,7 @@ function renderSettings() {
       ` : ''}
     </details>
     <div class="manage-section-divider"></div>
-    ${settingsSectionStart('account', '👤', 'menu.groupAccount')}
+    ${settingsSectionStart('account', 'menu.groupAccount')}
       <div class="settings-row" data-menu-target="export">
         <button type="button" class="menu-item-btn" data-action="export-data">${t('menu.exportData')}</button>
         <p class="settings-note">${t('settings.exportNote')}</p>
@@ -7337,11 +7349,11 @@ function renderSettings() {
 }
 // Wie die Abschnitte in "Über Logbuch": bei jedem Öffnen der Seite zugeklappt (siehe
 // openAboutSections), so ist auf einen Blick zu sehen, was es gibt.
-function settingsSectionStart(id, icon, titleKey) {
+function settingsSectionStart(id, titleKey) {
   const key = `settings:${id}`;
   return `
     <details class="tip-group settings-section" data-collapse-key="${key}" ${isAboutSectionCollapsed(key) ? '' : 'open'}>
-      <summary class="manage-section-title"><span class="item-icon" aria-hidden="true">${icon}</span>${t(titleKey)}</summary>`;
+      <summary class="manage-section-title">${icon(id)}${t(titleKey)}</summary>`;
 }
 
 function renderResetConfirm() {
@@ -7441,14 +7453,14 @@ function renderMenuButton() {
   `;
 }
 
-function renderSubpageHeader(titleKey) {
+function renderSubpageHeader(titleKey, iconName) {
   return `
     <div class="header subpage-header">
       <div class="subpage-header-title">
         <button type="button" class="back-btn" data-action="subpage-back" aria-label="${esc(t('ariaLabel.back'))}">
           <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <h1 tabindex="-1">${t(titleKey)}</h1>
+        <h1 tabindex="-1">${iconName ? icon(iconName) : ''}${t(titleKey)}</h1>
       </div>
       ${renderMenuButton()}
     </div>
@@ -7487,7 +7499,7 @@ function renderApp() {
           ? habitFormTitleKey(state.habitForm)
           : state.view === 'manage' && state.sectionForm
             ? (state.sectionForm.id ? 'habitForm.title.editGroup' : 'habitForm.title.newGroup')
-            : { manage: 'menu.manageFields', about: 'about.title', feedback: 'feedback.title', settings: 'menu.settings' }[state.view])
+            : { manage: 'menu.manageFields', about: 'about.title', feedback: 'feedback.title', settings: 'menu.settings' }[state.view], state.view === 'manage' ? (state.sectionForm ? 'newGroup' : 'manage') : state.view)
         : `
           <div class="header">
             <h1>Logbuch</h1>

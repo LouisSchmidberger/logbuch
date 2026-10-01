@@ -697,7 +697,7 @@ Tab-Leiste zeigt nur noch die Auswertungs-Ansichten (Heute/Woche/Monat/Jahr/Gesa
 "Einstellungen", "Über Logbuch", "Feedback geben". Alles Konfigurative steht auf der
 Unterseite **"Einstellungen"** (`renderSettings`), in drei einklappbaren Abschnitten (wie
 "Über Logbuch" bei jedem Öffnen zugeklappt, `settingsSectionStart`; Menüpunkte und
-Abschnitte mit Symbol wie im Onboarding, `.item-icon`): Erinnerungen
+Abschnitte mit Symbol wie im Onboarding): Erinnerungen
 (an/aus, Standard-Erinnerungszeit, Wochen-/Monatsübersicht), Anzeige (Textgröße,
 Hell/Dunkel, Sprache, Streifenmuster, Vibration), Konto (Export, Ersatzschlüssel, Abmelden,
 Konto löschen). Erklärungen stehen dort direkt unter der Einstellung statt hinter einem "?".
@@ -707,6 +707,12 @@ scrollen musste (klappte nicht zuverlässig) und keinen Platz für Erklärungen 
 `--popover-bg` vom Hintergrund ab (`--surface` ist im Hellmodus identisch mit `--paper`,
 reicht für ein freischwebendes Popover nicht). Scrollen neben dem offenen Menü schließt es
 (`scroll`-Listener am `window`, direkt nach `syncLayerHistory()`).
+
+**Symbole** (seit 2026-10-01): Menüpunkte, Seitenköpfe der Unterseiten, "+ Neues Feld"/"Neue
+Gruppe", Abschnitte in Einstellungen und "Über Logbuch" tragen ein Symbol – alle zentral in
+`ICONS` + `icon(name)` (dekorativ, `aria-hidden`). Vorerst Emojis; Nutzer tendiert zu eigenen,
+gezeichneten Symbolen (Gestaltungs-Durchgang) – dann nur `ICONS` austauschen. Bewusst ohne
+Symbol: Tabs, einzelne Felder, Wert-Knöpfe (wirkte überladen).
 
 **Unterseiten statt Tab-Swap** (seit 2026-09-18): "Felder verwalten", "Über Logbuch",
 "Feedback geben" (seit 2026-09-25) und "Einstellungen" (seit 2026-10-01) sind `state.view`-Werte wie die Tabs, aber keine Tabs — sie werden über
@@ -1032,7 +1038,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 653 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 652 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
