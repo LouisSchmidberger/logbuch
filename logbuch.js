@@ -4645,9 +4645,24 @@ function setOnbInProgress(on) {
   onbInProgressThisVisit = on;
   try { if (on) localStorage.setItem('onboardingInProgress', 'true'); else localStorage.removeItem('onboardingInProgress'); } catch { /* s.o. */ }
 }
-// Die Etappen des Einrichtens; "aufs Handy holen" nur auf Mobilgeräten.
+// Die Etappen des Einrichtens. "Aufs Handy holen" zählt nur mit, wenn der Schritt auf
+// diesem Gerät auch kommt (bzw. schon geschafft ist): Handy, und entweder schon installiert
+// oder die Installations-Seite wurde hier nicht früher schon weggeklickt. Festgelegt bei der
+// Einstiegsfrage (onbIncludesInstall) - wer die Seite mitten im Einrichten überspringt,
+// behält dieselbe Zählung, sonst spränge "Schritt 2 von 4" auf "Schritt 1 von 3".
+function onbIncludesInstall() {
+  try {
+    const v = localStorage.getItem('onboardingWithInstall');
+    if (v !== null) return v === 'true';
+  } catch { /* s.u. */ }
+  return isMobileDevice() && (isStandaloneDisplay() || shouldShowInstallGate());
+}
+function rememberOnbIncludesInstall() {
+  const v = isMobileDevice() && (isStandaloneDisplay() || shouldShowInstallGate());
+  try { localStorage.setItem('onboardingWithInstall', String(v)); } catch { /* dann jedes Mal neu bestimmt */ }
+}
 function onbStages() {
-  return [...(isMobileDevice() ? ['install'] : []), 'account', 'setup', 'key'];
+  return [...(onbIncludesInstall() ? ['install'] : []), 'account', 'setup', 'key'];
 }
 // Fortschrittsleiste "Schritt X von N: …" (optional mit Unterschritt, z.B. im Tutorial).
 function onbProgress(stage, part = null) {
@@ -7200,6 +7215,7 @@ app.addEventListener('click', async (e) => {
   if (action === 'onb-mode') {
     setOnbMode(el.dataset.mode);
     setOnbInProgress(true);
+    rememberOnbIncludesInstall();
     state.authMode = el.dataset.mode === 'guided' && state.authMode === 'mode' ? 'overview' : 'signup';
     render();
     document.querySelector('.auth-box h1, .auth-box .sub')?.focus({ preventScroll: true });
