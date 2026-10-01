@@ -996,7 +996,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 503 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 506 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -1054,10 +1054,11 @@ Alle Zeiten/Daten gelten in der **Ortszeit des jeweiligen Nutzers**
 - **Eigene Zeit je Feld**: jedes Feld kann über `reminder_minute` unabhängig von der
   Standardzeit eine eigene Erinnerungszeit bekommen – z.B. Gewicht typischerweise
   morgens statt zur (abendlichen) Standardzeit. In der App per Checkbox "Eigene
-  Erinnerungszeit" im Feld-Formular (`<select>` mit allen 96 15-Minuten-Werten,
-  `reminderTimeInputHtml` in `logbuch.js` – bewusst kein natives `<input
-  type="time">`, dessen `step`-Attribut viele Browser/Betriebssysteme ignorieren,
-  wodurch sich trotzdem jede beliebige Minute auswählen ließe), standardmäßig aus.
+  Erinnerungszeit" im Feld-Formular, standardmäßig aus. Uhrzeiten überall (Feld, Gruppe,
+  Standardzeit, Tutorial) als zwei Auswahllisten Stunde : Minute (00/15/30/45,
+  `reminderTimeInputHtml`/`readTimeInput` in `logbuch.js`, seit 2026-10-01 statt einer Liste
+  mit allen 96 Viertelstunden) – bewusst kein natives `<input type="time">`, dessen
+  `step`-Attribut viele Browser/Betriebssysteme ignorieren.
 - **Eigene Zeit je Gruppe** (seit 2026-09-28, `habit_sections.reminder_minute`, Klartext wie
   bei Feldern, DB-Check auf 15-Minuten-Raster): Felder einer solchen Gruppe fallen aus der
   Sammel-Erinnerung zur Standardzeit heraus und werden stattdessen gemeinsam zur Zeit der

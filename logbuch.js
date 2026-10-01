@@ -540,17 +540,35 @@ function minutesToTimeStr(min) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 const REMINDER_TIME_STEP = 15; // Minuten — muss zum Cron-Intervall in send-notifications passen
-// Bewusst ein <select> mit ausschließlich gültigen 15-Minuten-Werten statt eines
-// nativen <input type="time" step="900">: das step-Attribut wird von vielen Browsern/
-// Betriebssystemen (v.a. mobil) schlicht ignoriert, sodass sich trotzdem jede beliebige
-// Minute auswählen ließ, obwohl das System ohnehin nur im 15-Minuten-Raster zustellen
-// kann (unnötige Verwirrung: man konnte etwas einstellen, das stillschweigend gerundet
-// wurde). Ein <select> kann von vornherein gar nichts anderes anbieten.
-function reminderTimeInputHtml(id, minutes, dataAction, disabled, describedBy) {
-  const options = Array.from({ length: (24 * 60) / REMINDER_TIME_STEP }, (_, i) => i * REMINDER_TIME_STEP)
-    .map((m) => `<option value="${m}" ${m === minutes ? 'selected' : ''}>${minutesToTimeStr(m)}</option>`)
-    .join('');
-  return `<select id="${id}" ${dataAction ? `data-action="${dataAction}"` : ''} ${disabled ? 'disabled' : ''} ${describedBy ? `aria-describedby="${describedBy}"` : ''}>${options}</select>`;
+// Uhrzeit als zwei Auswahllisten Stunde : Minute (seit 2026-10-01; vorher eine Liste mit
+// allen 96 Viertelstunden, auf Android ein endloses Scrollen). Bewusst <select> statt
+// <input type="time" step="900">: das step-Attribut ignorieren viele Browser (v.a. mobil),
+// man hätte trotzdem jede Minute wählen können, obwohl nur im 15-Minuten-Raster zugestellt
+// wird. Die Minuten-Liste bietet deshalb von vornherein nur 00/15/30/45. Wert lesen über
+// readTimeInput(id); beide Listen tragen dieselbe data-action.
+function reminderTimeInputHtml(id, minutes, dataAction, disabled, describedBy, labelledBy) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const attrs = `${dataAction ? `data-action="${dataAction}"` : ''} ${disabled ? 'disabled' : ''} ${describedBy ? `aria-describedby="${describedBy}"` : ''}`;
+  const hours = Array.from({ length: 24 }, (_, i) => `<option value="${i}" ${i === h ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('');
+  const mins = Array.from({ length: 60 / REMINDER_TIME_STEP }, (_, i) => i * REMINDER_TIME_STEP)
+    .map((v) => `<option value="${v}" ${v === m ? 'selected' : ''}>${String(v).padStart(2, '0')}</option>`).join('');
+  return `
+    <span class="time-input" id="${id}" data-time-input role="group" ${labelledBy ? `aria-labelledby="${labelledBy}"` : `aria-label="${esc(t('time.label'))}"`}>
+      <select id="${id}-h" ${attrs} aria-label="${esc(t('time.hour'))}">${hours}</select>
+      <span class="time-input-sep" aria-hidden="true">:</span>
+      <select id="${id}-m" ${attrs} aria-label="${esc(t('time.minute'))}">${mins}</select>
+    </span>
+  `;
+}
+// Minuten seit Mitternacht aus reminderTimeInputHtml (id des Ganzen oder ein Element
+// darin), null wenn es nicht im DOM steht.
+function readTimeInput(idOrEl) {
+  const wrap = typeof idOrEl === 'string' ? document.getElementById(idOrEl) : idOrEl?.closest('[data-time-input]');
+  if (!wrap) return null;
+  const h = Number(wrap.querySelector('[id$="-h"]').value);
+  const m = Number(wrap.querySelector('[id$="-m"]').value);
+  return h * 60 + m;
 }
 
 // 0 = schlechtester, 1 = bester Wert
@@ -1322,6 +1340,9 @@ const STRINGS = {
     'common.finish': 'Fertig',
     'menu.defaultReminderTime': 'Standard-Erinnerungszeit',
     'menu.timezoneNote': 'Zeitzone: {tz} (folgt deinem Gerät)',
+    'time.label': 'Uhrzeit',
+    'time.hour': 'Stunde',
+    'time.minute': 'Minute',
     'menu.summaryNotifications': 'Wochen- und Monatsübersicht ankündigen',
     'menu.summaryNotificationsExplain': 'Sonntags bzw. am letzten Tag des Monats kommt zur Standard-Erinnerungszeit eine Benachrichtigung, dass deine Wochen- bzw. Monatsübersicht bereit ist – aber nur, wenn du im jeweiligen Zeitraum mindestens einen Tag eingetragen hast. Ein Tipp darauf öffnet direkt die passende Übersicht.',
     'tutorial.stepLabel': 'Schritt {step} von {total}',
@@ -1827,6 +1848,9 @@ const STRINGS = {
     'common.finish': 'Done',
     'menu.defaultReminderTime': 'Default reminder time',
     'menu.timezoneNote': 'Time zone: {tz} (follows your device)',
+    'time.label': 'Time',
+    'time.hour': 'Hour',
+    'time.minute': 'Minute',
     'menu.summaryNotifications': 'Announce weekly and monthly summary',
     'menu.summaryNotificationsExplain': 'On Sundays and on the last day of the month, you get a notification at your default reminder time that your weekly or monthly summary is ready – but only if you have entered at least one day in that period. Tapping it opens the matching summary directly.',
     'tutorial.stepLabel': 'Step {step} of {total}',
@@ -3223,8 +3247,8 @@ function syncHabitFormFromDom() {
     if (goalEl) f.goalPercent = Number(goalEl.value);
     const reminderEnabledEl = document.getElementById('habit-form-reminder-enabled');
     if (reminderEnabledEl) f.reminderEnabled = reminderEnabledEl.checked;
-    const reminderTimeEl = document.getElementById('habit-form-reminder-time');
-    if (reminderTimeEl) f.reminderMinute = Number(reminderTimeEl.value);
+    const reminderTime = readTimeInput('habit-form-reminder-time');
+    if (reminderTime !== null) f.reminderMinute = reminderTime;
   } else if (f.kind === 'computed') {
     const aggregateEl = document.getElementById('habit-form-computed-aggregate');
     if (aggregateEl) f.aggregate = aggregateEl.value;
@@ -3240,8 +3264,8 @@ function syncHabitFormFromDom() {
     if (unitEl) f.unit = unitEl.value;
     const reminderEnabledEl = document.getElementById('habit-form-reminder-enabled');
     if (reminderEnabledEl) f.reminderEnabled = reminderEnabledEl.checked;
-    const reminderTimeEl = document.getElementById('habit-form-reminder-time');
-    if (reminderTimeEl) f.reminderMinute = Number(reminderTimeEl.value);
+    const reminderTime = readTimeInput('habit-form-reminder-time');
+    if (reminderTime !== null) f.reminderMinute = reminderTime;
   }
   if (f.kind !== 'computed') readScheduleFromDom(f);
   const showInStatsEl = document.getElementById('habit-form-show-in-stats');
@@ -3294,9 +3318,9 @@ async function handleHabitSaveInner() {
 
   const isInsert = !f.defId;
   const reminderEnabled = document.getElementById('habit-form-reminder-enabled')?.checked ?? f.reminderEnabled;
-  const reminderTimeEl = document.getElementById('habit-form-reminder-time');
+  const reminderTime = readTimeInput('habit-form-reminder-time');
   const reminderMinute = reminderEnabled
-    ? (reminderTimeEl ? Number(reminderTimeEl.value) : f.reminderMinute)
+    ? (reminderTime !== null ? reminderTime : f.reminderMinute)
     : null;
 
   const goalEl = document.getElementById('habit-form-goal');
@@ -3540,8 +3564,8 @@ function readSectionFormFromDom() {
   if (boxes.length) sf.members = boxes.filter((b) => b.checked && !b.disabled).map((b) => b.dataset.sectionMember);
   const reminderEnabledEl = document.getElementById('section-form-reminder-enabled');
   if (reminderEnabledEl) sf.reminderEnabled = reminderEnabledEl.checked;
-  const reminderTimeEl = document.getElementById('section-form-reminder-time');
-  if (reminderTimeEl) sf.reminderMinute = Number(reminderTimeEl.value);
+  const reminderTime = readTimeInput('section-form-reminder-time');
+  if (reminderTime !== null) sf.reminderMinute = reminderTime;
 }
 async function saveSectionForm() {
   const sf = state.sectionForm;
@@ -6308,8 +6332,8 @@ function renderTutorialReminders() {
     body = `
       <p class="tutorial-text"><strong>${t('tutorial.reminders.activeTitle')}</strong></p>
       <div class="auth-field">
-        <label for="tutorial-default-time">${t('tutorial.reminders.timeLabel')}</label>
-        ${reminderTimeInputHtml('tutorial-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', false, 'tutorial-time-note')}
+        <span class="settings-label" id="tutorial-default-time-label">${t('tutorial.reminders.timeLabel')}</span>
+        ${reminderTimeInputHtml('tutorial-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', false, 'tutorial-time-note', 'tutorial-default-time-label')}
         <p class="habit-form-lock-note" id="tutorial-time-note">${t('tutorial.reminders.timeNote')}</p>
       </div>
       <button type="button" class="auth-submit" data-action="tutorial-next">${t('common.next')}</button>
@@ -6447,8 +6471,8 @@ function renderSettings() {
     ${settingsSectionStart('reminders', '🔔', 'settings.reminders')}
       <div data-menu-target="push">${renderPushRow()}</div>
       <div class="settings-row">
-        <label for="menu-default-time">${t('menu.defaultReminderTime')}</label>
-        ${reminderTimeInputHtml('menu-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', false, 'menu-timezone-note')}
+        <span class="settings-label" id="menu-default-time-label">${t('menu.defaultReminderTime')}</span>
+        ${reminderTimeInputHtml('menu-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', false, 'menu-timezone-note', 'menu-default-time-label')}
         <p class="settings-note" id="menu-timezone-note">${t('settings.defaultReminderNote')} ${t('menu.timezoneNote', { tz: state.userSettings.timezone.replace(/_/g, ' ') })}</p>
       </div>
       <div class="settings-row">
@@ -7325,7 +7349,7 @@ app.addEventListener('change', async (e) => {
   }
   const defaultTimeEl = e.target.closest('[data-action="menu-default-time"]');
   if (defaultTimeEl) {
-    saveDefaultReminderMinute(Number(defaultTimeEl.value));
+    saveDefaultReminderMinute(readTimeInput(defaultTimeEl));
     return;
   }
   const localeEl = e.target.closest('[data-action="menu-locale"]');
