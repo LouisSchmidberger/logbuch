@@ -752,7 +752,9 @@ const state = {
   weekAnchor: startOfWeek(new Date()),
   monthAnchor: (() => { const d = startOfDay(new Date()); d.setDate(1); return d; })(),
   yearAnchor: new Date().getFullYear(),
-  authMode: signedInHereBefore() ? 'signin' : 'welcome', // 'welcome' | 'signin' | 'signup' | 'forgot'
+  // 'welcome' | 'mode' (Einstiegsfrage) | 'overview' ("So läuft's ab") | 'installed' (frisch
+  // installierte App) | 'signup' | 'checkMail' | 'signin' | 'forgot'
+  authMode: signedInHereBefore() ? 'signin' : isStandaloneDisplay() ? 'installed' : 'welcome',
   authError: null,
   authEmail: '', // bleibt über einen Re-Render (z.B. nach Fehler) hinweg erhalten,
   authPassword: '', // damit ein Tippfehler nicht das ganze Formular leert (siehe input-Listener).
@@ -1116,6 +1118,28 @@ const STRINGS = {
     'auth.welcome.new': 'Ich bin neu hier',
     'auth.welcome.newNote': 'Konto erstellen und Logbuch einrichten – dauert etwa 5 bis 10 Minuten.',
     'auth.welcome.existing': 'Ich habe schon ein Konto',
+    'onb.mode.title': 'Wie möchtest du starten?',
+    'onb.mode.guided': 'Schritt für Schritt',
+    'onb.mode.guidedNote': 'Mit genauen Erklärungen und Bildern.',
+    'onb.mode.short': 'Kurz und knapp',
+    'onb.mode.shortNote': 'Wenn du dich mit Apps gut auskennst. Erklärungen kannst du trotzdem jederzeit aufklappen.',
+    'onb.overview.title': 'So läuft’s ab',
+    'onb.overview.install': 'Logbuch aufs Handy holen',
+    'onb.overview.account': 'Konto erstellen und E-Mail bestätigen',
+    'onb.overview.setup': 'Logbuch einrichten: Erinnerungen und dein erstes Feld',
+    'onb.overview.key': 'Ersatzschlüssel sichern',
+    'onb.overview.duration': 'Dauert etwa 5 bis 10 Minuten.',
+    'onb.overview.helper': 'Wenn du magst, hol dir jemanden dazu, der sich mit Handys auskennt – zu zweit geht’s oft leichter.',
+    'onb.overview.start': 'Los geht’s',
+    'onb.installed.title': 'Geschafft!',
+    'onb.installed.body': 'Logbuch ist jetzt auf deinem Handy. Weiter geht’s mit deinem Konto.',
+    'onb.installed.continue': 'Konto erstellen',
+    'onb.progress.label': 'Schritt {n} von {total}: {name}',
+    'onb.progress.part': 'Teil {part} von {parts}',
+    'onb.stage.install': 'Logbuch aufs Handy holen',
+    'onb.stage.account': 'Konto erstellen',
+    'onb.stage.setup': 'Logbuch einrichten',
+    'onb.stage.key': 'Ersatzschlüssel sichern',
     'auth.backToLogin': 'Zurück zur Anmeldung',
     'auth.forgotPassword': 'Passwort vergessen?',
     'auth.resetLinkSent': 'Falls diese E-Mail bei uns registriert ist, haben wir einen Link zum Zurücksetzen geschickt.',
@@ -1366,7 +1390,6 @@ const STRINGS = {
     'time.minute': 'Minute',
     'menu.summaryNotifications': 'Wochen- und Monatsübersicht ankündigen',
     'menu.summaryNotificationsExplain': 'Sonntags bzw. am letzten Tag des Monats kommt zur Standard-Erinnerungszeit eine Benachrichtigung, dass deine Wochen- bzw. Monatsübersicht bereit ist – aber nur, wenn du im jeweiligen Zeitraum mindestens einen Tag eingetragen hast. Ein Tipp darauf öffnet direkt die passende Übersicht.',
-    'tutorial.stepLabel': 'Schritt {step} von {total}',
     'tutorial.skip': 'Tutorial überspringen',
     'tutorial.navLabel': 'Tutorial-Navigation',
     'tutorial.skipConfirm.title': 'Tutorial überspringen?',
@@ -1655,6 +1678,28 @@ const STRINGS = {
     'auth.welcome.new': 'I’m new here',
     'auth.welcome.newNote': 'Create an account and set up Logbuch – takes about 5 to 10 minutes.',
     'auth.welcome.existing': 'I already have an account',
+    'onb.mode.title': 'How would you like to start?',
+    'onb.mode.guided': 'Step by step',
+    'onb.mode.guidedNote': 'With detailed explanations and pictures.',
+    'onb.mode.short': 'Short and sweet',
+    'onb.mode.shortNote': 'If you know your way around apps. You can still open the explanations anytime.',
+    'onb.overview.title': 'Here’s how it goes',
+    'onb.overview.install': 'Get Logbuch onto your phone',
+    'onb.overview.account': 'Create an account and confirm your email',
+    'onb.overview.setup': 'Set up Logbuch: reminders and your first field',
+    'onb.overview.key': 'Save your spare key',
+    'onb.overview.duration': 'Takes about 5 to 10 minutes.',
+    'onb.overview.helper': 'If you like, ask someone who knows their way around phones to join you – it’s often easier together.',
+    'onb.overview.start': 'Let’s go',
+    'onb.installed.title': 'Done!',
+    'onb.installed.body': 'Logbuch is now on your phone. Next up: your account.',
+    'onb.installed.continue': 'Create account',
+    'onb.progress.label': 'Step {n} of {total}: {name}',
+    'onb.progress.part': 'part {part} of {parts}',
+    'onb.stage.install': 'Get Logbuch onto your phone',
+    'onb.stage.account': 'Create account',
+    'onb.stage.setup': 'Set up Logbuch',
+    'onb.stage.key': 'Save your spare key',
     'auth.backToLogin': 'Back to sign in',
     'auth.forgotPassword': 'Forgot password?',
     'auth.resetLinkSent': 'If this email is registered with us, we have sent a link to reset your password.',
@@ -1905,7 +1950,6 @@ const STRINGS = {
     'time.minute': 'Minute',
     'menu.summaryNotifications': 'Announce weekly and monthly summary',
     'menu.summaryNotificationsExplain': 'On Sundays and on the last day of the month, you get a notification at your default reminder time that your weekly or monthly summary is ready – but only if you have entered at least one day in that period. Tapping it opens the matching summary directly.',
-    'tutorial.stepLabel': 'Step {step} of {total}',
     'tutorial.skip': 'Skip tutorial',
     'tutorial.navLabel': 'Tutorial navigation',
     'tutorial.skipConfirm.title': 'Skip tutorial?',
@@ -3127,6 +3171,7 @@ async function confirmSpareKey() {
     return;
   }
   spareKeyPending = false;
+  setOnbInProgress(false); // Einrichten abgeschlossen
 }
 
 // --- Felder-Verwaltung -----------------------------------------------------
@@ -4574,6 +4619,51 @@ async function resendConfirmEmail() {
 // zum Registrieren war nur ein kleiner Link. Die Knöpfe beschreiben deshalb die Lage der
 // Person statt des Fachbegriffs. Wer sich auf dem Gerät schon einmal angemeldet hat,
 // startet direkt beim Anmelden (signedInHereBefore).
+// --- Onboarding-Gerüst (seit 2026-10-01) ------------------------------------------
+// Einstiegsfrage "Wie möchtest du starten?": Schritt für Schritt (mehr Erklärung offen)
+// oder Kurz und knapp. EIN Ablauf für beide - Faustregel: klarer formulieren gilt für
+// alle, mehr erklären bekommt nur, wer Schritt für Schritt gewählt hat (aufklappbare
+// Erklärungen sind dann von Anfang an offen, siehe whyBox). Gemerkt nur auf dem Gerät.
+// iPhone: Safari und die installierte App teilen keinen Speicher - die frisch installierte
+// App fragt deshalb noch einmal (authMode 'installed').
+function getOnbMode() {
+  try { return localStorage.getItem('onboardingMode'); } catch { return null; } // 'guided' | 'short' | null
+}
+function setOnbMode(mode) {
+  try { localStorage.setItem('onboardingMode', mode); } catch { /* dann eben nur bis zum Neuladen */ }
+  onbModeThisVisit = mode;
+}
+let onbModeThisVisit = null;
+function isGuided() { return (getOnbMode() || onbModeThisVisit) === 'guided'; }
+// Läuft gerade das Einrichten eines neuen Kontos (von "Ich bin neu hier" bis zum gesicherten
+// Ersatzschlüssel)? Steuert die Fortschrittsleiste auf den Seiten davor und danach.
+function isOnbInProgress() {
+  try { return localStorage.getItem('onboardingInProgress') === 'true'; } catch { return onbInProgressThisVisit; }
+}
+let onbInProgressThisVisit = false;
+function setOnbInProgress(on) {
+  onbInProgressThisVisit = on;
+  try { if (on) localStorage.setItem('onboardingInProgress', 'true'); else localStorage.removeItem('onboardingInProgress'); } catch { /* s.o. */ }
+}
+// Die Etappen des Einrichtens; "aufs Handy holen" nur auf Mobilgeräten.
+function onbStages() {
+  return [...(isMobileDevice() ? ['install'] : []), 'account', 'setup', 'key'];
+}
+// Fortschrittsleiste "Schritt X von N: …" (optional mit Unterschritt, z.B. im Tutorial).
+function onbProgress(stage, part = null) {
+  const stages = onbStages();
+  const idx = stages.indexOf(stage);
+  if (idx < 0) return '';
+  const label = t('onb.progress.label', { n: idx + 1, total: stages.length, name: t(`onb.stage.${stage}`) })
+    + (part ? ` · ${t('onb.progress.part', { part: part[0], parts: part[1] })}` : '');
+  return `
+    <div class="onb-progress">
+      <div class="onb-progress-bar" aria-hidden="true">${stages.map((st, i) => `<span class="onb-progress-seg${i < idx ? ' onb-progress-seg--done' : i === idx ? ' onb-progress-seg--current' : ''}"></span>`).join('')}</div>
+      <p class="onb-progress-label">${label}</p>
+    </div>
+  `;
+}
+
 function signedInHereBefore() {
   try { return localStorage.getItem('signedInHere') === 'true'; } catch { return false; }
 }
@@ -4585,7 +4675,7 @@ function renderAuthWelcome() {
     <div class="auth-box">
       <h1 tabindex="-1">Logbuch</h1>
       <p class="auth-welcome-lead">${t('auth.welcome.lead')}</p>
-      <button type="button" class="auth-submit auth-choice" data-action="auth-choose" data-mode="signup" aria-describedby="auth-new-note">${t('auth.welcome.new')}</button>
+      <button type="button" class="auth-submit auth-choice" data-action="auth-choose" data-mode="mode" aria-describedby="auth-new-note">${t('auth.welcome.new')}</button>
       <p class="auth-choice-note" id="auth-new-note">${t('auth.welcome.newNote')}</p>
       <button type="button" class="manage-new-btn manage-new-btn--secondary auth-choice" data-action="auth-choose" data-mode="signin">${t('auth.welcome.existing')}</button>
     </div>
@@ -4598,9 +4688,8 @@ function renderCheckMail() {
   const steps = ['auth.checkMail.step1', 'auth.checkMail.step2', 'auth.checkMail.step3', 'auth.checkMail.step4'];
   app.innerHTML = `
     <div class="auth-box onb">
-      <button type="button" class="back-btn auth-back" data-action="auth-choose" data-mode="signup" aria-label="${esc(t('ariaLabel.back'))}">
-        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
+      ${authBackButton('signup')}
+      ${onbProgress('account')}
       <div class="onb-icon" aria-hidden="true">✉️</div>
       <h1 tabindex="-1">${t('auth.checkMail.title')}</h1>
       <p class="tutorial-text">${t('auth.checkMail.body')}</p>
@@ -4611,8 +4700,69 @@ function renderCheckMail() {
   `;
 }
 
+function authBackButton(target) {
+  return `
+    <button type="button" class="back-btn auth-back" data-action="auth-choose" data-mode="${target}" aria-label="${esc(t('ariaLabel.back'))}">
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  `;
+}
+// Die zwei Antworten der Einstiegsfrage - fragt nach dem Wunsch, nicht nach dem Können
+// ("kennst du dich aus?" schätzen viele falsch ein und kann herablassend wirken).
+function onbModeChoices() {
+  return `
+    <button type="button" class="auth-submit auth-choice" data-action="onb-mode" data-mode="guided" aria-describedby="onb-guided-note">${t('onb.mode.guided')}</button>
+    <p class="auth-choice-note" id="onb-guided-note">${t('onb.mode.guidedNote')}</p>
+    <button type="button" class="manage-new-btn manage-new-btn--secondary auth-choice" data-action="onb-mode" data-mode="short" aria-describedby="onb-short-note">${t('onb.mode.short')}</button>
+    <p class="auth-choice-note" id="onb-short-note">${t('onb.mode.shortNote')}</p>
+  `;
+}
+function renderOnbMode() {
+  app.innerHTML = `
+    <div class="auth-box onb">
+      ${authBackButton('welcome')}
+      <h1 tabindex="-1">${t('onb.mode.title')}</h1>
+      ${onbModeChoices()}
+    </div>
+  `;
+}
+function renderOnbOverview() {
+  const icons = { install: '📱', account: '✉️', setup: '✏️', key: '🔑' };
+  app.innerHTML = `
+    <div class="auth-box onb">
+      ${authBackButton('mode')}
+      <h1 tabindex="-1">${t('onb.overview.title')}</h1>
+      <ol class="onb-overview">${onbStages().map((st) => `<li><span class="item-icon" aria-hidden="true">${icons[st]}</span>${t(`onb.overview.${st}`)}</li>`).join('')}</ol>
+      <p class="onb-hint">${t('onb.overview.duration')}</p>
+      <div class="why-box"><p>💡 ${t('onb.overview.helper')}</p></div>
+      <button type="button" class="auth-submit" data-action="auth-choose" data-mode="signup">${t('onb.overview.start')}</button>
+    </div>
+  `;
+}
+// Frisch installierte App ohne Anmeldung (Startzustand 'installed'): erst einmal
+// bestätigen, dass es geklappt hat. Ist die Einstiegsfrage auf diesem Speicher schon
+// beantwortet (Android teilt ihn mit dem Browser), geht es direkt weiter, sonst kommt sie
+// hier noch einmal (iPhone).
+function renderOnbInstalled() {
+  app.innerHTML = `
+    <div class="auth-box onb">
+      ${onbProgress('account')}
+      <div class="onb-icon" aria-hidden="true">🎉</div>
+      <h1 tabindex="-1">${t('onb.installed.title')}</h1>
+      <p class="tutorial-text">${t('onb.installed.body')}</p>
+      ${getOnbMode()
+        ? `<button type="button" class="auth-submit auth-choice" data-action="auth-choose" data-mode="signup">${t('onb.installed.continue')}</button>`
+        : `<p class="tutorial-text">${t('onb.mode.title')}</p>${onbModeChoices()}`}
+      <button type="button" class="auth-toggle" data-action="auth-choose" data-mode="signin">${t('auth.welcome.existing')}</button>
+    </div>
+  `;
+}
+
 function renderAuth() {
   if (state.authMode === 'welcome') { renderAuthWelcome(); return; }
+  if (state.authMode === 'mode') { renderOnbMode(); return; }
+  if (state.authMode === 'overview') { renderOnbOverview(); return; }
+  if (state.authMode === 'installed') { renderOnbInstalled(); return; }
   if (state.authMode === 'checkMail') { renderCheckMail(); return; }
   const isSignup = state.authMode === 'signup';
   const isForgot = state.authMode === 'forgot';
@@ -4620,11 +4770,8 @@ function renderAuth() {
 
   app.innerHTML = `
     <div class="auth-box">
-      ${!isForgot ? `
-        <button type="button" class="back-btn auth-back" data-action="auth-choose" data-mode="welcome" aria-label="${esc(t('ariaLabel.back'))}">
-          <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-      ` : ''}
+      ${!isForgot ? authBackButton(isSignup ? (isStandaloneDisplay() ? 'installed' : 'mode') : (isStandaloneDisplay() && !signedInHereBefore() ? 'installed' : 'welcome')) : ''}
+      ${!isForgot && isOnbInProgress() ? onbProgress('account') : ''}
       <h1>Logbuch</h1>
       <p class="sub" tabindex="-1">${title}</p>
       ${state.authError ? `<div class="notice" role="alert">${esc(state.authError)}</div>` : ''}
@@ -4650,7 +4797,7 @@ function renderAuth() {
             })}
             ${isSignup ? `
               <p class="onb-hint auth-password-hint">${t('auth.passwordHint', { min: AUTH_MIN_PASSWORD_LENGTH })}</p>
-              <details class="why-details"><summary>${t('auth.passwordWhyTitle')}</summary><p>${t('auth.passwordWhy')}</p></details>
+              <details class="why-details" ${isGuided() ? 'open' : ''}><summary>${t('auth.passwordWhyTitle')}</summary><p>${t('auth.passwordWhy')}</p></details>
             ` : ''}
           </div>
         ` : ''}
@@ -4883,6 +5030,7 @@ function renderRecoveryKeyDisplay() {
   const formatted = formatRecoveryKey(hex);
   app.innerHTML = `
     <div class="auth-box onb">
+      ${isOnbInProgress() ? onbProgress('key') : ''}
       <div class="onb-icon" aria-hidden="true">🔑</div>
       <h1 tabindex="-1">${t('recoveryDisplay.title')}</h1>
       <p class="tutorial-text">${t('recoveryDisplay.explain')}</p>
@@ -4959,6 +5107,8 @@ function renderInstallGate() {
     `;
   app.innerHTML = `
     <div class="auth-box onb">
+      ${authBackButton(state.authMode === 'signup' ? (isGuided() ? 'overview' : 'mode') : 'welcome')}
+      ${isOnbInProgress() ? onbProgress('install') : ''}
       <div class="onb-icon" aria-hidden="true">📱</div>
       <h1 tabindex="-1">${t('installGate.title')}</h1>
       <p class="tutorial-text">${t('installGate.body')}</p>
@@ -4990,7 +5140,8 @@ function renderUnlockPrompt() {
       <h1>Logbuch</h1>
       <p class="sub">${t('unlock.title')}</p>
       <p class="onb-hint">${t('unlock.explain')}</p>
-      <details class="why-details"><summary>${t('unlock.whyTitle')}</summary><p>${t('unlock.why')}</p></details>
+      ${isOnbInProgress() ? onbProgress('account') : ''}
+      <details class="why-details" ${isGuided() ? 'open' : ''}><summary>${t('unlock.whyTitle')}</summary><p>${t('unlock.why')}</p></details>
       ${state.unlockError ? `<div class="notice" role="alert">${esc(state.unlockError)}</div>` : ''}
       <form id="unlock-form">
         <div class="auth-field">
@@ -6471,24 +6622,19 @@ function renderTutorialSkipConfirm() {
 // Bausteine der Tutorial-Bildschirme (Neufassung 2026-09-29): ein Bildschirm, ein
 // Thema - Symbol, kurze Überschrift, der eine wichtige Satz fett, Begründungen im
 // wiedererkennbaren "Warum?"-Kasten (Leitlinie des Nutzers: nie nur sagen, dass etwas so
-// ist, sondern warum; locker statt förmlich, die App als Freund). Fortschritt als Punkte
-// ohne Zahlen (der aktuelle Punkt ist länger - Form statt nur Farbe), Screenreader hören
-// "Schritt X von Y".
+// ist, sondern warum; locker statt förmlich, die App als Freund). Fortschritt über die
+// Leiste des ganzen Einrichtens (onbProgress), das Tutorial ist darin Etappe "einrichten".
 const TUTORIAL_STEPS = 4;
-function tutorialDots(step) {
-  const dots = Array.from({ length: TUTORIAL_STEPS }, (_, i) => {
-    const cls = i + 1 < step ? ' onb-dot--done' : i + 1 === step ? ' onb-dot--current' : '';
-    return `<span class="onb-dot${cls}"></span>`;
-  }).join('');
-  return `<div class="onb-dots" role="img" aria-label="${esc(t('tutorial.stepLabel', { step, total: TUTORIAL_STEPS }))}">${dots}</div>`;
-}
+// Im Tutorial: die Etappe "Logbuch einrichten" mit dem Tutorial-Schritt als Unterschritt.
+function tutorialProgress(step) { return onbProgress('setup', [step, TUTORIAL_STEPS]); }
+// "Warum?"/"Genauer erklären": aufklappbar - bei "Schritt für Schritt" von Anfang an offen.
 function whyBox(titleKey, bodyKey) {
-  return `<div class="why-box"><p class="why-box-title">${t(titleKey)}</p><p>${t(bodyKey)}</p></div>`;
+  return `<details class="why-box" ${isGuided() ? 'open' : ''}><summary class="why-box-title">${t(titleKey)}</summary><p>${t(bodyKey)}</p></details>`;
 }
 function tutorialScreen({ step, icon, title, body }) {
   return `
     <div class="auth-box onb">
-      ${tutorialDots(step)}
+      ${tutorialProgress(step)}
       <div class="onb-icon" aria-hidden="true">${icon}</div>
       <h1 tabindex="-1">${title}</h1>
       ${body}
@@ -6596,7 +6742,7 @@ function renderTutorialFieldIntro() {
 
 function renderTutorialFieldForm() {
   return `
-    ${tutorialDots(3)}
+    ${tutorialProgress(3)}
     ${renderHabitForm()}
   `;
 }
@@ -7009,7 +7155,11 @@ function render() {
   // die Tag oder Ansicht ändern (Klicks, Wischen, Deep-Links, Kalenderzellen, ...).
   if (state.noteEditor && !isNoteEditorOpen()) commitPendingNoteDraft();
   if (state.passwordRecovery) { renderPasswordRecovery(); }
-  else if (!state.session) { if (shouldShowInstallGate()) renderInstallGate(); else renderAuth(); }
+  else if (!state.session) {
+    // Die Installations-Seite kommt erst nach Startseite bzw. Einstiegsfrage - direkt vor
+    // dem Formular (so registriert man sich gleich in der installierten App).
+    if (['signup', 'signin'].includes(state.authMode) && shouldShowInstallGate()) renderInstallGate(); else renderAuth();
+  }
   else if (state.confirmLanding) { renderConfirmLanding(); }
   else if (state.recoveryKeyToShow) { renderRecoveryKeyDisplay(); }
   else if (state.encryptionSetupInProgress) { app.innerHTML = `<div class="loading">${t('common.encryptingData')}</div>`; }
@@ -7047,7 +7197,13 @@ app.addEventListener('click', async (e) => {
   // state.rowMenu.
   if (action !== 'row-menu') state.rowMenu = null;
 
-  if (action === 'check-mail-done') {
+  if (action === 'onb-mode') {
+    setOnbMode(el.dataset.mode);
+    setOnbInProgress(true);
+    state.authMode = el.dataset.mode === 'guided' && state.authMode === 'mode' ? 'overview' : 'signup';
+    render();
+    document.querySelector('.auth-box h1, .auth-box .sub')?.focus({ preventScroll: true });
+  } else if (action === 'check-mail-done') {
     // Die Hilfe beim Anmelden erscheint wieder, falls die Adresse doch noch nicht bestätigt ist.
     state.confirmEmailFor = null;
     state.confirmResend = null;
@@ -7055,13 +7211,15 @@ app.addEventListener('click', async (e) => {
     render();
     document.querySelector('.auth-box .sub')?.focus({ preventScroll: true });
   } else if (action === 'auth-choose') {
+    // Wer "Ich habe schon ein Konto" wählt, richtet kein neues Konto ein.
+    if (el.dataset.mode === 'signin' && ['welcome', 'installed'].includes(state.authMode)) setOnbInProgress(false);
     state.authMode = el.dataset.mode;
     state.authError = null;
     state.notice = null;
     render();
     // Neue Seite: Fokus auf ihren Titel (nicht ins E-Mail-Feld - das öffnete auf dem Handy
     // sofort die Tastatur).
-    document.querySelector(state.authMode === 'welcome' ? '.auth-box h1' : '.auth-box .sub')?.focus({ preventScroll: true });
+    document.querySelector(['welcome', 'mode', 'overview', 'installed'].includes(state.authMode) ? '.auth-box h1' : '.auth-box .sub')?.focus({ preventScroll: true });
   } else if (action === 'resend-confirm') {
     if (state.confirmEmailFor && state.confirmResend !== 'sending') resendConfirmEmail();
   } else if (action === 'start-forgot') {

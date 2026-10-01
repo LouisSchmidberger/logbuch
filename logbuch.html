@@ -776,13 +776,8 @@
   .auth-box h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 1.625rem; margin: 0 0 4px; text-align: center; }
   .auth-box p.sub { font-size: 0.875rem; color: var(--sand); text-align: center; margin: 0 0 24px; }
   .tutorial-text { font-size: 0.9375rem; line-height: 1.5; margin: 0 0 16px; }
-  /* Tutorial-Bausteine (siehe tutorialScreen): Punkte statt "Schritt X von Y", der
-     aktuelle Punkt länger (Form statt nur Farbe); "Warum?"-Kasten als wiedererkennbares
+  /* Tutorial-Bausteine (siehe tutorialScreen); "Warum?"-Kasten als wiedererkennbares
      Element für Begründungen. */
-  .onb-dots { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 0 0 20px; }
-  .onb-dot { width: 8px; height: 8px; border-radius: 4px; border: 1.5px solid var(--sand); box-sizing: border-box; }
-  .onb-dot--done { background: var(--sand); }
-  .onb-dot--current { width: 22px; background: var(--moss); border-color: var(--moss); }
   .onb-icon { font-size: 2.5rem; line-height: 1; text-align: center; margin: 0 0 10px; }
   .onb h1 { margin-bottom: 16px; outline: none; }
   .onb .tutorial-text strong { font-weight: 600; }
@@ -813,7 +808,18 @@
     background: rgba(var(--moss-rgb), 0.09); font-size: 0.9375rem; line-height: 1.5;
   }
   .why-box p { margin: 0; }
-  .why-box .why-box-title { font-weight: 600; margin-bottom: 2px; }
+  .why-box .why-box-title { font-weight: 600; cursor: pointer; }
+  .why-box[open] .why-box-title { margin-bottom: 4px; }
+  /* Fortschritt über das ganze Einrichten (onbProgress): Etappen als Leiste + Text. */
+  .onb-progress { margin: 0 0 1.25rem; }
+  .onb-progress-bar { display: flex; gap: 4px; }
+  .onb-progress-seg { flex: 1; height: 6px; border-radius: 3px; border: 1px solid var(--sand); box-sizing: border-box; }
+  .onb-progress-seg--done { background: var(--sand); }
+  .onb-progress-seg--current { background: var(--moss); border-color: var(--moss); }
+  .onb-progress-label { margin: 0.5rem 0 0; font-size: 0.875rem; text-align: center; color: var(--ink); }
+  .onb-overview { list-style: none; counter-reset: onb; padding: 0; margin: 0 0 1rem; display: flex; flex-direction: column; gap: 0.75rem; font-size: 1rem; line-height: 1.4; }
+  .onb-overview li { counter-increment: onb; display: flex; align-items: flex-start; }
+  .onb-overview li::before { content: counter(onb) "."; font-weight: 600; min-width: 1.5em; }
   .onb-more { margin: 0 0 16px; font-size: 0.9375rem; line-height: 1.5; }
   .onb-more summary { cursor: pointer; color: var(--moss); font-weight: 600; }
   .onb-more p { margin: 6px 0 0; }
@@ -1119,6 +1125,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=b096119bd8"></script>
+<script type="module" src="./logbuch.js?v=57fea92cb5"></script>
 </body>
 </html>

@@ -56,7 +56,8 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
   Web-Push überhaupt funktioniert (Safari liefert Push sonst gar nicht aus, seit
   iOS 16.4) — Hinweistext ist deshalb iOS-spezifisch dringlicher formuliert.
 - **Installation vor dem Anmelden** (`renderInstallGate`, seit 2026-09-29): auf dem Handy
-  im Browser kommt noch VOR Registrieren/Anmelden eine eigene Seite "Erst mal ein Zuhause
+  im Browser kommt VOR dem Registrieren/Anmelden-Formular (seit 2026-10-01 nach Startseite
+  und Einstiegsfrage, siehe Onboarding → Gerüst) eine eigene Seite "Erst mal ein Zuhause
   für Logbuch" mit Begründung ("Warum?"-Kasten, iOS: sonst keine Erinnerungen) und
   Anleitung mit gezeichneten Symbolen; auf Android/Chrome zusätzlich ein echter
   Installieren-Knopf (`beforeinstallprompt`). So registriert man sich gleich in der
@@ -1011,7 +1012,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 537 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 558 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -1177,9 +1178,8 @@ DEK-Unlock, das Tutorial braucht ja schon entschlüsselte Daten). `state.tutoria
 **Leitlinie für alle Texte hier** (Nutzer, 2026-09-29): nie nur sagen, dass etwas so ist,
 sondern warum; locker statt förmlich, die App als Freund, der helfen will; persönliche
 Ich-Form des Machers, wo es um Vertrauen geht ("Nicht mal ich kann sie lesen"). Ein
-Bildschirm = ein Thema. Gemeinsame Bausteine (`tutorialScreen`): Fortschritt als Punkte
-ohne Zahlen (`tutorialDots`, aktueller Punkt länger, Screenreader hören "Schritt X von
-Y"), Symbol, kurze Überschrift (wird bei jedem Bildschirmwechsel fokussiert,
+Bildschirm = ein Thema. Gemeinsame Bausteine (`tutorialScreen`): Fortschritt über die
+Leiste des ganzen Einrichtens (`tutorialProgress` → `onbProgress('setup', [Teil, 4])`), Symbol, kurze Überschrift (wird bei jedem Bildschirmwechsel fokussiert,
 `lastTutorialScreen`), der eine Kernsatz fett, Begründungen im wiedererkennbaren
 "Warum?"-Kasten (`whyBox`), kurze Hinweise in normaler Schriftfarbe (`.onb-hint`, nicht
 im blassen Sandton der Formular-Hinweise). Zurück/Überspringen stehen in einer eigenen
@@ -1188,7 +1188,24 @@ klar vom Inhalt abheben; Aktionen des Inhalts ("Lieber nicht", "Noch ein Feld") 
 beim Hauptknopf. Versprechen "ohne Druck" bewusst ohne "vergessen" formuliert (ein
 ausgelassener Tag kann auch Absicht sein).
 
-- **Davor** (nur Handy im Browser): Installations-Seite vor dem Anmelden, siehe Stack →
+**Gerüst des Einrichtens** (seit 2026-10-01, Plan siehe Memory "Onboarding-Umbau"):
+Startseite → "Ich bin neu hier" → **Einstiegsfrage** "Wie möchtest du starten?"
+(`renderOnbMode`: Schritt für Schritt / Kurz und knapp – fragt nach dem Wunsch, nicht nach
+dem Können) → bei Schritt für Schritt **"So läuft's ab"** (`renderOnbOverview`, Etappen,
+Dauer, Hinweis "hol dir gern jemanden dazu") → Installations-Seite (nur Handy im Browser) →
+Registrieren → "Schau in dein Postfach" → … → Tutorial → Ersatzschlüssel. **Faustregel**:
+klarer formulieren gilt für alle, mehr erklären nur bei Schritt für Schritt – EIN Ablauf,
+aufklappbare Erklärungen (`whyBox` bzw. `.why-details`) sind dann von Anfang an offen
+(`isGuided`). Wahl und "Einrichten läuft" nur auf dem Gerät (`localStorage`
+`onboardingMode`/`onboardingInProgress`, `getOnbMode`/`isOnbInProgress`); beendet mit dem
+bestätigten Ersatzschlüssel (`confirmSpareKey`) bzw. bei "Ich habe schon ein Konto".
+**Fortschrittsleiste** `onbProgress(stage)`: Etappen install (nur Mobilgeräte) / account /
+setup / key, "Schritt X von N: …". **Frisch installierte App** (`authMode: 'installed'`,
+standalone ohne frühere Anmeldung): "Geschafft!" – iPhone-Safari und installierte App teilen
+keinen Speicher, deshalb fragt sie die Einstiegsfrage dort noch einmal (Android: schon
+bekannt → direkt "Konto erstellen").
+
+- **Davor** (nur Handy im Browser): Installations-Seite vor dem Formular, siehe Stack →
   "Installation vor dem Anmelden". **Danach** (immer): der Ersatzschlüssel, siehe
   Verschlüsselung → Recovery-Key.
 - **1 Hallo** (`renderTutorialHello`): was Logbuch ist + drei Versprechen mit Symbol
