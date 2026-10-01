@@ -6834,6 +6834,7 @@ async function saveOnboardingCompleted() {
   state.userSettings = { ...state.userSettings, onboardingCompleted: true };
   state.tutorialStep = null;
   state.tutorialSkipConfirm = false;
+  state.habitForm = null; // beim Überspringen aus Schritt 3 sonst unsichtbar weiter offen
   render();
   maybeShowSpareKey(); // direkt nach dem Tutorial, auch wenn es übersprungen wurde
   const { error } = await supabase.from('user_settings')
