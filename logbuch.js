@@ -1415,7 +1415,8 @@ const STRINGS = {
     'tutorial.reminders.activeTitle': '✓ Erinnerungen sind an.',
     'tutorial.reminders.timeLabel': 'Um wie viel Uhr?',
     'tutorial.reminders.timeNote': 'Abends passt oft gut – dann ist der Tag rum. Ändern kannst du das jederzeit in den Einstellungen.',
-    'tutorial.reminders.iosNeedsInstall': 'Auf dem iPhone kommen Erinnerungen nur an, wenn Logbuch auf dem Home-Bildschirm liegt. Das kannst du jederzeit nachholen – ein Hinweis in der App zeigt dir, wie.',
+    'tutorial.reminders.iosNeedsInstall': 'Auf dem iPhone kommen Erinnerungen nur an, wenn Logbuch auf dem Home-Bildschirm liegt. Das kannst du jederzeit nachholen – auch gleich jetzt.',
+    'tutorial.reminders.howInstall': 'So holst du Logbuch auf den Home-Bildschirm',
     'tutorial.field.title': 'Was möchtest du festhalten?',
     'tutorial.field.body': 'Überleg dir eine Sache, die du ab heute beobachten willst. Tipp auf ein Beispiel, um damit zu starten – oder nimm deine eigene Idee.',
     'tutorial.field.examplesLabel': 'Beispiele',
@@ -1478,6 +1479,15 @@ const STRINGS = {
     'installSketch.ariaChromeList': 'Skizze: Menü mit „Zum Startbildschirm hinzufügen“ hervorgehoben',
     'installSketch.ariaSamsungMenu': 'Skizze: Menü ≡ unten rechts',
     'installSketch.ariaSamsungList': 'Skizze: Menü mit „Seite hinzufügen zu“ hervorgehoben',
+    'installSketch.permIosLine1': '„Logbuch“ möchte dir',
+    'installSketch.permIosLine2': 'Mitteilungen senden',
+    'installSketch.permDeny': 'Nicht erlauben',
+    'installSketch.permAllow': 'Erlauben',
+    'installSketch.permAndroidLine1': 'Logbuch erlauben,',
+    'installSketch.permAndroidLine2': 'Benachrichtigungen zu senden?',
+    'installSketch.permAllowAndroid': 'Zulassen',
+    'installSketch.permDenyAndroid': 'Nicht zulassen',
+    'installSketch.ariaPerm': 'Skizze: die Frage deines Handys, mit „Erlauben“ hervorgehoben',
     'installGate.installed': '✓ Installiert! Öffne Logbuch jetzt über das neue Symbol auf deinem Startbildschirm und registriere dich dort (oder melde dich an).',
     'installGate.skip': 'Ich bleib erst mal im Browser',
     'installGate.skipNoteIos': 'Geht auch – nur kommen dann keine Erinnerungen. Du kannst Logbuch jederzeit später noch hinzufügen.',
@@ -2007,7 +2017,8 @@ const STRINGS = {
     'tutorial.reminders.activeTitle': '✓ Reminders are on.',
     'tutorial.reminders.timeLabel': 'At what time?',
     'tutorial.reminders.timeNote': 'Evenings often work well – the day is done by then. You can change this in the settings anytime.',
-    'tutorial.reminders.iosNeedsInstall': 'On iPhone, reminders only arrive when Logbuch is on your home screen. You can do that anytime – a hint in the app shows you how.',
+    'tutorial.reminders.iosNeedsInstall': 'On iPhone, reminders only arrive when Logbuch is on your home screen. You can do that anytime – even right now.',
+    'tutorial.reminders.howInstall': 'How to put Logbuch on your home screen',
     'tutorial.field.title': 'What would you like to track?',
     'tutorial.field.body': 'Think of one thing you want to keep an eye on from today. Tap an example to start with it – or go with your own idea.',
     'tutorial.field.examplesLabel': 'Examples',
@@ -2070,6 +2081,15 @@ const STRINGS = {
     'installSketch.ariaChromeList': 'Sketch: menu with “Add to Home screen” highlighted',
     'installSketch.ariaSamsungMenu': 'Sketch: menu ≡ at the bottom right',
     'installSketch.ariaSamsungList': 'Sketch: menu with “Add page to” highlighted',
+    'installSketch.permIosLine1': '“Logbuch” would like',
+    'installSketch.permIosLine2': 'to send you notifications',
+    'installSketch.permDeny': 'Don’t Allow',
+    'installSketch.permAllow': 'Allow',
+    'installSketch.permAndroidLine1': 'Allow Logbuch to',
+    'installSketch.permAndroidLine2': 'send you notifications?',
+    'installSketch.permAllowAndroid': 'Allow',
+    'installSketch.permDenyAndroid': 'Don’t allow',
+    'installSketch.ariaPerm': 'Sketch: your phone’s question, with “Allow” highlighted',
     'installGate.installed': '✓ Installed! Now open Logbuch via the new icon on your home screen and sign up there (or sign in).',
     'installGate.skip': 'I will stay in the browser for now',
     'installGate.skipNoteIos': 'That works too – you just will not get reminders. You can add Logbuch to your home screen anytime later.',
@@ -5252,6 +5272,17 @@ function sketchHtml(kind) {
         ${tiles.map((tile, i) => { const cx = 58 + (i % 2) * 84, y = 166 + Math.floor(i / 2) * 56; return `<rect x="${cx - 8}" y="${y - 4}" width="16" height="16" rx="4" class="sk-line"/>${tile.map((line, j) => sketchText(cx, y + 24 + j * 10, line, 'text-anchor="middle" font-size="9"')).join('')}`; }).join('')}
         <rect x="18" y="${166 + 56 - 6}" width="80" height="46" rx="8" class="sk-hl"/>`, L('ariaSamsungList'));
     }
+    case 'permIos':
+      return sketchFrame(`${sketchPage()}<rect x="30" y="110" width="140" height="96" rx="14" class="sk-sheet"/>
+        ${sketchText(100, 136, L('permIosLine1'), 'text-anchor="middle" font-weight="600"')}${sketchText(100, 150, L('permIosLine2'), 'text-anchor="middle" font-weight="600"')}
+        <line x1="30" y1="170" x2="170" y2="170" class="sk-sep"/><line x1="100" y1="170" x2="100" y2="206" class="sk-sep"/>
+        ${sketchText(65, 192, L('permDeny'), 'text-anchor="middle" font-size="9"')}${sketchText(135, 192, L('permAllow'), 'text-anchor="middle" font-weight="600"')}
+        <rect x="104" y="174" width="62" height="28" rx="8" class="sk-hl"/>`, L('ariaPerm'));
+    case 'permAndroid':
+      return sketchFrame(`${sketchPage()}<rect x="26" y="110" width="148" height="104" rx="14" class="sk-sheet"/>
+        ${sketchText(100, 136, L('permAndroidLine1'), 'text-anchor="middle" font-weight="600" font-size="10"')}${sketchText(100, 150, L('permAndroidLine2'), 'text-anchor="middle" font-weight="600" font-size="10"')}
+        ${sketchText(100, 180, L('permAllowAndroid'), 'text-anchor="middle" font-weight="600"')}${sketchText(100, 202, L('permDenyAndroid'), 'text-anchor="middle" font-size="10"')}
+        <rect x="46" y="166" width="108" height="22" rx="8" class="sk-hl"/>`, L('ariaPerm'));
     default: return '';
   }
 }
@@ -5268,19 +5299,22 @@ function installSteps() {
     default: return [['other1', null], ['confirm', null]];
   }
 }
-function renderInstallGate() {
-  const ios = isIOSDevice();
+// Faustregel: bei "Schritt für Schritt" die Skizzen direkt im Ablauf, sonst die kurze
+// Text-Fassung mit den Skizzen zum Aufklappen.
+function installManualHtml() {
   const steps = installSteps();
   const list = (withSketches) => `
     <ol class="onb-steps install-steps">
       ${steps.map(([key, sketch]) => `<li><span>${t(`installGate.step.${key}`)}</span>${withSketches && sketch ? sketchHtml(sketch) : ''}</li>`).join('')}
     </ol>
   `;
-  // Faustregel: bei "Schritt für Schritt" die Skizzen direkt im Ablauf, sonst die kurze
-  // Text-Fassung mit den Skizzen zum Aufklappen.
-  const manual = isGuided()
+  return isGuided()
     ? list(true)
     : `${list(false)}<details class="why-box"><summary class="why-box-title">${t('installGate.showPictures')}</summary>${list(true)}</details>`;
+}
+function renderInstallGate() {
+  const ios = isIOSDevice();
+  const manual = installManualHtml();
   const how = appJustInstalled
     ? `<p class="tutorial-text"><strong>${t('installGate.installed')}</strong></p>`
     : `
@@ -6880,6 +6914,7 @@ function renderTutorialReminders() {
   } else if (state.pushStatus === 'unsupported') {
     body = `
       <p class="tutorial-text">${isIOSDevice() ? t('tutorial.reminders.iosNeedsInstall') : t('push.unsupported')}</p>
+      ${isIOSDevice() && !isStandaloneDisplay() ? `<details class="why-box" ${isGuided() ? 'open' : ''}><summary class="why-box-title">${t('tutorial.reminders.howInstall')}</summary>${installManualHtml()}</details>` : ''}
       <button type="button" class="auth-submit" data-action="tutorial-next">${t('common.next')}</button>
     `;
   } else {
@@ -6888,6 +6923,7 @@ function renderTutorialReminders() {
       <p class="tutorial-text">${t('tutorial.reminders.body')}</p>
       ${whyBox('tutorial.reminders.whyTitle', 'tutorial.reminders.whyBody')}
       <p class="onb-hint">${t('tutorial.reminders.permissionNote')}</p>
+      ${isGuided() ? sketchHtml(isIOSDevice() ? 'permIos' : 'permAndroid') : ''}
       <button type="button" class="auth-submit" data-action="enable-push" ${busy ? 'disabled' : ''}>${busy ? t('push.checking') : t('tutorial.reminders.yes')}</button>
       <button type="button" class="auth-toggle" data-action="tutorial-next">${t('tutorial.reminders.no')}</button>
       <p class="onb-hint onb-hint--after onb-center">${t('tutorial.reminders.laterNote')}</p>

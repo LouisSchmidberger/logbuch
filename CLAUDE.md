@@ -1018,7 +1018,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 590 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 600 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -1221,6 +1221,10 @@ bekannt → direkt "Konto erstellen").
   einem Tag etwas fehlt", plus die abschaltbaren Übersichten – muss mit dem echten
   Verhalten übereinstimmen), Hinweis auf die Erlaubnis-Abfrage, "Ja, erinnere mich"
   (`enable-push`) oder "Lieber nicht". Die Uhrzeit erscheint erst, wenn Push aktiv ist.
+  Bei Schritt für Schritt zeigt eine Skizze die Erlaubnis-Frage des Handys mit
+  hervorgehobenem "Erlauben" (`sketchHtml('permIos'|'permAndroid')`); blockiert → Anleitung
+  (siehe Erinnerungen → Blockierte Mitteilungen); iPhone im Browser → aufklappbare
+  Installations-Anleitung (`installManualHtml`, dieselbe wie auf der Installations-Seite).
   Ohne Push-Unterstützung (iOS im Browser) eine Erklärung statt der Frage.
 - **3 Erstes Feld**: Einleitung (`renderTutorialFieldIntro`) mit antippbaren Beispielen
   (`TUTORIAL_EXAMPLES`, `tutorialExampleForm`: öffnet das Formular vorausgefüllt, z.B.
