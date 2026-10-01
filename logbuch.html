@@ -824,6 +824,11 @@
   .onb-progress-seg { flex: 1; height: 6px; border-radius: 3px; border: 1px solid var(--sand); box-sizing: border-box; }
   .onb-progress-seg--done { background: var(--sand); }
   .onb-progress-seg--current { background: var(--moss); border-color: var(--moss); }
+  .onb-substeps { display: flex; justify-content: center; gap: 5px; margin-top: 0.375rem; }
+  .onb-substep { width: 7px; height: 7px; border-radius: 4px; border: 1.5px solid var(--sand); box-sizing: border-box; }
+  .onb-substep--done { background: var(--sand); }
+  .onb-substep--current { width: 18px; background: var(--moss); border-color: var(--moss); }
+  .unlock-account { text-align: center; margin: -12px 0 16px; overflow-wrap: anywhere; }
   .onb-progress-label { margin: 0.5rem 0 0; font-size: 0.875rem; text-align: center; color: var(--ink); }
   /* Installations-Skizzen (sketchHtml): vereinfachte Handy-Ansicht, Hervorhebung in Moos. */
   .install-steps li > span { display: block; }
@@ -842,9 +847,6 @@
   .onb-overview { list-style: none; counter-reset: onb; padding: 0; margin: 0 0 1rem; display: flex; flex-direction: column; gap: 0.75rem; font-size: 1rem; line-height: 1.4; }
   .onb-overview li { counter-increment: onb; display: flex; align-items: flex-start; }
   .onb-overview li::before { content: counter(onb) "."; font-weight: 600; min-width: 1.5em; }
-  .onb-more { margin: 0 0 16px; font-size: 0.9375rem; line-height: 1.5; }
-  .onb-more summary { cursor: pointer; color: var(--moss); font-weight: 600; }
-  .onb-more p { margin: 6px 0 0; }
   .onb .recovery-key-code { margin-top: 4px; }
   .onb .habit-form-actions { margin-bottom: 18px; }
   .onb-steps { margin: 0 0 18px; padding-left: 22px; font-size: 0.9375rem; line-height: 1.5; display: flex; flex-direction: column; gap: 8px; }
@@ -1157,6 +1159,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=e83143dea4"></script>
+<script type="module" src="./logbuch.js?v=6b41628360"></script>
 </body>
 </html>

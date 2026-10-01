@@ -1027,7 +1027,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 623 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 630 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -1215,7 +1215,10 @@ aufklappbare Erklärungen (`whyBox` bzw. `.why-details`) sind dann von Anfang an
 `onboardingMode`/`onboardingInProgress`, `getOnbMode`/`isOnbInProgress`); beendet mit dem
 bestätigten Ersatzschlüssel (`confirmSpareKey`) bzw. bei "Ich habe schon ein Konto".
 **Fortschrittsleiste** `onbProgress(stage)`: Etappen install (nur Mobilgeräte) / account /
-setup / key, "Schritt X von N: …". **Frisch installierte App** (`authMode: 'installed'`,
+setup / key, "Schritt X von N: …"; ein Unterschritt (Tutorial) steht als kleine Punkte-Zeile
+darunter, nicht in derselben Überschrift. Registrieren/Anmelden sperren und beschriften den
+Knopf sofort ("Konto wird erstellt …", `authSubmitBusy`) – sonst tippten viele während der
+Wartezeit nochmal und bekamen einen Fehler, obwohl es geklappt hatte. **Frisch installierte App** (`authMode: 'installed'`,
 standalone ohne frühere Anmeldung): "Geschafft!" – iPhone-Safari und installierte App teilen
 keinen Speicher, deshalb fragt sie die Einstiegsfrage dort noch einmal (Android: schon
 bekannt → direkt "Konto erstellen").

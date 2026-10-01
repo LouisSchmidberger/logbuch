@@ -1115,6 +1115,9 @@ const STRINGS = {
     'auth.sendResetLink': 'Link zum Zurücksetzen senden',
     'auth.createAccount': 'Konto erstellen',
     'auth.login': 'Anmelden',
+    'auth.busy.signup': 'Konto wird erstellt …',
+    'auth.busy.login': 'Wird angemeldet …',
+    'auth.busy.forgot': 'Wird gesendet …',
     'auth.welcome.lead': 'Schön, dass du da bist!',
     'auth.welcome.new': 'Ich bin neu hier',
     'auth.welcome.newNote': 'Konto erstellen und Logbuch einrichten – dauert etwa 5 bis 10 Minuten.',
@@ -1200,7 +1203,7 @@ const STRINGS = {
     'recoveryDisplay.notYet': 'Noch nicht',
     'recoveryDisplay.yesWritten': 'Ja, aufgeschrieben',
     'recoveryDisplay.explain': 'Deine Einträge sind so verschlüsselt, dass <strong>nur du sie lesen kannst – nicht mal ich.</strong> Die Kehrseite: Vergisst du dein Passwort, reicht ein Link zum Zurücksetzen allein nicht, deine Einträge blieben verschlossen. Dafür gibt es diesen Ersatzschlüssel – mit ihm setzt du ein neues Passwort, ohne etwas zu verlieren.',
-    'recoveryDisplay.moreLabel': 'Mehr erfahren',
+    'recoveryDisplay.moreLabel': 'Was, wenn ich beides verliere?',
     'recoveryDisplay.more': 'Verlierst du Passwort <strong>und</strong> Ersatzschlüssel, sind deine Einträge weg – das ist der Preis dafür, dass niemand sonst rankommt. Einen neuen Ersatzschlüssel bekommst du jederzeit in den Einstellungen unter „Ersatzschlüssel neu erzeugen“, der alte wird dann ungültig.',
     'recoveryDisplay.fileTitle': 'Logbuch – Ersatzschlüssel',
     'recoveryDisplay.fileName': 'logbuch-ersatzschluessel.txt',
@@ -1209,6 +1212,7 @@ const STRINGS = {
     'common.logout': 'Abmelden',
     'unlock.title': 'Passwort eingeben',
     'unlock.explain': 'Zur Sicherheit brauchst du hier dein Passwort noch einmal.',
+    'unlock.account': 'Konto: <strong>{email}</strong>',
     'unlock.whyTitle': 'Warum?',
     'unlock.why': 'Deine Einträge sind mit deinem Passwort verschlüsselt. Auf einem neuen Gerät, nach dem Löschen der Browserdaten oder wenn du gerade über den Link aus der Mail gekommen bist, kennt Logbuch den Schlüssel noch nicht – dein Passwort öffnet sie wieder (bzw. richtet bei einem neuen Konto die Verschlüsselung ein).',
     'unlock.unlocking': 'Einen Moment …',
@@ -1444,11 +1448,12 @@ const STRINGS = {
     'tutorial.reminders.howInstall': 'So holst du Logbuch auf den Home-Bildschirm',
     'tutorial.field.title': 'Was möchtest du festhalten?',
     'tutorial.field.intro': 'Ein <strong>Feld</strong> ist eine Sache, die du jeden Tag einträgst – zum Beispiel deine Stimmung oder ob du Sport gemacht hast. Leg jetzt dein erstes an; das Formular hier ist dasselbe, mit dem du später weitere Felder anlegst.',
-    'tutorial.form.nameIdeas': 'Zum Beispiel: Stimmung, Schlaf, Energie, Sport, Gewicht',
-    'tutorial.form.more': 'Genauer erklärt',
+    'tutorial.form.nameIdeas': 'Kurze Namen passen am besten in die Übersicht. Zum Beispiel: <strong>Schlaf</strong> – wie gut habe ich geschlafen? · <strong>Stimmung</strong> – wie geht’s mir heute? · <strong>Sport</strong> – ja oder nein? · <strong>Gewicht</strong> – in kg',
     'tutorial.form.tipKind': 'Der Feld-Typ bestimmt, wie du einträgst: <strong>Skala</strong> für „wie sehr“ (z. B. Stimmung 1–5), <strong>Zahl</strong> für Messwerte (z. B. Gewicht), <strong>Text</strong> für ein paar Worte.',
-    'tutorial.form.tipKindMore': 'Für Ja/Nein (z. B. „Sport gemacht?“) nimmst du eine Skala mit 2 Stufen und schaltest gleich „Eigene Bezeichnungen“ ein – dann schreibst du „Nein“ und „Ja“ hinein.',
-    'tutorial.form.tip.scale': 'Stell ein, wie viele Stufen es gibt und ob die Werte als Knöpfe oder Schieberegler erscheinen. In der <strong>Vorschau</strong> kannst du gleich ausprobieren, wie das in „Heute“ aussieht.',
+    'tutorial.form.tipKindMoreTitle': 'Und für Ja/Nein-Fragen?',
+    'tutorial.form.tipKindMore': 'Nimm eine Skala mit 2 Stufen und schalte „Eigene Bezeichnungen“ ein – dann schreibst du „Nein“ und „Ja“ hinein.',
+    'tutorial.form.tip.scale': 'Stell ein, wie viele Stufen es gibt und ob die Werte als Knöpfe oder Schieberegler erscheinen. Mit <strong>„Eigene Bezeichnungen“</strong> gibst du den Stufen Namen statt Zahlen (z. B. schlecht – okay – gut). In der <strong>Vorschau</strong> kannst du gleich ausprobieren, wie das in „Heute“ aussieht.',
+    'tutorial.form.tipScaleMoreTitle': 'Was bedeutet „Bewertung“?',
     'tutorial.form.tipScaleMore': '„Bewertung“ legt fest, was gut ist – danach richten sich die Farben in der Auswertung (grün = gut). Bei „Keine Wertung“ wird nur festgehalten, ohne gut oder schlecht.',
     'tutorial.form.tip.number': 'Gib eine Einheit an, wenn du magst (z. B. kg). Eingetragen wird dann einfach eine Zahl.',
     'tutorial.form.tip.text': 'In „Heute“ steht für dieses Feld ein Textfeld, das von selbst speichert.',
@@ -1535,6 +1540,8 @@ const STRINGS = {
     'push.blocked.androidBrowser': 'Tippe oben links in der Adressleiste auf das Symbol neben der Adresse → <strong>Berechtigungen</strong> → <strong>Benachrichtigungen</strong> → zulassen. Komm dann hierher zurück.',
     'push.blocked.other': 'Erlaube in den Website-Einstellungen deines Browsers für diese Seite <strong>Benachrichtigungen</strong>. Komm dann hierher zurück.',
     'push.blocked.retry': 'Nochmal versuchen',
+    'push.blocked.retryHint': 'Hast du sie dort erlaubt? Dann tipp hier, um die Erinnerungen einzuschalten:',
+    'push.blocked.still': 'Mitteilungen sind noch blockiert. Erlaube sie zuerst wie beschrieben und versuch es dann nochmal.',
     'tutorial.reminders.blocked': 'Kein Problem – du kannst auch ohne Erinnerungen weitermachen. Falls du es dir anders überlegst:',
     'menu.language': 'Sprache',
     'theme.label': 'Darstellung',
@@ -1740,6 +1747,9 @@ const STRINGS = {
     'auth.sendResetLink': 'Send reset link',
     'auth.createAccount': 'Create account',
     'auth.login': 'Sign in',
+    'auth.busy.signup': 'Creating account …',
+    'auth.busy.login': 'Signing in …',
+    'auth.busy.forgot': 'Sending …',
     'auth.welcome.lead': 'Great to have you here!',
     'auth.welcome.new': 'I’m new here',
     'auth.welcome.newNote': 'Create an account and set up Logbuch – takes about 5 to 10 minutes.',
@@ -1825,7 +1835,7 @@ const STRINGS = {
     'recoveryDisplay.notYet': 'Not yet',
     'recoveryDisplay.yesWritten': 'Yes, written down',
     'recoveryDisplay.explain': 'Your entries are encrypted so that <strong>only you can read them – not even I can.</strong> The flip side: if you forget your password, a reset link alone is not enough, your entries would stay locked. That is what this spare key is for – with it, you set a new password without losing anything.',
-    'recoveryDisplay.moreLabel': 'Learn more',
+    'recoveryDisplay.moreLabel': 'What if I lose both?',
     'recoveryDisplay.more': 'If you lose your password <strong>and</strong> your spare key, your entries are gone – that is the price of nobody else being able to get in. You can get a new spare key anytime in the settings under “Regenerate spare key”; the old one then becomes invalid.',
     'recoveryDisplay.fileTitle': 'Logbuch – spare key',
     'recoveryDisplay.fileName': 'logbuch-spare-key.txt',
@@ -1834,6 +1844,7 @@ const STRINGS = {
     'common.logout': 'Sign out',
     'unlock.title': 'Enter your password',
     'unlock.explain': 'For security, please enter your password once more.',
+    'unlock.account': 'Account: <strong>{email}</strong>',
     'unlock.whyTitle': 'Why?',
     'unlock.why': 'Your entries are encrypted with your password. On a new device, after clearing browser data, or if you just came from the link in the email, Logbuch does not know the key yet – your password opens them again (or, for a new account, sets up the encryption).',
     'unlock.unlocking': 'One moment …',
@@ -2069,11 +2080,12 @@ const STRINGS = {
     'tutorial.reminders.howInstall': 'How to put Logbuch on your home screen',
     'tutorial.field.title': 'What would you like to track?',
     'tutorial.field.intro': 'A <strong>field</strong> is one thing you enter every day – for example your mood or whether you exercised. Create your first one now; this form is the same one you will use later for more fields.',
-    'tutorial.form.nameIdeas': 'For example: mood, sleep, energy, exercise, weight',
-    'tutorial.form.more': 'Explained in more detail',
+    'tutorial.form.nameIdeas': 'Short names fit best in the overview. For example: <strong>Sleep</strong> – how well did I sleep? · <strong>Mood</strong> – how am I today? · <strong>Exercise</strong> – yes or no? · <strong>Weight</strong> – in kg',
     'tutorial.form.tipKind': 'The field type decides how you enter things: <strong>Scale</strong> for “how much” (e.g. mood 1–5), <strong>Number</strong> for measurements (e.g. weight), <strong>Text</strong> for a few words.',
-    'tutorial.form.tipKindMore': 'For yes/no (e.g. “Exercised?”) choose a scale with 2 steps and turn on “Custom labels” – then type “No” and “Yes”.',
-    'tutorial.form.tip.scale': 'Set how many steps there are and whether values appear as buttons or a slider. In the <strong>preview</strong> you can try out right away how it looks in “Today”.',
+    'tutorial.form.tipKindMoreTitle': 'And for yes/no questions?',
+    'tutorial.form.tipKindMore': 'Choose a scale with 2 steps and turn on “Custom labels” – then type “No” and “Yes”.',
+    'tutorial.form.tip.scale': 'Set how many steps there are and whether values appear as buttons or a slider. With <strong>“Custom labels”</strong> you give the steps names instead of numbers (e.g. bad – okay – good). In the <strong>preview</strong> you can try out right away how it looks in “Today”.',
+    'tutorial.form.tipScaleMoreTitle': 'What does “Valuation” mean?',
     'tutorial.form.tipScaleMore': '“Valuation” decides what is good – the colors in the statistics follow it (green = good). With “No valuation” things are just recorded, without good or bad.',
     'tutorial.form.tip.number': 'Add a unit if you like (e.g. kg). Then you simply enter a number.',
     'tutorial.form.tip.text': 'In “Today” this field gets a text box that saves by itself.',
@@ -2160,6 +2172,8 @@ const STRINGS = {
     'push.blocked.androidBrowser': 'Tap the icon next to the address at the top left of the address bar → <strong>Permissions</strong> → <strong>Notifications</strong> → allow. Then come back here.',
     'push.blocked.other': 'Allow <strong>notifications</strong> for this site in your browser’s site settings. Then come back here.',
     'push.blocked.retry': 'Try again',
+    'push.blocked.retryHint': 'Allowed them there? Then tap here to turn reminders on:',
+    'push.blocked.still': 'Notifications are still blocked. Allow them first as described, then try again.',
     'tutorial.reminders.blocked': 'No problem – you can continue without reminders. In case you change your mind:',
     'menu.language': 'Language',
     'theme.label': 'Appearance',
@@ -4522,6 +4536,7 @@ function pushBlockedHelp() {
     <div class="push-blocked">
       <p>${t('push.blocked.intro')}</p>
       <p>${t(key)}</p>
+      <p>${t('push.blocked.retryHint')}</p>
       <button type="button" class="push-toggle" data-action="enable-push">${t('push.blocked.retry')}</button>
     </div>
   `;
@@ -4535,7 +4550,9 @@ async function enablePush() {
       // 'denied': Anleitung statt Meldung (pushBlockedHelp); 'default' = Dialog nur
       // weggeklickt, dann fragt der Browser beim nächsten Versuch wieder.
       state.pushStatus = pushOffStatus();
-      if (state.pushStatus !== 'blocked') state.notice = { type: 'error', text: t('notice.pushPermissionDenied') };
+      // Blockiert fragt der Browser gar nicht erst - ohne Meldung wirkte "Nochmal versuchen"
+      // wie kaputt.
+      state.notice = { type: 'error', text: t(state.pushStatus === 'blocked' ? 'push.blocked.still' : 'notice.pushPermissionDenied') };
       render();
       return;
     }
@@ -4818,12 +4835,18 @@ function onbProgress(stage, part = null) {
   const stages = onbStages();
   const idx = stages.indexOf(stage);
   if (idx < 0) return '';
-  const label = t('onb.progress.label', { n: idx + 1, total: stages.length, name: t(`onb.stage.${stage}`) })
-    + (part ? ` · ${t('onb.progress.part', { part: part[0], parts: part[1] })}` : '');
+  const label = t('onb.progress.label', { n: idx + 1, total: stages.length, name: t(`onb.stage.${stage}`) });
+  // Unterschritt (z.B. im Tutorial) als eigene, kleinere Zeile mit Punkten darunter - in
+  // derselben Überschrift wirkte "Schritt 2 von 3 … Teil 2 von 4" überladen.
+  const sub = part ? `
+      <div class="onb-substeps" role="img" aria-label="${esc(t('onb.progress.part', { part: part[0], parts: part[1] }))}">
+        ${Array.from({ length: part[1] }, (_, i) => `<span class="onb-substep${i + 1 < part[0] ? ' onb-substep--done' : i + 1 === part[0] ? ' onb-substep--current' : ''}"></span>`).join('')}
+      </div>` : '';
   return `
     <div class="onb-progress">
       <div class="onb-progress-bar" aria-hidden="true">${stages.map((st, i) => `<span class="onb-progress-seg${i < idx ? ' onb-progress-seg--done' : i === idx ? ' onb-progress-seg--current' : ''}"></span>`).join('')}</div>
       <p class="onb-progress-label">${label}</p>
+      ${sub}
     </div>
   `;
 }
@@ -4922,6 +4945,7 @@ function renderOnbInstalled() {
   `;
 }
 
+let authSubmitBusy = false;
 function renderAuth() {
   if (state.authMode === 'welcome') { renderAuthWelcome(); return; }
   if (state.authMode === 'mode') { renderOnbMode(); return; }
@@ -4991,6 +5015,14 @@ function renderAuth() {
 
   document.getElementById('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    // Registrieren dauert ein paar Sekunden - ohne sichtbare Rückmeldung tippten viele
+    // nochmal, und der zweite Versuch meldete einen Fehler, obwohl der erste geklappt hatte.
+    // Knopf deshalb sofort sperren und beschriften; das nächste render() baut ihn neu auf.
+    if (authSubmitBusy) return;
+    authSubmitBusy = true;
+    const submitBtn = e.target.querySelector('.auth-submit');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = t(isForgot ? 'auth.busy.forgot' : isSignup ? 'auth.busy.signup' : 'auth.busy.login'); }
+    try {
     const email = document.getElementById('email').value.trim();
     state.authError = null;
     state.notice = null;
@@ -5060,6 +5092,9 @@ function renderAuth() {
       render();
     } finally {
       authFlowInFlight = false;
+    }
+    } finally {
+      authSubmitBusy = false;
     }
   });
 }
@@ -5224,10 +5259,7 @@ function renderRecoveryKeyDisplay() {
         ${SPARE_KEY_METHODS.map(([m, icon]) => `<button type="button" class="spare-key-method${shown.method === m ? ' spare-key-method--active' : ''}" data-action="spare-key-method" data-method="${m}" aria-pressed="${shown.method === m}"><span class="spare-key-method-icon" aria-hidden="true">${icon}</span>${t(`recoveryDisplay.method.${m}`)}</button>`).join('')}
       </div>
       ${shown.method ? `<div class="form-tip spare-key-help" role="status"><span class="item-icon" aria-hidden="true">💡</span><p>${spareKeyMethodHelp(shown.method)}</p></div>` : ''}
-      <details class="onb-more">
-        <summary>${t('recoveryDisplay.moreLabel')}</summary>
-        <p>${t('recoveryDisplay.more')}</p>
-      </details>
+      ${whyBox('recoveryDisplay.moreLabel', 'recoveryDisplay.more')}
       ${ask ? `
         <div class="spare-key-ask" role="alert">
           <p>${t(shown.method === 'write' ? 'recoveryDisplay.askWritten' : 'recoveryDisplay.askNone')}</p>
@@ -5428,6 +5460,7 @@ function renderUnlockPrompt() {
     <div class="auth-box">
       <h1>Logbuch</h1>
       <p class="sub">${t('unlock.title')}</p>
+      ${state.session?.user?.email ? `<p class="unlock-account">${t('unlock.account', { email: state.session.user.email })}</p>` : ''}
       <p class="onb-hint">${t('unlock.explain')}</p>
       ${isOnbInProgress() ? onbProgress('account') : ''}
       <details class="why-details" ${isGuided() ? 'open' : ''}><summary>${t('unlock.whyTitle')}</summary><p>${t('unlock.why')}</p></details>
@@ -6704,8 +6737,8 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // nicht nur ein Feld erzeugen - ein eigener Frage-Antwort-Assistent wurde verworfen).
   const tutorialForm = f.revealStage !== undefined;
   const stage = tutorialForm ? f.revealStage : 3;
-  const tipBox = (key, moreKey) => `
-    <div class="form-tip"><span class="item-icon" aria-hidden="true">💡</span><div><p>${t(key)}</p>${moreKey ? whyBox('tutorial.form.more', moreKey) : ''}</div></div>`;
+  const tipBox = (key, moreTitleKey, moreKey) => `
+    <div class="form-tip"><span class="item-icon" aria-hidden="true">💡</span><div><p>${t(key)}</p>${moreKey ? whyBox(moreTitleKey, moreKey) : ''}</div></div>`;
   // Seltener Gebrauchtes steht unter "Mehr Einstellungen" (seit 2026-10-01; das Formular
   // war für Neulinge zu lang - und das Tutorial nutzt dasselbe Formular). Aufgeklappt, wenn
   // dort schon etwas vom Standard abweicht, sonst zu; offen/zu übersteht Re-Renders
@@ -6731,7 +6764,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         ${tutorialForm ? `<p class="onb-hint auth-password-hint" id="habit-form-name-ideas">${t('tutorial.form.nameIdeas')}</p>` : ''}
       </div>
       ${stage < 2 ? `<button type="button" class="auth-submit" data-action="habit-reveal-next">${t('common.next')}</button>` : `
-      ${tutorialForm ? tipBox('tutorial.form.tipKind', 'tutorial.form.tipKindMore') : ''}
+      ${tutorialForm ? tipBox('tutorial.form.tipKind', 'tutorial.form.tipKindMoreTitle', 'tutorial.form.tipKindMore') : ''}
       <div class="auth-field" id="habit-form-kind-field">
         <label id="habit-form-kind-label">${t('habitForm.fieldType')}</label>
         <div class="pill-group" role="group" aria-labelledby="habit-form-kind-label">
@@ -6741,7 +6774,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         </div>
       </div>
       ${stage < 3 ? `<button type="button" class="auth-submit" data-action="habit-reveal-next">${t('common.next')}</button>` : `
-      ${tutorialForm ? tipBox(`tutorial.form.tip.${f.kind}`, f.kind === 'scale' ? 'tutorial.form.tipScaleMore' : null) : ''}
+      ${tutorialForm ? tipBox(`tutorial.form.tip.${f.kind}`, 'tutorial.form.tipScaleMoreTitle', f.kind === 'scale' ? 'tutorial.form.tipScaleMore' : null) : ''}
       <div id="habit-form-details"></div>
       ${isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : numberBody}
       <details class="habit-form-more" ${moreOpen ? 'open' : ''}>
