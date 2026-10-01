@@ -59,7 +59,13 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
   im Browser kommt VOR dem Registrieren/Anmelden-Formular (seit 2026-10-01 nach Startseite
   und Einstiegsfrage, siehe Onboarding → Gerüst) eine eigene Seite "Erst mal ein Zuhause
   für Logbuch" mit Begründung ("Warum?"-Kasten, iOS: sonst keine Erinnerungen) und
-  Anleitung mit gezeichneten Symbolen; auf Android/Chrome zusätzlich ein echter
+  Anleitung je Browser (`installBrowser`: Safari iOS, andere iOS-Browser, Chrome, Samsung
+  Internet, Firefox, sonst allgemein; `installSteps`) mit **gezeichneten SVG-Skizzen**
+  (`sketchHtml`, seit 2026-10-01: vereinfachte Handy-Ansicht, richtiger Knopf grün
+  eingekreist, Beschriftung aus der App, passt sich Hell/Dunkel an – bewusst keine
+  Screenshots, die je Sprache/Theme/OS-Version veralten). Bei Schritt für Schritt stehen die
+  Skizzen im Ablauf, sonst kurze Text-Schritte mit "Mit Bildern zeigen" zum Aufklappen;
+  danach ein Satz Vorwarnung "Browser schließt sich oft von selbst …"; auf Android/Chrome zusätzlich ein echter
   Installieren-Knopf (`beforeinstallprompt`). So registriert man sich gleich in der
   installierten App – vorher kam der Hinweis erst nach dem Anmelden (zweites Anmelden in
   der App nötig) und wurde oft einfach weggeklickt. "Ich bleib erst mal im Browser" merkt
@@ -1012,7 +1018,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 558 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 590 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

@@ -1435,17 +1435,49 @@ const STRINGS = {
     'tutorial.done.start': 'Loslegen',
     'tutorial.done.addMore': 'Noch ein Feld anlegen',
     'installGate.title': 'Erst mal ein Zuhause für Logbuch',
-    'installGate.body': 'Logbuch gibt es in keinem App-Store – es läuft direkt im Browser. <strong>Hol es dir auf deinen Home-Bildschirm</strong>, dann fühlt es sich an wie eine richtige App.',
+    'installGate.body': 'Logbuch kommt nicht aus dem App-Store, sondern ist eine Webseite, die du <strong>wie eine App auf deinen Startbildschirm legst</strong>. Dann öffnest du es mit einem Tipp – ohne Browser drumherum.',
     'installGate.whyTitle': 'Warum?',
     'installGate.whyIos': 'Auf dem iPhone kommen Erinnerungen nur an, wenn Logbuch auf dem Home-Bildschirm liegt – so hat Apple das geregelt.',
     'installGate.whyAndroid': 'Dann öffnet sich Logbuch wie eine App – ohne Browser-Leisten, mit einem Tipp auf dem Startbildschirm, statt es jedes Mal im Browser suchen zu müssen.',
     'installGate.installButton': 'Logbuch installieren',
     'installGate.orManually': 'Oder von Hand:',
-    'installGate.iosStep1': 'Tippe auf das Teilen-Symbol – oben in der Adressleiste oder unten in der Leiste:',
-    'installGate.iosStep2': 'Wähle „Zum Home-Bildschirm“ (eventuell etwas nach unten scrollen).',
-    'installGate.androidStep1': 'Tippe oben rechts auf die drei Punkte:',
-    'installGate.androidStep2': 'Wähle „App installieren“ oder „Zum Startbildschirm hinzufügen“.',
-    'installGate.step3': 'Öffne Logbuch über das neue Symbol – dort registrierst du dich (oder meldest dich an).',
+    'installGate.installButtonNote': 'Danach fragt dein Handy noch einmal – tipp dort auf „Installieren“.',
+    'installGate.showPictures': 'Mit Bildern zeigen',
+    'installGate.afterwards': 'Danach schließt sich der Browser oft von selbst, und du siehst das neue Logbuch-Symbol auf deinem Startbildschirm. Tipp darauf – dort geht’s weiter.',
+    'installGate.step.iosSafari1': 'Tippe unten auf das Teilen-Symbol (Quadrat mit Pfeil nach oben). Siehst du es nicht, tippe zuerst auf ••• unten rechts.',
+    'installGate.step.iosOther1': 'Tippe oben rechts in der Adressleiste auf das Teilen-Symbol (Quadrat mit Pfeil nach oben).',
+    'installGate.step.ios2': 'Scrolle in der Liste etwas nach unten und tippe auf „Zum Home-Bildschirm“.',
+    'installGate.step.ios3': 'Tippe oben rechts auf „Hinzufügen“.',
+    'installGate.step.chrome1': 'Tippe oben rechts auf die drei Punkte ⋮.',
+    'installGate.step.chrome2': 'Tippe auf „Zum Startbildschirm hinzufügen“ – manchmal heißt es auch „App installieren“.',
+    'installGate.step.samsung1': 'Tippe unten rechts auf das Menü ≡.',
+    'installGate.step.samsung2': 'Tippe auf „Seite hinzufügen zu“ und dann auf „Startbildschirm“.',
+    'installGate.step.firefox1': 'Tippe auf die drei Punkte ⋮ (oben oder unten rechts).',
+    'installGate.step.firefox2': 'Tippe auf „Installieren“ bzw. „Zum Startbildschirm hinzufügen“.',
+    'installGate.step.other1': 'Öffne das Menü deines Browsers und wähle „Zum Startbildschirm hinzufügen“ bzw. „App installieren“.',
+    'installGate.step.confirm': 'Bestätige mit „Installieren“ bzw. „Hinzufügen“.',
+    'installSketch.copy': 'Kopieren',
+    'installSketch.readingList': 'Zur Leseliste',
+    'installSketch.addHome': 'Zum Home-Bildschirm',
+    'installSketch.bookmark': 'Lesezeichen',
+    'installSketch.cancel': 'Abbrechen',
+    'installSketch.add': 'Hinzufügen',
+    'installSketch.newTab': 'Neuer Tab',
+    'installSketch.history': 'Verlauf',
+    'installSketch.bookmarks': 'Lesezeichen',
+    'installSketch.addHomeAndroid1': 'Zum Startbildschirm',
+    'installSketch.addHomeAndroid2': 'hinzufügen',
+    'installSketch.addPageTo1': 'Seite',
+    'installSketch.addPageTo2': 'hinzufügen zu',
+    'installSketch.downloads': 'Downloads',
+    'installSketch.ariaIosShare': 'Skizze: Teilen-Symbol unten in der Leiste von Safari',
+    'installSketch.ariaIosShareTop': 'Skizze: Teilen-Symbol oben rechts in der Adressleiste',
+    'installSketch.ariaIosSheet': 'Skizze: Liste mit „Zum Home-Bildschirm“ hervorgehoben',
+    'installSketch.ariaIosAdd': 'Skizze: „Hinzufügen“ oben rechts hervorgehoben',
+    'installSketch.ariaChromeMenu': 'Skizze: drei Punkte oben rechts neben der Adressleiste',
+    'installSketch.ariaChromeList': 'Skizze: Menü mit „Zum Startbildschirm hinzufügen“ hervorgehoben',
+    'installSketch.ariaSamsungMenu': 'Skizze: Menü ≡ unten rechts',
+    'installSketch.ariaSamsungList': 'Skizze: Menü mit „Seite hinzufügen zu“ hervorgehoben',
     'installGate.installed': '✓ Installiert! Öffne Logbuch jetzt über das neue Symbol auf deinem Startbildschirm und registriere dich dort (oder melde dich an).',
     'installGate.skip': 'Ich bleib erst mal im Browser',
     'installGate.skipNoteIos': 'Geht auch – nur kommen dann keine Erinnerungen. Du kannst Logbuch jederzeit später noch hinzufügen.',
@@ -1995,17 +2027,49 @@ const STRINGS = {
     'tutorial.done.start': 'Get started',
     'tutorial.done.addMore': 'Add another field',
     'installGate.title': 'First, a home for Logbuch',
-    'installGate.body': 'Logbuch is not in any app store – it runs right in your browser. <strong>Put it on your home screen</strong> and it feels like a real app.',
+    'installGate.body': 'Logbuch does not come from an app store – it is a web page that you <strong>put on your home screen like an app</strong>. Then you open it with one tap – without a browser around it.',
     'installGate.whyTitle': 'Why?',
     'installGate.whyIos': 'On iPhone, reminders only arrive when Logbuch is on your home screen – that is how Apple set it up.',
     'installGate.whyAndroid': 'Then Logbuch opens like an app – without browser bars, with one tap on your home screen instead of looking for it in the browser every time.',
     'installGate.installButton': 'Install Logbuch',
     'installGate.orManually': 'Or by hand:',
-    'installGate.iosStep1': 'Tap the share icon – at the top in the address bar or at the bottom in the toolbar:',
-    'installGate.iosStep2': 'Choose “Add to Home Screen” (you may need to scroll down a bit).',
-    'installGate.androidStep1': 'Tap the three dots at the top right:',
-    'installGate.androidStep2': 'Choose “Install app” or “Add to Home screen”.',
-    'installGate.step3': 'Open Logbuch via the new icon – sign up (or sign in) there.',
+    'installGate.installButtonNote': 'Your phone then asks once more – tap “Install” there.',
+    'installGate.showPictures': 'Show with pictures',
+    'installGate.afterwards': 'Afterwards the browser often closes by itself and you see the new Logbuch icon on your home screen. Tap it – that is where it continues.',
+    'installGate.step.iosSafari1': 'Tap the share icon at the bottom (a square with an arrow pointing up). If you do not see it, first tap ••• at the bottom right.',
+    'installGate.step.iosOther1': 'Tap the share icon at the top right in the address bar (a square with an arrow pointing up).',
+    'installGate.step.ios2': 'Scroll down a little in the list and tap “Add to Home Screen”.',
+    'installGate.step.ios3': 'Tap “Add” at the top right.',
+    'installGate.step.chrome1': 'Tap the three dots ⋮ at the top right.',
+    'installGate.step.chrome2': 'Tap “Add to Home screen” – sometimes it is called “Install app”.',
+    'installGate.step.samsung1': 'Tap the menu ≡ at the bottom right.',
+    'installGate.step.samsung2': 'Tap “Add page to” and then “Home screen”.',
+    'installGate.step.firefox1': 'Tap the three dots ⋮ (top or bottom right).',
+    'installGate.step.firefox2': 'Tap “Install” or “Add to Home screen”.',
+    'installGate.step.other1': 'Open your browser menu and choose “Add to Home screen” or “Install app”.',
+    'installGate.step.confirm': 'Confirm with “Install” or “Add”.',
+    'installSketch.copy': 'Copy',
+    'installSketch.readingList': 'Reading List',
+    'installSketch.addHome': 'Add to Home Screen',
+    'installSketch.bookmark': 'Bookmark',
+    'installSketch.cancel': 'Cancel',
+    'installSketch.add': 'Add',
+    'installSketch.newTab': 'New tab',
+    'installSketch.history': 'History',
+    'installSketch.bookmarks': 'Bookmarks',
+    'installSketch.addHomeAndroid1': 'Add to',
+    'installSketch.addHomeAndroid2': 'Home screen',
+    'installSketch.addPageTo1': 'Add page',
+    'installSketch.addPageTo2': 'to',
+    'installSketch.downloads': 'Downloads',
+    'installSketch.ariaIosShare': 'Sketch: share icon in the bottom bar of Safari',
+    'installSketch.ariaIosShareTop': 'Sketch: share icon at the top right of the address bar',
+    'installSketch.ariaIosSheet': 'Sketch: list with “Add to Home Screen” highlighted',
+    'installSketch.ariaIosAdd': 'Sketch: “Add” at the top right highlighted',
+    'installSketch.ariaChromeMenu': 'Sketch: three dots at the top right next to the address bar',
+    'installSketch.ariaChromeList': 'Sketch: menu with “Add to Home screen” highlighted',
+    'installSketch.ariaSamsungMenu': 'Sketch: menu ≡ at the bottom right',
+    'installSketch.ariaSamsungList': 'Sketch: menu with “Add page to” highlighted',
     'installGate.installed': '✓ Installed! Now open Logbuch via the new icon on your home screen and sign up there (or sign in).',
     'installGate.skip': 'I will stay in the browser for now',
     'installGate.skipNoteIos': 'That works too – you just will not get reminders. You can add Logbuch to your home screen anytime later.',
@@ -5119,23 +5183,114 @@ window.addEventListener('appinstalled', () => {
   appJustInstalled = true;
   if (!state.session && shouldShowInstallGate()) render();
 });
-// Gezeichnete Symbole für die Anleitung - "Quadrat mit Pfeil nach oben" in Worten war
-// schwer zu finden. Dekorativ (der Text nennt das Symbol ohnehin).
-const ICON_IOS_SHARE = '<svg class="onb-inline-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-const ICON_MENU_DOTS = '<svg class="onb-inline-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="5" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="19" r="2" fill="currentColor"/></svg>';
+// Welcher Browser? Die Anleitung unterscheidet sich je nachdem, wo Teilen/Menü sitzen.
+function installBrowser() {
+  const ua = navigator.userAgent;
+  if (isIOSDevice()) return /CriOS|FxiOS|EdgiOS/.test(ua) ? 'ios-other' : 'ios-safari';
+  if (/Android/.test(ua)) {
+    if (/SamsungBrowser/.test(ua)) return 'samsung';
+    if (/Firefox/.test(ua)) return 'firefox';
+    return 'chrome';
+  }
+  return 'other';
+}
+// Gezeichnete Skizzen statt Screenshots (Nutzer-Entscheidung 2026-10-01): vereinfachte
+// Handy-Ansicht, der richtige Knopf grün eingekreist, Beschriftung aus der App (eine Skizze
+// für beide Sprachen), passt sich Hell/Dunkel an und altert langsamer als Screenshots.
+// viewBox 200x300; Klassen sk-* siehe CSS.
+function sketchFrame(content, label) {
+  return `<svg class="install-sketch" viewBox="0 0 200 300" role="img" aria-label="${esc(label)}">
+    <rect x="12" y="4" width="176" height="292" rx="22" class="sk-frame"/>
+    ${content}
+  </svg>`;
+}
+function sketchPage(top = 56) {
+  return [0, 1, 2, 3, 4].map((i) => `<rect x="30" y="${top + i * 18}" width="${[140, 110, 130, 90, 120][i]}" height="7" rx="3" class="sk-line"/>`).join('');
+}
+function sketchText(x, y, text, opts = '') {
+  return `<text x="${x}" y="${y}" class="sk-text" ${opts}>${esc(text)}</text>`;
+}
+const SK_SHARE = (x, y) => `<g class="sk-icon" transform="translate(${x - 7} ${y - 9})"><path d="M7 1v10M3.5 4.5 7 1l3.5 3.5"/><path d="M4 7H2.5v9h9V7H10"/></g>`;
+function sketchHtml(kind) {
+  const L = (k) => t(`installSketch.${k}`);
+  switch (kind) {
+    case 'iosShare':
+      return sketchFrame(`${sketchPage()}
+        <rect x="26" y="226" width="148" height="22" rx="11" class="sk-bar"/>${sketchText(100, 241, 'logbuch', 'text-anchor="middle"')}
+        ${['‹', '›', '', '▢', '⧉'].map((c, i) => (c ? sketchText(44 + i * 28, 274, c, 'text-anchor="middle"') : '')).join('')}
+        ${SK_SHARE(100, 270)}<circle cx="100" cy="268" r="14" class="sk-hl"/>`, L('ariaIosShare'));
+    case 'iosShareTop':
+      return sketchFrame(`<rect x="26" y="18" width="148" height="24" rx="12" class="sk-bar"/>${sketchText(90, 34, 'logbuch', 'text-anchor="middle"')}
+        ${SK_SHARE(160, 31)}<circle cx="160" cy="29" r="13" class="sk-hl"/>${sketchPage(60)}`, L('ariaIosShareTop'));
+    case 'iosSheet': {
+      const rows = [L('copy'), L('readingList'), L('addHome'), L('bookmark')];
+      return sketchFrame(`${sketchPage()}<rect x="16" y="120" width="168" height="170" rx="14" class="sk-sheet"/>
+        ${rows.map((r, i) => `<rect x="30" y="${136 + i * 36}" width="12" height="12" rx="3" class="sk-line"/>${sketchText(50, 146 + i * 36, r)}`).join('')}
+        <rect x="22" y="${128 + 2 * 36}" width="156" height="28" rx="8" class="sk-hl"/>`, L('ariaIosSheet'));
+    }
+    case 'iosAdd':
+      return sketchFrame(`<rect x="16" y="20" width="168" height="270" rx="14" class="sk-sheet"/>
+        ${sketchText(28, 44, L('cancel'))}${sketchText(172, 44, L('add'), 'text-anchor="end" font-weight="600"')}
+        <rect x="106" y="28" width="76" height="24" rx="8" class="sk-hl"/>
+        <rect x="30" y="72" width="40" height="40" rx="10" class="sk-appicon"/>${sketchText(82, 96, 'Logbuch')}`, L('ariaIosAdd'));
+    case 'chromeMenu':
+      return sketchFrame(`<rect x="24" y="18" width="128" height="24" rx="12" class="sk-bar"/>${sketchText(88, 34, 'logbuch', 'text-anchor="middle"')}
+        ${[24, 30, 36].map((y) => `<circle cx="170" cy="${y}" r="1.8" class="sk-dot"/>`).join('')}<circle cx="170" cy="30" r="13" class="sk-hl"/>${sketchPage(60)}`, L('ariaChromeMenu'));
+    case 'chromeList': {
+      const rows = [[L('newTab')], [L('history')], [L('bookmarks')], [L('addHomeAndroid1'), L('addHomeAndroid2')]];
+      return sketchFrame(`${sketchPage(60)}<rect x="62" y="16" width="122" height="176" rx="8" class="sk-sheet"/>
+        ${rows.map((r, i) => r.map((line, j) => sketchText(74, 42 + i * 34 + j * 13, line)).join('')).join('')}
+        <rect x="66" y="${24 + 3 * 34}" width="114" height="40" rx="6" class="sk-hl"/>`, L('ariaChromeList'));
+    }
+    case 'samsungMenu':
+      return sketchFrame(`${sketchPage()}<rect x="24" y="18" width="152" height="24" rx="12" class="sk-bar"/>${sketchText(100, 34, 'logbuch', 'text-anchor="middle"')}
+        ${['‹', '›', '⌂', '▢'].map((c, i) => sketchText(36 + i * 34, 274, c, 'text-anchor="middle"')).join('')}
+        ${[264, 269, 274].map((y) => `<rect x="161" y="${y - 0.9}" width="14" height="1.8" rx="0.9" class="sk-dot"/>`).join('')}<circle cx="168" cy="269" r="14" class="sk-hl"/>`, L('ariaSamsungMenu'));
+    case 'samsungList': {
+      const tiles = [[L('bookmarks')], [L('history')], [L('addPageTo1'), L('addPageTo2')], [L('downloads')]];
+      return sketchFrame(`${sketchPage()}<rect x="16" y="150" width="168" height="140" rx="14" class="sk-sheet"/>
+        ${tiles.map((tile, i) => { const cx = 58 + (i % 2) * 84, y = 166 + Math.floor(i / 2) * 56; return `<rect x="${cx - 8}" y="${y - 4}" width="16" height="16" rx="4" class="sk-line"/>${tile.map((line, j) => sketchText(cx, y + 24 + j * 10, line, 'text-anchor="middle" font-size="9"')).join('')}`; }).join('')}
+        <rect x="18" y="${166 + 56 - 6}" width="80" height="46" rx="8" class="sk-hl"/>`, L('ariaSamsungList'));
+    }
+    default: return '';
+  }
+}
+// Schritte je Browser: [Text-Schlüssel, Skizze]. Danach immer eine kurze Vorwarnung
+// (der Browser schließt sich meist von selbst - laut Nutzer-Erfahrung kein Problem, daher
+// kein eigener Schritt).
+function installSteps() {
+  switch (installBrowser()) {
+    case 'ios-safari': return [['iosSafari1', 'iosShare'], ['ios2', 'iosSheet'], ['ios3', 'iosAdd']];
+    case 'ios-other': return [['iosOther1', 'iosShareTop'], ['ios2', 'iosSheet'], ['ios3', 'iosAdd']];
+    case 'samsung': return [['samsung1', 'samsungMenu'], ['samsung2', 'samsungList'], ['confirm', null]];
+    case 'firefox': return [['firefox1', null], ['firefox2', null], ['confirm', null]];
+    case 'chrome': return [['chrome1', 'chromeMenu'], ['chrome2', 'chromeList'], ['confirm', null]];
+    default: return [['other1', null], ['confirm', null]];
+  }
+}
 function renderInstallGate() {
   const ios = isIOSDevice();
-  const steps = ios
-    ? [`${t('installGate.iosStep1')} ${ICON_IOS_SHARE}`, t('installGate.iosStep2'), t('installGate.step3')]
-    : [`${t('installGate.androidStep1')} ${ICON_MENU_DOTS}`, t('installGate.androidStep2'), t('installGate.step3')];
+  const steps = installSteps();
+  const list = (withSketches) => `
+    <ol class="onb-steps install-steps">
+      ${steps.map(([key, sketch]) => `<li><span>${t(`installGate.step.${key}`)}</span>${withSketches && sketch ? sketchHtml(sketch) : ''}</li>`).join('')}
+    </ol>
+  `;
+  // Faustregel: bei "Schritt für Schritt" die Skizzen direkt im Ablauf, sonst die kurze
+  // Text-Fassung mit den Skizzen zum Aufklappen.
+  const manual = isGuided()
+    ? list(true)
+    : `${list(false)}<details class="why-box"><summary class="why-box-title">${t('installGate.showPictures')}</summary>${list(true)}</details>`;
   const how = appJustInstalled
     ? `<p class="tutorial-text"><strong>${t('installGate.installed')}</strong></p>`
     : `
       ${deferredInstallPrompt ? `
         <button type="button" class="auth-submit" data-action="install-prompt">${t('installGate.installButton')}</button>
-        <p class="onb-hint onb-hint--after">${t('installGate.orManually')}</p>
+        <p class="onb-hint onb-hint--after">${t('installGate.installButtonNote')}</p>
+        <p class="onb-hint install-or">${t('installGate.orManually')}</p>
       ` : ''}
-      <ol class="onb-steps">${steps.map((st) => `<li>${st}</li>`).join('')}</ol>
+      ${manual}
+      <p class="onb-hint">${t('installGate.afterwards')}</p>
     `;
   app.innerHTML = `
     <div class="auth-box onb">

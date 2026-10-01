@@ -817,6 +817,19 @@
   .onb-progress-seg--done { background: var(--sand); }
   .onb-progress-seg--current { background: var(--moss); border-color: var(--moss); }
   .onb-progress-label { margin: 0.5rem 0 0; font-size: 0.875rem; text-align: center; color: var(--ink); }
+  /* Installations-Skizzen (sketchHtml): vereinfachte Handy-Ansicht, Hervorhebung in Moos. */
+  .install-steps li > span { display: block; }
+  .install-or { margin-top: 1.25rem; font-weight: 600; }
+  .install-sketch { display: block; width: 100%; max-width: 12rem; margin: 0.25rem auto 0.5rem; color: var(--ink); }
+  .sk-frame { fill: var(--paper); stroke: currentColor; stroke-width: 2; }
+  .sk-line { fill: color-mix(in srgb, var(--ink) 18%, transparent); }
+  .sk-bar { fill: color-mix(in srgb, var(--ink) 10%, transparent); }
+  .sk-sheet { fill: var(--popover-bg); stroke: color-mix(in srgb, var(--ink) 30%, transparent); stroke-width: 1; }
+  .sk-appicon { fill: var(--moss); }
+  .sk-text { fill: currentColor; font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; }
+  .sk-icon path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .sk-dot { fill: currentColor; }
+  .sk-hl { fill: rgba(var(--moss-rgb), 0.15); stroke: var(--moss); stroke-width: 3; }
   .onb-overview { list-style: none; counter-reset: onb; padding: 0; margin: 0 0 1rem; display: flex; flex-direction: column; gap: 0.75rem; font-size: 1rem; line-height: 1.4; }
   .onb-overview li { counter-increment: onb; display: flex; align-items: flex-start; }
   .onb-overview li::before { content: counter(onb) "."; font-weight: 600; min-width: 1.5em; }
@@ -1127,6 +1140,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=27f6eace00"></script>
+<script type="module" src="./logbuch.js?v=938c7e4262"></script>
 </body>
 </html>
