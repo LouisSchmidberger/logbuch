@@ -282,6 +282,12 @@ jeder Tastendruck aktualisiert sofort `state.entries` (ohne `render()`), der ver
 Upsert läuft erst nach 1 s Tipp-Pause (`updateTextValue`/`TEXT_SAVE_DELAY_MS`), sofort beim
 Verlassen des Feldes, beim Wechsel in eine andere App und vor dem Abmelden
 (`flushAllDaySaves`). Keine Notizen im Zeilen-Menü (wären doppelt), kein Mitglied berechneter Felder.
+**Erklärungen in der Auswertung** (seit 2026-10-01): ohne jeden Eintrag zeigen
+Woche/Monat/Jahr/Gesamt statt leerer Kästchen einen Satz, was hier bald zu sehen ist
+(`renderStatsEmpty`); darunter dauerhaft, zugeklappt "Was bedeuten Farben und Zahlen?"
+(`renderStatsLegend`, Farbleiste aus `scoreColor` + Erklärung zu Ø/%, (N×), Tagesfarbe,
+Schraffur, Streifenmuster). Bewusst klein – die Überarbeitung der Auswertung ist eigenes Thema.
+
 **Rückblick** (`renderTextReviews`): in Woche/Monat/Jahr/Gesamt pro Feld eine
 Liste Datum + Text (jeder Eintrag öffnet seinen Tag), überall gleich: eingeklappt
 (`<details>`, Anzahl im Titel) und neueste zuerst – eine je nach Ansicht umgekehrte
@@ -999,7 +1005,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 508 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 515 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

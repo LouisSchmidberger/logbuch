@@ -1221,6 +1221,13 @@ const STRINGS = {
     'common.archived': 'archiviert',
     'global.rangeNote': 'Seit {since} · {count} Tage mit Eintrag',
     'global.noEntries': 'Noch keine Einträge.',
+    'stats.empty': 'Hier siehst du bald, wie deine Tage verlaufen – sobald du ein paar Tage eingetragen hast.',
+    'stats.legend.title': 'Was bedeuten Farben und Zahlen?',
+    'stats.legend.bad': 'weniger gut',
+    'stats.legend.good': 'gut',
+    'stats.legend.week': 'Jedes Kästchen zeigt, wie gut der Wert an dem Tag war – gemessen daran, was du beim Feld unter „Bewertung“ eingestellt hast (bei „Niedrige Werte erstrebenswert“ ist wenig grün). Leer: nichts eingetragen. Schraffiert: an dem Tag nicht geplant. Ø: Durchschnitt der Woche – 100 % wäre jeden eingetragenen Tag der beste Wert.',
+    'stats.legend.stats': 'Im Kalender zeigt jeder Tag die Tagesfarbe: den Durchschnitt aller bewerteten Felder. Darunter pro Feld der Durchschnitt in Prozent – 100 % wäre jeden eingetragenen Tag der beste Wert – und in Klammern, an wie vielen Tagen du eingetragen hast.',
+    'stats.legend.common': 'Felder ohne Bewertung zeigen nur, ob etwas eingetragen ist. Das Streifenmuster (abschaltbar in den Einstellungen) zeigt dasselbe wie die Farbe – für alle, die Rot und Grün schlecht unterscheiden.',
     'global.title': 'Gesamt',
     'numberChart.meta': '{last} zuletzt · Ø {avg} · {count}×',
     'numberChart.tooFewValues': 'Noch zu wenige Werte für einen Verlauf.',
@@ -1731,6 +1738,13 @@ const STRINGS = {
     'common.archived': 'archived',
     'global.rangeNote': 'Since {since} · {count} days with entry',
     'global.noEntries': 'No entries yet.',
+    'stats.empty': 'Soon you will see here how your days are going – once you have entered a few days.',
+    'stats.legend.title': 'What do the colors and numbers mean?',
+    'stats.legend.bad': 'less good',
+    'stats.legend.good': 'good',
+    'stats.legend.week': 'Each box shows how good the value was that day – measured by what you set under “Valuation” for the field (with “Low values desirable”, little is green). Empty: nothing entered. Hatched: not planned that day. Ø: average of the week – 100 % would be the best value on every day you entered.',
+    'stats.legend.stats': 'In the calendar, each day shows the day color: the average of all rated fields. Below, for each field, the average in percent – 100 % would be the best value on every day you entered – and in parentheses on how many days you entered something.',
+    'stats.legend.common': 'Fields without a rating only show whether something was entered. The stripe pattern (can be turned off in the settings) shows the same as the color – for everyone who has trouble telling red and green apart.',
     'global.title': 'Overall',
     'numberChart.meta': 'last: {last} · avg. {avg} · {count}×',
     'numberChart.tooFewValues': 'Not enough values yet for a chart.',
@@ -5354,6 +5368,33 @@ function renderToday() {
   `;
 }
 
+// Noch gar nichts eingetragen (z.B. direkt nach dem Onboarding): statt leerer grauer
+// Kästchen ein Satz, was hier bald zu sehen ist - sonst wirkt die Auswertung kaputt.
+function hasAnyEntries() {
+  return Object.values(state.entries).some((day) => dayHasValues(day));
+}
+function renderStatsEmpty() {
+  return `<div class="stats-empty"><span class="item-icon" aria-hidden="true">📊</span>${t('stats.empty')}</div>`;
+}
+// "Was bedeuten Farben und Zahlen?" - dauerhaft, zugeklappt, unter Woche/Monat/Jahr/Gesamt
+// (kind 'week' oder 'stats'). Klein gehalten; die große Überarbeitung der Auswertung ist ein
+// eigenes Thema.
+function renderStatsLegend(kind) {
+  const stops = [0, 0.25, 0.5, 0.75, 1].map((v) => `${scoreColor(v)} ${v * 100}%`).join(', ');
+  return `
+    <details class="stats-legend">
+      <summary>${t('stats.legend.title')}</summary>
+      <div class="stats-legend-scale" aria-hidden="true">
+        <span>${t('stats.legend.bad')}</span>
+        <span class="stats-legend-bar" style="background: linear-gradient(to right, ${stops})"></span>
+        <span>${t('stats.legend.good')}</span>
+      </div>
+      <p>${t(kind === 'week' ? 'stats.legend.week' : 'stats.legend.stats')}</p>
+      <p>${t('stats.legend.common')}</p>
+    </details>
+  `;
+}
+
 // --- Rendering: Week -----------------------------------------------------
 function renderWeek() {
   const days = Array.from({ length: 7 }, (_, i) => addDays(state.weekAnchor, i));
@@ -5389,6 +5430,7 @@ function renderWeek() {
       <div class="day-label"><span class="day-date">${days[0].getDate()}. ${monthName(days[0])} – ${days[6].getDate()}. ${monthName(days[6])}</span></div>
       <button type="button" class="nav-btn" data-action="nav-week" data-dir="1" aria-label="${esc(t('ariaLabel.nextWeek'))}">›</button>
     </div>
+    ${!hasAnyEntries() ? renderStatsEmpty() : `
     <div class="grid-scroll">
       <div class="grid-row grid-row--header">
         <div class="grid-label"></div>
@@ -5397,8 +5439,10 @@ function renderWeek() {
       </div>
       ${rows}
     </div>
+    ${renderStatsLegend('week')}
     ${renderNumberCharts(visibleHabits, days.map(formatKey), true)}
     ${renderTextReviews(visibleHabits, days.map(formatKey))}
+    `}
   `;
 }
 
@@ -5427,6 +5471,7 @@ function renderMonth() {
       <div class="day-label"><span class="day-date">${monthName(first)} ${year}</span></div>
       <button type="button" class="nav-btn" data-action="nav-month" data-dir="1" aria-label="${esc(t('ariaLabel.nextMonth'))}">›</button>
     </div>
+    ${!hasAnyEntries() ? renderStatsEmpty() : `
     <div class="month-grid">
       ${mondayFirstWeekdayShortNames().map((w) => `<div class="month-weekday">${w}</div>`).join('')}
       ${cells.map((d) => {
@@ -5437,8 +5482,10 @@ function renderMonth() {
       }).join('')}
     </div>
     <div class="month-stats">${renderBySection(monthStats.map((st) => st.habit), 'stats', (list) => renderStatsRows(monthStats.filter((st) => list.includes(st.habit))))}</div>
+    ${renderStatsLegend('stats')}
     ${renderNumberCharts(visibleHabits, cellKeys, true)}
     ${renderTextReviews(visibleHabits, cellKeys)}
+    `}
   `;
 }
 
@@ -5471,10 +5518,13 @@ function renderYear() {
       <div class="day-label"><span class="day-date">${year}</span></div>
       <button type="button" class="nav-btn" data-action="nav-year" data-dir="1" aria-label="${esc(t('ariaLabel.nextYear'))}">›</button>
     </div>
+    ${!hasAnyEntries() ? renderStatsEmpty() : `
     <div class="year-grid">${monthsGrid}</div>
     <div class="month-stats">${renderBySection(yearStats.map((st) => st.habit), 'stats', (list) => renderStatsRows(yearStats.filter((st) => list.includes(st.habit))))}</div>
+    ${renderStatsLegend('stats')}
     ${renderNumberCharts(visibleHabits, yearKeys)}
     ${renderTextReviews(visibleHabits, yearKeys)}
+    `}
   `;
 }
 
@@ -5496,10 +5546,13 @@ function renderGlobal() {
     <div class="day-nav">
       <div class="day-label"><span class="day-date">${t('global.title')}</span></div>
     </div>
+    ${!dateKeys.length ? renderStatsEmpty() : `
     <p class="manage-meta" style="margin: -8px 0 14px;">${rangeNote}</p>
     <div class="month-stats">${renderBySection(stats.map((st) => st.habit), 'stats', (list) => renderStatsRows(stats.filter((st) => list.includes(st.habit))))}</div>
+    ${renderStatsLegend('stats')}
     ${renderNumberCharts(statsHabits, dateKeys)}
     ${renderTextReviews(statsHabits, dateKeys)}
+    `}
   `;
 }
 
