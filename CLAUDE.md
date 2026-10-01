@@ -1018,7 +1018,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 600 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 601 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -1226,17 +1226,19 @@ bekannt → direkt "Konto erstellen").
   (siehe Erinnerungen → Blockierte Mitteilungen); iPhone im Browser → aufklappbare
   Installations-Anleitung (`installManualHtml`, dieselbe wie auf der Installations-Seite).
   Ohne Push-Unterstützung (iOS im Browser) eine Erklärung statt der Frage.
-- **3 Erstes Feld**: Einleitung (`renderTutorialFieldIntro`) mit antippbaren Beispielen
-  (`TUTORIAL_EXAMPLES`, `tutorialExampleForm`: öffnet das Formular vorausgefüllt, z.B.
-  "Gewicht" als Zahlenwert in kg, "Sport" als Ja/Nein) oder "Eigene Idee" (leeres
-  Formular), danach die **echte** `renderHabitForm()` (kein Duplikat; ob das erste Feld
-  ein vereinfachtes Formular bekommt, ist eine eigene, noch offene Frage des Nutzers) –
-  gesteuert über `state.habitForm`: gesetzt zeigt das Formular, `null` (z.B. nach
-  "Abbrechen") die Einleitung. Keine Tab-Leiste/kein Menü sichtbar; eine
-  `beforeunload`-Warnung verhindert versehentliches Verlassen bei offenem Formular. Nach
-  erfolgreichem Anlegen (Insert-Zweig in `handleHabitSave`) Sprung zu 4.
+- **3 Erstes Feld** (`renderTutorialFieldForm`, seit 2026-10-01): Satz, was ein Feld ist,
+  dann direkt das **echte** Feld-Formular, Stück für Stück aufgedeckt (`f.revealStage`:
+  1 Name mit Ideen als Text darunter → 2 + Feld-Typ → 3 + Einstellungen zum Typ, Vorschau,
+  "Mehr Einstellungen" (zu), "Feld anlegen"; Aktion `habit-reveal-next`), je neu
+  aufgedecktem Teil ein Tipp-Kasten (`.form-tip`, "Genauer erklärt" bei Schritt für Schritt
+  offen). Nutzer-Entscheidungen: das Tutorial soll auf die echte Oberfläche vorbereiten
+  (eigener Frage-Antwort-Assistent verworfen); keine Vorlagen/Beispiele zum Antippen
+  (Vorlagen erst sinnvoll, wenn man das Formular einmal selbst durchgegangen ist);
+  "Berechnet" ausgeblendet; kein "Abbrechen" (Zurück/Überspringen in der Fußleiste). Keine
+  Tab-Leiste/kein Menü sichtbar; eine `beforeunload`-Warnung verhindert versehentliches
+  Verlassen. Nach erfolgreichem Anlegen (Insert-Zweig in `handleHabitSave`) Sprung zu 4.
 - **4 Geschafft** (`renderTutorialDone`): "Loslegen" (`saveOnboardingCompleted()`) oder
-  "Noch ein Feld anlegen" (zurück ins Formular, ohne Einleitung).
+  "Noch ein Feld anlegen" (wieder das aufgedeckte Formular ab dem Namen).
 
 Überspringen (Schritte 1–3) fragt zweistufig nach (`.modal-overlay`/`.modal-box`,
 gleiches Muster wie `renderDeleteConfirm`) und setzt bei Bestätigung sofort

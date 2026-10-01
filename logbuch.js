@@ -1418,18 +1418,19 @@ const STRINGS = {
     'tutorial.reminders.iosNeedsInstall': 'Auf dem iPhone kommen Erinnerungen nur an, wenn Logbuch auf dem Home-Bildschirm liegt. Das kannst du jederzeit nachholen – auch gleich jetzt.',
     'tutorial.reminders.howInstall': 'So holst du Logbuch auf den Home-Bildschirm',
     'tutorial.field.title': 'Was möchtest du festhalten?',
-    'tutorial.field.body': 'Überleg dir eine Sache, die du ab heute beobachten willst. Tipp auf ein Beispiel, um damit zu starten – oder nimm deine eigene Idee.',
-    'tutorial.field.examplesLabel': 'Beispiele',
+    'tutorial.field.intro': 'Ein <strong>Feld</strong> ist eine Sache, die du jeden Tag einträgst – zum Beispiel deine Stimmung oder ob du Sport gemacht hast. Leg jetzt dein erstes an; das Formular hier ist dasselbe, mit dem du später weitere Felder anlegst.',
+    'tutorial.form.nameIdeas': 'Zum Beispiel: Stimmung, Schlaf, Energie, Sport, Gewicht',
+    'tutorial.form.more': 'Genauer erklärt',
+    'tutorial.form.tipKind': 'Der Feld-Typ bestimmt, wie du einträgst: <strong>Skala</strong> für „wie sehr“ (z. B. Stimmung 1–5), <strong>Zahl</strong> für Messwerte (z. B. Gewicht), <strong>Text</strong> für ein paar Worte.',
+    'tutorial.form.tipKindMore': 'Für Ja/Nein (z. B. „Sport gemacht?“) nimmst du eine Skala mit 2 Stufen und schaltest gleich „Eigene Bezeichnungen“ ein – dann schreibst du „Nein“ und „Ja“ hinein.',
+    'tutorial.form.tip.scale': 'Stell ein, wie viele Stufen es gibt und ob die Werte als Knöpfe oder Schieberegler erscheinen. In der <strong>Vorschau</strong> kannst du gleich ausprobieren, wie das in „Heute“ aussieht.',
+    'tutorial.form.tipScaleMore': '„Bewertung“ legt fest, was gut ist – danach richten sich die Farben in der Auswertung (grün = gut). Bei „Keine Wertung“ wird nur festgehalten, ohne gut oder schlecht.',
+    'tutorial.form.tip.number': 'Gib eine Einheit an, wenn du magst (z. B. kg). Eingetragen wird dann einfach eine Zahl.',
+    'tutorial.form.tip.text': 'In „Heute“ steht für dieses Feld ein Textfeld, das von selbst speichert.',
+    'tutorial.form.tip.computed': '',
+    'tutorial.form.create': 'Feld anlegen',
     'tutorial.field.whyTitle': 'Warum erst mal nur eins?',
     'tutorial.field.whyBody': 'Wenige Felder heißt: schnell eingetragen. Das hält länger durch als ein langer Fragebogen – ergänzen kannst du jederzeit.',
-    'tutorial.field.ownIdea': 'Eigene Idee',
-    'tutorial.example.mood': 'Stimmung',
-    'tutorial.example.sleep': 'Schlaf',
-    'tutorial.example.energy': 'Energie',
-    'tutorial.example.sport': 'Sport',
-    'tutorial.example.weight': 'Gewicht',
-    'tutorial.example.no': 'Nein',
-    'tutorial.example.yes': 'Ja',
     'tutorial.done.title': 'Dein erstes Feld steht.',
     'tutorial.done.titleMore': 'Deine {count} Felder stehen.',
     'tutorial.done.body': 'Du kannst noch ein, zwei weitere anlegen – oder direkt loslegen. <strong>Tipp: lieber klein anfangen und später erweitern.</strong>',
@@ -2020,18 +2021,19 @@ const STRINGS = {
     'tutorial.reminders.iosNeedsInstall': 'On iPhone, reminders only arrive when Logbuch is on your home screen. You can do that anytime – even right now.',
     'tutorial.reminders.howInstall': 'How to put Logbuch on your home screen',
     'tutorial.field.title': 'What would you like to track?',
-    'tutorial.field.body': 'Think of one thing you want to keep an eye on from today. Tap an example to start with it – or go with your own idea.',
-    'tutorial.field.examplesLabel': 'Examples',
+    'tutorial.field.intro': 'A <strong>field</strong> is one thing you enter every day – for example your mood or whether you exercised. Create your first one now; this form is the same one you will use later for more fields.',
+    'tutorial.form.nameIdeas': 'For example: mood, sleep, energy, exercise, weight',
+    'tutorial.form.more': 'Explained in more detail',
+    'tutorial.form.tipKind': 'The field type decides how you enter things: <strong>Scale</strong> for “how much” (e.g. mood 1–5), <strong>Number</strong> for measurements (e.g. weight), <strong>Text</strong> for a few words.',
+    'tutorial.form.tipKindMore': 'For yes/no (e.g. “Exercised?”) choose a scale with 2 steps and turn on “Custom labels” – then type “No” and “Yes”.',
+    'tutorial.form.tip.scale': 'Set how many steps there are and whether values appear as buttons or a slider. In the <strong>preview</strong> you can try out right away how it looks in “Today”.',
+    'tutorial.form.tipScaleMore': '“Valuation” decides what is good – the colors in the statistics follow it (green = good). With “No valuation” things are just recorded, without good or bad.',
+    'tutorial.form.tip.number': 'Add a unit if you like (e.g. kg). Then you simply enter a number.',
+    'tutorial.form.tip.text': 'In “Today” this field gets a text box that saves by itself.',
+    'tutorial.form.tip.computed': '',
+    'tutorial.form.create': 'Create field',
     'tutorial.field.whyTitle': 'Why just one for now?',
     'tutorial.field.whyBody': 'Few fields means: quickly filled in. That lasts longer than a long questionnaire – you can add more anytime.',
-    'tutorial.field.ownIdea': 'My own idea',
-    'tutorial.example.mood': 'Mood',
-    'tutorial.example.sleep': 'Sleep',
-    'tutorial.example.energy': 'Energy',
-    'tutorial.example.sport': 'Exercise',
-    'tutorial.example.weight': 'Weight',
-    'tutorial.example.no': 'No',
-    'tutorial.example.yes': 'Yes',
     'tutorial.done.title': 'Your first field is set.',
     'tutorial.done.titleMore': 'Your {count} fields are set.',
     'tutorial.done.body': 'You can add one or two more – or get started right away. <strong>Tip: better start small and expand later.</strong>',
@@ -6603,6 +6605,15 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   `;
 
   const isComputed = f.kind === 'computed';
+  // Im Tutorial (f.revealStage gesetzt) dasselbe echte Formular, aber Stück für Stück
+  // aufgedeckt: 1 Name, 2 + Feld-Typ, 3 + Einstellungen zum Typ, Vorschau, Mehr
+  // Einstellungen, Anlegen. Ausgefülltes bleibt stehen; zu jedem neuen Teil ein Tipp-Kasten
+  // (Nutzer-Entscheidung 2026-10-01: das Tutorial soll auf die echte Oberfläche vorbereiten,
+  // nicht nur ein Feld erzeugen - ein eigener Frage-Antwort-Assistent wurde verworfen).
+  const tutorialForm = f.revealStage !== undefined;
+  const stage = tutorialForm ? f.revealStage : 3;
+  const tipBox = (key, moreKey) => `
+    <div class="form-tip"><span class="item-icon" aria-hidden="true">💡</span><div><p>${t(key)}</p>${moreKey ? whyBox('tutorial.form.more', moreKey) : ''}</div></div>`;
   // Seltener Gebrauchtes steht unter "Mehr Einstellungen" (seit 2026-10-01; das Formular
   // war für Neulinge zu lang - und das Tutorial nutzt dasselbe Formular). Aufgeklappt, wenn
   // dort schon etwas vom Standard abweicht, sonst zu; offen/zu übersteht Re-Renders
@@ -6613,9 +6624,9 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // "Berechnet" nur anbieten, wenn es etwas zu berechnen gibt (mind. 2 passende Felder) -
   // beim allerersten Feld im Tutorial führte die Auswahl sonst nur zu "noch keine Felder".
   const others = state.habits.filter((h) => !h.archivedAt && h.defId !== f.defId);
-  const computedPossible = isComputed
+  const computedPossible = isComputed || (!tutorialForm && (false
     || others.filter((h) => h.kind === 'scale' && !isNeutralScale(h)).length >= 2
-    || others.filter((h) => h.kind === 'number').length >= 2;
+    || others.filter((h) => h.kind === 'number').length >= 2));
   const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber'], ['text', 'habitForm.kindText']]
     .concat(computedPossible ? [['computed', 'habitForm.kindComputed']] : []);
   return `
@@ -6624,9 +6635,12 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       ${f.locked ? `<p class="habit-form-lock-note">${t('habitForm.lockedNote')}</p>` : ''}
       <div class="auth-field">
         <label for="habit-form-name">${t('habitForm.name')}</label>
-        <input type="text" id="habit-form-name" value="${esc(f.name)}" maxlength="40" />
+        <input type="text" id="habit-form-name" value="${esc(f.name)}" maxlength="40" ${tutorialForm ? 'aria-describedby="habit-form-name-ideas"' : ''} />
+        ${tutorialForm ? `<p class="onb-hint auth-password-hint" id="habit-form-name-ideas">${t('tutorial.form.nameIdeas')}</p>` : ''}
       </div>
-      <div class="auth-field">
+      ${stage < 2 ? `<button type="button" class="auth-submit" data-action="habit-reveal-next">${t('common.next')}</button>` : `
+      ${tutorialForm ? tipBox('tutorial.form.tipKind', 'tutorial.form.tipKindMore') : ''}
+      <div class="auth-field" id="habit-form-kind-field">
         <label id="habit-form-kind-label">${t('habitForm.fieldType')}</label>
         <div class="pill-group" role="group" aria-labelledby="habit-form-kind-label">
           ${kinds.map(([kind, key]) => `
@@ -6634,6 +6648,9 @@ function renderHabitForm({ titleInHeader = false } = {}) {
           `).join('')}
         </div>
       </div>
+      ${stage < 3 ? `<button type="button" class="auth-submit" data-action="habit-reveal-next">${t('common.next')}</button>` : `
+      ${tutorialForm ? tipBox(`tutorial.form.tip.${f.kind}`, f.kind === 'scale' ? 'tutorial.form.tipScaleMore' : null) : ''}
+      <div id="habit-form-details"></div>
       ${isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : numberBody}
       <details class="habit-form-more" ${moreOpen ? 'open' : ''}>
         <summary><span class="habit-form-more-title">${t('habitForm.more')}</span><span class="habit-form-more-sub">${t('habitForm.moreSub')}</span></summary>
@@ -6657,9 +6674,11 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       </div>
       </details>
       <div class="habit-form-actions">
-        <button type="button" class="habit-form-cancel" data-action="habit-cancel" ${state.habitFormSaving ? 'disabled' : ''}>${t('common.cancel')}</button>
-        <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t('common.save')}</button>
+        ${tutorialForm ? '' : `<button type="button" class="habit-form-cancel" data-action="habit-cancel" ${state.habitFormSaving ? 'disabled' : ''}>${t('common.cancel')}</button>`}
+        <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t(tutorialForm ? 'tutorial.form.create' : 'common.save')}</button>
       </div>
+      `}
+      `}
     </div>
   `;
 }
@@ -6935,39 +6954,21 @@ function renderTutorialReminders() {
   });
 }
 
-// Beispiele zum Antippen öffnen das Formular schon passend vorausgefüllt - wer keine
-// eigene Idee hat, kommt so mit einem Tipp weiter (das Formular selbst ist unverändert).
-const TUTORIAL_EXAMPLES = ['mood', 'sleep', 'energy', 'sport', 'weight'];
-function tutorialExampleForm(example) {
-  const f = defaultHabitForm();
-  f.name = t(`tutorial.example.${example}`);
-  if (example === 'weight') { f.kind = 'number'; f.unit = 'kg'; }
-  if (example === 'sport') {
-    f.max = 2;
-    f.labelsEnabled = true;
-    f.labels = [t('tutorial.example.no'), t('tutorial.example.yes')];
-  }
-  return f;
-}
-function renderTutorialFieldIntro() {
-  const chips = TUTORIAL_EXAMPLES.map((ex) => `<button type="button" class="onb-chip" data-action="tutorial-example" data-example="${ex}">${t(`tutorial.example.${ex}`)}</button>`).join('');
+// Schritt 3: direkt das echte Feld-Formular, Stück für Stück aufgedeckt (siehe
+// renderHabitForm, f.revealStage). Keine Vorlagen/Beispiele zum Antippen (Nutzer: Vorlagen
+// erst sinnvoll, wenn man das Formular einmal selbst durchgegangen ist) - nur Ideen als
+// Text unter dem Namen.
+function renderTutorialFieldForm() {
+  if (!state.habitForm) state.habitForm = { ...defaultHabitForm(), revealStage: 1 };
   return tutorialScreen({
     step: 3, icon: '✏️', title: t('tutorial.field.title'),
     body: `
-      <p class="tutorial-text">${t('tutorial.field.body')}</p>
-      <div class="onb-examples" role="group" aria-label="${esc(t('tutorial.field.examplesLabel'))}">${chips}</div>
+      <p class="tutorial-text">${t('tutorial.field.intro')}</p>
       ${whyBox('tutorial.field.whyTitle', 'tutorial.field.whyBody')}
-      <button type="button" class="auth-submit" data-action="tutorial-ready">${t('tutorial.field.ownIdea')}</button>
+      ${renderHabitForm({ titleInHeader: true })}
       ${tutorialNav({ back: true, skip: true })}
     `,
   });
-}
-
-function renderTutorialFieldForm() {
-  return `
-    ${tutorialProgress(3)}
-    ${renderHabitForm()}
-  `;
 }
 
 function renderTutorialDone() {
@@ -6988,7 +6989,7 @@ function renderTutorial() {
   app.innerHTML =
     state.tutorialStep === 1 ? renderTutorialHello() :
     state.tutorialStep === 2 ? renderTutorialReminders() :
-    state.tutorialStep === 3 ? (state.habitForm ? renderTutorialFieldForm() : renderTutorialFieldIntro()) :
+    state.tutorialStep === 3 ? renderTutorialFieldForm() :
     renderTutorialDone();
   // Bei jedem Wechsel des Bildschirms die Überschrift fokussieren (Screenreader hören so,
   // wo sie sind) - nicht bei jedem render(), sonst spränge der Fokus z.B. nach dem
@@ -6996,7 +6997,7 @@ function renderTutorial() {
   const screenKey = `${state.tutorialStep}:${state.habitForm ? 'form' : ''}`;
   if (screenKey !== lastTutorialScreen) {
     lastTutorialScreen = screenKey;
-    if (!state.habitForm) app.querySelector('.onb h1')?.focus({ preventScroll: true });
+    app.querySelector('.onb h1')?.focus({ preventScroll: true });
     window.scrollTo(0, 0);
   }
 }
@@ -7654,6 +7655,21 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'habit-edit') {
     const h = state.habits.find((x) => x.defId === el.dataset.id);
     if (h) openHabitForm(habitToForm(h));
+  } else if (action === 'habit-reveal-next') {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    if (f.revealStage === 1 && !f.name.trim()) {
+      state.notice = { type: 'error', text: t('habitForm.error.nameRequired') };
+      render();
+      document.getElementById('habit-form-name')?.focus();
+      return;
+    }
+    f.revealStage = Math.min(3, f.revealStage + 1);
+    render();
+    // Zum neu aufgedeckten Teil scrollen und dort den Fokus setzen.
+    const target = document.getElementById(f.revealStage === 2 ? 'habit-form-kind-field' : 'habit-form-details');
+    target?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    (f.revealStage === 2 ? target?.querySelector('[aria-pressed="true"]') : document.querySelector('#habit-form .form-tip ~ .auth-field button, #habit-form .form-tip ~ .auth-field input'))?.focus({ preventScroll: true });
   } else if (action === 'habit-cancel') {
     closeHabitForm();
     render();
@@ -7782,21 +7798,14 @@ app.addEventListener('click', async (e) => {
     // Gibt neuen Nutzern Vertrauen ("kann ich aus Versehen zu weit geklickt haben?"),
     // obwohl technisch nichts verloren geht — jede Einstellung lässt sich später über
     // Menü/Formular erneut ändern. state.habitForm wird mit geleert, damit beim Zurück
-    // von "Geschafft" wieder die Feld-Einleitung statt eines offenen Formulars erscheint.
+    // von "Geschafft" ein frisches Formular statt des schon gespeicherten erscheint.
     // Schritt 1 hat keinen Zurück-Knopf (davor liegt nichts mehr).
     state.tutorialStep = Math.max(1, state.tutorialStep - 1);
     state.habitForm = null;
     render();
-  } else if (action === 'tutorial-ready') {
-    state.habitForm = defaultHabitForm();
-    render();
-    document.getElementById('habit-form-name')?.focus();
-  } else if (action === 'tutorial-example') {
-    state.habitForm = tutorialExampleForm(el.dataset.example);
-    render();
   } else if (action === 'tutorial-add-more') {
     state.tutorialStep = 3;
-    state.habitForm = defaultHabitForm();
+    state.habitForm = { ...defaultHabitForm(), revealStage: 1 };
     render();
     document.getElementById('habit-form-name')?.focus();
   } else if (action === 'tutorial-finish') {
