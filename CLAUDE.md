@@ -65,7 +65,7 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
   sich das Gerät (`localStorage` `installGateSkipped`). Weil der Bestätigungslink aus der
   Registrierungs-Mail im Browser aufgeht, nicht in der App: kommt man darüber
   (`#…type=signup`, vor dem Start von supabase-js gemerkt, `ARRIVED_VIA_SIGNUP_CONFIRM`)
-  auf dem Handy im Browser an, zeigt `renderConfirmLanding` "E-Mail bestätigt – zurück zur
+  auf dem Handy im Browser an, zeigt `renderConfirmLanding` "Adresse bestätigt – zurück zur
   App" statt der Anmeldung (Weitermachen im Browser bleibt möglich).
 - **Startseite vor dem Anmelden** (`renderAuthWelcome`, `authMode: 'welcome'`, seit
   2026-10-01): zwei Knöpfe "Ich bin neu hier" / "Ich habe schon ein Konto" statt direkt
@@ -609,7 +609,7 @@ alles native Web Crypto API, keine Library):
 `render()`):
 - `unlockEncryption(userId, password, { verifyPassword })`, aufgerufen aus
   `completeAuthFlow` direkt nach erfolgreichem `signIn`/`signUp` (Passwort ist dort im
-  Klartext verfügbar) bzw. aus der Entsperr-Maske: prüft zuerst den lokalen
+  Klartext verfügbar) bzw. aus der Entsperr-Maske (in der App "Passwort eingeben", `renderUnlockPrompt`): prüft zuerst den lokalen
   IndexedDB-Cache (`usableCachedDek`, schneller Pfad ohne PBKDF2); ohne Treffer wird die
   `user_encryption`-Zeile geladen und mit dem Passwort entpackt (falsch → `WRONG_PASSWORD`,
   Meldung über `unlockErrorText`, Netzwerkfehler getrennt). Existiert keine Zeile
@@ -1011,7 +1011,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 525 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 535 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -1329,9 +1329,11 @@ Nutzer selbst außerhalb, bevor eine wirklich breite/kommerzielle Nutzung starte
   **Bestätigungsmail im Spam** (bei GMX beobachtet, 2026-10-01): SPF/DKIM/DMARC sind korrekt
   eingerichtet – Ursache ist der noch geringe Ruf der Absender-Domain, die kurze
   Standardvorlage und dass Absender (`louis-schmidberger.de`), Link (`supabase.co`) und Ziel
-  (`github.io`) verschiedene Domains sind. Deshalb zeigt die Anmelde-Seite nach der
-  Registrierung bzw. beim Anmelden mit unbestätigter Adresse eine Hilfe
-  (`renderConfirmEmailHelp`, `state.confirmEmailFor`): Spam-Ordner-Hinweis, die verwendete
+  (`github.io`) verschiedene Domains sind. Deshalb kommt nach der Registrierung
+  eine eigene Seite "Schau in dein Postfach" (`renderCheckMail`, `authMode: 'checkMail'`,
+  nummerierte Schritte bis "Weiter zum Anmelden", seit 2026-10-01 – vorher standen Meldung,
+  Hilfe und Formular untereinander), und dort sowie beim Anmelden mit unbestätigter Adresse
+  eine Hilfe (`renderConfirmEmailHelp`, `state.confirmEmailFor`): Spam-Ordner-Hinweis, die verwendete
   Adresse (Tippfehler fallen auf) und "Mail nochmal senden" (`supabase.auth.resend`,
   Supabase erlaubt eine Mail pro Minute und Adresse – die Wartezeit wird angezeigt).
   **Vorlage der Bestätigungsmail** (seit 2026-10-01): `supabase/templates/confirmation.html`

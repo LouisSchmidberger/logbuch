@@ -1104,7 +1104,9 @@ const STRINGS = {
     'auth.forgotRecoveryNote': 'Zum eigentlichen Zurücksetzen brauchst du im nächsten Schritt deinen Ersatzschlüssel (den du nach der Einrichtung bekommen bzw. zuletzt in den Einstellungen neu erzeugt hast) – nur damit bleiben deine bisherigen Daten erhalten.',
     'auth.email': 'E-Mail',
     'auth.password': 'Passwort',
-    'auth.passwordHint': '<strong>Mindestens {min} Zeichen.</strong> Deine Einträge werden auf deinem Gerät verschlüsselt, bevor sie gespeichert werden. Dein Passwort ist der Schlüssel dazu. Wähle deshalb eines, das du sonst nirgends verwendest.',
+    'auth.passwordHint': '<strong>Mindestens {min} Zeichen.</strong> Merk es dir gut oder schreib es auf und leg den Zettel an einen sicheren Ort – ohne dein Passwort kommst du nicht mehr an deine Einträge.',
+    'auth.passwordWhyTitle': 'Warum so wichtig?',
+    'auth.passwordWhy': 'Deine Einträge werden auf deinem Gerät verschlüsselt, bevor sie gespeichert werden – dein Passwort ist der Schlüssel dazu. Deshalb kann niemand sonst sie lesen, nicht mal ich. Wähle eines, das du sonst nirgends verwendest.',
     'auth.hide': 'Verbergen',
     'auth.show': 'Anzeigen',
     'auth.sendResetLink': 'Link zum Zurücksetzen senden',
@@ -1118,7 +1120,6 @@ const STRINGS = {
     'auth.forgotPassword': 'Passwort vergessen?',
     'auth.resetLinkSent': 'Falls diese E-Mail bei uns registriert ist, haben wir einen Link zum Zurücksetzen geschickt.',
     'auth.signupFailedGeneric': 'Registrierung fehlgeschlagen. Bitte versuche es erneut.',
-    'auth.confirmEmailNotice': 'Ich hab dir eine Mail geschickt – tipp auf den Knopf darin. So ist sicher, dass die Adresse dir gehört, und nur so kannst du später ein vergessenes Passwort zurücksetzen. Danach meldest du dich hier an.',
     'auth.confirmHelp.spam': 'Keine Mail da? Schau auch im <strong>Spam-Ordner</strong> nach – je nach Anbieter heißt er auch „Werbung“ oder „Junk“. Manchmal dauert es ein paar Minuten.',
     'auth.confirmHelp.sentTo': 'Die Mail ging an: <strong>{email}</strong>. Stimmt die Adresse nicht? Dann registriere dich einfach nochmal mit der richtigen.',
     'auth.confirmHelp.resend': 'Mail nochmal senden',
@@ -1126,6 +1127,13 @@ const STRINGS = {
     'auth.confirmHelp.resent': 'Eine neue Mail ist unterwegs.',
     'auth.confirmHelp.wait': 'Bitte warte noch {seconds} Sekunden, dann kannst du es nochmal versuchen.',
     'auth.confirmHelp.failed': 'Das Senden hat nicht geklappt. Bitte versuch es gleich nochmal.',
+    'auth.checkMail.title': 'Schau in dein Postfach',
+    'auth.checkMail.body': 'Ich hab dir eine Mail geschickt. Damit ist sicher, dass die Adresse dir gehört – und nur so kannst du später ein vergessenes Passwort zurücksetzen.',
+    'auth.checkMail.step1': 'Öffne deine E-Mail-App, zum Beispiel Gmail, GMX oder Outlook.',
+    'auth.checkMail.step2': 'Öffne die Mail „Bestätige deine Adresse für Logbuch“.',
+    'auth.checkMail.step3': 'Tipp darin auf den grünen Knopf.',
+    'auth.checkMail.step4': 'Komm hierher zurück und tipp auf „Weiter zum Anmelden“.',
+    'auth.checkMail.continue': 'Weiter zum Anmelden',
     'auth.error.passwordTooShort': 'Das Passwort muss mindestens {min} Zeichen lang sein.',
     'recovery.title': 'Neues Passwort setzen',
     'recovery.newPassword': 'Neues Passwort',
@@ -1155,12 +1163,14 @@ const STRINGS = {
     'common.next': 'Weiter',
     'common.back': 'Zurück',
     'common.logout': 'Abmelden',
-    'unlock.title': 'Entsperren',
-    'unlock.explain': 'Neues Gerät, Browserdaten gelöscht oder gerade per E-Mail-Bestätigungslink angemeldet — bitte dein Passwort erneut eingeben, um deine Einträge zu entschlüsseln (bzw. bei einem ganz neuen Konto die Verschlüsselung einzurichten).',
-    'unlock.unlocking': 'Wird entsperrt …',
-    'unlock.unlock': 'Entsperren',
+    'unlock.title': 'Passwort eingeben',
+    'unlock.explain': 'Zur Sicherheit brauchst du hier dein Passwort noch einmal.',
+    'unlock.whyTitle': 'Warum?',
+    'unlock.why': 'Deine Einträge sind mit deinem Passwort verschlüsselt. Auf einem neuen Gerät, nach dem Löschen der Browserdaten oder wenn du gerade über den Link aus der Mail gekommen bist, kennt Logbuch den Schlüssel noch nicht – dein Passwort öffnet sie wieder (bzw. richtet bei einem neuen Konto die Verschlüsselung ein).',
+    'unlock.unlocking': 'Einen Moment …',
+    'unlock.unlock': 'Weiter',
     'unlock.wrongPassword': 'Falsches Passwort.',
-    'unlock.failed': 'Entsperren fehlgeschlagen: ',
+    'unlock.failed': 'Das hat nicht geklappt.',
     'unlock.keyChanged': 'Deine Verschlüsselung wurde auf einem anderen Gerät neu eingerichtet (Passwort zurückgesetzt ohne Ersatzschlüssel). Bitte gib dein aktuelles Passwort ein.',
     'ariaLabel.deleteEntry': 'Eintrag löschen',
     'ariaLabel.noValue': 'kein Wert',
@@ -1417,8 +1427,8 @@ const STRINGS = {
     'installGate.skip': 'Ich bleib erst mal im Browser',
     'installGate.skipNoteIos': 'Geht auch – nur kommen dann keine Erinnerungen. Du kannst Logbuch jederzeit später noch hinzufügen.',
     'installGate.skipNote': 'Geht auch – du kannst Logbuch jederzeit später noch hinzufügen.',
-    'confirmLanding.title': 'E-Mail bestätigt!',
-    'confirmLanding.body': '<strong>Geh jetzt zurück zu Logbuch auf deinem Home-Bildschirm</strong> und melde dich dort an. Diese Browser-Seite brauchst du nicht mehr.',
+    'confirmLanding.title': 'Adresse bestätigt!',
+    'confirmLanding.body': 'Diese Seite brauchst du nicht mehr. <strong>Öffne Logbuch jetzt wieder über das Symbol auf deinem Startbildschirm</strong> und melde dich dort an.',
     'confirmLanding.continueHere': 'Oder hier im Browser weitermachen',
     'push.unsupported': 'Erinnerungen werden von diesem Browser nicht unterstützt.',
     'push.checking': 'Erinnerungsstatus wird geprüft …',
@@ -1631,7 +1641,9 @@ const STRINGS = {
     'auth.forgotRecoveryNote': 'To actually reset your password, you will need your spare key in the next step (the one you got after setup, or last regenerated in the settings) – only with it is your existing data kept.',
     'auth.email': 'Email',
     'auth.password': 'Password',
-    'auth.passwordHint': '<strong>At least {min} characters.</strong> Your entries are encrypted on your device before they are stored. Your password is the key to them. Choose one you don’t use anywhere else.',
+    'auth.passwordHint': '<strong>At least {min} characters.</strong> Remember it well or write it down and keep the note in a safe place – without your password you cannot get to your entries anymore.',
+    'auth.passwordWhyTitle': 'Why does it matter so much?',
+    'auth.passwordWhy': 'Your entries are encrypted on your device before they are stored – your password is the key. That is why nobody else can read them, not even me. Choose one you do not use anywhere else.',
     'auth.hide': 'Hide',
     'auth.show': 'Show',
     'auth.sendResetLink': 'Send reset link',
@@ -1645,7 +1657,6 @@ const STRINGS = {
     'auth.forgotPassword': 'Forgot password?',
     'auth.resetLinkSent': 'If this email is registered with us, we have sent a link to reset your password.',
     'auth.signupFailedGeneric': 'Sign-up failed. Please try again.',
-    'auth.confirmEmailNotice': 'I have sent you an email – tap the button in it. That way we know the address is yours, and only then can you reset a forgotten password later. Afterwards, sign in here.',
     'auth.confirmHelp.spam': 'No email? Also check your <strong>spam folder</strong> – depending on your provider it may be called “Junk” or “Promotions”. Sometimes it takes a few minutes.',
     'auth.confirmHelp.sentTo': 'The email went to: <strong>{email}</strong>. Wrong address? Just sign up again with the right one.',
     'auth.confirmHelp.resend': 'Send the email again',
@@ -1653,6 +1664,13 @@ const STRINGS = {
     'auth.confirmHelp.resent': 'A new email is on its way.',
     'auth.confirmHelp.wait': 'Please wait another {seconds} seconds, then you can try again.',
     'auth.confirmHelp.failed': 'Sending did not work. Please try again in a moment.',
+    'auth.checkMail.title': 'Check your inbox',
+    'auth.checkMail.body': 'I have sent you an email. That way we know the address is yours – and only then can you reset a forgotten password later.',
+    'auth.checkMail.step1': 'Open your email app, for example Gmail, Outlook or Yahoo Mail.',
+    'auth.checkMail.step2': 'Open the email “Confirm your email for Logbuch”.',
+    'auth.checkMail.step3': 'Tap the green button in it.',
+    'auth.checkMail.step4': 'Come back here and tap “Continue to sign in”.',
+    'auth.checkMail.continue': 'Continue to sign in',
     'auth.error.passwordTooShort': 'The password must be at least {min} characters long.',
     'recovery.title': 'Set new password',
     'recovery.newPassword': 'New password',
@@ -1682,12 +1700,14 @@ const STRINGS = {
     'common.next': 'Next',
     'common.back': 'Back',
     'common.logout': 'Sign out',
-    'unlock.title': 'Unlock',
-    'unlock.explain': 'New device, browser data cleared, or just signed in via an email confirmation link — please re-enter your password to decrypt your entries (or, for a brand-new account, to set up encryption).',
-    'unlock.unlocking': 'Unlocking…',
-    'unlock.unlock': 'Unlock',
+    'unlock.title': 'Enter your password',
+    'unlock.explain': 'For security, please enter your password once more.',
+    'unlock.whyTitle': 'Why?',
+    'unlock.why': 'Your entries are encrypted with your password. On a new device, after clearing browser data, or if you just came from the link in the email, Logbuch does not know the key yet – your password opens them again (or, for a new account, sets up the encryption).',
+    'unlock.unlocking': 'One moment …',
+    'unlock.unlock': 'Continue',
     'unlock.wrongPassword': 'Incorrect password.',
-    'unlock.failed': 'Unlocking failed: ',
+    'unlock.failed': 'That did not work.',
     'unlock.keyChanged': 'Your encryption was set up again on another device (password reset without a spare key). Please enter your current password.',
     'ariaLabel.deleteEntry': 'Delete entry',
     'ariaLabel.noValue': 'no value',
@@ -1944,8 +1964,8 @@ const STRINGS = {
     'installGate.skip': 'I will stay in the browser for now',
     'installGate.skipNoteIos': 'That works too – you just will not get reminders. You can add Logbuch to your home screen anytime later.',
     'installGate.skipNote': 'That works too – you can add Logbuch anytime later.',
-    'confirmLanding.title': 'Email confirmed!',
-    'confirmLanding.body': '<strong>Now go back to Logbuch on your home screen</strong> and sign in there. You do not need this browser page anymore.',
+    'confirmLanding.title': 'Address confirmed!',
+    'confirmLanding.body': 'You do not need this page anymore. <strong>Now open Logbuch again from its icon on your home screen</strong> and sign in there.',
     'confirmLanding.continueHere': 'Or continue here in the browser',
     'push.unsupported': 'Reminders are not supported by this browser.',
     'push.checking': 'Checking reminder status …',
@@ -2966,7 +2986,9 @@ async function upgradePasswordWrap(row, dek, password) {
 // so aussehen.
 function unlockErrorText(err) {
   if (err?.message === WRONG_PASSWORD) return t('unlock.wrongPassword');
-  return t('unlock.failed') + translateDbError(err?.message || String(err));
+  const raw = err?.message || String(err);
+  const friendly = translateDbError(raw);
+  return `${t('unlock.failed')} ${friendly !== raw ? friendly : t('notice.tryAgain')}`;
 }
 
 // Beim Zurückkehren in die App: wurde der DEK inzwischen auf einem anderen Gerät neu
@@ -4561,8 +4583,28 @@ function renderAuthWelcome() {
   `;
 }
 
+// Nach dem Registrieren: was jetzt zu tun ist, als nummerierte Schritte - vorher standen
+// Meldung, Hilfe und Anmelde-Formular untereinander, und alle drei wollten etwas.
+function renderCheckMail() {
+  const steps = ['auth.checkMail.step1', 'auth.checkMail.step2', 'auth.checkMail.step3', 'auth.checkMail.step4'];
+  app.innerHTML = `
+    <div class="auth-box onb">
+      <button type="button" class="back-btn auth-back" data-action="auth-choose" data-mode="signup" aria-label="${esc(t('ariaLabel.back'))}">
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="onb-icon" aria-hidden="true">✉️</div>
+      <h1 tabindex="-1">${t('auth.checkMail.title')}</h1>
+      <p class="tutorial-text">${t('auth.checkMail.body')}</p>
+      <ol class="onb-steps">${steps.map((k) => `<li>${t(k)}</li>`).join('')}</ol>
+      <button type="button" class="auth-submit" data-action="check-mail-done">${t('auth.checkMail.continue')}</button>
+      ${renderConfirmEmailHelp()}
+    </div>
+  `;
+}
+
 function renderAuth() {
   if (state.authMode === 'welcome') { renderAuthWelcome(); return; }
+  if (state.authMode === 'checkMail') { renderCheckMail(); return; }
   const isSignup = state.authMode === 'signup';
   const isForgot = state.authMode === 'forgot';
   const title = isForgot ? t('auth.title.forgot') : isSignup ? t('auth.title.signup') : t('auth.title.login');
@@ -4597,7 +4639,10 @@ function renderAuth() {
               showVisibilityToggle: true,
               visible: state.authPasswordVisible,
             })}
-            ${isSignup ? `<p class="habit-form-lock-note">${t('auth.passwordHint', { min: AUTH_MIN_PASSWORD_LENGTH })}</p>` : ''}
+            ${isSignup ? `
+              <p class="onb-hint auth-password-hint">${t('auth.passwordHint', { min: AUTH_MIN_PASSWORD_LENGTH })}</p>
+              <details class="why-details"><summary>${t('auth.passwordWhyTitle')}</summary><p>${t('auth.passwordWhy')}</p></details>
+            ` : ''}
           </div>
         ` : ''}
         ${isSignup ? `
@@ -4663,10 +4708,9 @@ function renderAuth() {
         });
         if (error) { state.authError = translateAuthError(error.message); render(); return; }
         if (!data.session) {
-          state.notice = { type: 'ok', text: t('auth.confirmEmailNotice') };
           state.confirmEmailFor = email;
           state.confirmResend = null;
-          state.authMode = 'signin';
+          state.authMode = 'checkMail';
           render();
           return;
         }
@@ -4936,7 +4980,8 @@ function renderUnlockPrompt() {
     <div class="auth-box">
       <h1>Logbuch</h1>
       <p class="sub">${t('unlock.title')}</p>
-      <p class="habit-form-lock-note">${t('unlock.explain')}</p>
+      <p class="onb-hint">${t('unlock.explain')}</p>
+      <details class="why-details"><summary>${t('unlock.whyTitle')}</summary><p>${t('unlock.why')}</p></details>
       ${state.unlockError ? `<div class="notice" role="alert">${esc(state.unlockError)}</div>` : ''}
       <form id="unlock-form">
         <div class="auth-field">
@@ -6992,7 +7037,14 @@ app.addEventListener('click', async (e) => {
   // state.rowMenu.
   if (action !== 'row-menu') state.rowMenu = null;
 
-  if (action === 'auth-choose') {
+  if (action === 'check-mail-done') {
+    // Die Hilfe beim Anmelden erscheint wieder, falls die Adresse doch noch nicht bestätigt ist.
+    state.confirmEmailFor = null;
+    state.confirmResend = null;
+    state.authMode = 'signin';
+    render();
+    document.querySelector('.auth-box .sub')?.focus({ preventScroll: true });
+  } else if (action === 'auth-choose') {
     state.authMode = el.dataset.mode;
     state.authError = null;
     state.notice = null;

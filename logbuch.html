@@ -801,6 +801,12 @@
      der Formular-Hinweise - hier stehen Dinge, die man wirklich lesen soll. */
   .onb-hint { font-size: 0.875rem; line-height: 1.45; color: var(--ink); margin: 0 0 10px; }
   .onb-hint--after { margin: 6px 0 0; }
+  /* Aufklappbares "Warum?" (Anmelde-Seiten) - die Begründung steht bereit, ohne den
+     Hauptsatz zu verdrängen. */
+  .why-details { margin: 0.5rem 0 0; font-size: 0.875rem; line-height: 1.5; }
+  .why-details summary { cursor: pointer; font-weight: 600; padding: 0.25rem 0; }
+  .why-details p { margin: 0.25rem 0 0; color: var(--sand); }
+  .auth-password-hint { margin: 4px 0 0; }
   .why-box {
     margin: 0 0 18px; padding: 10px 12px; border-left: 3px solid var(--moss); border-radius: 4px;
     background: rgba(var(--moss-rgb), 0.09); font-size: 0.9375rem; line-height: 1.5;
@@ -1112,6 +1118,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=53a266c26f"></script>
+<script type="module" src="./logbuch.js?v=d0f11b1b06"></script>
 </body>
 </html>
