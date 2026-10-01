@@ -1491,7 +1491,10 @@ const STRINGS = {
     'installGate.step.samsung2': 'Such nach „Seite hinzufügen zu“ und wähle dann „Startbildschirm“ (oder etwas Ähnliches).',
     'installGate.step.firefox1': 'Öffne das Menü – meist drei Punkte ⋮, oben oder unten rechts.',
     'installGate.step.firefox2': 'Such nach einem Eintrag wie „Installieren“ oder „Zum Startbildschirm hinzufügen“.',
-    'installGate.step.other1': 'Öffne das Menü deines Browsers (oft drei Punkte ⋮ oder ≡, oben oder unten) und such nach einem Eintrag wie „Zum Startbildschirm hinzufügen“, „App installieren“ oder „Hinzufügen zu …“ – manchmal steckt er in einem Unterpunkt.',
+    'installGate.step.other1': 'Öffne das Menü deines Browsers – oft drei Punkte ⋮ oben rechts oder ≡ unten rechts.',
+    'installGate.step.other2': 'Such nach einem Eintrag wie „Zum Startbildschirm hinzufügen“, „App installieren“ oder „Hinzufügen zu …“ – manchmal steckt er in einem Unterpunkt.',
+    'installGate.step.opera1': 'Öffne das Menü – meist drei Punkte ⋮ oben rechts.',
+    'installGate.step.opera2': 'Tippe auf „Hinzufügen zu …“ und wähle dort „Startbildschirm“ (oder etwas Ähnliches).',
     'installGate.step.confirm': 'Bestätige, falls dein Handy nachfragt (z. B. mit „Installieren“ oder „Hinzufügen“).',
     'installSketch.copy': 'Kopieren',
     'installSketch.readingList': 'Zur Leseliste',
@@ -1515,6 +1518,17 @@ const STRINGS = {
     'installSketch.ariaChromeList': 'Skizze: Menü mit „Zum Startbildschirm hinzufügen“ hervorgehoben',
     'installSketch.ariaSamsungMenu': 'Skizze: Menü ≡ unten rechts',
     'installSketch.ariaSamsungList': 'Skizze: Menü mit „Seite hinzufügen zu“ hervorgehoben',
+    'installSketch.or': 'oder',
+    'installSketch.settings': 'Einstellungen',
+    'installSketch.addHomeGeneric1': 'Zum Startbildschirm',
+    'installSketch.addHomeGeneric2': '/ Hinzufügen zu …',
+    'installSketch.reload': 'Neu laden',
+    'installSketch.share': 'Teilen',
+    'installSketch.addTo': 'Hinzufügen zu …',
+    'installSketch.zoom': 'Zoomstufe',
+    'installSketch.ariaGenericMenu': 'Skizze: das Menü sitzt meist oben rechts oder unten rechts',
+    'installSketch.ariaGenericList': 'Skizze: Menü mit einem Eintrag zum Startbildschirm hervorgehoben',
+    'installSketch.ariaOperaList': 'Skizze: Menü mit „Hinzufügen zu …“ hervorgehoben',
     'installSketch.permIosLine1': '„Logbuch“ möchte dir',
     'installSketch.permIosLine2': 'Mitteilungen senden',
     'installSketch.permDeny': 'Nicht erlauben',
@@ -2128,7 +2142,10 @@ const STRINGS = {
     'installGate.step.samsung2': 'Look for “Add page to” and then choose “Home screen” (or something similar).',
     'installGate.step.firefox1': 'Open the menu – usually three dots ⋮, at the top or bottom right.',
     'installGate.step.firefox2': 'Look for an entry like “Install” or “Add to Home screen”.',
-    'installGate.step.other1': 'Open your browser menu (often three dots ⋮ or ≡, at the top or bottom) and look for an entry like “Add to Home screen”, “Install app” or “Add to …” – sometimes it is inside a sub-menu.',
+    'installGate.step.other1': 'Open your browser menu – often three dots ⋮ at the top right or ≡ at the bottom right.',
+    'installGate.step.other2': 'Look for an entry like “Add to Home screen”, “Install app” or “Add to …” – sometimes it is inside a sub-menu.',
+    'installGate.step.opera1': 'Open the menu – usually three dots ⋮ at the top right.',
+    'installGate.step.opera2': 'Tap “Add to …” and choose “Home screen” there (or something similar).',
     'installGate.step.confirm': 'Confirm if your phone asks (e.g. with “Install” or “Add”).',
     'installSketch.copy': 'Copy',
     'installSketch.readingList': 'Reading List',
@@ -2152,6 +2169,17 @@ const STRINGS = {
     'installSketch.ariaChromeList': 'Sketch: menu with “Add to Home screen” highlighted',
     'installSketch.ariaSamsungMenu': 'Sketch: menu ≡ at the bottom right',
     'installSketch.ariaSamsungList': 'Sketch: menu with “Add page to” highlighted',
+    'installSketch.or': 'or',
+    'installSketch.settings': 'Settings',
+    'installSketch.addHomeGeneric1': 'Add to Home screen',
+    'installSketch.addHomeGeneric2': '/ Add to …',
+    'installSketch.reload': 'Reload',
+    'installSketch.share': 'Share',
+    'installSketch.addTo': 'Add to …',
+    'installSketch.zoom': 'Zoom',
+    'installSketch.ariaGenericMenu': 'Sketch: the menu is usually at the top right or bottom right',
+    'installSketch.ariaGenericList': 'Sketch: menu with an entry for the home screen highlighted',
+    'installSketch.ariaOperaList': 'Sketch: menu with “Add to …” highlighted',
     'installSketch.permIosLine1': '“Logbuch” would like',
     'installSketch.permIosLine2': 'to send you notifications',
     'installSketch.permDeny': 'Don’t Allow',
@@ -5338,7 +5366,8 @@ function installBrowser() {
     if (/Firefox/.test(ua)) return 'firefox';
     // Opera, Edge, Vivaldi, Yandex & Co. tragen "Chrome" in der Kennung, haben aber andere
     // Menüs - dort lieber die allgemeine Anleitung als eine falsche genaue.
-    if (/OPR\/|EdgA|Vivaldi|YaBrowser|DuckDuckGo|MiuiBrowser|HuaweiBrowser/.test(ua)) return 'other';
+    if (/OPR\//.test(ua)) return 'opera';
+    if (/EdgA|Vivaldi|YaBrowser|DuckDuckGo|MiuiBrowser|HuaweiBrowser/.test(ua)) return 'other';
     return 'chrome';
   }
   return 'other';
@@ -5401,6 +5430,26 @@ function sketchHtml(kind) {
         ${tiles.map((tile, i) => { const cx = 58 + (i % 2) * 84, y = 166 + Math.floor(i / 2) * 56; return `<rect x="${cx - 8}" y="${y - 4}" width="16" height="16" rx="4" class="sk-line"/>${tile.map((line, j) => sketchText(cx, y + 24 + j * 10, line, 'text-anchor="middle" font-size="9"')).join('')}`; }).join('')}
         <rect x="18" y="${166 + 56 - 6}" width="80" height="46" rx="8" class="sk-hl"/>`, L('ariaSamsungList'));
     }
+    case 'genericMenu':
+      // Zwei übliche Stellen fürs Menü, beide gestrichelt markiert: "hier oder hier".
+      return sketchFrame(`<rect x="24" y="18" width="128" height="24" rx="12" class="sk-bar"/>${sketchText(88, 34, 'logbuch', 'text-anchor="middle"')}
+        ${[24, 30, 36].map((y) => `<circle cx="170" cy="${y}" r="1.8" class="sk-dot"/>`).join('')}<circle cx="170" cy="30" r="13" class="sk-hl sk-hl--maybe"/>
+        ${sketchPage(60)}
+        ${[264, 269, 274].map((y) => `<rect x="161" y="${y - 0.9}" width="14" height="1.8" rx="0.9" class="sk-dot"/>`).join('')}<circle cx="168" cy="269" r="14" class="sk-hl sk-hl--maybe"/>
+        ${sketchText(100, 210, L('or'), 'text-anchor="middle" font-style="italic"')}`, L('ariaGenericMenu'));
+    case 'genericList': {
+      const rows = [[L('newTab')], [L('history')], [L('addHomeGeneric1'), L('addHomeGeneric2')], [L('settings')]];
+      return sketchFrame(`${sketchPage(60)}<rect x="62" y="16" width="122" height="176" rx="8" class="sk-sheet"/>
+        ${rows.map((r, i) => r.map((line, j) => sketchText(74, 42 + i * 34 + j * 13, line)).join('')).join('')}
+        <rect x="66" y="${24 + 2 * 34}" width="114" height="40" rx="6" class="sk-hl"/>`, L('ariaGenericList'));
+    }
+    case 'operaList': {
+      const rows = [[L('reload')], [L('share')], [L('addTo')], [L('zoom')]];
+      return sketchFrame(`${sketchPage(60)}<rect x="62" y="16" width="122" height="176" rx="8" class="sk-sheet"/>
+        ${rows.map((r, i) => r.map((line, j) => sketchText(74, 42 + i * 34 + j * 13, line)).join('')).join('')}
+        ${sketchText(172, 110, '›', 'text-anchor="middle"')}
+        <rect x="66" y="${26 + 2 * 34}" width="114" height="30" rx="6" class="sk-hl"/>`, L('ariaOperaList'));
+    }
     case 'permIos':
       return sketchFrame(`${sketchPage()}<rect x="30" y="110" width="140" height="96" rx="14" class="sk-sheet"/>
         ${sketchText(100, 136, L('permIosLine1'), 'text-anchor="middle" font-weight="600"')}${sketchText(100, 150, L('permIosLine2'), 'text-anchor="middle" font-weight="600"')}
@@ -5425,7 +5474,8 @@ function installSteps() {
     case 'samsung': return [['samsung1', 'samsungMenu'], ['samsung2', 'samsungList'], ['confirm', null]];
     case 'firefox': return [['firefox1', null], ['firefox2', null], ['confirm', null]];
     case 'chrome': return [['chrome1', 'chromeMenu'], ['chrome2', 'chromeList'], ['confirm', null]];
-    default: return [['other1', null], ['confirm', null]];
+    case 'opera': return [['opera1', 'chromeMenu'], ['opera2', 'operaList'], ['confirm', null]];
+    default: return [['other1', 'genericMenu'], ['other2', 'genericList'], ['confirm', null]];
   }
 }
 // Faustregel: bei "Schritt für Schritt" die Skizzen direkt im Ablauf, sonst die kurze

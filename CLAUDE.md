@@ -69,7 +69,7 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
   ("meist", "such nach etwas Ähnlichem", Hinweis dass es je nach Handy/Browser anders aussieht –
   Nutzer-Erfahrung: wer selbst ein bisschen suchen soll, findet es eher, als wer eine exakte
   Beschreibung erwartet, die dann nicht stimmt); Opera, Edge u.a. bekommen die allgemeine
-  Anleitung statt der Chrome-Anleitung. Gilt genauso für alle anderen Anleitungen zu fremden
+  Anleitung statt der Chrome-Anleitung – mit allgemeinen Skizzen (Menü "oben rechts oder unten rechts", gestrichelt; Liste mit Eintrag zum Startbildschirm), Opera eine eigene (Menü ⋮ → „Hinzufügen zu …“ → Startbildschirm, nach einem Nutzer-Screenshot). Auch ungefähre Skizzen helfen mehr als gar keine (Nutzer). Gilt genauso für alle anderen Anleitungen zu fremden
   Oberflächen (Mitteilungen erlauben, Bildschirmfoto, Downloads). auf Android/Chrome zusätzlich ein echter
   Installieren-Knopf (`beforeinstallprompt`). So registriert man sich gleich in der
   installierten App – vorher kam der Hinweis erst nach dem Anmelden (zweites Anmelden in
@@ -1032,7 +1032,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 635 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 649 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
