@@ -838,7 +838,7 @@ function closeModals() {
 // von "Verwalten") - deshalb ein Layer-Zähler statt einer reinen Boolean-Prüfung, mit
 // je einem History-Eintrag pro Layer, damit zwei Zurück-Drücke auch zwei Ebenen
 // nacheinander schließen.
-function isSubpageView(view) { return view === 'manage' || view === 'about' || view === 'feedback'; }
+function isSubpageView(view) { return view === 'manage' || view === 'about' || view === 'feedback' || view === 'settings'; }
 // Merkt sich den Tab, von dem aus eine Unterseite betreten wurde (nicht überschreiben,
 // wenn man z.B. innerhalb von "Verwalten" übers Menü direkt zu "Über Logbuch"
 // wechselt - sonst würde "Zurück" dann fälschlich zu "Verwalten" statt zum
@@ -1081,7 +1081,7 @@ const STRINGS = {
     'auth.title.forgot': 'Passwort zurücksetzen',
     'auth.title.signup': 'Neues Konto anlegen',
     'auth.title.login': 'Anmelden',
-    'auth.forgotRecoveryNote': 'Zum eigentlichen Zurücksetzen brauchst du im nächsten Schritt deinen Ersatzschlüssel (den du nach der Einrichtung bekommen bzw. zuletzt im Menü neu erzeugt hast) – nur damit bleiben deine bisherigen Daten erhalten.',
+    'auth.forgotRecoveryNote': 'Zum eigentlichen Zurücksetzen brauchst du im nächsten Schritt deinen Ersatzschlüssel (den du nach der Einrichtung bekommen bzw. zuletzt in den Einstellungen neu erzeugt hast) – nur damit bleiben deine bisherigen Daten erhalten.',
     'auth.email': 'E-Mail',
     'auth.password': 'Passwort',
     'auth.passwordHint': '<strong>Mindestens {min} Zeichen.</strong> Deine Einträge werden auf deinem Gerät verschlüsselt, bevor sie gespeichert werden. Dein Passwort ist der Schlüssel dazu. Wähle deshalb eines, das du sonst nirgends verwendest.',
@@ -1110,7 +1110,7 @@ const STRINGS = {
     'recovery.title': 'Neues Passwort setzen',
     'recovery.newPassword': 'Neues Passwort',
     'recovery.key': 'Ersatzschlüssel',
-    'recovery.keyPlaceholder': 'von der Einrichtung bzw. zuletzt im Menü neu erzeugt',
+    'recovery.keyPlaceholder': 'von der Einrichtung bzw. zuletzt in den Einstellungen neu erzeugt',
     'recovery.saving': 'Wird gespeichert …',
     'recovery.savePassword': 'Passwort speichern',
     'recovery.keyAlsoLost': 'Ersatzschlüssel auch verloren?',
@@ -1129,7 +1129,7 @@ const STRINGS = {
     'recoveryDisplay.keepTitle': 'Heb ihn gut auf',
     'recoveryDisplay.keepBody': 'Er wird nur dieses eine Mal angezeigt – speichere ihn am besten jetzt, im Passwort-Manager oder ausgedruckt. <strong>Und gib ihn niemandem:</strong> Er öffnet dein Logbuch genauso wie dein Passwort.',
     'recoveryDisplay.moreLabel': 'Mehr erfahren',
-    'recoveryDisplay.more': 'Verlierst du Passwort <strong>und</strong> Ersatzschlüssel, sind deine Einträge weg – das ist der Preis dafür, dass niemand sonst rankommt. Einen neuen Ersatzschlüssel bekommst du jederzeit im Menü unter „Ersatzschlüssel neu erzeugen“, der alte wird dann ungültig.',
+    'recoveryDisplay.more': 'Verlierst du Passwort <strong>und</strong> Ersatzschlüssel, sind deine Einträge weg – das ist der Preis dafür, dass niemand sonst rankommt. Einen neuen Ersatzschlüssel bekommst du jederzeit in den Einstellungen unter „Ersatzschlüssel neu erzeugen“, der alte wird dann ungültig.',
     'recoveryDisplay.fileTitle': 'Logbuch – Ersatzschlüssel',
     'recoveryDisplay.fileName': 'logbuch-ersatzschluessel.txt',
     'common.next': 'Weiter',
@@ -1235,7 +1235,7 @@ const STRINGS = {
     'habitForm.members': 'Mitglieder (mind. 2 Felder)',
     'habitForm.noComputedCandidates': 'Noch keine Skala-Felder vorhanden, die sich zusammenfassen lassen.',
     'habitForm.ownReminderTime': 'Eigene Erinnerungszeit',
-    'habitForm.defaultReminderNote': 'Ohne eigene Zeit gilt die Standard-Erinnerungszeit (aktuell {time}, änderbar im Menü).',
+    'habitForm.defaultReminderNote': 'Ohne eigene Zeit gilt die Standard-Erinnerungszeit (aktuell {time}, änderbar in den Einstellungen).',
     'habitForm.sectionReminderNote': 'Ohne eigene Zeit über die Gruppe „{name}“ geregelt: gemeinsame Erinnerung um {time}.',
     'habitForm.title.editGroup': 'Gruppe bearbeiten',
     'habitForm.title.newGroup': 'Neue Gruppe',
@@ -1346,10 +1346,10 @@ const STRINGS = {
     'tutorial.reminders.permissionNote': 'Gleich fragt dein Gerät um Erlaubnis – tipp dort auf „Erlauben“.',
     'tutorial.reminders.yes': 'Ja, erinnere mich',
     'tutorial.reminders.no': 'Lieber nicht',
-    'tutorial.reminders.laterNote': 'Kein Problem – du kannst Erinnerungen jederzeit im Menü einschalten.',
+    'tutorial.reminders.laterNote': 'Kein Problem – du kannst Erinnerungen jederzeit in den Einstellungen einschalten.',
     'tutorial.reminders.activeTitle': '✓ Erinnerungen sind an.',
     'tutorial.reminders.timeLabel': 'Um wie viel Uhr?',
-    'tutorial.reminders.timeNote': 'Abends passt oft gut – dann ist der Tag rum. Ändern kannst du das jederzeit im Menü.',
+    'tutorial.reminders.timeNote': 'Abends passt oft gut – dann ist der Tag rum. Ändern kannst du das jederzeit in den Einstellungen.',
     'tutorial.reminders.iosNeedsInstall': 'Auf dem iPhone kommen Erinnerungen nur an, wenn Logbuch auf dem Home-Bildschirm liegt. Das kannst du jederzeit nachholen – ein Hinweis in der App zeigt dir, wie.',
     'tutorial.field.title': 'Was möchtest du festhalten?',
     'tutorial.field.body': 'Überleg dir eine Sache, die du ab heute beobachten willst. Tipp auf ein Beispiel, um damit zu starten – oder nimm deine eigene Idee.',
@@ -1408,13 +1408,17 @@ const STRINGS = {
     'pattern.enableLabel': 'Muster zusätzlich zur Farbe anzeigen',
     'haptics.enableLabel': 'Beim Eintragen vibrieren',
     'pattern.explain': 'Etwa 1 von 12 Männern und 1 von 200 Frauen hat eine Rot-Grün-Sehschwäche – oft unbemerkt, da sie selten diagnostiziert wird. Damit Bewertungen (rot bis grün) nicht ausschließlich über die Farbe erkennbar sind, zeigt Logbuch standardmäßig zusätzlich ein feines Streifenmuster: je dichter, desto besser der Wert. Rein optisch abschaltbar, falls du es nicht brauchst und nicht magst.',
-    'menu.groupNavigation': 'Navigation',
-    'menu.groupSettings': 'Einstellungen',
     'menu.groupAccount': 'Konto',
     'menu.manageFields': 'Felder verwalten',
     'menu.about': 'Über Logbuch',
     'about.title': 'Über Logbuch',
     'menu.feedback': 'Feedback geben',
+    'menu.settings': 'Einstellungen',
+    'settings.reminders': 'Erinnerungen',
+    'settings.display': 'Anzeige',
+    'settings.defaultReminderNote': 'Gilt für alle Felder ohne eigene Erinnerungszeit.',
+    'settings.exportNote': 'Lädt alles, was zu deinem Konto gehört, als eine Datei herunter.',
+    'settings.recoveryKeyNote': 'Nur nötig, wenn du deinen Ersatzschlüssel verloren hast – der alte gilt danach nicht mehr.',
     'feedback.title': 'Feedback',
     'feedback.intro': 'Ideen, Fehler, Lob oder Kritik – alles ist willkommen.',
     'feedback.messageLabel': 'Deine Nachricht',
@@ -1428,7 +1432,7 @@ const STRINGS = {
     'feedback.error.rateLimited': 'Du hast in den letzten 24 Stunden schon mehrere Nachrichten geschickt – bitte versuch es später noch einmal.',
     'feedback.error.failed': 'Senden fehlgeschlagen – bitte versuch es später noch einmal.',
     'about.intro': 'Ein paar Dinge, die sich nicht von selbst erklären — zum Nachlesen, falls du magst.',
-    'about.link.menu': 'Im Menü zeigen',
+    'about.link.menu': 'In den Einstellungen zeigen',
     'about.link.manage': 'Zu „Felder verwalten“',
     'about.status': 'Beta – Stand {date}. Ich baue laufend weiter, melde dich gern, falls dir etwas auffällt.',
     'about.monetizationNote': 'Logbuch ist aktuell in vollem Umfang kostenlos. Es ist möglich, dass ich künftig bestimmte Funktionen kostenpflichtig mache, zum Beispiel über ein Abonnement.',
@@ -1438,7 +1442,7 @@ const STRINGS = {
     'about.a11y.title': 'Barrierefreiheit bei Logbuch',
     'about.a11y.intro': 'Menschen mit Einschränkungen — ob durch eine Behinderung, Farbenblindheit oder eingeschränkte Beweglichkeit — gehören zu den in der Gesellschaft am wenigsten berücksichtigten Gruppen. Gerade eine App, die dabei helfen soll, gut für sich selbst zu sorgen, sollte hier besonders genau hinschauen — nicht weil es irgendwann Pflicht wird, sondern weil es mir wichtig ist. Ein paar konkrete Dinge, die ich deshalb bewusst eingebaut habe, und warum:',
     'about.a11y.pattern.title': 'Warum ein Muster zusätzlich zur Farbe?',
-    'about.a11y.pattern.body': 'Rund 1 von 12 Männern und 1 von 200 Frauen hat eine Rot-Grün-Sehschwäche — oft unbemerkt, weil sie selten diagnostiziert wird. Bewertungen in Logbuch (rot bis grün) sind deshalb standardmäßig zusätzlich mit einem feinen Streifenmuster versehen, dessen Dichte sich nach dem Wert richtet. Bewusst nicht als Extra-Einstellung, die man erst suchen muss (Opt-in), sondern als Standard, den man bei Bedarf abschalten kann (im Menü unter „Einstellungen“) — wer es braucht, weiß oft selbst nicht, dass er danach suchen müsste.',
+    'about.a11y.pattern.body': 'Rund 1 von 12 Männern und 1 von 200 Frauen hat eine Rot-Grün-Sehschwäche — oft unbemerkt, weil sie selten diagnostiziert wird. Bewertungen in Logbuch (rot bis grün) sind deshalb standardmäßig zusätzlich mit einem feinen Streifenmuster versehen, dessen Dichte sich nach dem Wert richtet. Bewusst nicht als Extra-Einstellung, die man erst suchen muss (Opt-in), sondern als Standard, den man bei Bedarf abschalten kann (in den Einstellungen) — wer es braucht, weiß oft selbst nicht, dass er danach suchen müsste.',
     'about.a11y.keyboard.title': 'Tastatur statt Maus oder Finger',
     'about.a11y.keyboard.body': 'Alles in Logbuch lässt sich vollständig ohne Maus oder Touch bedienen — wichtig für Menschen, die aus motorischen Gründen keine Maus präzise führen oder einen Touchscreen nicht zuverlässig treffen können. Kalenderzellen, Dialoge und selbst das Umsortieren von Feldern (sonst nur per Ziehen möglich) haben eine vollwertige Tastatur-Alternative. In Dialogen wie „Konto löschen“ bleibt der Tastatur-Fokus zuverlässig innerhalb des Dialogs, statt unbemerkt in den Hintergrund abzurutschen, und Escape schließt sie, wie man es von anderer Software gewohnt ist.',
     'about.a11y.screenreader.title': 'Screenreader (Vorlese-Software für blinde Menschen)',
@@ -1466,9 +1470,9 @@ const STRINGS = {
     'about.privacy.canSee.title': 'Was ich sehen kann',
     'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>wie viele Felder und Gruppen du hast, von welcher Art die Felder sind (z. B. Skala oder Zahl) und welches Feld in welcher Gruppe steht – aber nicht, worum es geht oder wie Felder und Gruppen heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokollieren die Anbieter, bei denen Logbuch läuft, für kurze Zeit technische Zugriffsdaten wie IP-Adressen. Und ein Mail-Dienst bekommt deine E-Mail-Adresse, um dir die Mails zum Bestätigen deines Kontos und zum Zurücksetzen des Passworts zu schicken.',
     'about.privacy.recoveryKey.title': 'Die Kehrseite: dein Ersatzschlüssel',
-    'about.privacy.recoveryKey.body': 'Weil ich keinen Zugriff habe, kann ich dir auch nicht helfen, wenn du Passwort <strong>und</strong> Ersatzschlüssel verlierst – dann sind deine Einträge unwiederbringlich weg. Bewahre ihn deshalb gut auf. Hast du ihn verlegt, kannst du dir im Menü jederzeit einen neuen erzeugen – der alte wird dabei ungültig, und du brauchst ihn dafür nicht.',
+    'about.privacy.recoveryKey.body': 'Weil ich keinen Zugriff habe, kann ich dir auch nicht helfen, wenn du Passwort <strong>und</strong> Ersatzschlüssel verlierst – dann sind deine Einträge unwiederbringlich weg. Bewahre ihn deshalb gut auf. Hast du ihn verlegt, kannst du dir in den Einstellungen jederzeit einen neuen erzeugen – der alte wird dabei ungültig, und du brauchst ihn dafür nicht.',
     'about.privacy.yourData.title': 'Deine Daten gehören dir',
-    'about.privacy.yourData.body': 'Du kannst jederzeit alles als Datei exportieren – dein Recht auf Auskunft über deine Daten – oder dein Konto löschen (im Menü unter „Konto“). Dein Konto und alle Einträge werden dabei endgültig gelöscht.',
+    'about.privacy.yourData.body': 'Du kannst jederzeit alles als Datei exportieren – dein Recht auf Auskunft über deine Daten – oder dein Konto löschen (in den Einstellungen unter „Konto“). Dein Konto und alle Einträge werden dabei endgültig gelöscht.',
     'about.privacy.feedback': 'Hast du Fragen dazu, oder fehlt dir etwas? Schreib mir gern.',
     'about.tip.swipe.title': 'Wischen',
     'about.tip.swipe.body': 'In Tag-, Wochen-, Monats- und Jahresansicht kannst du nach links/rechts wischen, um zum vorherigen/nächsten Zeitraum zu springen — schneller als die Pfeil-Buttons. In "Felder verwalten" und "Über Logbuch" bringt dich ein Wisch nach rechts zurück.',
@@ -1501,11 +1505,11 @@ const STRINGS = {
     'about.tip.archiveVsDelete.title': 'Archivieren statt löschen',
     'about.tip.archiveVsDelete.body': 'Archivierte Felder verschwinden aus der Tageseingabe und standardmäßig auch aus der Auswertung – ihre bisherigen Werte bleiben aber erhalten. Willst du sie weiter sehen (z. B. die Vorgeschichte eines Feldes, das du durch ein neues ersetzt hast), setz in „Felder verwalten“ beim archivierten Feld den Haken „In der Auswertung anzeigen“. Archivierte Felder lassen sich jederzeit reaktivieren; endgültiges Löschen entfernt dagegen auch die bisherigen Werte.',
     'about.tip.theme.title': 'Dark Mode',
-    'about.tip.theme.body': 'Folgt automatisch deiner Systemeinstellung, lässt sich im Menü aber auch fest auf Hell oder Dunkel stellen.',
+    'about.tip.theme.body': 'Folgt automatisch deiner Systemeinstellung, lässt sich in den Einstellungen aber auch fest auf Hell oder Dunkel stellen.',
     'about.tip.textSize.title': 'Schriftgröße',
-    'about.tip.textSize.body': 'Im Menü unter „Textgröße“ lässt sich die Schrift in der ganzen App vergrößern oder verkleinern – gilt für dieses Gerät.',
+    'about.tip.textSize.body': 'In den Einstellungen unter „Textgröße“ lässt sich die Schrift in der ganzen App vergrößern oder verkleinern – gilt für dieses Gerät.',
     'about.tip.language.title': 'Sprache',
-    'about.tip.language.body': 'Logbuch gibt\'s auf Deutsch und Englisch, umstellbar im Menü.',
+    'about.tip.language.body': 'Logbuch gibt\'s auf Deutsch und Englisch, umstellbar in den Einstellungen.',
     'menu.exportData': 'Meine Daten exportieren',
     'menu.regenerateRecoveryKey': 'Ersatzschlüssel neu erzeugen',
     'menu.deleteAccount': 'Konto löschen',
@@ -1582,7 +1586,7 @@ const STRINGS = {
     'auth.title.forgot': 'Reset password',
     'auth.title.signup': 'Create new account',
     'auth.title.login': 'Sign in',
-    'auth.forgotRecoveryNote': 'To actually reset your password, you will need your spare key in the next step (the one you got after setup, or last regenerated in the menu) – only with it is your existing data kept.',
+    'auth.forgotRecoveryNote': 'To actually reset your password, you will need your spare key in the next step (the one you got after setup, or last regenerated in the settings) – only with it is your existing data kept.',
     'auth.email': 'Email',
     'auth.password': 'Password',
     'auth.passwordHint': '<strong>At least {min} characters.</strong> Your entries are encrypted on your device before they are stored. Your password is the key to them. Choose one you don’t use anywhere else.',
@@ -1611,7 +1615,7 @@ const STRINGS = {
     'recovery.title': 'Set new password',
     'recovery.newPassword': 'New password',
     'recovery.key': 'Spare key',
-    'recovery.keyPlaceholder': 'from setup, or last regenerated in the menu',
+    'recovery.keyPlaceholder': 'from setup, or last regenerated in the settings',
     'recovery.saving': 'Saving…',
     'recovery.savePassword': 'Save password',
     'recovery.keyAlsoLost': 'Also lost your spare key?',
@@ -1630,7 +1634,7 @@ const STRINGS = {
     'recoveryDisplay.keepTitle': 'Keep it safe',
     'recoveryDisplay.keepBody': 'It is shown only this once – best save it now, in a password manager or printed out. <strong>And do not give it to anyone:</strong> it unlocks your Logbuch just like your password.',
     'recoveryDisplay.moreLabel': 'Learn more',
-    'recoveryDisplay.more': 'If you lose your password <strong>and</strong> your spare key, your entries are gone – that is the price of nobody else being able to get in. You can get a new spare key anytime in the menu under “Regenerate spare key”; the old one then becomes invalid.',
+    'recoveryDisplay.more': 'If you lose your password <strong>and</strong> your spare key, your entries are gone – that is the price of nobody else being able to get in. You can get a new spare key anytime in the settings under “Regenerate spare key”; the old one then becomes invalid.',
     'recoveryDisplay.fileTitle': 'Logbuch – spare key',
     'recoveryDisplay.fileName': 'logbuch-spare-key.txt',
     'common.next': 'Next',
@@ -1736,7 +1740,7 @@ const STRINGS = {
     'habitForm.members': 'Members (at least 2 fields)',
     'habitForm.noComputedCandidates': 'No scale fields available yet that can be combined.',
     'habitForm.ownReminderTime': 'Custom reminder time',
-    'habitForm.defaultReminderNote': 'Without a custom time, the default reminder time applies (currently {time}, changeable in the menu).',
+    'habitForm.defaultReminderNote': 'Without a custom time, the default reminder time applies (currently {time}, changeable in the settings).',
     'habitForm.sectionReminderNote': 'Without a custom time, handled by the group “{name}”: shared reminder at {time}.',
     'habitForm.title.editGroup': 'Edit group',
     'habitForm.title.newGroup': 'New group',
@@ -1847,10 +1851,10 @@ const STRINGS = {
     'tutorial.reminders.permissionNote': 'Your device will ask for permission in a moment – tap “Allow” there.',
     'tutorial.reminders.yes': 'Yes, remind me',
     'tutorial.reminders.no': 'Rather not',
-    'tutorial.reminders.laterNote': 'No problem – you can turn reminders on in the menu anytime.',
+    'tutorial.reminders.laterNote': 'No problem – you can turn reminders on in the settings anytime.',
     'tutorial.reminders.activeTitle': '✓ Reminders are on.',
     'tutorial.reminders.timeLabel': 'At what time?',
-    'tutorial.reminders.timeNote': 'Evenings often work well – the day is done by then. You can change this in the menu anytime.',
+    'tutorial.reminders.timeNote': 'Evenings often work well – the day is done by then. You can change this in the settings anytime.',
     'tutorial.reminders.iosNeedsInstall': 'On iPhone, reminders only arrive when Logbuch is on your home screen. You can do that anytime – a hint in the app shows you how.',
     'tutorial.field.title': 'What would you like to track?',
     'tutorial.field.body': 'Think of one thing you want to keep an eye on from today. Tap an example to start with it – or go with your own idea.',
@@ -1909,13 +1913,17 @@ const STRINGS = {
     'pattern.enableLabel': 'Show pattern in addition to color',
     'haptics.enableLabel': 'Vibrate when entering values',
     'pattern.explain': 'About 1 in 12 men and 1 in 200 women has red-green color vision deficiency – often unnoticed, since it is rarely diagnosed. So that ratings (red to green) are not recognizable through color alone, Logbuch shows a subtle stripe pattern in addition by default: the denser it is, the better the value. Purely a visual choice, switch it off if you do not need or want it.',
-    'menu.groupNavigation': 'Navigation',
-    'menu.groupSettings': 'Settings',
     'menu.groupAccount': 'Account',
     'menu.manageFields': 'Manage fields',
     'menu.about': 'About Logbuch',
     'about.title': 'About Logbuch',
     'menu.feedback': 'Send feedback',
+    'menu.settings': 'Settings',
+    'settings.reminders': 'Reminders',
+    'settings.display': 'Display',
+    'settings.defaultReminderNote': 'Applies to all fields without their own reminder time.',
+    'settings.exportNote': 'Downloads everything that belongs to your account as one file.',
+    'settings.recoveryKeyNote': 'Only needed if you lost your spare key – the old one stops working afterwards.',
     'feedback.title': 'Feedback',
     'feedback.intro': 'Ideas, bugs, praise or criticism – everything is welcome.',
     'feedback.messageLabel': 'Your message',
@@ -1929,7 +1937,7 @@ const STRINGS = {
     'feedback.error.rateLimited': 'You have already sent several messages in the last 24 hours – please try again later.',
     'feedback.error.failed': 'Sending failed – please try again later.',
     'about.intro': 'A few things that are not obvious at first glance — here to read up on if you are curious.',
-    'about.link.menu': 'Show in menu',
+    'about.link.menu': 'Show in settings',
     'about.link.manage': 'Go to “Manage fields”',
     'about.status': 'Beta – as of {date}. I am actively continuing to build this out, feel free to reach out if you notice anything.',
     'about.monetizationNote': 'Logbuch is currently completely free. I may make certain features paid in the future, for example via a subscription.',
@@ -1939,7 +1947,7 @@ const STRINGS = {
     'about.a11y.title': 'Accessibility at Logbuch',
     'about.a11y.intro': 'People with disabilities — whether through a physical condition, color blindness, or limited mobility — are among the least considered groups in society. An app meant to help you take good care of yourself should pay particular attention here — not because it will eventually be required, but because it matters to me. Here are a few concrete things I built in on purpose, and why:',
     'about.a11y.pattern.title': 'Why a pattern in addition to color?',
-    'about.a11y.pattern.body': 'About 1 in 12 men and 1 in 200 women has red-green color vision deficiency — often unnoticed, since it is rarely diagnosed. Ratings in Logbuch (red to green) therefore get a subtle stripe pattern by default, whose density follows the value. Deliberately not an extra setting you would have to go looking for (opt-in), but a default you can switch off if you do not need it (in the menu under "Settings") — the people who need it often would not know to look for it.',
+    'about.a11y.pattern.body': 'About 1 in 12 men and 1 in 200 women has red-green color vision deficiency — often unnoticed, since it is rarely diagnosed. Ratings in Logbuch (red to green) therefore get a subtle stripe pattern by default, whose density follows the value. Deliberately not an extra setting you would have to go looking for (opt-in), but a default you can switch off if you do not need it (in the settings) — the people who need it often would not know to look for it.',
     'about.a11y.keyboard.title': 'Keyboard instead of mouse or touch',
     'about.a11y.keyboard.body': 'Everything in Logbuch can be operated fully without a mouse or touch — important for people who, for motor reasons, cannot precisely control a mouse or reliably hit targets on a touchscreen. Calendar cells, dialogs, and even reordering fields (otherwise only possible by dragging) have a full keyboard alternative. In dialogs like "Delete account", keyboard focus reliably stays within the dialog instead of unnoticeably slipping into the background, and Escape closes them, as is standard in other software.',
     'about.a11y.screenreader.title': 'Screen readers (software that reads the screen aloud for blind users)',
@@ -1967,9 +1975,9 @@ const STRINGS = {
     'about.privacy.canSee.title': 'What I can see',
     'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>how many fields and groups you have, what kind the fields are (e.g. scale or number), and which field is in which group – but not what they are about or what your fields and groups are called</li><li>on which days you filled in which of these fields (for reminders), without the value</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the providers Logbuch runs on briefly log technical access data such as IP addresses. And an email service gets your email address to send you the emails for confirming your account and resetting your password.',
     'about.privacy.recoveryKey.title': 'The flip side: your spare key',
-    'about.privacy.recoveryKey.body': 'Because I have no access, I also cannot help you if you lose your password <strong>and</strong> your spare key – your entries are then gone for good. So keep it somewhere safe. If you have misplaced it, you can create a new one in the menu anytime – the old one becomes invalid, and you do not need it to do this.',
+    'about.privacy.recoveryKey.body': 'Because I have no access, I also cannot help you if you lose your password <strong>and</strong> your spare key – your entries are then gone for good. So keep it somewhere safe. If you have misplaced it, you can create a new one in the settings anytime – the old one becomes invalid, and you do not need it to do this.',
     'about.privacy.yourData.title': 'Your data belongs to you',
-    'about.privacy.yourData.body': 'You can export everything as a file at any time – your right to access your data – or delete your account (in the menu under “Account”). Your account and all entries are then permanently deleted.',
+    'about.privacy.yourData.body': 'You can export everything as a file at any time – your right to access your data – or delete your account (in the settings under “Account”). Your account and all entries are then permanently deleted.',
     'about.privacy.feedback': 'Do you have questions about this, or is something missing? Feel free to write to me.',
     'about.tip.swipe.title': 'Swiping',
     'about.tip.swipe.body': 'In the day, week, month, and year views, you can swipe left/right to jump to the previous/next period — faster than the arrow buttons. On "Manage fields" and "About Logbuch", swiping right takes you back.',
@@ -2002,11 +2010,11 @@ const STRINGS = {
     'about.tip.archiveVsDelete.title': 'Archiving instead of deleting',
     'about.tip.archiveVsDelete.body': 'Archived fields disappear from daily entry and, by default, from the statistics too – but their existing values are kept. If you still want to see them (e.g. the history of a field you replaced with a new one), tick “Show in statistics” for the archived field under “Manage fields”. Archived fields can be reactivated anytime; permanent deletion, on the other hand, also removes the existing values.',
     'about.tip.theme.title': 'Dark mode',
-    'about.tip.theme.body': 'Follows your system setting automatically, but can also be fixed to light or dark in the menu.',
+    'about.tip.theme.body': 'Follows your system setting automatically, but can also be fixed to light or dark in the settings.',
     'about.tip.textSize.title': 'Text size',
-    'about.tip.textSize.body': 'Under “Text size” in the menu you can make the text larger or smaller throughout the app – applies to this device.',
+    'about.tip.textSize.body': 'Under “Text size” in the settings you can make the text larger or smaller throughout the app – applies to this device.',
     'about.tip.language.title': 'Language',
-    'about.tip.language.body': 'Logbuch is available in German and English, switchable in the menu.',
+    'about.tip.language.body': 'Logbuch is available in German and English, switchable in the settings.',
     'menu.exportData': 'Export my data',
     'menu.regenerateRecoveryKey': 'Regenerate spare key',
     'menu.deleteAccount': 'Delete account',
@@ -5441,13 +5449,13 @@ function renderGlobal() {
 // neugierig ist. Die Tipp-Gruppen (tipGroup) sind eine simple Array-Struktur statt
 // vieler Einzel-Strings, damit neue Tipps sich leicht ergänzen lassen.
 // Ein Tipp in "Über Logbuch". link (optional): wohin der Tipp verweist - { menu:
-// '<data-menu-target>' } öffnet das ☰-Menü und springt zum Eintrag (focusMenuTarget),
+// '<data-menu-target>' } öffnet die Einstellungen und springt zur Einstellung (focusSettingsTarget),
 // { manage: true } öffnet "Felder verwalten". Der Tipp-Titel steht im Link zusätzlich
 // unsichtbar für Screenreader, sonst hießen alle Links nur "Im Menü zeigen".
 // bodyTag 'div' für Texte mit Liste (Datenschutz), sonst 'p'.
 function renderTip([titleKey, bodyKey, link], bodyTag = 'p') {
   const linkHtml = !link ? '' : link.menu
-    ? `<button type="button" class="link-btn tip-link" data-action="open-menu-at" data-target="${link.menu}">${t('about.link.menu')}<span class="visually-hidden">: ${t(titleKey)}</span></button>`
+    ? `<button type="button" class="link-btn tip-link" data-action="open-settings-at" data-target="${link.menu}">${t('about.link.menu')}<span class="visually-hidden">: ${t(titleKey)}</span></button>`
     : `<button type="button" class="link-btn tip-link" data-action="open-manage">${t('about.link.manage')}<span class="visually-hidden">: ${t(titleKey)}</span></button>`;
   return `
     <div class="tip">
@@ -6418,77 +6426,96 @@ function renderPushRow(prominent = false) {
   `;
 }
 
+// Das ☰-Menü enthält seit 2026-10-01 nur noch die Ziele; alle Einstellungen und
+// Konto-Aktionen stehen auf der eigenen Seite "Einstellungen" (renderSettings). Vorher
+// steckte alles in diesem schmalen Fenster, das dafür in sich scrollen musste (klappte
+// nicht zuverlässig) und keinen Platz für Erklärungen hatte.
 function renderMenu() {
   return `
     <div class="menu-panel">
-      <div class="menu-group">
-        <p class="menu-group-label">${t('menu.groupNavigation')}</p>
-        <button type="button" class="menu-item-btn" data-action="open-manage">${t('menu.manageFields')}</button>
-        <button type="button" class="menu-item-btn" data-action="open-about">${t('menu.about')}</button>
-        <button type="button" class="menu-item-btn" data-action="open-feedback">${t('menu.feedback')}</button>
-      </div>
-      <div class="menu-group-divider"></div>
-      <div class="menu-group">
-        <p class="menu-group-label">${t('menu.groupSettings')}</p>
-        ${renderPushRow()}
-        <div class="menu-row">
-          <label for="menu-default-time">${t('menu.defaultReminderTime')}</label>
-          ${reminderTimeInputHtml('menu-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', false, 'menu-timezone-note')}
-          <p class="menu-row-note" id="menu-timezone-note">${t('menu.timezoneNote', { tz: state.userSettings.timezone.replace(/_/g, ' ') })}</p>
-        </div>
-        <div class="menu-row">
-          <label class="checkbox-field">
-            <input type="checkbox" data-action="summary-notifications-toggle" ${state.userSettings.summaryNotifications ? 'checked' : ''} />
-            ${t('menu.summaryNotifications')}
-          </label>
-          ${infoTip(t('menu.summaryNotificationsExplain'))}
-        </div>
-        <div class="menu-row">
-          <label for="menu-locale">${t('menu.language')}</label>
-          <select id="menu-locale" data-action="menu-locale" data-menu-target="language">
-            <option value="de" ${currentLocale === 'de' ? 'selected' : ''}>Deutsch</option>
-            <option value="en" ${currentLocale === 'en' ? 'selected' : ''}>English</option>
-          </select>
-        </div>
-        <div class="menu-row">
-          <label id="menu-theme-label">${t('theme.label')}</label>
-          <div class="pill-group" role="group" aria-labelledby="menu-theme-label" data-menu-target="theme">
-            <button type="button" class="pill-toggle${!getThemeOverride() ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="" aria-pressed="${!getThemeOverride()}">${t('theme.system')}</button>
-            <button type="button" class="pill-toggle${getThemeOverride() === 'light' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="light" aria-pressed="${getThemeOverride() === 'light'}">${t('theme.light')}</button>
-            <button type="button" class="pill-toggle${getThemeOverride() === 'dark' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="dark" aria-pressed="${getThemeOverride() === 'dark'}">${t('theme.dark')}</button>
-          </div>
-        </div>
-        <div class="menu-row">
-          <label id="menu-text-size-label">${t('textSize.label')}</label>
-          <div class="pill-group" role="group" aria-labelledby="menu-text-size-label" data-menu-target="text-size">
-            ${TEXT_SIZES.map((size) => `<button type="button" class="pill-toggle${getTextSize() === size ? ' pill-toggle--active' : ''}" data-action="text-size-set" data-size="${size}" aria-pressed="${getTextSize() === size}">${t('textSize.' + (size || 'normal'))}</button>`).join('')}
-          </div>
-        </div>
-        <div class="menu-row">
-          <label class="checkbox-field">
-            <input type="checkbox" data-action="pattern-toggle" data-menu-target="pattern" ${isPatternDisabled() ? '' : 'checked'} />
-            ${t('pattern.enableLabel')}
-          </label>
-          ${infoTip(t('pattern.explain'))}
-        </div>
-        ${hapticsSupported() ? `
-          <div class="menu-row">
-            <label class="checkbox-field">
-              <input type="checkbox" data-action="haptics-toggle" ${isHapticsDisabled() ? '' : 'checked'} />
-              ${t('haptics.enableLabel')}
-            </label>
-          </div>
-        ` : ''}
-      </div>
-      <div class="menu-group-divider"></div>
-      <div class="menu-group">
-        <p class="menu-group-label">${t('menu.groupAccount')}</p>
-        <button type="button" class="menu-item-btn" data-action="export-data" data-menu-target="export">${t('menu.exportData')}</button>
-        <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key" data-menu-target="recovery-key">${t('menu.regenerateRecoveryKey')}</button>
-        <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="open-delete-confirm">${t('menu.deleteAccount')}</button>
-        <button type="button" class="menu-item-btn" data-action="logout-arm">${t('common.logout')}</button>
-      </div>
+      <button type="button" class="menu-item-btn" data-action="open-manage">${t('menu.manageFields')}</button>
+      <button type="button" class="menu-item-btn" data-action="open-settings">${t('menu.settings')}</button>
+      <button type="button" class="menu-item-btn" data-action="open-about">${t('menu.about')}</button>
+      <button type="button" class="menu-item-btn" data-action="open-feedback">${t('menu.feedback')}</button>
     </div>
+  `;
+}
+
+// Einstellungen: Erinnerungen, Anzeige, Konto. Erklärungen stehen direkt unter der
+// jeweiligen Einstellung statt hinter einem "?" (Neulinge fanden die nicht). data-menu-
+// target: Sprungziel für die Links aus "Über Logbuch" (focusSettingsTarget).
+function renderSettings() {
+  return `
+    <section class="settings-section" aria-labelledby="settings-reminders-title">
+      <h2 class="manage-section-title" id="settings-reminders-title">${t('settings.reminders')}</h2>
+      <div data-menu-target="push">${renderPushRow()}</div>
+      <div class="settings-row">
+        <label for="menu-default-time">${t('menu.defaultReminderTime')}</label>
+        ${reminderTimeInputHtml('menu-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', false, 'menu-timezone-note')}
+        <p class="settings-note" id="menu-timezone-note">${t('settings.defaultReminderNote')} ${t('menu.timezoneNote', { tz: state.userSettings.timezone.replace(/_/g, ' ') })}</p>
+      </div>
+      <div class="settings-row">
+        <label class="checkbox-field">
+          <input type="checkbox" data-action="summary-notifications-toggle" aria-describedby="settings-summary-note" ${state.userSettings.summaryNotifications ? 'checked' : ''} />
+          ${t('menu.summaryNotifications')}
+        </label>
+        <p class="settings-note" id="settings-summary-note">${t('menu.summaryNotificationsExplain')}</p>
+      </div>
+    </section>
+    <section class="settings-section" aria-labelledby="settings-display-title">
+      <h2 class="manage-section-title" id="settings-display-title">${t('settings.display')}</h2>
+      <div class="settings-row" data-menu-target="text-size">
+        <span class="settings-label" id="menu-text-size-label">${t('textSize.label')}</span>
+        <div class="pill-group" role="group" aria-labelledby="menu-text-size-label">
+          ${TEXT_SIZES.map((size) => `<button type="button" class="pill-toggle${getTextSize() === size ? ' pill-toggle--active' : ''}" data-action="text-size-set" data-size="${size}" aria-pressed="${getTextSize() === size}">${t('textSize.' + (size || 'normal'))}</button>`).join('')}
+        </div>
+      </div>
+      <div class="settings-row" data-menu-target="theme">
+        <span class="settings-label" id="menu-theme-label">${t('theme.label')}</span>
+        <div class="pill-group" role="group" aria-labelledby="menu-theme-label">
+          <button type="button" class="pill-toggle${!getThemeOverride() ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="" aria-pressed="${!getThemeOverride()}">${t('theme.system')}</button>
+          <button type="button" class="pill-toggle${getThemeOverride() === 'light' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="light" aria-pressed="${getThemeOverride() === 'light'}">${t('theme.light')}</button>
+          <button type="button" class="pill-toggle${getThemeOverride() === 'dark' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="dark" aria-pressed="${getThemeOverride() === 'dark'}">${t('theme.dark')}</button>
+        </div>
+      </div>
+      <div class="settings-row" data-menu-target="language">
+        <label for="menu-locale">${t('menu.language')}</label>
+        <select id="menu-locale" data-action="menu-locale">
+          <option value="de" ${currentLocale === 'de' ? 'selected' : ''}>Deutsch</option>
+          <option value="en" ${currentLocale === 'en' ? 'selected' : ''}>English</option>
+        </select>
+      </div>
+      <div class="settings-row" data-menu-target="pattern">
+        <label class="checkbox-field">
+          <input type="checkbox" data-action="pattern-toggle" aria-describedby="settings-pattern-note" ${isPatternDisabled() ? '' : 'checked'} />
+          ${t('pattern.enableLabel')}
+        </label>
+        <p class="settings-note" id="settings-pattern-note">${t('pattern.explain')}</p>
+      </div>
+      ${hapticsSupported() ? `
+        <div class="settings-row">
+          <label class="checkbox-field">
+            <input type="checkbox" data-action="haptics-toggle" ${isHapticsDisabled() ? '' : 'checked'} />
+            ${t('haptics.enableLabel')}
+          </label>
+        </div>
+      ` : ''}
+    </section>
+    <section class="settings-section" aria-labelledby="settings-account-title">
+      <h2 class="manage-section-title" id="settings-account-title">${t('menu.groupAccount')}</h2>
+      <div class="settings-row" data-menu-target="export">
+        <button type="button" class="menu-item-btn" data-action="export-data">${t('menu.exportData')}</button>
+        <p class="settings-note">${t('settings.exportNote')}</p>
+      </div>
+      <div class="settings-row" data-menu-target="recovery-key">
+        <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key">${t('menu.regenerateRecoveryKey')}</button>
+        <p class="settings-note">${t('settings.recoveryKeyNote')}</p>
+      </div>
+      <div class="settings-row settings-row--buttons">
+        <button type="button" class="menu-item-btn" data-action="logout-arm">${t('common.logout')}</button>
+        <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="open-delete-confirm">${t('menu.deleteAccount')}</button>
+      </div>
+    </section>
   `;
 }
 
@@ -6561,21 +6588,16 @@ function renderDeleteConfirm() {
   `;
 }
 
-// Link aus "Über Logbuch" (siehe renderTip): Menü ist schon offen - zum Eintrag
-// scrollen (nur innerhalb des Panels: ein Fenster-Scroll würde das Menü schließen, siehe
-// scroll-Listener), kurz hervorheben und fokussieren. Bei einer Pill-Gruppe die gerade
-// aktive Pill (Auswahllisten nicht nach Bedienung per Finger, siehe focusReopensPicker).
-function focusMenuTarget(target) {
-  const panel = document.querySelector('.menu-panel');
-  const el = panel?.querySelector(`[data-menu-target="${target}"]`);
-  if (!el) return;
-  const row = el.closest('.menu-row') || el;
-  const panelRect = panel.getBoundingClientRect();
-  const rowRect = row.getBoundingClientRect();
-  panel.scrollTop += rowRect.top - panelRect.top - (panelRect.height - rowRect.height) / 2;
+// Link aus "Über Logbuch" (siehe renderTip): Einstellungen sind schon offen - zur
+// Einstellung scrollen, kurz hervorheben und fokussieren (bei einer Pill-Gruppe die gerade
+// aktive Pill; Auswahllisten nicht nach Bedienung per Finger, siehe focusReopensPicker).
+function focusSettingsTarget(target) {
+  const row = document.querySelector(`[data-menu-target="${target}"]`);
+  if (!row) return;
+  row.scrollIntoView({ block: 'center' });
   row.classList.add('field-highlight');
   row.addEventListener('animationend', () => row.classList.remove('field-highlight'), { once: true });
-  const focusEl = el.matches('button, input, select') ? el : el.querySelector('[aria-pressed="true"]') || el.querySelector('button');
+  const focusEl = row.querySelector('[aria-pressed="true"]') || row.querySelector('button, input, select');
   if (focusEl && !focusReopensPicker(focusEl)) focusEl.focus({ preventScroll: true });
 }
 
@@ -6585,7 +6607,7 @@ function focusMenuTarget(target) {
 function renderMenuButton() {
   return `
     <div class="header-menu-wrap">
-      <button type="button" class="menu-btn" data-action="toggle-menu" aria-label="${esc(t('ariaLabel.menu'))}" aria-expanded="${state.menuOpen}">☰</button>
+      <button type="button" class="menu-btn" data-action="toggle-menu" aria-expanded="${state.menuOpen}"><span aria-hidden="true">☰</span> ${t('ariaLabel.menu')}</button>
       ${state.menuOpen ? renderMenu() : ''}
     </div>
   `;
@@ -6627,7 +6649,8 @@ function renderApp() {
     state.view === 'year' ? renderYear() :
     state.view === 'global' ? renderGlobal() :
     state.view === 'about' ? renderAbout() :
-    state.view === 'feedback' ? renderFeedback() : renderManage();
+    state.view === 'feedback' ? renderFeedback() :
+    state.view === 'settings' ? renderSettings() : renderManage();
 
   app.innerHTML = `
     <div class="sticky-top">
@@ -6636,7 +6659,7 @@ function renderApp() {
           ? habitFormTitleKey(state.habitForm)
           : state.view === 'manage' && state.sectionForm
             ? (state.sectionForm.id ? 'habitForm.title.editGroup' : 'habitForm.title.newGroup')
-            : { manage: 'menu.manageFields', about: 'about.title', feedback: 'feedback.title' }[state.view])
+            : { manage: 'menu.manageFields', about: 'about.title', feedback: 'feedback.title', settings: 'menu.settings' }[state.view])
         : `
           <div class="header">
             <h1>Logbuch</h1>
@@ -6832,7 +6855,7 @@ app.addEventListener('click', async (e) => {
     if (!document.getElementById('recovery-key-confirm')?.checked) return; // Button ist sonst disabled
     await confirmSpareKey();
   } else if (action === 'regenerate-recovery-key') {
-    modalTriggerSelector = '.menu-btn'; // wie beim Konto löschen: das Menü ist danach zu
+    modalTriggerSelector = '[data-action="regenerate-recovery-key"]';
     state.regenKeyConfirm = true;
     state.menuOpen = false;
     render();
@@ -6845,7 +6868,7 @@ app.addEventListener('click', async (e) => {
     modalTriggerSelector = null; // danach kommt die Anzeige des neuen Schlüssels
     await regenerateRecoveryKey();
   } else if (action === 'logout-arm') {
-    modalTriggerSelector = '.menu-btn';
+    modalTriggerSelector = '[data-action="logout-arm"]';
     state.logoutConfirm = true;
     state.menuOpen = false;
     render();
@@ -6878,10 +6901,13 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'open-manage') {
     enterSubpage('manage');
     render();
-  } else if (action === 'open-menu-at') {
-    state.menuOpen = true;
+  } else if (action === 'open-settings') {
+    enterSubpage('settings');
     render();
-    focusMenuTarget(el.dataset.target);
+  } else if (action === 'open-settings-at') {
+    enterSubpage('settings');
+    render();
+    focusSettingsTarget(el.dataset.target);
   } else if (action === 'open-about') {
     enterSubpage('about');
     render();
@@ -6896,9 +6922,7 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'export-data') {
     await handleExportData();
   } else if (action === 'open-delete-confirm') {
-    // Der Menü-Button (☰) bleibt als einziges beteiligtes Element über das
-    // Zuklappen des Menüs hinaus im Header bestehen — passendstes Rücksprungziel.
-    modalTriggerSelector = '.menu-btn';
+    modalTriggerSelector = '[data-action="open-delete-confirm"]';
     state.deleteConfirm = { busy: false };
     state.menuOpen = false;
     render();
@@ -7410,11 +7434,10 @@ app.addEventListener('toggle', (e) => {
   else openAboutSections.delete(details.dataset.collapseKey);
 }, true);
 
-// Menü schließen, wenn außerhalb davon geklickt wird. Ausnahme: die Links in "Über
-// Logbuch", die das Menü gerade erst geöffnet haben (derselbe Klick kommt hier danach an).
+// Menü schließen, wenn außerhalb davon geklickt wird.
 document.addEventListener('click', (e) => {
   if (!state.menuOpen) return;
-  if (e.target.closest('.menu-panel, .menu-btn, [data-action="open-menu-at"]')) return;
+  if (e.target.closest('.menu-panel, .menu-btn')) return;
   state.menuOpen = false;
   render();
 });

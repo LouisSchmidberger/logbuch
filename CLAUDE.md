@@ -83,7 +83,7 @@ Account?/Noch keinen Account?" sind damit entfallen). Wer sich auf dem
 ## Datenmodell
 
 Tabelle `habit_definitions`: eine Zeile pro Nutzer und Feld. Jeder Nutzer verwaltet seine Felder selbst über "Felder verwalten"
-im Burger-Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
+im Menü der App (anlegen, umbenennen, archivieren, reaktivieren; siehe
 `renderManage` in `logbuch.js` – kein eigener Tab mehr, siehe Abschnitt "Design").
 **Seit 2026-09-27 größtenteils verschlüsselt** (siehe Abschnitt "Verschlüsselung" →
 Feld-Definitionen): die folgenden Eigenschaften stehen bei umgestellten Zeilen nicht mehr
@@ -203,10 +203,10 @@ Neue solche Spalten brauchen dieselbe Prüfung.
 Tabelle `user_settings`: eine Zeile pro Nutzer. `default_reminder_minute` (Minuten
 seit Mitternacht, 0–1439, 15-Minuten-Raster, Default 1320 = 22:00) ist die
 Standard-Erinnerungszeit für alle Felder ohne eigene `reminder_minute` (siehe
-Erinnerungen), im Burger-Menü der App änderbar. `onboarding_completed` (bool, Default
+Erinnerungen), in den Einstellungen der App änderbar. `onboarding_completed` (bool, Default
 `false`) steuert, ob der Account noch das Onboarding-Tutorial sieht (siehe Abschnitt
 unten). `summary_notifications` (bool, Default `true`) schaltet die Wochen-/
-Monatsübersicht-Benachrichtigungen ab (siehe Erinnerungen, im Burger-Menü änderbar).
+Monatsübersicht-Benachrichtigungen ab (siehe Erinnerungen, in den Einstellungen änderbar).
 `timezone` (IANA-Name, Default `'Europe/Berlin'`, per Trigger gegen
 `pg_timezone_names` validiert) ist die Zeitzone, in der alle Erinnerungen dieses
 Nutzers ausgewertet werden – folgt still dem Gerät (siehe Erinnerungen → Zeitzone).
@@ -588,7 +588,7 @@ alles native Web Crypto API, keine Library):
   diesen Code noch besitzt. Verliert er Passwort UND Recovery-Key, sind die Daten
   tatsächlich unwiederbringlich weg (unumgehbare Konsequenz, kein Bug — jeder auch
   dann noch funktionierende Mechanismus wäre zwangsläufig ein serverseitiger
-  Zugriffsweg). Im Burger-Menü jederzeit neu erzeugbar (`regenerateRecoveryKey`,
+  Zugriffsweg). In den Einstellungen jederzeit neu erzeugbar (`regenerateRecoveryKey`,
   macht den alten Code ungültig, braucht kein Passwort, da der DEK ja schon im
   Speicher liegt). Fragt vorher nach (`renderRegenKeyConfirm`, seit 2026-10-01) – der alte
   Code ist sofort ungültig, auch der aufgeschriebene.
@@ -664,38 +664,23 @@ im `<style>`-Block von `logbuch.html`. Bei Erweiterungen an diesem Stil festhalt
 nicht auf generische Tailwind-/Card-Optik wechseln.
 
 Tab-Leiste zeigt nur noch die Auswertungs-Ansichten (Heute/Woche/Monat/Jahr/Gesamt,
-`.tabs` bereits horizontal scrollbar für künftig weitere Views). Alles Konfigurative
-sitzt im **Burger-Menü** (☰-Button oben rechts, `renderMenu` in `logbuch.js`), intern
-in drei Gruppen unterteilt: Navigation ("Felder verwalten", "Über Logbuch", "Feedback geben") oben,
-Einstellungen (Push/Erinnerungszeit/Sprache/Darstellung/Streifenmuster) in der Mitte,
-Konto (Export/Recovery-Key/Löschen/Abmelden) unten. Jede Gruppe steckt in einem eigenen
-`.menu-group` (kleines, dezentes Caps-Label, `menu.groupNavigation`/`menu.groupSettings`/
-`menu.groupAccount`) mit `.menu-group-divider` dazwischen – seit 2026-09-19 (vorher nur
-eine dünne Trennlinie ohne Beschriftung, wirkte trotz Gruppierung noch zu wenig
-strukturiert/zu eng). `.menu-item-btn` nutzt `--input-bg` (auf Hell weiß, deutlich
-gegen `--surface`/`--paper` abgesetzt – dieselbe Fläche wie `<select>`/Textfelder in
-der App) statt randlos/transparent zu sein – ein kurzer randloser Zwischenstand am
-selben Tag wirkte nicht mehr klickbar genug, zurückgerudert. `.menu-panel` selbst hebt
-sich seitdem außerdem über einen kräftigeren Rand (`var(--ink)` statt `var(--line)`)
-und stärkeren Schlagschatten vom Hintergrund ab – `--surface` ist im Hellmodus
-bewusst identisch mit `--paper` (siehe Dark-Mode-Abschnitt, wichtig für nahtlose
-`.sticky-top`-Header), reichte für ein freischwebendes Popover wie das Menü aber nicht
-als Abgrenzung. Deshalb seit 2026-09-19 eigener Farb-Token `--popover-bg` (in beiden
-Themes leicht heller/anders als `--surface`), aktuell nur vom Menü-Panel genutzt, aber
-bewusst allgemein benannt für künftige weitere Popovers. Zwei unterschiedliche Fälle beim Scrollen mit offenem Menü: Scrollen NEBEN dem Panel
-(Hintergrund/Fenster) soll das Menü schließen, Scrollen AUF dem Panel selbst (falls
-dessen Inhalt z.B. bei Zoom nicht mehr auf den Bildschirm passt) soll dagegen gar
-nichts am Hintergrund auslösen, aber innerhalb des Panels normal funktionieren. Löst
-sich rein über CSS + einen `scroll`-Listener am `window` (`logbuch.js`, direkt nach
-`syncLayerHistory()`): `.menu-panel` hat ein eigenes `max-height`/`overflow-y: auto`
-(scrollt bei Bedarf in sich selbst) und `overscroll-behavior: contain` (verhindert
-Scroll-Chaining zum Hintergrund, sobald das Panel selbst an sein Scroll-Ende kommt).
-`scroll`-Events bubbeln nicht – ein Scroll innerhalb des Panels feuert nur dort, nie am
-`window`, der window-weite Listener sieht deshalb ausschließlich echte
-Hintergrund-Scrolls und schließt dann das Menü. Keine Body-Scroll-Sperre nötig.
+`.tabs` bereits horizontal scrollbar für künftig weitere Views). Das **Menü** (Knopf
+"☰ Menü" oben rechts – mit Wort, nicht jede Person erkennt die drei Striche; `renderMenu` in
+`logbuch.js`) enthält seit 2026-10-01 nur noch die Ziele: "Felder verwalten",
+"Einstellungen", "Über Logbuch", "Feedback geben". Alles Konfigurative steht auf der
+Unterseite **"Einstellungen"** (`renderSettings`), in drei Abschnitten: Erinnerungen
+(an/aus, Standard-Erinnerungszeit, Wochen-/Monatsübersicht), Anzeige (Textgröße,
+Hell/Dunkel, Sprache, Streifenmuster, Vibration), Konto (Export, Ersatzschlüssel, Abmelden,
+Konto löschen). Erklärungen stehen dort direkt unter der Einstellung statt hinter einem "?".
+Grund für den Umbau: vorher steckte alles im schmalen Menü-Popover, das dafür in sich
+scrollen musste (klappte nicht zuverlässig) und keinen Platz für Erklärungen hatte.
+`.menu-panel` hebt sich über einen kräftigen Rand (`var(--ink)`) und eigenen Farb-Token
+`--popover-bg` vom Hintergrund ab (`--surface` ist im Hellmodus identisch mit `--paper`,
+reicht für ein freischwebendes Popover nicht). Scrollen neben dem offenen Menü schließt es
+(`scroll`-Listener am `window`, direkt nach `syncLayerHistory()`).
 
-**Unterseiten statt Tab-Swap** (seit 2026-09-18): "Felder verwalten", "Über Logbuch" und
-"Feedback geben" (seit 2026-09-25) sind `state.view`-Werte wie die Tabs, aber keine Tabs — sie werden über
+**Unterseiten statt Tab-Swap** (seit 2026-09-18): "Felder verwalten", "Über Logbuch",
+"Feedback geben" (seit 2026-09-25) und "Einstellungen" (seit 2026-10-01) sind `state.view`-Werte wie die Tabs, aber keine Tabs — sie werden über
 `enterSubpage(view)` betreten (merkt sich in `state.previousTabView`, von welchem Tab
 aus man kam, außer man wechselt direkt zwischen zwei Unterseiten übers Menü) und
 ersetzen Header **und** Tab-Leiste komplett durch einen eigenen `renderSubpageHeader()`
@@ -713,15 +698,15 @@ wenig Höhe, siehe Accessibility). In "Über Logbuch" sind alle aufklappbaren
 Abschnitte (hervorgehobene Bereiche und Tipp-Gruppen) bei **jedem** Öffnen der Seite
 zugeklappt (Nutzer-Wunsch 2026-09-27, `openAboutSections`, von `enterSubpage` zurückgesetzt) –
 was man aufklappt, bleibt nur für die Dauer des Besuchs offen, kein dauerhaftes Merken.
-Tipps, die auf eine Stelle in der App verweisen ("im Menü", "in Felder verwalten"), haben
-darunter einen Link dorthin (`renderTip` mit drittem Element `{ menu: '<ziel>' }` bzw.
-`{ manage: true }`; seit 2026-09-28): "Im Menü zeigen" öffnet das ☰-Menü, scrollt nur
-innerhalb des Panels zum Eintrag (`data-menu-target`), hebt ihn kurz hervor und fokussiert
-ihn (`focusMenuTarget`). Bewusst nur diese Richtung – keine Sprünge zwischen Tipps und
+Tipps, die auf eine Stelle in der App verweisen ("in den Einstellungen", "in Felder
+verwalten"), haben darunter einen Link dorthin (`renderTip` mit drittem Element `{ menu:
+'<ziel>' }` bzw. `{ manage: true }`; seit 2026-09-28): "In den Einstellungen zeigen" öffnet
+die Einstellungen, scrollt zur Einstellung (`data-menu-target`), hebt sie kurz hervor und
+fokussiert sie (`focusSettingsTarget`). Bewusst nur diese Richtung – keine Sprünge zwischen Tipps und
 keine Links von der App zurück in die Erklärungen (Nutzer-Entscheidung). Neue Tipps mit
 Ortsangabe bekommen denselben Link.
 
-**History-Layer-Zähler statt einfacher An/Aus-Prüfung**: Overlay (z.B. Burger-Menü) und
+**History-Layer-Zähler statt einfacher An/Aus-Prüfung**: Overlay (z.B. Menü) und
 Unterseite können gleichzeitig offen sein (z.B. Menü öffnen innerhalb von "Verwalten"),
 `currentLayerCount()`/`syncLayerHistory()` zählen deshalb 0–2 statt nur zu schließen/
 nicht zu schließen. `syncLayerHistory()` gleicht dabei um die volle Differenz ab, nicht
@@ -862,7 +847,7 @@ Verworfen: "+ Neues Feld" dort als reiner Text-Link (wirkte allein unter der Lin
 **Haptisches Feedback** (seit 2026-09-27, `haptic()` in `logbuch.js`): kurzes
 Vibrieren beim Setzen/Entfernen eines Werts (Buttons, Schieberegler erst beim
 Loslassen – nicht bei jedem Schritt, das wären bei 100 Stufen zu viele – und ×) sowie
-beim Long-Press-Menü, damit versehentliche Eingaben eher auffallen. Im Menü
+beim Long-Press-Menü, damit versehentliche Eingaben eher auffallen. In den Einstellungen
 abschaltbar ("Beim Eintragen vibrieren", geräte-lokal per `localStorage`
 `hapticsDisabled` wie Theme/Streifenmuster), standardmäßig an – abschaltbar, weil
 Vibration für manche unangenehm ist (z.B. sensorische Empfindlichkeit). **Nur
@@ -908,7 +893,7 @@ Tabs, deshalb absichtlich weniger empfindlich statt eines einheitlichen Schwelle
 Schriftgrößen im CSS stehen in `rem` (dabei gegenüber den früheren px-Werten angehoben –
 Fließtext 15–16px, kaum etwas unter 13px, nur in den engen Kalender-Rastern 12px), ebenso die
 Maße von Bedienelementen mit Text (Wert-Buttons, runde Knöpfe, Raster-Spalten,
-`#app`-Breite 30rem). Im Menü "Textgröße" Klein/Normal/Groß/Sehr groß setzt nur
+`#app`-Breite 30rem). In den Einstellungen "Textgröße" Klein/Normal/Groß/Sehr groß setzt nur
 `data-text-size` auf `<html>` (87,5/100/112,5/125 %; "Klein" etwa die frühere Größe, für alle,
 die lieber mehr auf einmal sehen), pro Gerät per `localStorage` `textSize` wie das Theme.
 Neue CSS-Größen deshalb immer in `rem`, nie in px. Grund: Zwei-Finger-Zoom vergrößert wie
@@ -926,8 +911,8 @@ was etwas tut, sieht wie ein Knopf aus – Hauptaktion ausgefüllt, Nebenaktione
 0.5rem Abstand, Tippfläche bis in die halbe Lücke (~40px, ohne Überlappung – WCAG AA verlangt
 24px). Neue Knöpfe entsprechend.
 
-**Dark Mode** (seit 2026-09-16): folgt standardmäßig `prefers-color-scheme`, im
-Burger-Menü überschreibbar (System/Hell/Dunkel als Pill-Toggle, gleiches Muster wie
+**Dark Mode** (seit 2026-09-16): folgt standardmäßig `prefers-color-scheme`, in den
+Einstellungen überschreibbar (System/Hell/Dunkel als Pill-Toggle, gleiches Muster wie
 `f.kind`/`f.good` im Habit-Formular). Override liegt in `localStorage`
 (`themeOverride`, Werte `'light'`/`'dark'`/nicht gesetzt = System) — bewusst NICHT in
 `user_settings`, da geräte-lokal statt kontoweit gedacht (anders als die Sprache).
@@ -979,7 +964,7 @@ bekommen hat. Neue klickbare Elemente brauchen deshalb stabile, eindeutige `data
 Merkmale bzw. eine id. Ausnahme: Auswahllisten (`<select>`) werden nach Bedienung per Finger
 nie per Skript fokussiert (`focusReopensPicker`) – auf iOS öffnet das sofort wieder ihr
 Auswahl-Menü, man musste scheinbar zweimal wählen. Fehlermeldungen auf Anmelde-/Entsperr-/Reset-Seite mit
-`role="alert"`. Burger-Menü: `aria-expanded`, Escape schließt. **Wenig Höhe** (Handy quer,
+`role="alert"`. Menü: `aria-expanded`, Escape schließt. **Wenig Höhe** (Handy quer,
 Zoom; `@media (max-height: 500px)`): Kopf und Tab-Leiste nicht angepinnt
 (`stickyHeaderBottom()` liefert dann 0), Dialoge scrollen, wenn sie höher als der
 Bildschirm sind.
@@ -989,7 +974,7 @@ eigene Browser-History-Einträge hatte die native/Gesten-Zurück-Taste nichts, w
 zurückgehen könnte, und hat stattdessen sofort die App verlassen — unabhängig davon,
 was gerade offen war. `isOverlayOpen()`/`isSubpageView()`/`currentLayerCount()`/
 `closeTopLayer()`/`syncLayerHistory()` (direkt nach `modalTriggerSelector` in
-`logbuch.js`) schließen stattdessen offene Overlays (Burger-Menü, Feld-Formular,
+`logbuch.js`) schließen stattdessen offene Overlays (Menü, Feld-Formular,
 Konto-/Tutorial-/Feld-Lösch-Bestätigungen) UND Unterseiten (Verwalten/Über Logbuch,
 siehe oben) über einen `popstate`-Listener, bevor die App wirklich verlassen wird.
 Overlay und Unterseite können gleichzeitig offen sein (z.B. "Neues Feld" innerhalb von
@@ -1009,7 +994,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 499 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 503 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -1023,7 +1008,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
   zusätzlich `document.documentElement.lang`) – beim Start per
   `detectInitialLocale()` (Browser-Locale als Platzhalter), dann beim Laden von
   `user_settings.locale` überschrieben, änderbar über die Sprachauswahl im
-  Burger-Menü (`saveLocale()`, spiegelt exakt das Muster von
+  den Einstellungen (`saveLocale()`, spiegelt exakt das Muster von
   `saveDefaultReminderMinute()`).
 - Datum/Wochentage/Monatsnamen laufen über `Intl.DateTimeFormat`-Helfer
   (`weekdayShort`/`weekdayLong`/`monthName`/`monthShort`/`longDate`/`formatDMY`,
@@ -1052,7 +1037,7 @@ noch in Nachrichten (`PUSH_TEXTS`) und verschickt sie (parallel, `SEND_CONCURREN
 Alle Zeiten/Daten gelten in der **Ortszeit des jeweiligen Nutzers**
 (`user_settings.timezone`):
 - **Standard-Erinnerungszeit (`user_settings.default_reminder_minute`, Default 22:00,
-  im Menü in 15-Minuten-Schritten änderbar)**: alle aktiven Felder OHNE
+  in den Einstellungen in 15-Minuten-Schritten änderbar)**: alle aktiven Felder OHNE
   eigene `reminder_minute` – unabhängig von `kind` (Skala oder Zahlenwert) – werden
   gemeinsam geprüft. Fehlt an diesem Tag noch mindestens eines davon, gibt es EINE
   Sammel-Nachricht (nicht eine pro Feld). Zusätzlich zu dieser Zeit: sonntags
@@ -1121,7 +1106,7 @@ AT TIME ZONE timezone` dessen lokales Datum ("heute") und lokalen Viertelstunden
 aus (auf 15 Minuten **abgerundet**, damit ein um ein paar Minuten verspäteter Cron-Lauf
 keine Erinnerung verpasst). Die App gleicht `timezone` still mit der Zeitzone des Geräts
 ab (`syncTimezone` in `logbuch.js`, bei jedem Laden der Einstellungen und beim
-Zurückkehren in die App per `visibilitychange`; im Menü als Hinweis unter der
+Zurückkehren in die App per `visibilitychange`; in den Einstellungen als Hinweis unter der
 Standard-Erinnerungszeit angezeigt). Bewusste Entscheidung für "folgt dem Gerät" statt
 manueller Einstellung: die App speichert Einträge unter dem **lokalen Gerätedatum** –
 nur wenn die Erinnerung derselben Zeitzone folgt, prüfen beide garantiert denselben
@@ -1195,7 +1180,7 @@ ausgelassener Tag kann auch Absicht sein).
   Formular), danach die **echte** `renderHabitForm()` (kein Duplikat; ob das erste Feld
   ein vereinfachtes Formular bekommt, ist eine eigene, noch offene Frage des Nutzers) –
   gesteuert über `state.habitForm`: gesetzt zeigt das Formular, `null` (z.B. nach
-  "Abbrechen") die Einleitung. Kein Tab-Leiste/Burger-Menü sichtbar; eine
+  "Abbrechen") die Einleitung. Keine Tab-Leiste/kein Menü sichtbar; eine
   `beforeunload`-Warnung verhindert versehentliches Verlassen bei offenem Formular. Nach
   erfolgreichem Anlegen (Insert-Zweig in `handleHabitSave`) Sprung zu 4.
 - **4 Geschafft** (`renderTutorialDone`): "Loslegen" (`saveOnboardingCompleted()`) oder
@@ -1215,7 +1200,7 @@ Umgesetzt:
   Secrets unten).
 - Selbst-Löschung des Kontos (Recht auf Löschung, Art. 17 DSGVO): Edge Function
   `delete-account` (`supabase/functions/delete-account/index.ts`), aufgerufen über
-  "Konto löschen" im Burger-Menü der App (Bestätigung durch Eintippen von "LÖSCHEN").
+  "Konto löschen" in den Einstellungen der App (Bestätigung durch Eintippen von "LÖSCHEN").
   Löscht per `auth.admin.deleteUser()` ausschließlich den durchs mitgeschickte
   Access-Token ermittelten Nutzer (nie eine vom Client übergebene ID) — alle anderen
   Tabellen hängen per `on delete cascade` an `auth.users` und werden automatisch mit
@@ -1230,14 +1215,14 @@ Umgesetzt:
   sonst mit jedem 15-Minuten-Lauf unbegrenzt). Migration
   `20260927160000_cleanup_unconfirmed_users`.
 - Datenexport (Auskunftsrecht/Datenportabilität, Art. 15/20 DSGVO): "Meine Daten
-  exportieren" im Burger-Menü (`handleExportData` in `logbuch.js`) lädt die eigenen
+  exportieren" in den Einstellungen (`handleExportData` in `logbuch.js`) lädt die eigenen
   Rohdaten aus allen fünf Tabellen mit Nutzerdaten (Felder, Einträge, Gruppen,
   Einstellungen, Push-Abos; RLS scoped automatisch auf den eigenen Nutzer) direkt
   im Browser als eine JSON-Datei herunter — kein Server-Roundtrip über eine eigene
   Function nötig. Feedback (siehe unten) ist bewusst **nicht** Teil des Exports
   (Nutzer-Entscheidung 2026-09-25).
 - **Feedback an den Betreiber** (seit 2026-09-25, Übergangslösung bis zu einem
-  möglichen Community-Bereich): Unterseite "Feedback geben" (Burger-Menü + Links an den
+  möglichen Community-Bereich): Unterseite "Feedback geben" (Menü + Links an den
   "ich freue mich über Feedback"-Stellen in "Über Logbuch", `renderFeedback`/
   `handleFeedbackSubmit` in `logbuch.js`) → Edge Function `submit-feedback` →
   `record_feedback()` (SQL) speichert in `public.feedback`, danach Mail an den
