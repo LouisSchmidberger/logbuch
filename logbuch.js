@@ -1040,19 +1040,19 @@ const STRINGS = {
     'ariaLabel.explain': 'Erklärung anzeigen',
     'ariaLabel.decrease': 'Verringern',
     'ariaLabel.increase': 'Erhöhen',
-    'notice.loadEntriesError': 'Einträge konnten nicht geladen werden: ',
-    'notice.loadHabitsError': 'Felder konnten nicht geladen werden: ',
+    'notice.loadEntriesError': 'Einträge konnten nicht geladen werden.',
+    'notice.loadHabitsError': 'Felder konnten nicht geladen werden.',
     'notice.habitsUndecryptable': '{count} Feld(er) konnten nicht entschlüsselt werden und werden nicht angezeigt.',
     'push.customReminder': 'Erinnerung: {names} noch nicht eingetragen.',
     'push.sectionReminder': 'Erinnerung: In „{name}“ fehlt noch etwas.',
-    'notice.loadSettingsError': 'Einstellungen konnten nicht geladen werden: ',
-    'notice.saveFailed': 'Speichern fehlgeschlagen: ',
-    'notice.createFailed': 'Anlegen fehlgeschlagen: ',
-    'notice.actionFailed': 'Aktion fehlgeschlagen: ',
-    'notice.reorderFailed': 'Reihenfolge konnte nicht gespeichert werden: ',
-    'notice.deleteFailed': 'Löschen fehlgeschlagen: ',
+    'notice.loadSettingsError': 'Einstellungen konnten nicht geladen werden.',
+    'notice.saveFailed': 'Speichern hat nicht geklappt.',
+    'notice.createFailed': 'Anlegen hat nicht geklappt.',
+    'notice.actionFailed': 'Das hat nicht geklappt.',
+    'notice.reorderFailed': 'Die Reihenfolge konnte nicht gespeichert werden.',
+    'notice.deleteFailed': 'Löschen hat nicht geklappt.',
     'notice.invalidNumber': 'Das ist keine gültige Zahl.',
-    'notice.recoveryKeySaveError': 'Neuer Ersatzschlüssel konnte nicht gespeichert werden: ',
+    'notice.recoveryKeySaveError': 'Der neue Ersatzschlüssel konnte nicht gespeichert werden.',
     'habitForm.error.minComputedMembers': 'Bitte mindestens 2 Felder auswählen.',
     'habitForm.error.stepsRange': 'Anzahl Stufen muss zwischen 2 und {max} liegen.',
     'habitForm.lockedStepCap': 'Dieses Feld hat {steps} Stufen – Buttons und eigene Bezeichnungen gehen nur bis {cap} Stufen, damit jede Stufe gut sichtbar und gezielt wählbar bleibt.',
@@ -1067,12 +1067,15 @@ const STRINGS = {
     'installHint.other': 'Für die beste Erfahrung (u.a. zuverlässigere Erinnerungen): füge Logbuch über das Browser-Menü zum Home-Bildschirm hinzu.',
     'notice.pushPermissionDenied': 'Ohne Benachrichtigungs-Erlaubnis im Browser geht das leider nicht.',
     'notice.pushEnabled': 'Erinnerungen sind aktiv.',
-    'notice.enableFailed': 'Aktivieren fehlgeschlagen: ',
+    'notice.enableFailed': 'Erinnerungen ließen sich nicht einschalten.',
     'notice.entriesUndecryptable': '{count} Tag(e) konnten nicht entschlüsselt werden und erscheinen leer. Damit nichts verloren geht, speichert Logbuch dort nichts. Schreib mir gern über „Feedback geben“.',
     'notice.dayUndecryptable': 'Dieser Tag konnte nicht entschlüsselt werden. Damit sein Inhalt nicht überschrieben wird, speichert Logbuch hier nichts.',
-    'notice.disableFailed': 'Deaktivieren fehlgeschlagen: ',
-    'notice.exportFailed': 'Export fehlgeschlagen: ',
+    'notice.disableFailed': 'Erinnerungen ließen sich nicht ausschalten.',
+    'notice.exportFailed': 'Der Export hat nicht geklappt.',
     'notice.exportDownloaded': 'Export heruntergeladen.',
+    'notice.tryAgain': 'Bitte versuch es gleich nochmal.',
+    'notice.details': 'Technische Details',
+    'ariaLabel.closeNotice': 'Meldung schließen',
     'deleteAccount.confirmWord': 'LÖSCHEN',
     'deleteAccount.confirmMismatch': 'Bitte tippe genau „{word}“ zur Bestätigung.',
     'auth.title.forgot': 'Passwort zurücksetzen',
@@ -1538,19 +1541,19 @@ const STRINGS = {
     'ariaLabel.explain': 'Show explanation',
     'ariaLabel.decrease': 'Decrease',
     'ariaLabel.increase': 'Increase',
-    'notice.loadEntriesError': 'Could not load entries: ',
-    'notice.loadHabitsError': 'Could not load fields: ',
+    'notice.loadEntriesError': 'Entries could not be loaded.',
+    'notice.loadHabitsError': 'Fields could not be loaded.',
     'notice.habitsUndecryptable': '{count} field(s) could not be decrypted and are not shown.',
     'push.customReminder': 'Reminder: {names} not entered yet.',
     'push.sectionReminder': 'Reminder: something in “{name}” is still missing.',
-    'notice.loadSettingsError': 'Could not load settings: ',
-    'notice.saveFailed': 'Save failed: ',
-    'notice.createFailed': 'Creating failed: ',
-    'notice.actionFailed': 'Action failed: ',
-    'notice.reorderFailed': 'Order could not be saved: ',
-    'notice.deleteFailed': 'Delete failed: ',
+    'notice.loadSettingsError': 'Settings could not be loaded.',
+    'notice.saveFailed': 'Saving did not work.',
+    'notice.createFailed': 'Creating did not work.',
+    'notice.actionFailed': 'That did not work.',
+    'notice.reorderFailed': 'The order could not be saved.',
+    'notice.deleteFailed': 'Deleting did not work.',
     'notice.invalidNumber': 'That is not a valid number.',
-    'notice.recoveryKeySaveError': 'New spare key could not be saved: ',
+    'notice.recoveryKeySaveError': 'The new spare key could not be saved.',
     'habitForm.error.minComputedMembers': 'Please select at least 2 fields.',
     'habitForm.error.stepsRange': 'Number of steps must be between 2 and {max}.',
     'habitForm.lockedStepCap': 'This field has {steps} steps – buttons and custom labels only go up to {cap} steps, so that every step stays clearly visible and easy to pick.',
@@ -1565,12 +1568,15 @@ const STRINGS = {
     'installHint.other': 'For the best experience (incl. more reliable reminders): add Logbuch to your home screen via the browser menu.',
     'notice.pushPermissionDenied': 'Without notification permission in the browser this unfortunately does not work.',
     'notice.pushEnabled': 'Reminders are active.',
-    'notice.enableFailed': 'Enabling failed: ',
+    'notice.enableFailed': 'Reminders could not be turned on.',
     'notice.entriesUndecryptable': '{count} day(s) could not be decrypted and appear empty. So that nothing gets lost, Logbuch does not save anything there. Feel free to write to me via “Send feedback”.',
     'notice.dayUndecryptable': 'This day could not be decrypted. So that its content is not overwritten, Logbuch does not save anything here.',
-    'notice.disableFailed': 'Disabling failed: ',
-    'notice.exportFailed': 'Export failed: ',
+    'notice.disableFailed': 'Reminders could not be turned off.',
+    'notice.exportFailed': 'The export did not work.',
     'notice.exportDownloaded': 'Export downloaded.',
+    'notice.tryAgain': 'Please try again in a moment.',
+    'notice.details': 'Technical details',
+    'ariaLabel.closeNotice': 'Close message',
     'deleteAccount.confirmWord': 'DELETE',
     'deleteAccount.confirmMismatch': 'Please type exactly "{word}" to confirm.',
     'auth.title.forgot': 'Reset password',
@@ -2334,6 +2340,63 @@ function infoTip(text) {
 // (assertive/alert), Erfolgsmeldungen kündigen sich nur höflich an (polite/status).
 // state.notice.text ist reiner Text (wird hier escaped) - Meldungen mit Parametern
 // deshalb mit tPlain(), nicht t() bauen.
+// Fehlermeldung aus einem Fehler: verständlicher Satz vorn; bekannte Fehler übersetzt
+// translateDbError in Klartext (Verbindung weg, Konto gelöscht …), alles andere kommt als
+// "Bitte versuch es nochmal" plus aufklappbare technische Details (für Feedback an mich) -
+// vorher stand der rohe Datenbank-Fehler direkt im Satz.
+function errorNotice(key, rawMessage) {
+  const raw = String(rawMessage ?? '');
+  const friendly = translateDbError(raw);
+  const known = friendly !== raw;
+  return { type: 'error', text: `${t(key)} ${known ? friendly : t('notice.tryAgain')}`, detail: known || !raw ? null : raw };
+}
+
+// --- Meldungen als schwebender Kasten unten (seit 2026-10-01) -------------------
+// Vorher standen Meldungen oben unter dem Kopf - wer weiter unten etwas tat (z.B. im
+// langen Feld-Formular auf "Speichern"), sah den Fehler nicht. Jetzt immer im Blick am
+// unteren Rand, in einem eigenen Element außerhalb von #app (render() ersetzt #app, der
+// Kasten soll aber nicht bei jedem Neuzeichnen neu einfliegen). Erfolgsmeldungen
+// verschwinden nach ein paar Sekunden von selbst (länger bei längerem Text; antippen oder
+// fokussieren hält sie fest), Fehler bleiben bis × oder zur nächsten Aktion. Ausnahme:
+// Anmelde-Seiten zeigen Meldungen weiter im Text (dort sind es Anleitungen wie "Ich hab
+// dir eine Mail geschickt", die nicht verschwinden dürfen, und die Seite ist kurz).
+let toastShown = null;
+let toastTimer = null;
+function toastDuration(text) { return Math.min(12000, 4000 + text.length * 50); }
+function syncToast(hidden = false) {
+  const root = document.getElementById('toast-root');
+  if (!root) return;
+  const n = hidden ? null : state.notice;
+  if (n === toastShown) return;
+  toastShown = n;
+  clearTimeout(toastTimer);
+  document.documentElement.classList.toggle('has-toast', !!n);
+  if (!n) { root.innerHTML = ''; return; }
+  const isErr = n.type !== 'ok';
+  root.innerHTML = `
+    <div class="toast${isErr ? ' toast--error' : ''}">
+      <div class="toast-body">
+        <p class="toast-text">${esc(n.text)}</p>
+        ${n.detail ? `<details class="toast-details"><summary>${t('notice.details')}</summary><p>${esc(n.detail)}</p></details>` : ''}
+      </div>
+      <button type="button" class="toast-close" aria-label="${esc(t('ariaLabel.closeNotice'))}">×</button>
+    </div>
+  `;
+  if (isErr) announceAlert(n.text); else announce(n.text);
+  if (!isErr) toastTimer = setTimeout(() => dismissToast(n), toastDuration(n.text));
+}
+function dismissToast(n = toastShown) {
+  if (n && state.notice === n) state.notice = null;
+  syncToast();
+}
+{
+  const root = document.getElementById('toast-root');
+  root?.addEventListener('click', (e) => { if (e.target.closest('.toast-close')) dismissToast(); });
+  const hold = () => clearTimeout(toastTimer);
+  root?.addEventListener('pointerdown', hold);
+  root?.addEventListener('focusin', hold);
+}
+
 function renderNotice() {
   if (!state.notice) return '';
   const isErr = state.notice.type !== 'ok';
@@ -2435,7 +2498,7 @@ async function loadEntries({ keepLocalChanges = false } = {}) {
   const { data, error } = await fetchAllRows(() =>
     supabase.from('habit_entries').select('entry_date, data').order('entry_date'));
   if (error) {
-    state.notice = { type: 'error', text: t('notice.loadEntriesError') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.loadEntriesError', error.message);
     return;
   }
   const map = {};
@@ -2513,7 +2576,7 @@ async function repadOldEntries() {
 async function loadHabits() {
   const { data, error } = await supabase.from('habit_definitions').select('*').order('sort_order');
   if (error) {
-    state.notice = { type: 'error', text: t('notice.loadHabitsError') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.loadHabitsError', error.message);
     return;
   }
   const habits = [];
@@ -2543,7 +2606,7 @@ async function loadHabits() {
 async function loadSections() {
   const { data, error } = await supabase.from('habit_sections').select('*').order('sort_order');
   if (error) {
-    state.notice = { type: 'error', text: t('notice.loadHabitsError') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.loadHabitsError', error.message);
     return;
   }
   const sections = [];
@@ -2559,7 +2622,7 @@ async function loadUserSettings() {
   const { data, error } = await supabase.from('user_settings')
     .select('default_reminder_minute, onboarding_completed, locale, summary_notifications, timezone').maybeSingle();
   if (error) {
-    state.notice = { type: 'error', text: t('notice.loadSettingsError') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.loadSettingsError', error.message);
     return;
   }
   state.userSettings = {
@@ -2608,7 +2671,7 @@ async function saveDefaultReminderMinute(minutes) {
   const { error } = await supabase.from('user_settings')
     .upsert({ user_id: state.session.user.id, default_reminder_minute: minutes }, { onConflict: 'user_id' });
   if (error) {
-    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.saveFailed', error.message);
     render();
   }
 }
@@ -2619,7 +2682,7 @@ async function saveSummaryNotifications(enabled) {
   const { error } = await supabase.from('user_settings')
     .upsert({ user_id: state.session.user.id, summary_notifications: enabled }, { onConflict: 'user_id' });
   if (error) {
-    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.saveFailed', error.message);
     render();
   }
 }
@@ -2632,7 +2695,7 @@ async function saveLocale(locale) {
   const { error } = await supabase.from('user_settings')
     .upsert({ user_id: state.session.user.id, locale }, { onConflict: 'user_id' });
   if (error) {
-    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.saveFailed', error.message);
     render();
   }
 }
@@ -2906,7 +2969,7 @@ async function regenerateRecoveryKey({ onlyIfUnconfirmed = false } = {}) {
   if (onlyIfUnconfirmed) query = query.eq('recovery_key_confirmed', false);
   const { data, error } = await query.select('user_id');
   if (error) {
-    state.notice = { type: 'error', text: t('notice.recoveryKeySaveError') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.recoveryKeySaveError', error.message);
     render();
     return;
   }
@@ -2943,7 +3006,7 @@ async function confirmSpareKey() {
     .eq('wrapped_dek_recovery', shown.wrapped)
     .select('user_id');
   if (error) {
-    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.saveFailed', error.message);
     render();
     return;
   }
@@ -3359,7 +3422,7 @@ async function handleHabitSaveInner() {
   if (f.defId) {
     const { data, error } = await supabase.from('habit_definitions').update(row).eq('id', f.defId).select().single();
     if (error) {
-      state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+      state.notice = errorNotice('notice.saveFailed', error.message);
       return;
     }
     const idx = state.habits.findIndex((h) => h.defId === f.defId);
@@ -3369,7 +3432,7 @@ async function handleHabitSaveInner() {
       .insert({ user_id: state.session.user.id, ...row })
       .select().single();
     if (error) {
-      state.notice = { type: 'error', text: t('notice.createFailed') + translateDbError(error.message) };
+      state.notice = errorNotice('notice.createFailed', error.message);
       return;
     }
     state.habits = [...state.habits, habitFromParts(data, payload)];
@@ -3394,7 +3457,7 @@ async function handleHabitArchive(defId, archive) {
     .update({ archived_at: archive ? new Date().toISOString() : null, ...(archive ? {} : { sort_order: sortOrder }) })
     .eq('id', defId);
   if (error) {
-    state.notice = { type: 'error', text: t('notice.actionFailed') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.actionFailed', error.message);
     render();
     return false;
   }
@@ -3426,7 +3489,7 @@ async function commitLayoutOrder(items) {
     : supabase.from('habit_definitions').update({ sort_order: i + 1, ...(it.moveOut ? { section_id: null } : {}) }).eq('id', it.id))));
   const failed = results.find((r) => r.error);
   if (failed) {
-    state.notice = { type: 'error', text: t('notice.reorderFailed') + translateDbError(failed.error.message) };
+    state.notice = errorNotice('notice.reorderFailed', failed.error.message);
     render();
   }
 }
@@ -3488,7 +3551,7 @@ async function saveSectionForm() {
   if (id) {
     const { error } = await supabase.from('habit_sections').update({ enc, reminder_minute: reminderMinute }).eq('id', id);
     if (error) {
-      state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+      state.notice = errorNotice('notice.saveFailed', error.message);
       render();
       return;
     }
@@ -3499,7 +3562,7 @@ async function saveSectionForm() {
       .insert({ user_id: state.session.user.id, enc, sort_order: sortOrder, reminder_minute: reminderMinute })
       .select().single();
     if (error) {
-      state.notice = { type: 'error', text: t('notice.createFailed') + translateDbError(error.message) };
+      state.notice = errorNotice('notice.createFailed', error.message);
       render();
       return;
     }
@@ -3529,7 +3592,7 @@ async function saveSectionForm() {
     .map((h) => (applied.has(h.defId) ? { ...h, sectionId: applied.get(h.defId).section_id, sortOrder: applied.get(h.defId).sort_order } : h))
     .sort((a, b) => a.sortOrder - b.sortOrder);
   if (failed) {
-    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(failed.error.message) };
+    state.notice = errorNotice('notice.saveFailed', failed.error.message);
   }
   closeSectionForm();
   render();
@@ -3592,7 +3655,7 @@ async function deleteSection(id) {
   await commitLayoutOrder(items);
   const { error } = await supabase.from('habit_sections').delete().eq('id', id);
   if (error) {
-    state.notice = { type: 'error', text: t('notice.deleteFailed') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.deleteFailed', error.message);
     render();
     return;
   }
@@ -3607,7 +3670,7 @@ async function handleHabitDelete(defId) {
   const habit = state.habits.find((h) => h.defId === defId);
   const { error } = await supabase.from('habit_definitions').delete().eq('id', defId);
   if (error) {
-    state.notice = { type: 'error', text: t('notice.deleteFailed') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.deleteFailed', error.message);
     render();
     return;
   }
@@ -3812,7 +3875,7 @@ async function updateHabitPayload(habit, changes) {
   const enc = await encryptData(currentDek, payload);
   const { error } = await supabase.from('habit_definitions').update({ enc, ...DEF_PLAINTEXT_CLEARED }).eq('id', habit.defId);
   if (error) {
-    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.saveFailed', error.message);
     render();
     return false;
   }
@@ -3880,7 +3943,7 @@ async function saveDayNow(dateKey) {
     if (error) throw error;
     syncedEntries.set(dateKey, { day, iv: encrypted.iv });
   } catch (err) {
-    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(err?.message || String(err)) };
+    state.notice = errorNotice('notice.saveFailed', err?.message || String(err));
     render();
   }
 }
@@ -4163,7 +4226,7 @@ async function enablePush() {
     state.notice = { type: 'ok', text: t('notice.pushEnabled') };
   } catch (err) {
     state.pushStatus = 'off';
-    state.notice = { type: 'error', text: t('notice.enableFailed') + (err.message || err) };
+    state.notice = errorNotice('notice.enableFailed', (err.message || err));
   }
   render();
 }
@@ -4180,7 +4243,7 @@ async function disablePush() {
     }
     state.pushStatus = 'off';
   } catch (err) {
-    state.notice = { type: 'error', text: t('notice.disableFailed') + (err.message || err) };
+    state.notice = errorNotice('notice.disableFailed', (err.message || err));
   }
   render();
 }
@@ -4200,7 +4263,7 @@ async function handleExportData() {
   ]);
   const err = defsRes.error || entriesRes.error || settingsRes.error || subsRes.error || sectionsRes.error;
   if (err) {
-    state.notice = { type: 'error', text: t('notice.exportFailed') + err.message };
+    state.notice = errorNotice('notice.exportFailed', err.message);
     render();
     return;
   }
@@ -4276,7 +4339,7 @@ async function handleDeleteAccount() {
   const { data, error } = await supabase.functions.invoke('delete-account');
   if (error || data?.error) {
     state.deleteConfirm.busy = false;
-    state.notice = { type: 'error', text: t('notice.deleteFailed') + (error?.message || data?.error) };
+    state.notice = errorNotice('notice.deleteFailed', (error?.message || data?.error));
     render();
     return;
   }
@@ -4645,7 +4708,6 @@ function renderRecoveryKeyDisplay() {
         <button type="button" class="manage-btn" data-action="copy-recovery-key">${t('recoveryDisplay.copy')}</button>
         <button type="button" class="manage-btn" data-action="download-recovery-key">${t('recoveryDisplay.download')}</button>
       </div>
-      ${renderNotice()}
       ${whyBox('recoveryDisplay.keepTitle', 'recoveryDisplay.keepBody')}
       <details class="onb-more">
         <summary>${t('recoveryDisplay.moreLabel')}</summary>
@@ -6154,7 +6216,7 @@ async function saveOnboardingCompleted() {
   const { error } = await supabase.from('user_settings')
     .upsert({ user_id: state.session.user.id, onboarding_completed: true }, { onConflict: 'user_id' });
   if (error) {
-    state.notice = { type: 'error', text: t('notice.saveFailed') + translateDbError(error.message) };
+    state.notice = errorNotice('notice.saveFailed', error.message);
     render();
   }
 }
@@ -6197,7 +6259,6 @@ function tutorialScreen({ step, icon, title, body }) {
       ${tutorialDots(step)}
       <div class="onb-icon" aria-hidden="true">${icon}</div>
       <h1 tabindex="-1">${title}</h1>
-      ${renderNotice()}
       ${body}
     </div>
     ${state.tutorialSkipConfirm ? renderTutorialSkipConfirm() : ''}
@@ -6298,7 +6359,6 @@ function renderTutorialFieldIntro() {
 function renderTutorialFieldForm() {
   return `
     ${tutorialDots(3)}
-    ${renderNotice()}
     ${renderHabitForm()}
   `;
 }
@@ -6553,7 +6613,6 @@ function renderApp() {
   // updateTextValue), Fokus und Cursor-Position hier.
   const active = document.activeElement;
   const caret = active?.tagName === 'TEXTAREA' && active.id ? { id: active.id, range: [active.selectionStart, active.selectionEnd] } : null;
-  const noticeHtml = renderNotice();
   const subpage = isSubpageView(state.view);
   // Rutsch-Animation nach einem Zeitraum-Wechsel (shiftPeriod): der neue Zeitraum kommt
   // aus der Richtung, in die man gewischt/geblättert hat. Bewusst nur um den Inhalt, nicht
@@ -6593,7 +6652,6 @@ function renderApp() {
         `}
     </div>
     ${renderInstallHint()}
-    ${noticeHtml}
     <div class="view-body${slideClass}">${body}</div>
     ${state.deleteConfirm ? renderDeleteConfirm() : ''}
     ${state.resetConfirm ? renderResetConfirm() : ''}
@@ -6617,6 +6675,12 @@ function renderApp() {
   // Screenreader erfahren so, welcher Zeitraum jetzt gezeigt wird (der Pfeil sagt nur
   // "Nächster Tag").
   if (slide) announce(document.querySelector('.day-nav .day-label')?.textContent.replace(/\s+/g, ' ').trim() ?? '');
+}
+function announceAlert(text) {
+  const el = document.getElementById('sr-alert');
+  if (!el || !text) return;
+  el.textContent = '';
+  setTimeout(() => { el.textContent = text; }, 50);
 }
 function announce(text) {
   const el = document.getElementById('sr-announcer');
@@ -6689,6 +6753,7 @@ function render() {
   else if (!state.loading && !state.userSettings.onboardingCompleted) { renderTutorial(); }
   else { renderApp(); }
   syncPreviewFitHint();
+  syncToast(state.passwordRecovery || !state.session); // Anmelde-Seiten: Meldung im Text
   focusModalIfOpen();
   restoreFocus(focusKey);
   syncLayerHistory();

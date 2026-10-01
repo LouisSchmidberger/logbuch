@@ -955,9 +955,16 @@ Aktionen zu duplizieren) und tragen zusätzlich zur Farbe ein Streifenmuster
 (`scorePatternStyle()`, diskrete Stufen, gröber in der Jahres-Ansicht) für
 Rot-Grün-Farbenblinde. Die Bestätigungs-Modals (Konto löschen, Tutorial überspringen, Tag zurücksetzen, Ersatzschlüssel neu erzeugen, Abmelden aus dem Menü – beendet die Erinnerungen des Geräts und verlangt danach das Passwort)
 haben `role="dialog"`/Fokus-Trap/Escape-Schließen/Fokus-Rückgabe (siehe
-`focusModalIfOpen()`/`restoreModalFocus()`/`modalTriggerSelector`, gemeinsamer Schließ-Weg `closeModals()`). Meldungen laufen
-zentral über `renderNotice()` (Fehler `role="alert"`/assertive, Erfolg
-`role="status"`/polite). Das Umsortieren
+`focusModalIfOpen()`/`restoreModalFocus()`/`modalTriggerSelector`, gemeinsamer Schließ-Weg `closeModals()`). Meldungen (`state.notice`)
+erscheinen seit 2026-10-01 als schwebender Kasten unten am Bildschirmrand (`syncToast`, eigenes
+`#toast-root` außerhalb von `#app`; vorher oben unter dem Kopf – weiter unten, z.B. beim
+Speichern im langen Feld-Formular, sah man Fehler nicht). Erfolg verschwindet nach 4–12 s je
+nach Länge (Antippen/Fokus hält ihn fest), Fehler bleiben bis × oder zur nächsten Aktion;
+Screenreader über `#sr-announcer` (polite) bzw. `#sr-alert` (assertive). Nur die
+Anmelde-Seiten zeigen Meldungen weiter im Text (`renderNotice()`, dort sind es Anleitungen).
+Fehler immer über `errorNotice(key, rawMessage)`: ganzer Satz + übersetzter bekannter Fehler
+(`translateDbError`) bzw. "Bitte versuch es nochmal" mit aufklappbaren technischen Details –
+nie den rohen Fehler direkt in den Satz. Das Umsortieren
 hat mit Hoch/Runter-Buttons (`commitLayoutOrder()`, gemeinsamer Persistenz-Pfad mit dem
 Pointer-Drag) eine Tastatur-Alternative. Beim Ziehen scrollt die Liste am oberen/unteren
 Bildschirmrand von selbst weiter (`updateDragAutoScroll`, schneller je näher am Rand), damit
@@ -1002,7 +1009,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 496 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 499 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template

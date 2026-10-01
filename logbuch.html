@@ -709,6 +709,37 @@
     background: rgba(var(--rust-rgb), 0.12); color: var(--rust); border: 1px solid rgba(var(--rust-rgb), 0.3);
   }
   .notice--ok { background: rgba(var(--moss-rgb), 0.12); color: var(--moss); border-color: rgba(var(--moss-rgb), 0.3); }
+  /* Meldungen unten am Rand (syncToast). Ohne Pointer-Events im leeren Bereich, damit
+     der darunterliegende Inhalt bedienbar bleibt; solange einer da ist, bekommt #app unten
+     mehr Platz, damit er nichts dauerhaft verdeckt (z.B. "Speichern"). */
+  #toast-root {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 100; pointer-events: none;
+    display: flex; justify-content: center; padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  .has-toast #app { padding-bottom: 9rem; }
+  .toast {
+    pointer-events: auto; width: 100%; max-width: 30rem; box-sizing: border-box;
+    display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 12px 14px;
+    background: var(--ink); color: var(--paper); border-radius: 6px; box-shadow: 0 8px 24px var(--shadow);
+    font-size: 0.9375rem; line-height: 1.4;
+  }
+  /* Weiß auf Rost (~5,6:1); im dunklen Modus ist Rost heller, dort dunkle Schrift. */
+  .toast--error { background: var(--rust); color: #fff; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .toast--error { color: var(--paper); } }
+  :root[data-theme="dark"] .toast--error { color: var(--paper); }
+  .toast-body { flex: 1; min-width: 0; }
+  .toast-text { margin: 0; }
+  .toast-details summary { cursor: pointer; font-size: 0.8125rem; margin-top: 6px; text-decoration: underline; }
+  .toast-details p { font-size: 0.8125rem; margin: 4px 0 0; overflow-wrap: anywhere; }
+  .toast-close {
+    position: relative; flex-shrink: 0; background: none; border: none; color: inherit;
+    font-size: 1.25rem; line-height: 1; padding: 0 2px; cursor: pointer;
+  }
+  .toast-close::after { content: ''; position: absolute; inset: -12px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .toast { animation: toast-in 0.2s ease-out; }
+  }
+  @keyframes toast-in { from { transform: translateY(12px); opacity: 0; } }
   .loading { font-size: 0.9375rem; color: var(--sand); padding: 40px 0; text-align: center; }
 
   .auth-box { max-width: 20rem; margin: 60px auto; }
@@ -1043,7 +1074,9 @@
 <body>
 <div id="app"><div class="loading">Lädt …</div></div>
 <div id="sr-announcer" class="visually-hidden" aria-live="polite"></div>
+<div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
+<div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=27c38a05d9"></script>
+<script type="module" src="./logbuch.js?v=d31cade7be"></script>
 </body>
 </html>
