@@ -1011,7 +1011,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 535 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 537 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -1229,7 +1229,14 @@ Umgesetzt:
   Löscht per `auth.admin.deleteUser()` ausschließlich den durchs mitgeschickte
   Access-Token ermittelten Nutzer (nie eine vom Client übergebene ID) — alle anderen
   Tabellen hängen per `on delete cascade` an `auth.users` und werden automatisch mit
-  gelöscht.
+  gelöscht. Der Dialog zeigt die E-Mail des Kontos, das gelöscht wird (seit
+  2026-10-01). **Geschützte Konten** (`public.protected_accounts`, Migration
+  `20261001120000_add_protected_accounts`): Fremdschlüssel ohne Cascade auf `auth.users` – die
+  Datenbank lehnt jedes Löschen dieser Konten ab (auch aus dem Dashboard), `delete-account`
+  meldet vorher "geschützt". Eingetragen ist das echte Konto des Betreibers (damit es beim
+  häufigen Löschen von Testkonten nicht versehentlich mit erwischt wird); welche Konten das
+  sind, steht bewusst nicht im öffentlichen Repo. Entfernen: `delete from
+  public.protected_accounts where user_id = …`.
 - **Unbestätigte Konten werden automatisch gelöscht** (seit 2026-09-27): pg_cron-Job
   `daily-cleanup` (täglich 03:17 UTC) ruft `public.delete_stale_unconfirmed_users()` auf –
   löscht Konten ohne E-Mail-Bestätigung und ohne je erfolgte Anmeldung 24h nach der

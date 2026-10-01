@@ -1565,6 +1565,8 @@ const STRINGS = {
     'menu.deleteAccount': 'Konto löschen',
     'deleteAccount.title': 'Konto endgültig löschen',
     'deleteAccount.warning': 'Alle deine Einträge, Felder und Einstellungen werden unwiderruflich gelöscht. Das kann nicht rückgängig gemacht werden.',
+    'deleteAccount.whichAccount': 'Konto: <strong>{email}</strong>',
+    'deleteAccount.protected': 'Dieses Konto ist gegen Löschen geschützt.',
     'deleteAccount.typeToConfirm': 'Tippe {word} zur Bestätigung',
     'deleteAccount.deleting': 'Wird gelöscht …',
     'deleteAccount.deletePermanently': 'Endgültig löschen',
@@ -2102,6 +2104,8 @@ const STRINGS = {
     'menu.deleteAccount': 'Delete account',
     'deleteAccount.title': 'Permanently delete account',
     'deleteAccount.warning': 'All your entries, fields and settings will be permanently deleted. This cannot be undone.',
+    'deleteAccount.whichAccount': 'Account: <strong>{email}</strong>',
+    'deleteAccount.protected': 'This account is protected against deletion.',
     'deleteAccount.typeToConfirm': 'Type {word} to confirm',
     'deleteAccount.deleting': 'Deleting …',
     'deleteAccount.deletePermanently': 'Delete permanently',
@@ -4490,8 +4494,13 @@ async function handleDeleteAccount() {
   const userId = state.session?.user?.id;
   const { data, error } = await supabase.functions.invoke('delete-account');
   if (error || data?.error) {
+    // Bei Nicht-2xx liefert supabase-js die eigentliche Antwort in error.context.
+    let code = data?.error ?? null;
+    try { if (!code) code = (await error.context.json()).error; } catch { /* z.B. Netzwerkfehler */ }
     state.deleteConfirm.busy = false;
-    state.notice = errorNotice('notice.deleteFailed', (error?.message || data?.error));
+    state.notice = code === 'protected'
+      ? { type: 'error', text: t('deleteAccount.protected') }
+      : errorNotice('notice.deleteFailed', code || error?.message);
     render();
     return;
   }
@@ -6803,6 +6812,7 @@ function renderDeleteConfirm() {
     <div class="modal-overlay">
       <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
         <h2 id="delete-confirm-title">${t('deleteAccount.title')}</h2>
+        <p class="delete-account-email">${t('deleteAccount.whichAccount', { email: state.session?.user?.email ?? '' })}</p>
         <p>${t('deleteAccount.warning')}</p>
         <div class="auth-field">
           <label for="delete-confirm-input">${t('deleteAccount.typeToConfirm', { word: t('deleteAccount.confirmWord') })}</label>

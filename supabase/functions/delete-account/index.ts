@@ -44,6 +44,18 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: corsHeaders });
   }
 
+  // Gegen Löschen geschützte Konten (public.protected_accounts, siehe Migration
+  // 20261001120000) - die Datenbank würde das Löschen ohnehin ablehnen, so gibt es aber
+  // eine verständliche Meldung statt eines Fremdschlüssel-Fehlers.
+  const { data: protectedRow, error: protectedErr } = await supabaseAdmin
+    .from('protected_accounts').select('user_id').eq('user_id', userData.user.id).maybeSingle();
+  if (protectedErr) {
+    return new Response(JSON.stringify({ error: protectedErr.message }), { status: 500, headers: corsHeaders });
+  }
+  if (protectedRow) {
+    return new Response(JSON.stringify({ error: 'protected' }), { status: 403, headers: corsHeaders });
+  }
+
   const { error: deleteErr } = await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
   if (deleteErr) {
     return new Response(JSON.stringify({ error: deleteErr.message }), { status: 500, headers: corsHeaders });
