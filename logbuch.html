@@ -641,9 +641,12 @@
   .number-chart-hit:hover, .number-chart-hit:active { background: rgba(var(--moss-rgb), 0.14); }
 
   .grid-scroll { overflow-x: auto; }
-  .grid-row { display: grid; grid-template-columns: minmax(3.75rem, 5rem) repeat(7, 1fr) minmax(2.25rem, 2.75rem); align-items: center; gap: 1px; }
+  /* Feldnamen bekommen gut ein Drittel der Breite, die Tageskästchen teilen sich den Rest -
+     vorher brachen die Namen in einer schmalen Spalte mitten im Wort um. Umbruch an
+     Silbengrenzen (hyphens, Sprache aus <html lang>), mitten im Wort nur als Notlösung. */
+  .grid-row { display: grid; grid-template-columns: minmax(0, 35%) repeat(7, minmax(0, 1fr)) minmax(2.25rem, 2.75rem); align-items: center; gap: 1px; }
   .grid-row--header { padding-bottom: 6px; }
-  .grid-label { font-size: 0.75rem; padding-right: 3px; line-height: 1.2; overflow-wrap: anywhere; }
+  .grid-label { font-size: 0.75rem; padding-right: 3px; line-height: 1.2; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
   .grid-col-header { display: flex; flex-direction: column; align-items: center; font-size: 0.75rem; color: var(--sand); cursor: pointer; }
   .grid-col-date { font-size: 0.8125rem; color: var(--ink); }
   .grid-col-header--avg { font-family: 'Fraunces', serif; font-style: italic; color: var(--ink); cursor: default; }
