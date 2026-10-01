@@ -1108,6 +1108,8 @@ const STRINGS = {
     'auth.email': 'E-Mail',
     'auth.password': 'Passwort',
     'auth.passwordHint': '<strong>Mindestens {min} Zeichen.</strong> Merk es dir gut oder schreib es auf und leg den Zettel an einen sicheren Ort – ohne dein Passwort kommst du nicht mehr an deine Einträge.',
+    'auth.passwordCount': '{count} von mindestens {min} Zeichen',
+    'auth.passwordCountOk': '{count} Zeichen',
     'auth.passwordWhyTitle': 'Warum so wichtig?',
     'auth.passwordWhy': 'Deine Einträge werden auf deinem Gerät verschlüsselt, bevor sie gespeichert werden – dein Passwort ist der Schlüssel dazu. Deshalb kann niemand sonst sie lesen, nicht mal ich. Wähle eines, das du sonst nirgends verwendest.',
     'auth.hide': 'Verbergen',
@@ -1157,10 +1159,11 @@ const STRINGS = {
     'auth.confirmHelp.failed': 'Das Senden hat nicht geklappt. Bitte versuch es gleich nochmal.',
     'auth.checkMail.title': 'Schau in dein Postfach',
     'auth.checkMail.body': 'Ich hab dir eine Mail geschickt. Damit ist sicher, dass die Adresse dir gehört – und nur so kannst du später ein vergessenes Passwort zurücksetzen.',
-    'auth.checkMail.step1': 'Öffne deine E-Mail-App, zum Beispiel Gmail, GMX oder Outlook.',
-    'auth.checkMail.step2': 'Öffne die Mail „Bestätige deine Adresse für Logbuch“.',
-    'auth.checkMail.step3': 'Tipp darin auf den grünen Knopf.',
-    'auth.checkMail.step4': 'Komm hierher zurück und tipp auf „Weiter zum Anmelden“.',
+    'auth.checkMail.howTitle': 'So geht’s',
+    'auth.checkMail.after': 'Danach meldest du dich an – hier über „Weiter zum Anmelden“ oder auf der Seite, die sich nach dem Bestätigen öffnet. Hast du Logbuch aufs Handy geholt, mach am besten in der App weiter.',
+    'auth.checkMail.step1': 'Öffne deine E-Mail-App (z. B. Gmail, GMX oder Outlook).',
+    'auth.checkMail.step2': 'Öffne die Mail von Logbuch („Bestätige deine Adresse für Logbuch“). Findest du sie nicht, schau auch im Spam-Ordner.',
+    'auth.checkMail.step3': 'Tipp darin auf den Knopf zum Bestätigen.',
     'auth.checkMail.continue': 'Weiter zum Anmelden',
     'auth.error.passwordTooShort': 'Das Passwort muss mindestens {min} Zeichen lang sein.',
     'recovery.title': 'Neues Passwort setzen',
@@ -1188,20 +1191,20 @@ const STRINGS = {
     'recoveryDisplay.method.file': 'Als Datei speichern',
     'recoveryDisplay.method.copy': 'Kopieren',
     'recoveryDisplay.help.write': 'Schreib ihn Zeichen für Zeichen auf Papier und leg den Zettel zu deinen wichtigen Unterlagen. Die Abstände zwischen den Blöcken sind nur zum besseren Lesen.',
-    'recoveryDisplay.help.photoIos': 'Mach ein Bildschirmfoto: Drück gleichzeitig kurz die <strong>Seitentaste</strong> und die <strong>Lauter-Taste</strong> (bei iPhones mit runder Home-Taste: Seitentaste und Home-Taste). Das Bild liegt danach in deinen Fotos.',
-    'recoveryDisplay.help.photoAndroid': 'Mach ein Bildschirmfoto: Drück gleichzeitig kurz die <strong>Ein/Aus-Taste</strong> und die <strong>Leiser-Taste</strong>. Das Bild liegt danach in deiner Galerie.',
+    'recoveryDisplay.help.photoIos': 'Mach ein Bildschirmfoto – bei den meisten iPhones: kurz gleichzeitig die <strong>Seitentaste</strong> und die <strong>Lauter-Taste</strong> drücken (bei iPhones mit runder Home-Taste: Seitentaste und Home-Taste). Das Bild landet in deinen Fotos.',
+    'recoveryDisplay.help.photoAndroid': 'Mach ein Bildschirmfoto – bei den meisten Handys: kurz gleichzeitig die <strong>Ein/Aus-Taste</strong> und die <strong>Leiser-Taste</strong> drücken. Das Bild landet in deiner Galerie bzw. deinen Fotos.',
     'recoveryDisplay.help.photoOther': 'Mach mit deinem Handy ein Foto von diesem Bildschirm.',
-    'recoveryDisplay.help.fileIos': 'Die Datei „logbuch-ersatzschluessel.txt“ liegt jetzt in der App <strong>Dateien</strong> im Ordner <strong>Downloads</strong>. Erscheint stattdessen eine Frage, tipp auf „Laden“.',
-    'recoveryDisplay.help.fileAndroid': 'Die Datei „logbuch-ersatzschluessel.txt“ liegt jetzt in der App <strong>Dateien</strong> (bzw. „Eigene Dateien“) im Ordner <strong>Downloads</strong>.',
-    'recoveryDisplay.help.fileOther': 'Die Datei „logbuch-ersatzschluessel.txt“ liegt jetzt in deinem Ordner <strong>Downloads</strong>.',
+    'recoveryDisplay.help.fileIos': 'Die Datei „logbuch-ersatzschluessel.txt“ liegt danach meist in der App <strong>Dateien</strong> unter <strong>Downloads</strong>. Fragt dein iPhone vorher nach, tipp auf „Laden“.',
+    'recoveryDisplay.help.fileAndroid': 'Die Datei „logbuch-ersatzschluessel.txt“ liegt danach meist im Ordner <strong>Downloads</strong> – zu finden in der App <strong>Dateien</strong> bzw. „Eigene Dateien“ (je nach Handy).',
+    'recoveryDisplay.help.fileOther': 'Die Datei „logbuch-ersatzschluessel.txt“ liegt danach meist in deinem Ordner <strong>Downloads</strong>.',
     'recoveryDisplay.help.copy': 'Kopiert. Füge ihn jetzt dort ein, wo du ihn aufbewahren willst – z. B. in einem Passwort-Manager oder einer Notiz.',
     'recoveryDisplay.help.copyGuided': 'Kopiert – dein Handy hat sich den Schlüssel gemerkt. Öffne jetzt z. B. deine <strong>Notizen-App</strong>, tipp lange auf eine leere Stelle und wähle <strong>Einfügen</strong>. Komm danach hierher zurück.',
     'recoveryDisplay.done': 'Ich habe ihn aufbewahrt',
-    'recoveryDisplay.askNone': 'Du hast noch keinen der Wege oben benutzt. Ohne Ersatzschlüssel kann dir niemand helfen, wenn du dein Passwort vergisst. Wirklich weiter?',
+    'recoveryDisplay.askNone': 'Hast du ihn sicher aufbewahrt? Ohne Ersatzschlüssel kann dir niemand helfen, wenn du dein Passwort vergisst.',
     'recoveryDisplay.askWritten': 'Hast du ihn aufgeschrieben? Ohne Ersatzschlüssel kann dir niemand helfen, wenn du dein Passwort vergisst.',
-    'recoveryDisplay.continueAnyway': 'Trotzdem weiter',
     'recoveryDisplay.notYet': 'Noch nicht',
     'recoveryDisplay.yesWritten': 'Ja, aufgeschrieben',
+    'recoveryDisplay.yesKept': 'Ja, ist aufbewahrt',
     'recoveryDisplay.explain': 'Deine Einträge sind so verschlüsselt, dass <strong>nur du sie lesen kannst – nicht mal ich.</strong> Die Kehrseite: Vergisst du dein Passwort, reicht ein Link zum Zurücksetzen allein nicht, deine Einträge blieben verschlossen. Dafür gibt es diesen Ersatzschlüssel – mit ihm setzt du ein neues Passwort, ohne etwas zu verlieren.',
     'recoveryDisplay.moreLabel': 'Was, wenn ich beides verliere?',
     'recoveryDisplay.more': 'Verlierst du Passwort <strong>und</strong> Ersatzschlüssel, sind deine Einträge weg – das ist der Preis dafür, dass niemand sonst rankommt. Einen neuen Ersatzschlüssel bekommst du jederzeit in den Einstellungen unter „Ersatzschlüssel neu erzeugen“, der alte wird dann ungültig.',
@@ -1213,6 +1216,7 @@ const STRINGS = {
     'unlock.title': 'Passwort eingeben',
     'unlock.explain': 'Zur Sicherheit brauchst du hier dein Passwort noch einmal.',
     'unlock.account': 'Konto: <strong>{email}</strong>',
+    'unlock.afterConfirm': '✓ Adresse bestätigt! Gib hier dein Passwort ein, um weiterzumachen – oder mach in der Logbuch-App weiter, falls du sie aufs Handy geholt hast. Dann brauchst du diese Seite nicht mehr.',
     'unlock.whyTitle': 'Warum?',
     'unlock.why': 'Deine Einträge sind mit deinem Passwort verschlüsselt. Auf einem neuen Gerät, nach dem Löschen der Browserdaten oder wenn du gerade über den Link aus der Mail gekommen bist, kennt Logbuch den Schlüssel noch nicht – dein Passwort öffnet sie wieder (bzw. richtet bei einem neuen Konto die Verschlüsselung ein).',
     'unlock.unlocking': 'Einen Moment …',
@@ -1473,21 +1477,22 @@ const STRINGS = {
     'installGate.whyAndroid': 'Dann öffnet sich Logbuch wie eine App – ohne Browser-Leisten, mit einem Tipp auf dem Startbildschirm, statt es jedes Mal im Browser suchen zu müssen.',
     'installGate.installButton': 'Logbuch installieren',
     'installGate.orManually': 'Oder von Hand:',
+    'installGate.vary': 'Je nach Handy und Browser sieht das etwas anders aus und die Einträge heißen leicht anders – halte nach etwas Ähnlichem Ausschau.',
     'installGate.installButtonNote': 'Danach fragt dein Handy noch einmal – tipp dort auf „Installieren“.',
     'installGate.showPictures': 'Mit Bildern zeigen',
     'installGate.afterwards': 'Danach schließt sich der Browser oft von selbst, und du siehst das neue Logbuch-Symbol auf deinem Startbildschirm. Tipp darauf – dort geht’s weiter.',
-    'installGate.step.iosSafari1': 'Tippe unten auf das Teilen-Symbol (Quadrat mit Pfeil nach oben). Siehst du es nicht, tippe zuerst auf ••• unten rechts.',
-    'installGate.step.iosOther1': 'Tippe oben rechts in der Adressleiste auf das Teilen-Symbol (Quadrat mit Pfeil nach oben).',
-    'installGate.step.ios2': 'Scrolle in der Liste etwas nach unten und tippe auf „Zum Home-Bildschirm“.',
-    'installGate.step.ios3': 'Tippe oben rechts auf „Hinzufügen“.',
-    'installGate.step.chrome1': 'Tippe oben rechts auf die drei Punkte ⋮.',
-    'installGate.step.chrome2': 'Tippe auf „Zum Startbildschirm hinzufügen“ – manchmal heißt es auch „App installieren“.',
-    'installGate.step.samsung1': 'Tippe unten rechts auf das Menü ≡.',
-    'installGate.step.samsung2': 'Tippe auf „Seite hinzufügen zu“ und dann auf „Startbildschirm“.',
-    'installGate.step.firefox1': 'Tippe auf die drei Punkte ⋮ (oben oder unten rechts).',
-    'installGate.step.firefox2': 'Tippe auf „Installieren“ bzw. „Zum Startbildschirm hinzufügen“.',
-    'installGate.step.other1': 'Öffne das Menü deines Browsers und wähle „Zum Startbildschirm hinzufügen“ bzw. „App installieren“.',
-    'installGate.step.confirm': 'Bestätige mit „Installieren“ bzw. „Hinzufügen“.',
+    'installGate.step.iosSafari1': 'Tippe auf das Teilen-Symbol (Quadrat mit Pfeil nach oben). Meist ist es unten in der Leiste; manchmal steckt es hinter ••• .',
+    'installGate.step.iosOther1': 'Tippe auf das Teilen-Symbol (Quadrat mit Pfeil nach oben) – meist oben in der Adressleiste.',
+    'installGate.step.ios2': 'Such in der Liste nach „Zum Home-Bildschirm“ – eventuell musst du dafür etwas nach unten scrollen.',
+    'installGate.step.ios3': 'Bestätige mit „Hinzufügen“.',
+    'installGate.step.chrome1': 'Öffne das Menü des Browsers – meist drei Punkte ⋮ oben rechts.',
+    'installGate.step.chrome2': 'Such nach einem Eintrag wie „Zum Startbildschirm hinzufügen“ oder „App installieren“.',
+    'installGate.step.samsung1': 'Öffne das Menü – meist ≡ unten rechts.',
+    'installGate.step.samsung2': 'Such nach „Seite hinzufügen zu“ und wähle dann „Startbildschirm“ (oder etwas Ähnliches).',
+    'installGate.step.firefox1': 'Öffne das Menü – meist drei Punkte ⋮, oben oder unten rechts.',
+    'installGate.step.firefox2': 'Such nach einem Eintrag wie „Installieren“ oder „Zum Startbildschirm hinzufügen“.',
+    'installGate.step.other1': 'Öffne das Menü deines Browsers (oft drei Punkte ⋮ oder ≡, oben oder unten) und such nach einem Eintrag wie „Zum Startbildschirm hinzufügen“, „App installieren“ oder „Hinzufügen zu …“ – manchmal steckt er in einem Unterpunkt.',
+    'installGate.step.confirm': 'Bestätige, falls dein Handy nachfragt (z. B. mit „Installieren“ oder „Hinzufügen“).',
     'installSketch.copy': 'Kopieren',
     'installSketch.readingList': 'Zur Leseliste',
     'installSketch.addHome': 'Zum Home-Bildschirm',
@@ -1535,9 +1540,9 @@ const STRINGS = {
     'push.enableProminent': 'Erinnerungen aktivieren',
     'push.blocked.status': 'Mitteilungen sind für Logbuch blockiert',
     'push.blocked.intro': 'Dein Handy fragt nicht noch einmal, wenn Mitteilungen einmal blockiert wurden. So erlaubst du sie wieder:',
-    'push.blocked.ios': 'Öffne die <strong>Einstellungen</strong> deines iPhones → <strong>Mitteilungen</strong> → <strong>Logbuch</strong> → „Mitteilungen erlauben“ einschalten. Komm dann hierher zurück.',
-    'push.blocked.androidApp': 'Halte das <strong>Logbuch-Symbol</strong> auf dem Startbildschirm gedrückt → <strong>App-Info</strong> (ⓘ) → <strong>Benachrichtigungen</strong> → einschalten. Komm dann hierher zurück.',
-    'push.blocked.androidBrowser': 'Tippe oben links in der Adressleiste auf das Symbol neben der Adresse → <strong>Berechtigungen</strong> → <strong>Benachrichtigungen</strong> → zulassen. Komm dann hierher zurück.',
+    'push.blocked.ios': 'Öffne die <strong>Einstellungen</strong> deines iPhones, such dort <strong>Mitteilungen</strong> und dann <strong>Logbuch</strong>, und erlaube Mitteilungen. Komm dann hierher zurück.',
+    'push.blocked.androidApp': 'Halte das <strong>Logbuch-Symbol</strong> auf dem Startbildschirm gedrückt, öffne die <strong>App-Info</strong> (oft ⓘ) und erlaube dort <strong>Benachrichtigungen</strong>. Je nach Handy heißen die Punkte etwas anders. Komm dann hierher zurück.',
+    'push.blocked.androidBrowser': 'Tippe in der Adressleiste auf das Symbol links neben der Adresse und such dort nach <strong>Berechtigungen</strong> bzw. <strong>Benachrichtigungen</strong>, um sie zu erlauben. Je nach Browser sieht das etwas anders aus. Komm dann hierher zurück.',
     'push.blocked.other': 'Erlaube in den Website-Einstellungen deines Browsers für diese Seite <strong>Benachrichtigungen</strong>. Komm dann hierher zurück.',
     'push.blocked.retry': 'Nochmal versuchen',
     'push.blocked.retryHint': 'Hast du sie dort erlaubt? Dann tipp hier, um die Erinnerungen einzuschalten:',
@@ -1740,6 +1745,8 @@ const STRINGS = {
     'auth.email': 'Email',
     'auth.password': 'Password',
     'auth.passwordHint': '<strong>At least {min} characters.</strong> Remember it well or write it down and keep the note in a safe place – without your password you cannot get to your entries anymore.',
+    'auth.passwordCount': '{count} of at least {min} characters',
+    'auth.passwordCountOk': '{count} characters',
     'auth.passwordWhyTitle': 'Why does it matter so much?',
     'auth.passwordWhy': 'Your entries are encrypted on your device before they are stored – your password is the key. That is why nobody else can read them, not even me. Choose one you do not use anywhere else.',
     'auth.hide': 'Hide',
@@ -1789,10 +1796,11 @@ const STRINGS = {
     'auth.confirmHelp.failed': 'Sending did not work. Please try again in a moment.',
     'auth.checkMail.title': 'Check your inbox',
     'auth.checkMail.body': 'I have sent you an email. That way we know the address is yours – and only then can you reset a forgotten password later.',
-    'auth.checkMail.step1': 'Open your email app, for example Gmail, Outlook or Yahoo Mail.',
-    'auth.checkMail.step2': 'Open the email “Confirm your email for Logbuch”.',
-    'auth.checkMail.step3': 'Tap the green button in it.',
-    'auth.checkMail.step4': 'Come back here and tap “Continue to sign in”.',
+    'auth.checkMail.howTitle': 'How it works',
+    'auth.checkMail.after': 'Then sign in – here via “Continue to sign in” or on the page that opens after confirming. If you put Logbuch on your phone, it is best to continue in the app.',
+    'auth.checkMail.step1': 'Open your email app (e.g. Gmail, Outlook or Yahoo Mail).',
+    'auth.checkMail.step2': 'Open the email from Logbuch (“Confirm your email for Logbuch”). If you cannot find it, also check your spam folder.',
+    'auth.checkMail.step3': 'Tap the confirm button in it.',
     'auth.checkMail.continue': 'Continue to sign in',
     'auth.error.passwordTooShort': 'The password must be at least {min} characters long.',
     'recovery.title': 'Set new password',
@@ -1820,20 +1828,20 @@ const STRINGS = {
     'recoveryDisplay.method.file': 'Save as file',
     'recoveryDisplay.method.copy': 'Copy',
     'recoveryDisplay.help.write': 'Write it down character by character on paper and keep the note with your important documents. The gaps between the blocks are just for easier reading.',
-    'recoveryDisplay.help.photoIos': 'Take a screenshot: briefly press the <strong>side button</strong> and the <strong>volume up button</strong> at the same time (on iPhones with a round Home button: side button and Home button). The picture is then in your Photos.',
-    'recoveryDisplay.help.photoAndroid': 'Take a screenshot: briefly press the <strong>power button</strong> and the <strong>volume down button</strong> at the same time. The picture is then in your gallery.',
+    'recoveryDisplay.help.photoIos': 'Take a screenshot – on most iPhones: briefly press the <strong>side button</strong> and the <strong>volume up button</strong> at the same time (on iPhones with a round Home button: side button and Home button). The picture ends up in your Photos.',
+    'recoveryDisplay.help.photoAndroid': 'Take a screenshot – on most phones: briefly press the <strong>power button</strong> and the <strong>volume down button</strong> at the same time. The picture ends up in your gallery or photos.',
     'recoveryDisplay.help.photoOther': 'Take a photo of this screen with your phone.',
-    'recoveryDisplay.help.fileIos': 'The file “logbuch-ersatzschluessel.txt” is now in the <strong>Files</strong> app in the <strong>Downloads</strong> folder. If a question appears instead, tap “Download”.',
-    'recoveryDisplay.help.fileAndroid': 'The file “logbuch-ersatzschluessel.txt” is now in the <strong>Files</strong> app (or “My Files”) in the <strong>Downloads</strong> folder.',
-    'recoveryDisplay.help.fileOther': 'The file “logbuch-ersatzschluessel.txt” is now in your <strong>Downloads</strong> folder.',
+    'recoveryDisplay.help.fileIos': 'The file “logbuch-ersatzschluessel.txt” is then usually in the <strong>Files</strong> app under <strong>Downloads</strong>. If your iPhone asks first, tap “Download”.',
+    'recoveryDisplay.help.fileAndroid': 'The file “logbuch-ersatzschluessel.txt” is then usually in the <strong>Downloads</strong> folder – find it in the <strong>Files</strong> app or “My Files” (depending on your phone).',
+    'recoveryDisplay.help.fileOther': 'The file “logbuch-ersatzschluessel.txt” is then usually in your <strong>Downloads</strong> folder.',
     'recoveryDisplay.help.copy': 'Copied. Now paste it where you want to keep it – e.g. in a password manager or a note.',
     'recoveryDisplay.help.copyGuided': 'Copied – your phone has remembered the key. Now open e.g. your <strong>notes app</strong>, press and hold an empty spot and choose <strong>Paste</strong>. Then come back here.',
     'recoveryDisplay.done': 'I have kept it safe',
-    'recoveryDisplay.askNone': 'You have not used any of the ways above yet. Without a spare key nobody can help you if you forget your password. Really continue?',
+    'recoveryDisplay.askNone': 'Have you kept it safe? Without a spare key nobody can help you if you forget your password.',
     'recoveryDisplay.askWritten': 'Did you write it down? Without a spare key nobody can help you if you forget your password.',
-    'recoveryDisplay.continueAnyway': 'Continue anyway',
     'recoveryDisplay.notYet': 'Not yet',
     'recoveryDisplay.yesWritten': 'Yes, written down',
+    'recoveryDisplay.yesKept': 'Yes, it is safe',
     'recoveryDisplay.explain': 'Your entries are encrypted so that <strong>only you can read them – not even I can.</strong> The flip side: if you forget your password, a reset link alone is not enough, your entries would stay locked. That is what this spare key is for – with it, you set a new password without losing anything.',
     'recoveryDisplay.moreLabel': 'What if I lose both?',
     'recoveryDisplay.more': 'If you lose your password <strong>and</strong> your spare key, your entries are gone – that is the price of nobody else being able to get in. You can get a new spare key anytime in the settings under “Regenerate spare key”; the old one then becomes invalid.',
@@ -1845,6 +1853,7 @@ const STRINGS = {
     'unlock.title': 'Enter your password',
     'unlock.explain': 'For security, please enter your password once more.',
     'unlock.account': 'Account: <strong>{email}</strong>',
+    'unlock.afterConfirm': '✓ Address confirmed! Enter your password here to continue – or continue in the Logbuch app if you put it on your phone. Then you do not need this page anymore.',
     'unlock.whyTitle': 'Why?',
     'unlock.why': 'Your entries are encrypted with your password. On a new device, after clearing browser data, or if you just came from the link in the email, Logbuch does not know the key yet – your password opens them again (or, for a new account, sets up the encryption).',
     'unlock.unlocking': 'One moment …',
@@ -2105,21 +2114,22 @@ const STRINGS = {
     'installGate.whyAndroid': 'Then Logbuch opens like an app – without browser bars, with one tap on your home screen instead of looking for it in the browser every time.',
     'installGate.installButton': 'Install Logbuch',
     'installGate.orManually': 'Or by hand:',
+    'installGate.vary': 'Depending on your phone and browser this looks a little different and the entries are named slightly differently – look for something similar.',
     'installGate.installButtonNote': 'Your phone then asks once more – tap “Install” there.',
     'installGate.showPictures': 'Show with pictures',
     'installGate.afterwards': 'Afterwards the browser often closes by itself and you see the new Logbuch icon on your home screen. Tap it – that is where it continues.',
-    'installGate.step.iosSafari1': 'Tap the share icon at the bottom (a square with an arrow pointing up). If you do not see it, first tap ••• at the bottom right.',
-    'installGate.step.iosOther1': 'Tap the share icon at the top right in the address bar (a square with an arrow pointing up).',
-    'installGate.step.ios2': 'Scroll down a little in the list and tap “Add to Home Screen”.',
-    'installGate.step.ios3': 'Tap “Add” at the top right.',
-    'installGate.step.chrome1': 'Tap the three dots ⋮ at the top right.',
-    'installGate.step.chrome2': 'Tap “Add to Home screen” – sometimes it is called “Install app”.',
-    'installGate.step.samsung1': 'Tap the menu ≡ at the bottom right.',
-    'installGate.step.samsung2': 'Tap “Add page to” and then “Home screen”.',
-    'installGate.step.firefox1': 'Tap the three dots ⋮ (top or bottom right).',
-    'installGate.step.firefox2': 'Tap “Install” or “Add to Home screen”.',
-    'installGate.step.other1': 'Open your browser menu and choose “Add to Home screen” or “Install app”.',
-    'installGate.step.confirm': 'Confirm with “Install” or “Add”.',
+    'installGate.step.iosSafari1': 'Tap the share icon (a square with an arrow pointing up). It is usually in the bar at the bottom; sometimes it is behind ••• .',
+    'installGate.step.iosOther1': 'Tap the share icon (a square with an arrow pointing up) – usually at the top in the address bar.',
+    'installGate.step.ios2': 'Look for “Add to Home Screen” in the list – you may need to scroll down a little.',
+    'installGate.step.ios3': 'Confirm with “Add”.',
+    'installGate.step.chrome1': 'Open the browser menu – usually three dots ⋮ at the top right.',
+    'installGate.step.chrome2': 'Look for an entry like “Add to Home screen” or “Install app”.',
+    'installGate.step.samsung1': 'Open the menu – usually ≡ at the bottom right.',
+    'installGate.step.samsung2': 'Look for “Add page to” and then choose “Home screen” (or something similar).',
+    'installGate.step.firefox1': 'Open the menu – usually three dots ⋮, at the top or bottom right.',
+    'installGate.step.firefox2': 'Look for an entry like “Install” or “Add to Home screen”.',
+    'installGate.step.other1': 'Open your browser menu (often three dots ⋮ or ≡, at the top or bottom) and look for an entry like “Add to Home screen”, “Install app” or “Add to …” – sometimes it is inside a sub-menu.',
+    'installGate.step.confirm': 'Confirm if your phone asks (e.g. with “Install” or “Add”).',
     'installSketch.copy': 'Copy',
     'installSketch.readingList': 'Reading List',
     'installSketch.addHome': 'Add to Home Screen',
@@ -2167,9 +2177,9 @@ const STRINGS = {
     'push.enableProminent': 'Enable reminders',
     'push.blocked.status': 'Notifications are blocked for Logbuch',
     'push.blocked.intro': 'Once notifications are blocked, your phone does not ask again. Here is how to allow them:',
-    'push.blocked.ios': 'Open your iPhone <strong>Settings</strong> → <strong>Notifications</strong> → <strong>Logbuch</strong> → turn on “Allow Notifications”. Then come back here.',
-    'push.blocked.androidApp': 'Press and hold the <strong>Logbuch icon</strong> on your home screen → <strong>App info</strong> (ⓘ) → <strong>Notifications</strong> → turn on. Then come back here.',
-    'push.blocked.androidBrowser': 'Tap the icon next to the address at the top left of the address bar → <strong>Permissions</strong> → <strong>Notifications</strong> → allow. Then come back here.',
+    'push.blocked.ios': 'Open your iPhone <strong>Settings</strong>, find <strong>Notifications</strong> and then <strong>Logbuch</strong>, and allow notifications. Then come back here.',
+    'push.blocked.androidApp': 'Press and hold the <strong>Logbuch icon</strong> on your home screen, open the <strong>App info</strong> (often ⓘ) and allow <strong>notifications</strong> there. Depending on your phone the entries are named a little differently. Then come back here.',
+    'push.blocked.androidBrowser': 'Tap the icon to the left of the address in the address bar and look for <strong>Permissions</strong> or <strong>Notifications</strong> to allow them. Depending on your browser this looks a little different. Then come back here.',
     'push.blocked.other': 'Allow <strong>notifications</strong> for this site in your browser’s site settings. Then come back here.',
     'push.blocked.retry': 'Try again',
     'push.blocked.retryHint': 'Allowed them there? Then tap here to turn reminders on:',
@@ -3316,8 +3326,12 @@ async function confirmSpareKey() {
     return;
   }
   spareKeyPending = false;
-  if (isOnbInProgress()) setTodayIntroPending(true); // danach einmal die Karte(n) in "Heute"
+  const finishedOnboarding = isOnbInProgress();
   setOnbInProgress(false); // Einrichten abgeschlossen
+  if (finishedOnboarding) {
+    setTodayIntroPending(true); // danach einmal die Karte(n) in "Heute"
+    render();
+  }
 }
 
 // --- Felder-Verwaltung -----------------------------------------------------
@@ -4872,7 +4886,7 @@ function renderAuthWelcome() {
 // Nach dem Registrieren: was jetzt zu tun ist, als nummerierte Schritte - vorher standen
 // Meldung, Hilfe und Anmelde-Formular untereinander, und alle drei wollten etwas.
 function renderCheckMail() {
-  const steps = ['auth.checkMail.step1', 'auth.checkMail.step2', 'auth.checkMail.step3', 'auth.checkMail.step4'];
+  const steps = ['auth.checkMail.step1', 'auth.checkMail.step2', 'auth.checkMail.step3'];
   app.innerHTML = `
     <div class="auth-box onb">
       ${authBackButton('signup')}
@@ -4880,7 +4894,11 @@ function renderCheckMail() {
       <div class="onb-icon" aria-hidden="true">✉️</div>
       <h1 tabindex="-1">${t('auth.checkMail.title')}</h1>
       <p class="tutorial-text">${t('auth.checkMail.body')}</p>
-      <ol class="onb-steps">${steps.map((k) => `<li>${t(k)}</li>`).join('')}</ol>
+      <details class="why-box" ${isGuided() ? 'open' : ''}>
+        <summary class="why-box-title">${t('auth.checkMail.howTitle')}</summary>
+        <ol class="onb-steps">${steps.map((k) => `<li>${t(k)}</li>`).join('')}</ol>
+      </details>
+      <p class="onb-hint">${t('auth.checkMail.after')}</p>
       <button type="button" class="auth-submit" data-action="check-mail-done">${t('auth.checkMail.continue')}</button>
       ${renderConfirmEmailHelp()}
     </div>
@@ -4946,6 +4964,13 @@ function renderOnbInstalled() {
 }
 
 let authSubmitBusy = false;
+// Aktuelle Passwort-Länge beim Registrieren - so sieht man vor dem Absenden, ob die
+// Mindestlänge erreicht ist (statt es erst durch eine Fehlermeldung zu erfahren).
+function passwordCountText(len) {
+  return len >= AUTH_MIN_PASSWORD_LENGTH
+    ? `✓ ${t('auth.passwordCountOk', { count: len })}`
+    : t('auth.passwordCount', { count: len, min: AUTH_MIN_PASSWORD_LENGTH });
+}
 function renderAuth() {
   if (state.authMode === 'welcome') { renderAuthWelcome(); return; }
   if (state.authMode === 'mode') { renderOnbMode(); return; }
@@ -4984,6 +5009,7 @@ function renderAuth() {
               visible: state.authPasswordVisible,
             })}
             ${isSignup ? `
+              <p class="password-count" id="password-count" aria-live="polite">${passwordCountText(state.authPassword.length)}</p>
               <p class="onb-hint auth-password-hint">${t('auth.passwordHint', { min: AUTH_MIN_PASSWORD_LENGTH })}</p>
               <details class="why-details" ${isGuided() ? 'open' : ''}><summary>${t('auth.passwordWhyTitle')}</summary><p>${t('auth.passwordWhy')}</p></details>
             ` : ''}
@@ -5264,8 +5290,8 @@ function renderRecoveryKeyDisplay() {
         <div class="spare-key-ask" role="alert">
           <p>${t(shown.method === 'write' ? 'recoveryDisplay.askWritten' : 'recoveryDisplay.askNone')}</p>
           <div class="habit-form-actions">
-            <button type="button" class="habit-form-cancel" data-action="spare-key-ask-back">${t(shown.method === 'write' ? 'recoveryDisplay.notYet' : 'common.back')}</button>
-            <button type="button" class="auth-submit" data-action="spare-key-finish">${t(shown.method === 'write' ? 'recoveryDisplay.yesWritten' : 'recoveryDisplay.continueAnyway')}</button>
+            <button type="button" class="habit-form-cancel" data-action="spare-key-ask-back">${t('recoveryDisplay.notYet')}</button>
+            <button type="button" class="auth-submit" data-action="spare-key-finish">${t(shown.method === 'write' ? 'recoveryDisplay.yesWritten' : 'recoveryDisplay.yesKept')}</button>
           </div>
         </div>
       ` : `<button type="button" class="auth-submit" data-action="spare-key-done">${t('recoveryDisplay.done')}</button>`}
@@ -5310,6 +5336,9 @@ function installBrowser() {
   if (/Android/.test(ua)) {
     if (/SamsungBrowser/.test(ua)) return 'samsung';
     if (/Firefox/.test(ua)) return 'firefox';
+    // Opera, Edge, Vivaldi, Yandex & Co. tragen "Chrome" in der Kennung, haben aber andere
+    // Menüs - dort lieber die allgemeine Anleitung als eine falsche genaue.
+    if (/OPR\/|EdgA|Vivaldi|YaBrowser|DuckDuckGo|MiuiBrowser|HuaweiBrowser/.test(ua)) return 'other';
     return 'chrome';
   }
   return 'other';
@@ -5404,6 +5433,7 @@ function installSteps() {
 function installManualHtml() {
   const steps = installSteps();
   const list = (withSketches) => `
+    <p class="onb-hint">${t('installGate.vary')}</p>
     <ol class="onb-steps install-steps">
       ${steps.map(([key, sketch]) => `<li><span>${t(`installGate.step.${key}`)}</span>${withSketches && sketch ? sketchHtml(sketch) : ''}</li>`).join('')}
     </ol>
@@ -5461,6 +5491,7 @@ function renderUnlockPrompt() {
       <h1>Logbuch</h1>
       <p class="sub">${t('unlock.title')}</p>
       ${state.session?.user?.email ? `<p class="unlock-account">${t('unlock.account', { email: state.session.user.email })}</p>` : ''}
+      ${ARRIVED_VIA_SIGNUP_CONFIRM && !isStandaloneDisplay() ? `<div class="notice notice--ok">${t('unlock.afterConfirm')}</div>` : ''}
       <p class="onb-hint">${t('unlock.explain')}</p>
       ${isOnbInProgress() ? onbProgress('account') : ''}
       <details class="why-details" ${isGuided() ? 'open' : ''}><summary>${t('unlock.whyTitle')}</summary><p>${t('unlock.why')}</p></details>
@@ -8136,7 +8167,15 @@ app.addEventListener('change', async (e) => {
 // einem Fehler) hinweg – sonst wäre bei jedem Fehlversuch das ganze Formular leer.
 app.addEventListener('input', (e) => {
   if (e.target.id === 'email' && !state.session) { state.authEmail = e.target.value; return; }
-  if (e.target.id === 'password' && !state.session) { state.authPassword = e.target.value; return; }
+  if (e.target.id === 'password' && !state.session) {
+    state.authPassword = e.target.value;
+    const count = document.getElementById('password-count');
+    if (count) {
+      count.textContent = passwordCountText(e.target.value.length);
+      count.classList.toggle('password-count--ok', e.target.value.length >= AUTH_MIN_PASSWORD_LENGTH);
+    }
+    return;
+  }
   // Kein render() beim Tippen (würde Fokus/Cursor zurücksetzen) - nur merken, damit
   // der Text einen späteren Re-Render (z.B. Meldung beim Absenden) übersteht.
   if (e.target.id === 'feedback-message') { state.feedback.message = e.target.value; return; }

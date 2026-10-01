@@ -65,7 +65,12 @@ diese Rechtstexte stehen, weiterhin nur informelles Testen mit bekannten Persone
   eingekreist, Beschriftung aus der App, passt sich Hell/Dunkel an – bewusst keine
   Screenshots, die je Sprache/Theme/OS-Version veralten). Bei Schritt für Schritt stehen die
   Skizzen im Ablauf, sonst kurze Text-Schritte mit "Mit Bildern zeigen" zum Aufklappen;
-  danach ein Satz Vorwarnung "Browser schließt sich oft von selbst …"; auf Android/Chrome zusätzlich ein echter
+  danach ein Satz Vorwarnung "Browser schließt sich oft von selbst …"; Texte bewusst vorsichtig
+  ("meist", "such nach etwas Ähnlichem", Hinweis dass es je nach Handy/Browser anders aussieht –
+  Nutzer-Erfahrung: wer selbst ein bisschen suchen soll, findet es eher, als wer eine exakte
+  Beschreibung erwartet, die dann nicht stimmt); Opera, Edge u.a. bekommen die allgemeine
+  Anleitung statt der Chrome-Anleitung. Gilt genauso für alle anderen Anleitungen zu fremden
+  Oberflächen (Mitteilungen erlauben, Bildschirmfoto, Downloads). auf Android/Chrome zusätzlich ein echter
   Installieren-Knopf (`beforeinstallprompt`). So registriert man sich gleich in der
   installierten App – vorher kam der Hinweis erst nach dem Anmelden (zweites Anmelden in
   der App nötig) und wurde oft einfach weggeklickt. "Ich bleib erst mal im Browser" merkt
@@ -1027,7 +1032,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 630 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 635 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
