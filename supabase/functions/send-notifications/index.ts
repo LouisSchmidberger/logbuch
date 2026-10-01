@@ -7,7 +7,7 @@
 // 1. Sammel-Erinnerung zur Standard-Erinnerungszeit (bewusst generisch, ohne
 //    Feldnamen – bei vielen Feldern sonst eine sehr lange Nachricht).
 // 2. Erinnerung für Felder mit eigener Zeit (meist ein einzelnes bewusst
-//    herausgehobenes wie Gewicht morgens). Feldnamen sind verschlüsselt, diese
+//    herausgehobenes Feld). Feldnamen sind verschlüsselt, diese
 //    Function kennt sie nicht: sie schickt einen allgemeinen Text plus die Feld-IDs
 //    (fieldIds), sw.js setzt auf dem Gerät die Namen aus einer lokalen Liste ein.
 // 3. Erinnerung je Gruppe mit eigener Zeit (gesammelt für deren Felder ohne eigene

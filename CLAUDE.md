@@ -1,6 +1,6 @@
 # Logbuch – Projektkontext
 
-Habit-/Gewichts-Tracker, standalone gebaut (bewusst unabhängig von Claude.ai, läuft
+Habit-Tracker mit frei anlegbaren Feldern (Skala, Zahl, Text, berechnete Werte), standalone gebaut (bewusst unabhängig von Claude.ai, läuft
 komplett eigenständig). Ursprünglich als reiner Einzelnutzer-Tracker in einem
 Claude.ai-Chat konzipiert, seitdem in Claude Code weitergeführt; seit der
 `habit_definitions`-Umstellung (siehe Datenmodell) mehrnutzerfähig – jeder Nutzer
@@ -156,8 +156,7 @@ Tabelle `habit_entries`: eine Zeile pro Nutzer und Kalendertag.
 - `entry_date` (date), `data` (jsonb) – **clientseitig verschlüsselt** (siehe Abschnitt
   "Verschlüsselung" unten): kein Klartext mehr, sondern `{iv: "<base64>", ciphertext:
   "<base64>"}`. Im entschlüsselten Zustand enthält das Objekt die Werte des Tages,
-  Keys entsprechen den `slug`s aus `habit_definitions` des jeweiligen Nutzers (Gewicht
-  ist ein ganz normaler `slug='weight'`-Eintrag darin, kein Sonderfall mehr).
+  Keys entsprechen den `slug`s aus `habit_definitions` des jeweiligen Nutzers.
   **Notizen** (seit 2026-09-27) liegen im selben verschlüsselten Objekt unter dem
   einzigen reservierten Schlüssel `_notes`: `{ mood: 3, _notes: { mood: "…", _day:
   "…" } }` – je Feld-Slug eine Notiz, `_day` für die Notiz zum ganzen Tag
@@ -279,7 +278,7 @@ Konzept, eher Richtung Ziel-Quote).
 ## Skalen-/Farblogik
 
 Vier Feld-Typen: `kind='scale'` (Stufen mit Gut/Schlecht-Bewertung – der Normalfall),
-`kind='number'` (freier Zahlenwert wie Gewicht, bewusst **ohne** Gut/Schlecht-Bewertung,
+`kind='number'` (freier Messwert wie Schlafstunden oder Gewicht, bewusst **ohne** Gut/Schlecht-Bewertung,
 dafür mit optionaler Einheit), `kind='computed'` ("Berechnet", nicht direkt befüllbar, zeigt den live
 berechneten Durchschnitt seiner Mitglieder-Felder – siehe `habitScore` unten) und
 `kind='text'` (freie Text-Antwort, siehe unten).
@@ -316,8 +315,8 @@ in "Über Logbuch" (`about.tip.textFields`). DB-Constraints `habit_definitions_k
 `normalize(habit, value)` bildet den Wert eines `scale`-Felds auf 0 (schlecht) bis 1 (gut)
 ab, unabhängig von der Richtung (`good: 'high'` vs. `good: 'low'`, z.B. bei
 "Gekifft"/"Gevaped"). `scoreColor(score)` färbt danach rot→grau→grün. `number`-Felder
-laufen nie durch `normalize`/`scoreColor` (kein "gut/schlecht" bei einem Zahlenwert wie
-Gewicht) – sie bekommen stattdessen in "Heute" ein Eingabefeld (als normale Zeile wie alle
+laufen nie durch `normalize`/`scoreColor` (kein "gut/schlecht" bei einem reinen
+Messwert) – sie bekommen stattdessen in "Heute" ein Eingabefeld (als normale Zeile wie alle
 Felder, seit 2026-10-01 ohne eigenen Kasten – ebenso Text-Felder) und in den
 Auswertungs-Tabs einen Verlaufs-Graphen (`renderNumberChart`), statt in die Score-/
 Heatmap-Logik einzufließen. Es gibt keinen separaten Bool-Typ – ein Ja/Nein-Feld ist
@@ -547,8 +546,8 @@ zählt der rohe Wert des Tages, keine Quote).
 
 ## Verschlüsselung (Zero-Access-Architektur)
 
-Seit 2026-09-14: `habit_entries.data` (die eigentlichen Werte — Gewicht, Stimmung,
-Sex, Drogenkonsum etc.) ist clientseitig verschlüsselt. Der Betreiber (auch über
+Seit 2026-09-14: `habit_entries.data` (die eigentlichen Werte — Stimmung, Schlaf,
+Gewicht, Sex, Drogenkonsum etc.) ist clientseitig verschlüsselt. Der Betreiber (auch über
 Supabase-Dashboard/CLI) kann diese Werte grundsätzlich nicht einsehen — RLS schützt
 nur Nutzer voreinander, das hier zusätzlich vor dem DB-Owner selbst. Seit 2026-09-27
 zusätzlich die **Feld-Definitionen** (siehe unten) – der Betreiber soll auch nicht sehen,
@@ -837,7 +836,7 @@ normal durch. Scrollen, Wischen und Deep-Links schließen es ebenfalls.
 `habit_entries`): freier Text pro Feld (auch berechnete; nur Text-Felder nicht, dort wäre es
 doppelt), pro Gruppe (Schlüssel `section:<id>`, `SECTION_NOTE_PREFIX`, seit 2026-09-28) und
 für den ganzen Tag, bewusst **kein Teil der Auswertung**. Gedacht als
-Ausnahme ("heute erst nach dem Frühstück gewogen"), nicht als tägliche Eingabe – deshalb
+Ausnahme ("heute wegen Erkältung kein Sport"), nicht als tägliche Eingabe – deshalb
 nur über das Zeilen-Menü erreichbar statt über ein eigenes Symbol pro Zeile. Eine
 vorhandene Notiz steht als kleiner kursiver Text unter dem Feld bzw. der
 Gruppen-Überschrift (`renderNote`, antippbar → Editor; bei Gruppen auch eingeklappt
@@ -1094,8 +1093,8 @@ Alle Zeiten/Daten gelten in der **Ortszeit des jeweiligen Nutzers**
   Jahresübersicht-Benachrichtigung (in die Jahresansicht schaut man ohnehin laufend,
   nicht nur zum Jahresende).
 - **Eigene Zeit je Feld**: jedes Feld kann über `reminder_minute` unabhängig von der
-  Standardzeit eine eigene Erinnerungszeit bekommen – z.B. Gewicht typischerweise
-  morgens statt zur (abendlichen) Standardzeit. In der App per Checkbox "Eigene
+  Standardzeit eine eigene Erinnerungszeit bekommen – z.B. ein Feld, das man
+  morgens einträgt, statt zur (abendlichen) Standardzeit. In der App per Checkbox "Eigene
   Erinnerungszeit" im Feld-Formular, standardmäßig aus. Uhrzeiten überall (Feld, Gruppe,
   Standardzeit, Tutorial) als zwei Auswahllisten Stunde : Minute (00/15/30/45,
   `reminderTimeInputHtml`/`readTimeInput` in `logbuch.js`, seit 2026-10-01 statt einer Liste
@@ -1142,7 +1141,7 @@ Die Sammel-Erinnerung zur Standardzeit ist bewusst generisch ("Noch nicht alle W
 für heute eingetragen.", keine Feldnamen – sonst bei vielen Feldern schnell eine sehr
 lange Nachricht). Eine Erinnerung zu einer eigenen Zeit nennt dagegen das konkrete
 Feld (`Erinnerung: <Namen> noch nicht eingetragen.`), da dort meist gezielt ein
-einzelnes Feld hervorgehoben werden soll (z.B. Gewicht) – **der Name wird dabei erst auf
+einzelnes Feld hervorgehoben werden soll – **der Name wird dabei erst auf
 dem Gerät eingesetzt**: der Server kennt Feldnamen nicht (sollen verschlüsselt sein),
 `get_due_notifications` liefert nur Feld-IDs, `send-notifications` schickt einen
 allgemeinen Text ("Ein Feld wartet noch …") plus `fieldIds`, und `sw.js` ersetzt ihn
