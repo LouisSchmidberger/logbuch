@@ -1247,7 +1247,10 @@ Umgesetzt:
   Access-Token ermittelten Nutzer (nie eine vom Client übergebene ID) — alle anderen
   Tabellen hängen per `on delete cascade` an `auth.users` und werden automatisch mit
   gelöscht. Der Dialog zeigt die E-Mail des Kontos, das gelöscht wird (seit
-  2026-10-01). **Geschützte Konten** (`public.protected_accounts`, Migration
+  2026-10-01). Danach entfernt `clearDeviceAccountTraces` die auf dem Gerät gemerkten Spuren
+  des Kontos/Einrichtens (`localStorage`: angemeldet hier, Einstiegs-Wahl, Einrichten läuft,
+  Installations-Seite/-Hinweis weggeklickt, Gruppen-Zustände); Geräte-Einstellungen
+  (Hell/Dunkel, Textgröße, Streifenmuster, Vibration) bleiben. **Geschützte Konten** (`public.protected_accounts`, Migration
   `20261001120000_add_protected_accounts`): Fremdschlüssel ohne Cascade auf `auth.users` – die
   Datenbank lehnt jedes Löschen dieser Konten ab (auch aus dem Dashboard), `delete-account`
   meldet vorher "geschützt". Eingetragen ist das echte Konto des Betreibers (damit es beim

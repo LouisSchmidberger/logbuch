@@ -4526,6 +4526,21 @@ async function handleExportData() {
 }
 
 // --- Konto löschen (Recht auf Löschung) -------------------------------------
+// Nach dem Löschen des Kontos: auf dem Gerät gemerkte Spuren des Kontos bzw. seines
+// Einrichtens mit entfernen ("Löschen" soll möglichst wenig übrig lassen; danach beginnt
+// man wieder bei der Startseite). Einstellungen des Geräts bzw. der Person (Hell/Dunkel,
+// Textgröße, Streifenmuster, Vibration) bleiben bewusst erhalten.
+function clearDeviceAccountTraces() {
+  try {
+    ['signedInHere', 'onboardingMode', 'onboardingInProgress', 'onboardingWithInstall', 'installGateSkipped', 'installHintDismissed']
+      .forEach((key) => localStorage.removeItem(key));
+    Object.keys(localStorage).filter((key) => key.startsWith('sectionCollapsed:')).forEach((key) => localStorage.removeItem(key));
+  } catch { /* nichts gespeichert oder kein Zugriff - dann gibt es auch nichts zu löschen */ }
+  onbModeThisVisit = null;
+  onbInProgressThisVisit = false;
+  installGateSkippedThisVisit = false;
+}
+
 async function handleDeleteAccount() {
   const input = (document.getElementById('delete-confirm-input')?.value || '').trim();
   if (input !== t('deleteAccount.confirmWord')) {
@@ -4556,6 +4571,8 @@ async function handleDeleteAccount() {
   await endPushForThisDevice({ deleteServerRow: false });
   if (userId) await clearCachedDek(userId);
   clearCurrentDek();
+  clearDeviceAccountTraces();
+  state.authMode = 'welcome';
 
   state.deleteConfirm = null;
   state.authEmail = '';
