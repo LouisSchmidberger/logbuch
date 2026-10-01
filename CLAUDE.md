@@ -668,7 +668,9 @@ Tab-Leiste zeigt nur noch die Auswertungs-Ansichten (Heute/Woche/Monat/Jahr/Gesa
 "☰ Menü" oben rechts – mit Wort, nicht jede Person erkennt die drei Striche; `renderMenu` in
 `logbuch.js`) enthält seit 2026-10-01 nur noch die Ziele: "Felder verwalten",
 "Einstellungen", "Über Logbuch", "Feedback geben". Alles Konfigurative steht auf der
-Unterseite **"Einstellungen"** (`renderSettings`), in drei Abschnitten: Erinnerungen
+Unterseite **"Einstellungen"** (`renderSettings`), in drei einklappbaren Abschnitten (wie
+"Über Logbuch" bei jedem Öffnen zugeklappt, `settingsSectionStart`; Menüpunkte und
+Abschnitte mit Symbol wie im Onboarding, `.item-icon`): Erinnerungen
 (an/aus, Standard-Erinnerungszeit, Wochen-/Monatsübersicht), Anzeige (Textgröße,
 Hell/Dunkel, Sprache, Streifenmuster, Vibration), Konto (Export, Ersatzschlüssel, Abmelden,
 Konto löschen). Erklärungen stehen dort direkt unter der Einstellung statt hinter einem "?".

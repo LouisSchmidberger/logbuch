@@ -845,7 +845,7 @@ function isSubpageView(view) { return view === 'manage' || view === 'about' || v
 // ursprünglichen Tab führen).
 function enterSubpage(view) {
   if (!isSubpageView(state.view)) state.previousTabView = state.view;
-  if (view === 'about') openAboutSections = new Set(); // bei jedem Öffnen alles zugeklappt
+  if (view === 'about' || view === 'settings') openAboutSections = new Set(); // bei jedem Öffnen alles zugeklappt
   if (view !== 'manage') closeManageOverlays();
   state.view = view;
   state.menuOpen = false;
@@ -6433,21 +6433,18 @@ function renderPushRow(prominent = false) {
 function renderMenu() {
   return `
     <div class="menu-panel">
-      <button type="button" class="menu-item-btn" data-action="open-manage">${t('menu.manageFields')}</button>
-      <button type="button" class="menu-item-btn" data-action="open-settings">${t('menu.settings')}</button>
-      <button type="button" class="menu-item-btn" data-action="open-about">${t('menu.about')}</button>
-      <button type="button" class="menu-item-btn" data-action="open-feedback">${t('menu.feedback')}</button>
+      ${[['open-manage', '✏️', 'menu.manageFields'], ['open-settings', '⚙️', 'menu.settings'], ['open-about', '📖', 'menu.about'], ['open-feedback', '💬', 'menu.feedback']]
+        .map(([action, icon, key]) => `<button type="button" class="menu-item-btn" data-action="${action}"><span class="item-icon" aria-hidden="true">${icon}</span>${t(key)}</button>`).join('')}
     </div>
   `;
 }
 
-// Einstellungen: Erinnerungen, Anzeige, Konto. Erklärungen stehen direkt unter der
+// Einstellungen: Erinnerungen, Anzeige, Konto, je einklappbar. Erklärungen stehen direkt unter der
 // jeweiligen Einstellung statt hinter einem "?" (Neulinge fanden die nicht). data-menu-
 // target: Sprungziel für die Links aus "Über Logbuch" (focusSettingsTarget).
 function renderSettings() {
   return `
-    <section class="settings-section" aria-labelledby="settings-reminders-title">
-      <h2 class="manage-section-title" id="settings-reminders-title">${t('settings.reminders')}</h2>
+    ${settingsSectionStart('reminders', '🔔', 'settings.reminders')}
       <div data-menu-target="push">${renderPushRow()}</div>
       <div class="settings-row">
         <label for="menu-default-time">${t('menu.defaultReminderTime')}</label>
@@ -6461,9 +6458,9 @@ function renderSettings() {
         </label>
         <p class="settings-note" id="settings-summary-note">${t('menu.summaryNotificationsExplain')}</p>
       </div>
-    </section>
-    <section class="settings-section" aria-labelledby="settings-display-title">
-      <h2 class="manage-section-title" id="settings-display-title">${t('settings.display')}</h2>
+    </details>
+    <div class="manage-section-divider"></div>
+    ${settingsSectionStart('display', '🎨', 'settings.display')}
       <div class="settings-row" data-menu-target="text-size">
         <span class="settings-label" id="menu-text-size-label">${t('textSize.label')}</span>
         <div class="pill-group" role="group" aria-labelledby="menu-text-size-label">
@@ -6500,9 +6497,9 @@ function renderSettings() {
           </label>
         </div>
       ` : ''}
-    </section>
-    <section class="settings-section" aria-labelledby="settings-account-title">
-      <h2 class="manage-section-title" id="settings-account-title">${t('menu.groupAccount')}</h2>
+    </details>
+    <div class="manage-section-divider"></div>
+    ${settingsSectionStart('account', '👤', 'menu.groupAccount')}
       <div class="settings-row" data-menu-target="export">
         <button type="button" class="menu-item-btn" data-action="export-data">${t('menu.exportData')}</button>
         <p class="settings-note">${t('settings.exportNote')}</p>
@@ -6515,8 +6512,16 @@ function renderSettings() {
         <button type="button" class="menu-item-btn" data-action="logout-arm">${t('common.logout')}</button>
         <button type="button" class="menu-item-btn menu-item-btn--danger" data-action="open-delete-confirm">${t('menu.deleteAccount')}</button>
       </div>
-    </section>
+    </details>
   `;
+}
+// Wie die Abschnitte in "Über Logbuch": bei jedem Öffnen der Seite zugeklappt (siehe
+// openAboutSections), so ist auf einen Blick zu sehen, was es gibt.
+function settingsSectionStart(id, icon, titleKey) {
+  const key = `settings:${id}`;
+  return `
+    <details class="tip-group settings-section" data-collapse-key="${key}" ${isAboutSectionCollapsed(key) ? '' : 'open'}>
+      <summary class="manage-section-title"><span class="item-icon" aria-hidden="true">${icon}</span>${t(titleKey)}</summary>`;
 }
 
 function renderResetConfirm() {
@@ -6594,6 +6599,8 @@ function renderDeleteConfirm() {
 function focusSettingsTarget(target) {
   const row = document.querySelector(`[data-menu-target="${target}"]`);
   if (!row) return;
+  const section = row.closest('details');
+  if (section) section.open = true; // eingeklappten Abschnitt aufklappen (merkt sich der toggle-Listener)
   row.scrollIntoView({ block: 'center' });
   row.classList.add('field-highlight');
   row.addEventListener('animationend', () => row.classList.remove('field-highlight'), { once: true });
