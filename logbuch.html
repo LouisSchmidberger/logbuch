@@ -1102,11 +1102,6 @@
   /* Gruppen-Formular: die Erinnerungszeit klar von der Mitglieder-Checkliste darüber absetzen */
   .section-form-reminder { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 20px; }
   .checkbox-field input { margin: 0; }
-  .recovery-key-confirm-row {
-    border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; margin: 12px 0 14px;
-    background: rgba(var(--moss-rgb), 0.06);
-  }
-  .recovery-key-confirm-row input[type="checkbox"] { width: 17px; height: 17px; flex-shrink: 0; accent-color: var(--moss); }
   /* Tipp-Kasten im Tutorial-Formular (renderHabitForm, f.revealStage). */
   .form-tip {
     display: flex; align-items: flex-start; gap: 0.25rem; margin: 0.75rem 0; padding: 0.75rem;
@@ -1127,10 +1122,22 @@
     border-radius: 3px; color: var(--ink); cursor: pointer;
   }
   .recovery-key-code {
-    font-family: monospace; font-size: 0.9375rem; line-height: 1.6; word-break: break-all;
-    background: var(--input-bg); border: 1px solid var(--line); border-radius: 3px; padding: 10px;
-    margin: 4px 0 14px;
+    font-family: monospace; font-size: 1.1875rem; line-height: 1.7; letter-spacing: 0.04em; text-align: center;
+    background: var(--input-bg); border: 1px solid var(--sand); border-radius: 4px; padding: 0.75rem;
+    margin: 4px 0 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 0 0.6em;
   }
+  .spare-key-question { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 1.1875rem; margin: 1.25rem 0 0.75rem; }
+  .spare-key-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .spare-key-method {
+    display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.875rem 0.5rem;
+    font-family: inherit; font-size: 0.9375rem; color: var(--ink); background: var(--input-bg);
+    border: 1px solid var(--sand); border-radius: 6px; cursor: pointer; text-align: center;
+  }
+  .spare-key-method-icon { font-size: 1.5rem; line-height: 1; }
+  .spare-key-method--active { border: 2px solid var(--moss); background: rgba(var(--moss-rgb), 0.1); }
+  .spare-key-help { margin-top: 0.75rem; }
+  .spare-key-ask { margin-top: 1rem; padding: 0.875rem; border: 1px solid var(--rust); border-radius: 6px; font-size: 0.9375rem; line-height: 1.5; }
+  .spare-key-ask p { margin: 0 0 0.75rem; }
   /* Honeypot: für Menschen unsichtbar (nicht display:none, das erkennen manche Bots),
      für Screenreader per aria-hidden ausgeblendet. */
   .honeypot-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
@@ -1142,6 +1149,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=8a93c5522d"></script>
+<script type="module" src="./logbuch.js?v=85dc8d5dca"></script>
 </body>
 </html>

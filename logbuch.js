@@ -1174,12 +1174,31 @@ const STRINGS = {
     'recovery.passwordSaved': 'Passwort gespeichert.',
     'recovery.cleanupFailed': 'Passwort gespeichert. Deine alten, nicht mehr lesbaren Daten konnten aber nicht vollständig gelöscht werden – falls dir Felder als „nicht entschlüsselbar“ gemeldet werden, schreib mir bitte über „Feedback geben“.',
     'recoveryDisplay.title': 'Dein Ersatzschlüssel',
+    'recoveryDisplay.lead': 'Falls du dein Passwort einmal vergisst, kommst du <strong>nur mit diesem Schlüssel</strong> wieder an deine Einträge. Heb ihn deshalb gut auf.',
+    'recoveryDisplay.whyTitle': 'Warum gibt es den?',
+    'recoveryDisplay.codeLabel': 'Dein Ersatzschlüssel',
+    'recoveryDisplay.secret': 'Gib ihn niemandem – er öffnet dein Logbuch genauso wie dein Passwort.',
+    'recoveryDisplay.how': 'Wie möchtest du ihn aufbewahren?',
+    'recoveryDisplay.method.write': 'Aufschreiben',
+    'recoveryDisplay.method.photo': 'Foto vom Bildschirm',
+    'recoveryDisplay.method.file': 'Als Datei speichern',
+    'recoveryDisplay.method.copy': 'Kopieren',
+    'recoveryDisplay.help.write': 'Schreib ihn Zeichen für Zeichen auf Papier und leg den Zettel zu deinen wichtigen Unterlagen. Die Abstände zwischen den Blöcken sind nur zum besseren Lesen.',
+    'recoveryDisplay.help.photoIos': 'Mach ein Bildschirmfoto: Drück gleichzeitig kurz die <strong>Seitentaste</strong> und die <strong>Lauter-Taste</strong> (bei iPhones mit runder Home-Taste: Seitentaste und Home-Taste). Das Bild liegt danach in deinen Fotos.',
+    'recoveryDisplay.help.photoAndroid': 'Mach ein Bildschirmfoto: Drück gleichzeitig kurz die <strong>Ein/Aus-Taste</strong> und die <strong>Leiser-Taste</strong>. Das Bild liegt danach in deiner Galerie.',
+    'recoveryDisplay.help.photoOther': 'Mach mit deinem Handy ein Foto von diesem Bildschirm.',
+    'recoveryDisplay.help.fileIos': 'Die Datei „logbuch-ersatzschluessel.txt“ liegt jetzt in der App <strong>Dateien</strong> im Ordner <strong>Downloads</strong>. Erscheint stattdessen eine Frage, tipp auf „Laden“.',
+    'recoveryDisplay.help.fileAndroid': 'Die Datei „logbuch-ersatzschluessel.txt“ liegt jetzt in der App <strong>Dateien</strong> (bzw. „Eigene Dateien“) im Ordner <strong>Downloads</strong>.',
+    'recoveryDisplay.help.fileOther': 'Die Datei „logbuch-ersatzschluessel.txt“ liegt jetzt in deinem Ordner <strong>Downloads</strong>.',
+    'recoveryDisplay.help.copy': 'Kopiert. Füge ihn jetzt dort ein, wo du ihn aufbewahren willst – z. B. in einem Passwort-Manager oder einer Notiz.',
+    'recoveryDisplay.help.copyGuided': 'Kopiert – dein Handy hat sich den Schlüssel gemerkt. Öffne jetzt z. B. deine <strong>Notizen-App</strong>, tipp lange auf eine leere Stelle und wähle <strong>Einfügen</strong>. Komm danach hierher zurück.',
+    'recoveryDisplay.done': 'Ich habe ihn aufbewahrt',
+    'recoveryDisplay.askNone': 'Du hast noch keinen der Wege oben benutzt. Ohne Ersatzschlüssel kann dir niemand helfen, wenn du dein Passwort vergisst. Wirklich weiter?',
+    'recoveryDisplay.askWritten': 'Hast du ihn aufgeschrieben? Ohne Ersatzschlüssel kann dir niemand helfen, wenn du dein Passwort vergisst.',
+    'recoveryDisplay.continueAnyway': 'Trotzdem weiter',
+    'recoveryDisplay.notYet': 'Noch nicht',
+    'recoveryDisplay.yesWritten': 'Ja, aufgeschrieben',
     'recoveryDisplay.explain': 'Deine Einträge sind so verschlüsselt, dass <strong>nur du sie lesen kannst – nicht mal ich.</strong> Die Kehrseite: Vergisst du dein Passwort, reicht ein Link zum Zurücksetzen allein nicht, deine Einträge blieben verschlossen. Dafür gibt es diesen Ersatzschlüssel – mit ihm setzt du ein neues Passwort, ohne etwas zu verlieren.',
-    'recoveryDisplay.copy': 'Kopieren',
-    'recoveryDisplay.download': 'Als Datei herunterladen',
-    'recoveryDisplay.confirmCheckbox': 'Ich hab ihn sicher gespeichert.',
-    'recoveryDisplay.keepTitle': 'Heb ihn gut auf',
-    'recoveryDisplay.keepBody': 'Er wird nur dieses eine Mal angezeigt – speichere ihn am besten jetzt, im Passwort-Manager oder ausgedruckt. <strong>Und gib ihn niemandem:</strong> Er öffnet dein Logbuch genauso wie dein Passwort.',
     'recoveryDisplay.moreLabel': 'Mehr erfahren',
     'recoveryDisplay.more': 'Verlierst du Passwort <strong>und</strong> Ersatzschlüssel, sind deine Einträge weg – das ist der Preis dafür, dass niemand sonst rankommt. Einen neuen Ersatzschlüssel bekommst du jederzeit in den Einstellungen unter „Ersatzschlüssel neu erzeugen“, der alte wird dann ungültig.',
     'recoveryDisplay.fileTitle': 'Logbuch – Ersatzschlüssel',
@@ -1644,10 +1663,8 @@ const STRINGS = {
     'tabs.global': 'Gesamt',
     'common.encryptingData': 'Deine Daten werden verschlüsselt …',
     'recoveryDisplay.replacedElsewhere': 'Dein Ersatzschlüssel wurde inzwischen auf einem anderen Gerät neu erzeugt – der eben gezeigte gilt deshalb nicht mehr. Hier ist ein neuer, bewahre bitte diesen auf.',
-    'recoveryDisplay.copied': 'In die Zwischenablage kopiert.',
     'recoveryDisplay.copyFailed': 'Kopieren nicht möglich - bitte den Ersatzschlüssel von Hand abschreiben.',
     'recoveryDisplay.fileBody': 'Sicher aufbewahren – ohne diesen Ersatzschlüssel UND dein Passwort sind deine Daten unwiederbringlich verloren. Gib ihn niemandem: Er öffnet dein Logbuch genauso wie dein Passwort.',
-    'recoveryDisplay.downloading': 'Datei wird heruntergeladen.',
   },
   en: {
     'error.db.duplicateSlug': 'A field with a very similar name already exists – please choose a different name.',
@@ -1777,12 +1794,31 @@ const STRINGS = {
     'recovery.passwordSaved': 'Password saved.',
     'recovery.cleanupFailed': 'Password saved. However, your old, no longer readable data could not be fully deleted – if fields are reported as “could not be decrypted”, please let me know via “Send feedback”.',
     'recoveryDisplay.title': 'Your spare key',
+    'recoveryDisplay.lead': 'If you ever forget your password, <strong>only this key</strong> gets you back to your entries. So keep it safe.',
+    'recoveryDisplay.whyTitle': 'Why does it exist?',
+    'recoveryDisplay.codeLabel': 'Your spare key',
+    'recoveryDisplay.secret': 'Do not give it to anyone – it unlocks your Logbuch just like your password.',
+    'recoveryDisplay.how': 'How would you like to keep it?',
+    'recoveryDisplay.method.write': 'Write it down',
+    'recoveryDisplay.method.photo': 'Screenshot',
+    'recoveryDisplay.method.file': 'Save as file',
+    'recoveryDisplay.method.copy': 'Copy',
+    'recoveryDisplay.help.write': 'Write it down character by character on paper and keep the note with your important documents. The gaps between the blocks are just for easier reading.',
+    'recoveryDisplay.help.photoIos': 'Take a screenshot: briefly press the <strong>side button</strong> and the <strong>volume up button</strong> at the same time (on iPhones with a round Home button: side button and Home button). The picture is then in your Photos.',
+    'recoveryDisplay.help.photoAndroid': 'Take a screenshot: briefly press the <strong>power button</strong> and the <strong>volume down button</strong> at the same time. The picture is then in your gallery.',
+    'recoveryDisplay.help.photoOther': 'Take a photo of this screen with your phone.',
+    'recoveryDisplay.help.fileIos': 'The file “logbuch-ersatzschluessel.txt” is now in the <strong>Files</strong> app in the <strong>Downloads</strong> folder. If a question appears instead, tap “Download”.',
+    'recoveryDisplay.help.fileAndroid': 'The file “logbuch-ersatzschluessel.txt” is now in the <strong>Files</strong> app (or “My Files”) in the <strong>Downloads</strong> folder.',
+    'recoveryDisplay.help.fileOther': 'The file “logbuch-ersatzschluessel.txt” is now in your <strong>Downloads</strong> folder.',
+    'recoveryDisplay.help.copy': 'Copied. Now paste it where you want to keep it – e.g. in a password manager or a note.',
+    'recoveryDisplay.help.copyGuided': 'Copied – your phone has remembered the key. Now open e.g. your <strong>notes app</strong>, press and hold an empty spot and choose <strong>Paste</strong>. Then come back here.',
+    'recoveryDisplay.done': 'I have kept it safe',
+    'recoveryDisplay.askNone': 'You have not used any of the ways above yet. Without a spare key nobody can help you if you forget your password. Really continue?',
+    'recoveryDisplay.askWritten': 'Did you write it down? Without a spare key nobody can help you if you forget your password.',
+    'recoveryDisplay.continueAnyway': 'Continue anyway',
+    'recoveryDisplay.notYet': 'Not yet',
+    'recoveryDisplay.yesWritten': 'Yes, written down',
     'recoveryDisplay.explain': 'Your entries are encrypted so that <strong>only you can read them – not even I can.</strong> The flip side: if you forget your password, a reset link alone is not enough, your entries would stay locked. That is what this spare key is for – with it, you set a new password without losing anything.',
-    'recoveryDisplay.copy': 'Copy',
-    'recoveryDisplay.download': 'Download as file',
-    'recoveryDisplay.confirmCheckbox': 'I have saved it securely.',
-    'recoveryDisplay.keepTitle': 'Keep it safe',
-    'recoveryDisplay.keepBody': 'It is shown only this once – best save it now, in a password manager or printed out. <strong>And do not give it to anyone:</strong> it unlocks your Logbuch just like your password.',
     'recoveryDisplay.moreLabel': 'Learn more',
     'recoveryDisplay.more': 'If you lose your password <strong>and</strong> your spare key, your entries are gone – that is the price of nobody else being able to get in. You can get a new spare key anytime in the settings under “Regenerate spare key”; the old one then becomes invalid.',
     'recoveryDisplay.fileTitle': 'Logbuch – spare key',
@@ -2247,10 +2283,8 @@ const STRINGS = {
     'tabs.global': 'Overall',
     'common.encryptingData': 'Your data is being encrypted …',
     'recoveryDisplay.replacedElsewhere': 'Your spare key was created anew on another device in the meantime – so the one just shown is no longer valid. Here is a new one, please keep this one.',
-    'recoveryDisplay.copied': 'Copied to clipboard.',
     'recoveryDisplay.copyFailed': 'Copying not possible - please write down the spare key by hand.',
     'recoveryDisplay.fileBody': 'Keep this safe – without this spare key AND your password, your data is irrecoverably lost. Do not give it to anyone: it unlocks your Logbuch just like your password.',
-    'recoveryDisplay.downloading': 'File is being downloaded.',
   },
 };
 
@@ -5143,36 +5177,56 @@ async function deleteUndecryptableData(userId) {
 // Stil der Tutorial-Bildschirme (Symbol, Begründung, "Warum?"-Kasten, Details hinter
 // "Mehr erfahren"). Nur über die Bestätigungs-Checkbox schließbar (auch Escape/Zurück
 // greifen hier bewusst nicht).
+// Ersatzschlüssel anzeigen (neu gestaltet 2026-10-01 nach einem Onboarding-Test: "Kopieren"
+// und Zwischenablage waren unbekannt, die wichtigsten Knöpfe die unscheinbarsten, und ein
+// ausgegrautes "Fertig" sagte nicht, warum es nicht geht). Vier gleich große Wege zum
+// Aufbewahren, die bekanntesten (Aufschreiben, Foto) vorn; jeder zeigt danach, was zu tun
+// ist. Der Abschluss-Knopf geht immer, fragt aber nach, wenn noch kein Weg benutzt wurde.
+// Zustand je angezeigtem Schlüssel in state.recoveryKeyToShow (method, ask).
+const SPARE_KEY_METHODS = [['write', '✍️'], ['photo', '📷'], ['file', '💾'], ['copy', '📋']];
+function spareKeyMethodHelp(method) {
+  if (method === 'photo') {
+    return t(isIOSDevice() ? 'recoveryDisplay.help.photoIos' : /Android/.test(navigator.userAgent) ? 'recoveryDisplay.help.photoAndroid' : 'recoveryDisplay.help.photoOther');
+  }
+  if (method === 'file') {
+    return t(isIOSDevice() ? 'recoveryDisplay.help.fileIos' : /Android/.test(navigator.userAgent) ? 'recoveryDisplay.help.fileAndroid' : 'recoveryDisplay.help.fileOther');
+  }
+  if (method === 'copy') return t(isGuided() ? 'recoveryDisplay.help.copyGuided' : 'recoveryDisplay.help.copy');
+  return t('recoveryDisplay.help.write');
+}
 function renderRecoveryKeyDisplay() {
-  const { hex } = state.recoveryKeyToShow;
-  const formatted = formatRecoveryKey(hex);
+  const shown = state.recoveryKeyToShow;
+  const formatted = formatRecoveryKey(shown.hex);
+  const ask = shown.ask;
   app.innerHTML = `
     <div class="auth-box onb">
       ${isOnbInProgress() ? onbProgress('key') : ''}
       <div class="onb-icon" aria-hidden="true">🔑</div>
       <h1 tabindex="-1">${t('recoveryDisplay.title')}</h1>
-      <p class="tutorial-text">${t('recoveryDisplay.explain')}</p>
-      <p class="recovery-key-code">${esc(formatted)}</p>
-      <div class="habit-form-actions">
-        <button type="button" class="manage-btn" data-action="copy-recovery-key">${t('recoveryDisplay.copy')}</button>
-        <button type="button" class="manage-btn" data-action="download-recovery-key">${t('recoveryDisplay.download')}</button>
+      <p class="tutorial-text">${t('recoveryDisplay.lead')}</p>
+      ${whyBox('recoveryDisplay.whyTitle', 'recoveryDisplay.explain')}
+      <p class="recovery-key-code" aria-label="${esc(t('recoveryDisplay.codeLabel'))}">${formatted.split('-').map((g) => `<span>${esc(g)}</span>`).join(' ')}</p>
+      <p class="onb-hint"><strong>${t('recoveryDisplay.secret')}</strong></p>
+      <h2 class="spare-key-question">${t('recoveryDisplay.how')}</h2>
+      <div class="spare-key-methods" role="group" aria-label="${esc(t('recoveryDisplay.how'))}">
+        ${SPARE_KEY_METHODS.map(([m, icon]) => `<button type="button" class="spare-key-method${shown.method === m ? ' spare-key-method--active' : ''}" data-action="spare-key-method" data-method="${m}" aria-pressed="${shown.method === m}"><span class="spare-key-method-icon" aria-hidden="true">${icon}</span>${t(`recoveryDisplay.method.${m}`)}</button>`).join('')}
       </div>
-      ${whyBox('recoveryDisplay.keepTitle', 'recoveryDisplay.keepBody')}
+      ${shown.method ? `<div class="form-tip spare-key-help" role="status"><span class="item-icon" aria-hidden="true">💡</span><p>${spareKeyMethodHelp(shown.method)}</p></div>` : ''}
       <details class="onb-more">
         <summary>${t('recoveryDisplay.moreLabel')}</summary>
         <p>${t('recoveryDisplay.more')}</p>
       </details>
-      <label class="checkbox-field recovery-key-confirm-row">
-        <input type="checkbox" id="recovery-key-confirm" />
-        ${t('recoveryDisplay.confirmCheckbox')}
-      </label>
-      <button type="button" class="auth-submit" data-action="confirm-recovery-key" id="recovery-key-continue" disabled>${t('common.finish')}</button>
+      ${ask ? `
+        <div class="spare-key-ask" role="alert">
+          <p>${t(shown.method === 'write' ? 'recoveryDisplay.askWritten' : 'recoveryDisplay.askNone')}</p>
+          <div class="habit-form-actions">
+            <button type="button" class="habit-form-cancel" data-action="spare-key-ask-back">${t(shown.method === 'write' ? 'recoveryDisplay.notYet' : 'common.back')}</button>
+            <button type="button" class="auth-submit" data-action="spare-key-finish">${t(shown.method === 'write' ? 'recoveryDisplay.yesWritten' : 'recoveryDisplay.continueAnyway')}</button>
+          </div>
+        </div>
+      ` : `<button type="button" class="auth-submit" data-action="spare-key-done">${t('recoveryDisplay.done')}</button>`}
     </div>
   `;
-
-  document.getElementById('recovery-key-confirm').addEventListener('change', (e) => {
-    document.getElementById('recovery-key-continue').disabled = !e.target.checked;
-  });
 }
 
 // --- Installation vor dem Anmelden (seit 2026-09-29) ------------------------------
@@ -7460,31 +7514,49 @@ app.addEventListener('click', async (e) => {
     state.recoveryFallbackConfirm = !state.recoveryFallbackConfirm;
     state.authError = null;
     render();
-  } else if (action === 'copy-recovery-key') {
-    try {
-      await navigator.clipboard.writeText(formatRecoveryKey(state.recoveryKeyToShow.hex));
-      state.notice = { type: 'ok', text: t('recoveryDisplay.copied') };
-    } catch {
-      state.notice = { type: 'error', text: t('recoveryDisplay.copyFailed') };
+  } else if (action === 'spare-key-method') {
+    const shown = state.recoveryKeyToShow;
+    if (!shown) return;
+    shown.method = el.dataset.method;
+    shown.used = true;
+    shown.ask = false;
+    if (shown.method === 'copy') {
+      try {
+        await navigator.clipboard.writeText(formatRecoveryKey(shown.hex));
+      } catch {
+        state.notice = { type: 'error', text: t('recoveryDisplay.copyFailed') };
+      }
+    } else if (shown.method === 'file') {
+      const blob = new Blob(
+        [`${t('recoveryDisplay.fileTitle')}\n${formatRecoveryKey(shown.hex)}\n\n${t('recoveryDisplay.fileBody')}\n`],
+        { type: 'text/plain' }
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = t('recoveryDisplay.fileName');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 60_000); // siehe handleExportData
     }
     render();
-  } else if (action === 'download-recovery-key') {
-    const blob = new Blob(
-      [`${t('recoveryDisplay.fileTitle')}\n${formatRecoveryKey(state.recoveryKeyToShow.hex)}\n\n${t('recoveryDisplay.fileBody')}\n`],
-      { type: 'text/plain' }
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = t('recoveryDisplay.fileName');
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 60_000); // siehe handleExportData
-    state.notice = { type: 'ok', text: t('recoveryDisplay.downloading') };
+  } else if (action === 'spare-key-done') {
+    const shown = state.recoveryKeyToShow;
+    if (!shown) return;
+    // Ohne benutzten Weg - oder nach "Aufschreiben", wo die App nicht sehen kann, ob es
+    // passiert ist - einmal freundlich nachfragen.
+    if (!shown.used || shown.method === 'write') {
+      shown.ask = true;
+      render();
+      document.querySelector('.spare-key-ask .auth-submit')?.focus();
+      return;
+    }
+    await confirmSpareKey();
+  } else if (action === 'spare-key-ask-back') {
+    if (state.recoveryKeyToShow) state.recoveryKeyToShow.ask = false;
     render();
-  } else if (action === 'confirm-recovery-key') {
-    if (!document.getElementById('recovery-key-confirm')?.checked) return; // Button ist sonst disabled
+  } else if (action === 'spare-key-finish') {
     await confirmSpareKey();
   } else if (action === 'regenerate-recovery-key') {
     modalTriggerSelector = '[data-action="regenerate-recovery-key"]';

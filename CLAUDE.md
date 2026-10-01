@@ -592,8 +592,11 @@ alles native Web Crypto API, keine Library):
 - **Recovery-Key** (in der App seit 2026-09-29 **"Ersatzschlüssel"**, englisch "spare
   key"; im Code weiter `recoveryKey`): ein zweiter, zufälliger 256-Bit-Schlüssel, der den
   DEK ein zweites Mal verpackt (`wrapped_dek_recovery`). Wird dem Nutzer **einmalig**
-  angezeigt (`renderRecoveryKeyDisplay`, Kopieren-/Download-Button, muss per Checkbox
-  bestätigt werden) und nirgends serverseitig im Klartext gespeichert. **Wann**: nicht
+  angezeigt (`renderRecoveryKeyDisplay`, seit 2026-10-01: Satz, wozu er da ist, Schlüssel
+  groß in Blöcken, "Wie möchtest du ihn aufbewahren?" mit vier gleich großen Wegen –
+  Aufschreiben, Bildschirmfoto mit Tastenkombi fürs Gerät, Datei mit Angabe wo sie liegt,
+  Kopieren mit Erklärung –, Abschluss-Knopf immer aktiv, fragt ohne benutzten Weg bzw. nach
+  "Aufschreiben" einmal nach) und nirgends serverseitig im Klartext gespeichert. **Wann**: nicht
   mehr gleich bei der Einrichtung (erster Eindruck wäre eine Sicherheitswarnung), sondern
   als eigener Schritt nach dem Tutorial – auch wenn es übersprungen wurde. Dafür merkt
   sich `user_encryption.recovery_key_confirmed`, ob der aktuelle Schlüssel bestätigt ist
@@ -1018,7 +1021,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 601 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 618 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
