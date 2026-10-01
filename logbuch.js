@@ -1345,6 +1345,8 @@ const STRINGS = {
     'manage.hiddenInStats': 'in der Auswertung ausgeblendet',
     'habitForm.showInStats': 'In der Auswertung anzeigen',
     'habitForm.showInStatsNote': 'Aus: erscheint nur in „Heute“, nicht in Woche, Monat, Jahr und Gesamt – z. B. wenn dir ein berechnetes Feld daraus reicht. Die Tagesfarbe rechnet es trotzdem mit ein.',
+    'habitForm.more': 'Mehr Einstellungen',
+    'habitForm.moreSub': 'Wiederholung, Erinnerungszeit und mehr – kannst du auch später ändern',
     'habitForm.computedExplain': 'Ein berechnetes Feld fasst mehrere Felder zu einem live berechneten Wert zusammen – Skalen als Durchschnitt, Zahlenwerte z. B. als Summe. Selbst ausfüllen kann man es nicht.',
     'common.finish': 'Fertig',
     'menu.defaultReminderTime': 'Standard-Erinnerungszeit',
@@ -1870,6 +1872,8 @@ const STRINGS = {
     'manage.hiddenInStats': 'hidden in statistics',
     'habitForm.showInStats': 'Show in statistics',
     'habitForm.showInStatsNote': 'Off: only appears in “Today”, not in the week, month, year, and overall views – e.g. if a calculated field made from it is enough for you. It still counts towards the day’s color.',
+    'habitForm.more': 'More settings',
+    'habitForm.moreSub': 'Repetition, reminder time and more – you can also change these later',
     'habitForm.computedExplain': 'A calculated field combines multiple fields into one live-calculated value – scales as an average, number fields e.g. as a sum. You cannot fill it in yourself.',
     'common.finish': 'Done',
     'menu.defaultReminderTime': 'Default reminder time',
@@ -6032,7 +6036,6 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         <button type="button" class="pill-toggle${!f.good ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="">${t('habitForm.noValuation')}</button>
       </div>
     </div>
-    ${f.good ? goalField : ''}
   `;
 
   const textBody = `<p class="habit-form-lock-note">${t('habitForm.textNote')}</p>`;
@@ -6092,7 +6095,6 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         ${isNumberComputedForm ? `<p class="habit-form-lock-note">${t('habitForm.computedUnitNote')}</p>` : ''}
       ` : `<p class="habit-form-lock-note">${t(isNumberComputedForm ? 'habitForm.noNumberComputedCandidates' : 'habitForm.noComputedCandidates')}</p>`}
     </div>
-    ${isNumberComputedForm ? '' : goalField}
   `;
 
   const reminderBody = `
@@ -6175,6 +6177,13 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   `;
 
   const isComputed = f.kind === 'computed';
+  // Seltener Gebrauchtes steht unter "Mehr Einstellungen" (seit 2026-10-01; das Formular
+  // war für Neulinge zu lang - und das Tutorial nutzt dasselbe Formular). Aufgeklappt, wenn
+  // dort schon etwas vom Standard abweicht, sonst zu; offen/zu übersteht Re-Renders
+  // (f.moreOpen, gesetzt vom toggle-Listener).
+  const showGoal = (f.kind === 'scale' && f.good) || (isComputed && f.computedType !== 'number');
+  const moreOpen = f.moreOpen ?? ((showGoal && f.goalPercent !== 100) || (!isComputed && (f.schedule.type !== 'daily' || f.reminderEnabled))
+    || (state.sections.length > 0 && !!f.sectionId) || !f.showInStats);
   // "Berechnet" nur anbieten, wenn es etwas zu berechnen gibt (mind. 2 passende Felder) -
   // beim allerersten Feld im Tutorial führte die Auswahl sonst nur zu "noch keine Felder".
   const others = state.habits.filter((h) => !h.archivedAt && h.defId !== f.defId);
@@ -6200,6 +6209,9 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         </div>
       </div>
       ${isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : numberBody}
+      <details class="habit-form-more" ${moreOpen ? 'open' : ''}>
+        <summary><span class="habit-form-more-title">${t('habitForm.more')}</span><span class="habit-form-more-sub">${t('habitForm.moreSub')}</span></summary>
+      ${showGoal ? goalField : ''}
       ${!isComputed ? scheduleBody + reminderBody : ''}
       ${state.sections.length ? `
         <div class="auth-field">
@@ -6217,6 +6229,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         </label>
         <p class="habit-form-lock-note" id="habit-form-show-in-stats-note">${t('habitForm.showInStatsNote')}</p>
       </div>
+      </details>
       <div class="habit-form-actions">
         <button type="button" class="habit-form-cancel" data-action="habit-cancel" ${state.habitFormSaving ? 'disabled' : ''}>${t('common.cancel')}</button>
         <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t('common.save')}</button>
@@ -7599,6 +7612,10 @@ app.addEventListener('toggle', (e) => {
   // Eintragen eines Werts), gilt aber nur für den jeweiligen Tag.
   if (e.target.matches?.('details.unplanned')) {
     state.unplannedOpenFor = e.target.open ? formatKey(state.currentDate) : null;
+    return;
+  }
+  if (e.target.matches?.('details.habit-form-more') && state.habitForm) {
+    state.habitForm.moreOpen = e.target.open;
     return;
   }
   const details = e.target.closest('details[data-collapse-key]');

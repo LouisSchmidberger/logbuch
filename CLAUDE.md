@@ -505,6 +505,12 @@ gilt pro Gerät und getrennt für "Heute" und die Auswertung (`localStorage`
 `sectionCollapsed:<today|stats>:<id>`). Der Bereich "Heute nicht geplant" bleibt
 ungegliedert. Ein Sprung zu einem Feld in einer eingeklappten Gruppe klappt sie auf.
 
+**"Mehr Einstellungen"** im Feld-Formular (seit 2026-10-01, `<details class="habit-form-more">`):
+Ziel-Quote, Wiederholung, eigene Erinnerungszeit, Gruppe und "In der Auswertung anzeigen"
+stehen eingeklappt unter "Mehr Einstellungen – kannst du auch später ändern" (Formular war
+für Neulinge zu lang; das Tutorial nutzt dasselbe Formular). Aufgeklappt, sobald dort etwas
+vom Standard abweicht; offen/zu übersteht Re-Renders über `f.moreOpen`.
+
 **"In der Auswertung anzeigen"** (seit 2026-09-27, `hideInStats` in der verschlüsselten
 payload, Checkbox in jedem Feld-Formular, standardmäßig an): ausgeblendete Felder
 erscheinen nur in "Heute", nicht in Woche/Monat/Jahr/Gesamt (`inStats`). **Archivierte
@@ -1005,7 +1011,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 523 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 525 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
