@@ -1107,7 +1107,7 @@ const STRINGS = {
     'auth.forgotRecoveryNote': 'Zum eigentlichen Zurücksetzen brauchst du im nächsten Schritt deinen Ersatzschlüssel (den du nach der Einrichtung bekommen bzw. zuletzt in den Einstellungen neu erzeugt hast) – nur damit bleiben deine bisherigen Daten erhalten.',
     'auth.email': 'E-Mail',
     'auth.password': 'Passwort',
-    'auth.passwordHint': '<strong>Mindestens {min} Zeichen.</strong> Merk es dir gut oder schreib es auf und leg den Zettel an einen sicheren Ort – ohne dein Passwort kommst du nicht mehr an deine Einträge.',
+    'auth.passwordHint': '<strong>Merk es dir gut oder schreib es auf</strong> und leg den Zettel an einen sicheren Ort – ohne dein Passwort kommst du nicht mehr an deine Einträge.',
     'auth.passwordCount': '{count} von mindestens {min} Zeichen',
     'auth.passwordCountOk': '{count} Zeichen',
     'auth.passwordWhyTitle': 'Warum so wichtig?',
@@ -1744,7 +1744,7 @@ const STRINGS = {
     'auth.forgotRecoveryNote': 'To actually reset your password, you will need your spare key in the next step (the one you got after setup, or last regenerated in the settings) – only with it is your existing data kept.',
     'auth.email': 'Email',
     'auth.password': 'Password',
-    'auth.passwordHint': '<strong>At least {min} characters.</strong> Remember it well or write it down and keep the note in a safe place – without your password you cannot get to your entries anymore.',
+    'auth.passwordHint': '<strong>Remember it well or write it down</strong> and keep the note in a safe place – without your password you cannot get to your entries anymore.',
     'auth.passwordCount': '{count} of at least {min} characters',
     'auth.passwordCountOk': '{count} characters',
     'auth.passwordWhyTitle': 'Why does it matter so much?',
@@ -5010,7 +5010,7 @@ function renderAuth() {
             })}
             ${isSignup ? `
               <p class="password-count" id="password-count" aria-live="polite">${passwordCountText(state.authPassword.length)}</p>
-              <p class="onb-hint auth-password-hint">${t('auth.passwordHint', { min: AUTH_MIN_PASSWORD_LENGTH })}</p>
+              <p class="onb-hint auth-password-hint">${t('auth.passwordHint')}</p>
               <details class="why-details" ${isGuided() ? 'open' : ''}><summary>${t('auth.passwordWhyTitle')}</summary><p>${t('auth.passwordWhy')}</p></details>
             ` : ''}
           </div>
