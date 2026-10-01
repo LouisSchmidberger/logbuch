@@ -333,6 +333,9 @@
   .modal-box p { font-size: 0.9375rem; line-height: 1.45; margin: 0 0 14px; }
 
   .push-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.875rem; color: var(--ink); background: rgba(var(--moss-rgb), 0.08); border: 1px solid var(--line); border-radius: 3px; padding: 7px 10px; margin-bottom: 16px; }
+  .push-row--blocked { flex-direction: column; align-items: stretch; gap: 0.5rem; background: rgba(var(--rust-rgb), 0.08); }
+  .push-blocked { font-size: 0.875rem; line-height: 1.5; }
+  .push-blocked p { margin: 0 0 0.5rem; }
   .push-row--muted { color: var(--sand); background: transparent; }
   .push-toggle {
     flex-shrink: 0; background: none; border: 1px solid var(--sand); border-radius: 999px; color: var(--ink);
@@ -1103,6 +1106,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=95ecc4a538"></script>
+<script type="module" src="./logbuch.js?v=ac15d1a650"></script>
 </body>
 </html>

@@ -1005,7 +1005,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 515 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 523 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
@@ -1083,6 +1083,13 @@ Alle Zeiten/Daten gelten in der **Ortszeit des jeweiligen Nutzers**
   "Eigene Erinnerungszeit", dass die Gruppe die Zeit regelt (`habitFormReminderNote`,
   wechselt beim Ändern der Gruppe mit). `get_due_notifications` liefert dafür
   `section_missing` (`[{id, fields}]`), Migration `20260928100000_add_section_reminders`.
+
+**Blockierte Mitteilungen** (seit 2026-10-01, `pushStatus: 'blocked'`, `pushOffStatus`,
+`pushBlockedHelp`): wer im Erlaubnis-Dialog "Blockieren" tippt, wird vom Browser nie wieder
+gefragt – statt einer Fehlermeldung (Sackgasse) zeigen Einstellungen und Tutorial eine kurze
+Anleitung je Gerät (iPhone, Android installiert/im Browser, sonst), wie man es wieder
+erlaubt, plus "Nochmal versuchen"; im Tutorial geht es mit [Weiter] ohne Erinnerungen weiter.
+Beim Zurückkehren in die App wird die Erlaubnis neu geprüft.
 
 **Deep-Links**: jede Benachrichtigung trägt ihr Ziel als URL
 (`./logbuch.html?view=today|week|month&date=YYYY-MM-DD`, `deepLink()` in der

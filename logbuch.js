@@ -762,7 +762,7 @@ const state = {
   confirmEmailFor: null,
   confirmResend: null, // null | 'sending' | 'sent' | { error: text }
   passwordRecovery: false, // true zwischen Klick auf den Passwort-Reset-Link und neuem Passwort
-  pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy'
+  pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy' | 'blocked' (Mitteilungen im Browser/Handy verboten)
   habits: [],         // alle Felder des Nutzers (aktiv + archiviert), sort_order-sortiert
   sections: [],       // Gruppen (intern "sections"): { id, name, sortOrder } (siehe layoutBlocks)
   sectionForm: null,  // { id: null (neu) | Gruppen-ID, name, members: [defId] } - offenes Gruppen-Formular
@@ -1083,7 +1083,7 @@ const STRINGS = {
     'ariaLabel.dismissHint': 'Hinweis schließen',
     'installHint.ios': 'Damit Erinnerungen ankommen: Tippe auf das Teilen-Symbol (Quadrat mit Pfeil nach oben – je nach Einstellung oben in der Adressleiste oder unten in der Leiste) und dann „Zum Home-Bildschirm“. Auf dem iPhone funktionieren Benachrichtigungen sonst leider gar nicht.',
     'installHint.other': 'Für die beste Erfahrung (u.a. zuverlässigere Erinnerungen): füge Logbuch über das Browser-Menü zum Home-Bildschirm hinzu.',
-    'notice.pushPermissionDenied': 'Ohne Benachrichtigungs-Erlaubnis im Browser geht das leider nicht.',
+    'notice.pushPermissionDenied': 'Ohne deine Erlaubnis kann Logbuch keine Erinnerungen schicken. Du kannst es jederzeit nochmal versuchen.',
     'notice.pushEnabled': 'Erinnerungen sind aktiv.',
     'notice.enableFailed': 'Erinnerungen ließen sich nicht einschalten.',
     'notice.entriesUndecryptable': '{count} Tag(e) konnten nicht entschlüsselt werden und erscheinen leer. Damit nichts verloren geht, speichert Logbuch dort nichts. Schreib mir gern über „Feedback geben“.',
@@ -1425,6 +1425,14 @@ const STRINGS = {
     'push.none': 'Keine Erinnerungen',
     'push.enable': 'Einschalten',
     'push.enableProminent': 'Erinnerungen aktivieren',
+    'push.blocked.status': 'Mitteilungen sind für Logbuch blockiert',
+    'push.blocked.intro': 'Dein Handy fragt nicht noch einmal, wenn Mitteilungen einmal blockiert wurden. So erlaubst du sie wieder:',
+    'push.blocked.ios': 'Öffne die <strong>Einstellungen</strong> deines iPhones → <strong>Mitteilungen</strong> → <strong>Logbuch</strong> → „Mitteilungen erlauben“ einschalten. Komm dann hierher zurück.',
+    'push.blocked.androidApp': 'Halte das <strong>Logbuch-Symbol</strong> auf dem Startbildschirm gedrückt → <strong>App-Info</strong> (ⓘ) → <strong>Benachrichtigungen</strong> → einschalten. Komm dann hierher zurück.',
+    'push.blocked.androidBrowser': 'Tippe oben links in der Adressleiste auf das Symbol neben der Adresse → <strong>Berechtigungen</strong> → <strong>Benachrichtigungen</strong> → zulassen. Komm dann hierher zurück.',
+    'push.blocked.other': 'Erlaube in den Website-Einstellungen deines Browsers für diese Seite <strong>Benachrichtigungen</strong>. Komm dann hierher zurück.',
+    'push.blocked.retry': 'Nochmal versuchen',
+    'tutorial.reminders.blocked': 'Kein Problem – du kannst auch ohne Erinnerungen weitermachen. Falls du es dir anders überlegst:',
     'menu.language': 'Sprache',
     'theme.label': 'Darstellung',
     'theme.system': 'System',
@@ -1600,7 +1608,7 @@ const STRINGS = {
     'ariaLabel.dismissHint': 'Dismiss hint',
     'installHint.ios': 'So reminders can reach you: tap the share icon (a square with an arrow pointing up – depending on your settings, either at the top in the address bar or at the bottom in the toolbar) and then "Add to Home Screen". Notifications unfortunately do not work at all on iPhone otherwise.',
     'installHint.other': 'For the best experience (incl. more reliable reminders): add Logbuch to your home screen via the browser menu.',
-    'notice.pushPermissionDenied': 'Without notification permission in the browser this unfortunately does not work.',
+    'notice.pushPermissionDenied': 'Without your permission Logbuch cannot send reminders. You can try again anytime.',
     'notice.pushEnabled': 'Reminders are active.',
     'notice.enableFailed': 'Reminders could not be turned on.',
     'notice.entriesUndecryptable': '{count} day(s) could not be decrypted and appear empty. So that nothing gets lost, Logbuch does not save anything there. Feel free to write to me via “Send feedback”.',
@@ -1942,6 +1950,14 @@ const STRINGS = {
     'push.none': 'No reminders',
     'push.enable': 'Turn on',
     'push.enableProminent': 'Enable reminders',
+    'push.blocked.status': 'Notifications are blocked for Logbuch',
+    'push.blocked.intro': 'Once notifications are blocked, your phone does not ask again. Here is how to allow them:',
+    'push.blocked.ios': 'Open your iPhone <strong>Settings</strong> → <strong>Notifications</strong> → <strong>Logbuch</strong> → turn on “Allow Notifications”. Then come back here.',
+    'push.blocked.androidApp': 'Press and hold the <strong>Logbuch icon</strong> on your home screen → <strong>App info</strong> (ⓘ) → <strong>Notifications</strong> → turn on. Then come back here.',
+    'push.blocked.androidBrowser': 'Tap the icon next to the address at the top left of the address bar → <strong>Permissions</strong> → <strong>Notifications</strong> → allow. Then come back here.',
+    'push.blocked.other': 'Allow <strong>notifications</strong> for this site in your browser’s site settings. Then come back here.',
+    'push.blocked.retry': 'Try again',
+    'tutorial.reminders.blocked': 'No problem – you can continue without reminders. In case you change your mind:',
     'menu.language': 'Language',
     'theme.label': 'Appearance',
     'theme.system': 'System',
@@ -2718,6 +2734,12 @@ async function syncTimezone() {
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && currentDek) syncTimezone();
+  // Zurück aus den Handy-Einstellungen, wo Mitteilungen wieder erlaubt wurden: Anleitung
+  // durch "Einschalten" ersetzen, ohne dass man neu laden muss.
+  if (document.visibilityState === 'visible' && state.pushStatus === 'blocked' && pushOffStatus() !== 'blocked') {
+    state.pushStatus = 'off';
+    renderUnlessTyping();
+  }
 });
 
 async function saveDefaultReminderMinute(minutes) {
@@ -4249,11 +4271,11 @@ async function checkPushStatus() {
         .select('id').eq('endpoint', sub.endpoint).maybeSingle();
       if (!error && !data) {
         await sub.unsubscribe();
-        state.pushStatus = 'off';
+        state.pushStatus = pushOffStatus();
         return;
       }
     }
-    state.pushStatus = sub ? 'on' : 'off';
+    state.pushStatus = sub ? 'on' : pushOffStatus();
   } catch {
     state.pushStatus = 'unsupported';
   }
@@ -4278,14 +4300,35 @@ async function endPushForThisDevice({ deleteServerRow = true } = {}) {
   if (state.pushStatus !== 'unsupported') state.pushStatus = 'off';
 }
 
+// Ohne Abo: 'blocked', wenn Mitteilungen für Logbuch verboten sind (einmal "Blockieren"
+// gedrückt - der Browser fragt dann nie wieder, nur eine Anleitung hilft weiter), sonst 'off'.
+function pushOffStatus() {
+  return typeof Notification !== 'undefined' && Notification.permission === 'denied' ? 'blocked' : 'off';
+}
+// Kurze Anleitung, wie man Mitteilungen wieder erlaubt - je nach Gerät und ob Logbuch
+// installiert ist. Steht in den Einstellungen und im Tutorial statt einer Sackgasse.
+function pushBlockedHelp() {
+  const key = isIOSDevice() ? 'push.blocked.ios'
+    : /Android/.test(navigator.userAgent) ? (isStandaloneDisplay() ? 'push.blocked.androidApp' : 'push.blocked.androidBrowser')
+      : 'push.blocked.other';
+  return `
+    <div class="push-blocked">
+      <p>${t('push.blocked.intro')}</p>
+      <p>${t(key)}</p>
+      <button type="button" class="push-toggle" data-action="enable-push">${t('push.blocked.retry')}</button>
+    </div>
+  `;
+}
 async function enablePush() {
   state.pushStatus = 'busy';
   render();
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
-      state.pushStatus = 'off';
-      state.notice = { type: 'error', text: t('notice.pushPermissionDenied') };
+      // 'denied': Anleitung statt Meldung (pushBlockedHelp); 'default' = Dialog nur
+      // weggeklickt, dann fragt der Browser beim nächsten Versuch wieder.
+      state.pushStatus = pushOffStatus();
+      if (state.pushStatus !== 'blocked') state.notice = { type: 'error', text: t('notice.pushPermissionDenied') };
       render();
       return;
     }
@@ -6428,6 +6471,12 @@ function renderTutorialReminders() {
       </div>
       <button type="button" class="auth-submit" data-action="tutorial-next">${t('common.next')}</button>
     `;
+  } else if (state.pushStatus === 'blocked') {
+    body = `
+      <p class="tutorial-text">${t('tutorial.reminders.blocked')}</p>
+      ${pushBlockedHelp()}
+      <button type="button" class="auth-submit" data-action="tutorial-next">${t('common.next')}</button>
+    `;
   } else if (state.pushStatus === 'unsupported') {
     body = `
       <p class="tutorial-text">${isIOSDevice() ? t('tutorial.reminders.iosNeedsInstall') : t('push.unsupported')}</p>
@@ -6531,6 +6580,9 @@ function renderPushRow(prominent = false) {
   }
   if (state.pushStatus === 'on') {
     return `<div class="push-row">🔔 ${t('push.active')} <button type="button" class="push-toggle" data-action="disable-push">${t('push.disable')}</button></div>`;
+  }
+  if (state.pushStatus === 'blocked') {
+    return `<div class="push-row push-row--blocked"><span>🔕 ${t('push.blocked.status')}</span>${pushBlockedHelp()}</div>`;
   }
   return `
     <div class="push-row">
