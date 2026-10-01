@@ -1092,6 +1092,8 @@ const STRINGS = {
     'notice.exportFailed': 'Der Export hat nicht geklappt.',
     'notice.exportDownloaded': 'Export heruntergeladen.',
     'notice.tryAgain': 'Bitte versuch es gleich nochmal.',
+    'notice.valueRemoved': '{name}: Eintrag entfernt',
+    'notice.undo': 'Rückgängig',
     'notice.details': 'Technische Details',
     'ariaLabel.closeNotice': 'Meldung schließen',
     'deleteAccount.confirmWord': 'LÖSCHEN',
@@ -1600,6 +1602,8 @@ const STRINGS = {
     'notice.exportFailed': 'The export did not work.',
     'notice.exportDownloaded': 'Export downloaded.',
     'notice.tryAgain': 'Please try again in a moment.',
+    'notice.valueRemoved': '{name}: entry removed',
+    'notice.undo': 'Undo',
     'notice.details': 'Technical details',
     'ariaLabel.closeNotice': 'Close message',
     'deleteAccount.confirmWord': 'DELETE',
@@ -2394,7 +2398,7 @@ function errorNotice(key, rawMessage) {
 // dir eine Mail geschickt", die nicht verschwinden dürfen, und die Seite ist kurz).
 let toastShown = null;
 let toastTimer = null;
-function toastDuration(text) { return Math.min(12000, 4000 + text.length * 50); }
+function toastDuration(n) { return Math.min(12000, Math.max(n.action ? 7000 : 0, 4000 + n.text.length * 50)); }
 function syncToast(hidden = false) {
   const root = document.getElementById('toast-root');
   if (!root) return;
@@ -2411,11 +2415,12 @@ function syncToast(hidden = false) {
         <p class="toast-text">${esc(n.text)}</p>
         ${n.detail ? `<details class="toast-details"><summary>${t('notice.details')}</summary><p>${esc(n.detail)}</p></details>` : ''}
       </div>
+      ${n.action ? `<button type="button" class="toast-action">${esc(n.action.label)}</button>` : ''}
       <button type="button" class="toast-close" aria-label="${esc(t('ariaLabel.closeNotice'))}">×</button>
     </div>
   `;
   if (isErr) announceAlert(n.text); else announce(n.text);
-  if (!isErr) toastTimer = setTimeout(() => dismissToast(n), toastDuration(n.text));
+  if (!isErr) toastTimer = setTimeout(() => dismissToast(n), toastDuration(n));
 }
 function dismissToast(n = toastShown) {
   if (n && state.notice === n) state.notice = null;
@@ -2423,7 +2428,14 @@ function dismissToast(n = toastShown) {
 }
 {
   const root = document.getElementById('toast-root');
-  root?.addEventListener('click', (e) => { if (e.target.closest('.toast-close')) dismissToast(); });
+  root?.addEventListener('click', (e) => {
+    if (e.target.closest('.toast-close')) dismissToast();
+    if (e.target.closest('.toast-action')) {
+      const n = toastShown;
+      dismissToast(n);
+      n?.action?.run();
+    }
+  });
   const hold = () => clearTimeout(toastTimer);
   root?.addEventListener('pointerdown', hold);
   root?.addEventListener('focusin', hold);
@@ -4009,10 +4021,34 @@ function renderUnlessTyping() {
   render();
 }
 
+// Ein entfernter Wert lässt sich über die Meldung wiederherstellen. Gilt für alle: wer
+// einen Wert "zur Sicherheit nochmal antippt", entfernt ihn (Umschalten, siehe
+// handleSelect) - vorher ging er dabei still verloren.
+function offerUndoRemoval(dateKey, habitId, previous) {
+  const habit = state.habits.find((h) => h.id === habitId);
+  state.notice = {
+    type: 'ok',
+    text: tPlain('notice.valueRemoved', { name: habit?.name ?? '' }),
+    action: {
+      label: t('notice.undo'),
+      run: () => {
+        const day = { ...(state.entries[dateKey] || {}) };
+        if (day[habitId] !== undefined) return; // inzwischen neu eingetragen
+        day[habitId] = previous;
+        state.entries = { ...state.entries, [dateKey]: day };
+        render();
+        saveDay(dateKey);
+      },
+    },
+  };
+}
+
 function handleSelect(dateKey, habitId, value) {
   const day = { ...(state.entries[dateKey] || {}) };
-  if (day[habitId] === value) delete day[habitId];
-  else day[habitId] = value;
+  if (day[habitId] === value) {
+    delete day[habitId];
+    offerUndoRemoval(dateKey, habitId, value);
+  } else day[habitId] = value;
   state.entries = { ...state.entries, [dateKey]: day };
   haptic();
   render();
@@ -4080,6 +4116,7 @@ function handleReset(dateKey) {
 // Möglichkeit hat, einen Wert wieder auszutragen.
 function handleClearValue(dateKey, habitId) {
   const day = { ...(state.entries[dateKey] || {}) };
+  if (day[habitId] !== undefined) offerUndoRemoval(dateKey, habitId, day[habitId]);
   delete day[habitId];
   state.entries = { ...state.entries, [dateKey]: day };
   haptic();

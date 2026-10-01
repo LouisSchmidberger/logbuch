@@ -951,7 +951,10 @@ Screenreader über `#sr-announcer` (polite) bzw. `#sr-alert` (assertive). Nur di
 Anmelde-Seiten zeigen Meldungen weiter im Text (`renderNotice()`, dort sind es Anleitungen).
 Fehler immer über `errorNotice(key, rawMessage)`: ganzer Satz + übersetzter bekannter Fehler
 (`translateDbError`) bzw. "Bitte versuch es nochmal" mit aufklappbaren technischen Details –
-nie den rohen Fehler direkt in den Satz. Das Umsortieren
+nie den rohen Fehler direkt in den Satz. Meldungen können einen Knopf tragen (`notice.action = { label, run }`): wird ein
+Wert entfernt (nochmal antippen oder ×), erscheint "<Feld>: Eintrag entfernt [Rückgängig]"
+(`offerUndoRemoval`, für alle, dauerhaft – vorher ging ein "zur Sicherheit nochmal
+angetippter" Wert still verloren). Das Umsortieren
 hat mit Hoch/Runter-Buttons (`commitLayoutOrder()`, gemeinsamer Persistenz-Pfad mit dem
 Pointer-Drag) eine Tastatur-Alternative. Beim Ziehen scrollt die Liste am oberen/unteren
 Bildschirmrand von selbst weiter (`updateDragAutoScroll`, schneller je näher am Rand), damit
@@ -996,7 +999,7 @@ Mechanismus in `logbuch.js`, direkt nach `esc()`:
 - `STRINGS = { de: {...}, en: {...} }` – flache Keys mit Punkt-Namespace
   (`'auth.createAccount'`, `'habitForm.error.nameRequired'`, `'ariaLabel.*'` für
   Aria-Labels, `'error.db.*'` für `translateDbError`), beide Sprachblöcke in
-  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 506 Keys je Sprache.
+  identischer Key-Reihenfolge zum leichten Diffen. Aktuell 508 Keys je Sprache.
 - `t(key, params)` liest aus `STRINGS[currentLocale]`, interpoliert `{platzhalter}`
   aus `params` (dabei automatisch `esc()`'t – Aufrufer müssen nicht selbst escapen),
   fällt bei fehlendem Key auf Deutsch zurück und loggt eine Warnung. Das Template
