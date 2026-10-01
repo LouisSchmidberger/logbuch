@@ -929,6 +929,9 @@ Text auf Score-Farben (gewählte Buttons, berechnete Felder in "Heute", Ø-Zelle
 Woche) wählt `textOnScore()` stattdessen je Farbe: reines Weiß oder Schwarz, je nachdem was
 mehr Kontrast hat – nur damit erreicht jede Stufe der Skala mind. 4,5:1 (fester heller
 Text lag auf den hellen Stufen bei ~3:1).
+`--sand` (Nebentext) ist im hellen Modus seit 2026-10-01 `#6b6354` (~4,8:1 auf `--paper`,
+vorher ~3:1); im dunklen Modus lag es schon bei ~6,5:1. Neue Text-Farben für kleine Schrift
+mindestens 4,5:1 auf ihrem Hintergrund.
 `scoreColor()` selbst bleibt bewusst unverändert (liefert rohe `rgb()`-Werte,
 unabhängig vom Theme). `<meta name="theme-color">` wird per JS synchronisiert
 (`syncThemeColorMeta`), da Meta-Tags keine CSS-Variablen lesen können.
