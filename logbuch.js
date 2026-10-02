@@ -1550,7 +1550,6 @@ const STRINGS = {
     'push.disable': 'Ausschalten',
     'push.none': 'Keine Erinnerungen',
     'push.enable': 'Einschalten',
-    'push.enableProminent': 'Erinnerungen aktivieren',
     'push.blocked.status': 'Mitteilungen sind für Logbuch blockiert',
     'push.blocked.intro': 'Dein Handy fragt nicht noch einmal, wenn Mitteilungen einmal blockiert wurden. So erlaubst du sie wieder:',
     'push.blocked.ios': 'Öffne die <strong>Einstellungen</strong> deines iPhones, such dort <strong>Mitteilungen</strong> und dann <strong>Logbuch</strong>, und erlaube Mitteilungen. Komm dann hierher zurück.',
@@ -2204,7 +2203,6 @@ const STRINGS = {
     'push.disable': 'Turn off',
     'push.none': 'No reminders',
     'push.enable': 'Turn on',
-    'push.enableProminent': 'Enable reminders',
     'push.blocked.status': 'Notifications are blocked for Logbuch',
     'push.blocked.intro': 'Once notifications are blocked, your phone does not ask again. Here is how to allow them:',
     'push.blocked.ios': 'Open your iPhone <strong>Settings</strong>, find <strong>Notifications</strong> and then <strong>Logbuch</strong>, and allow notifications. Then come back here.',
@@ -7218,9 +7216,7 @@ function renderTutorial() {
 let lastTutorialScreen = null;
 
 // --- Rendering: Haupt-App --------------------------------------------------
-// `prominent`: als ausgefüllter Button statt als schlichter Link (sonst bleibt es bewusst
-// unauffällig).
-function renderPushRow(prominent = false) {
+function renderPushRow() {
   if (state.pushStatus === 'unsupported') {
     return `<div class="push-row push-row--muted">${t('push.unsupported')}</div>`;
   }
@@ -7236,7 +7232,7 @@ function renderPushRow(prominent = false) {
   return `
     <div class="push-row">
       🔕 ${t('push.none')}
-      <button type="button" class="${prominent ? 'push-toggle push-toggle--prominent' : 'push-toggle'}" data-action="enable-push">${prominent ? t('push.enableProminent') : t('push.enable')}</button>
+      <button type="button" class="push-toggle" data-action="enable-push">${t('push.enable')}</button>
     </div>
   `;
 }
