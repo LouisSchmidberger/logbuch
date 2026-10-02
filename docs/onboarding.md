@@ -27,19 +27,25 @@ Der Weg vom ersten Öffnen bis zur eingerichteten App, für neue Konten.
   schließt sich, Symbol ist sichtbar) → nur ein Satz Vorwarnung, kein eigener Schritt.
 - **Erstes Feld = das echte Feld-Formular, Stück für Stück aufgedeckt**: das Tutorial soll
   auf die echte Oberfläche vorbereiten, nicht nur ein Feld erzeugen – ein eigener
-  Frage-Antwort-Assistent wurde deshalb verworfen. "Berechnet" ist im Tutorial ausgeblendet (Grund nicht dokumentiert).
+  Frage-Antwort-Assistent wurde deshalb verworfen. "Berechnet" ist im Tutorial immer
+  ausgeblendet, auch bei "Noch ein Feld anlegen" mit genug passenden Feldern (Grund nicht
+  dokumentiert). Davon getrennt gilt überall: der Typ erscheint erst ab zwei passenden
+  Feldern, beim allerersten Feld führte er sonst ins Leere (siehe [felder.md](felder.md)).
   **Keine Vorlagen/Beispiele zum Antippen** – Vorlagen sind erst sinnvoll, wenn man das
   Formular einmal selbst durchgegangen ist; nur Ideen als Text unter dem Namen.
 - **"Mehr Einstellungen"** auch im echten Formular (siehe [felder.md](felder.md)), weil das
   Formular für Neulinge zu lang war und das Tutorial dasselbe Formular nutzt.
-- **Erinnerungen**: bei Schritt für Schritt vorher eine Skizze des Erlaubnis-Dialogs (Grund
-  nicht dokumentiert); bei
-  Blockieren ein freundlicher Ausweg statt Sackgasse (siehe
-  [erinnerungen.md](erinnerungen.md) → Blockierte Mitteilungen).
+- **Erinnerungen**: bei Schritt für Schritt vorher eine Skizze des Erlaubnis-Dialogs (wie bei
+  der Installation: auch ungefähre Skizzen helfen mehr als gar keine); bei Blockieren ein
+  freundlicher Ausweg statt Sackgasse (siehe [erinnerungen.md](erinnerungen.md) →
+  Blockierte Mitteilungen).
 - **Ersatzschlüssel** als eigener Schritt am Ende statt bei der Einrichtung (erster Eindruck
-  wäre sonst eine Sicherheitswarnung). Vier gleich große Wege zum Aufbewahren, Abschluss-Knopf
-  immer aktiv statt Häkchen + ausgegrautem "Fertig", Rückfrage statt Sperre (Grund jeweils
-  nicht dokumentiert).
+  wäre sonst eine Sicherheitswarnung). Vier gleich große Wege zum Aufbewahren: Kopieren und
+  Datei allein reichen nicht – die Zwischenablage kennen viele nicht, eine Datei ist auf dem
+  Handy oft nicht wiederzufinden –, deshalb auch Aufschreiben und Abfotografieren; gleich
+  groß, weil kleine Pillen-Knöpfe zu unscheinbar waren. Abschluss-Knopf immer aktiv mit Rückfrage statt
+  Häkchen + ausgegrautem "Fertig": ein deaktivierter Knopf ohne erkennbaren Grund war ein
+  Stolperstein.
 - **Nach dem Onboarding**: Erklärungen dorthin, wo man sie braucht (Karten in "Heute"), statt
   nur in "Über Logbuch". Dauerhaft für alle: "Eintrag entfernt [Rückgängig]", Hinweis bei
   leerer Auswertung, "Was bedeuten Farben und Zahlen?" (siehe
