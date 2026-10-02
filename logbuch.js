@@ -4828,11 +4828,6 @@ async function resendConfirmEmail() {
   announce(state.confirmResend === 'sent' ? t('auth.confirmHelp.resent') : state.confirmResend.error);
 }
 
-// Startseite vor dem Anmelde-Formular: wer neu ist, landete vorher direkt bei
-// "Anmelden" - klingt für viele nach "ich bin neu, also melde ich mich an", und der Weg
-// zum Registrieren war nur ein kleiner Link. Die Knöpfe beschreiben deshalb die Lage der
-// Person statt des Fachbegriffs. Wer sich auf dem Gerät schon einmal angemeldet hat,
-// startet direkt beim Anmelden (signedInHereBefore).
 // --- Onboarding-Gerüst (seit 2026-10-01) ------------------------------------------
 // Einstiegsfrage "Wie möchtest du starten?": Schritt für Schritt (mehr Erklärung offen)
 // oder Kurz und knapp. EIN Ablauf für beide - Faustregel: klarer formulieren gilt für
@@ -4905,6 +4900,10 @@ function signedInHereBefore() {
 function rememberSignedInHere() {
   try { localStorage.setItem('signedInHere', 'true'); } catch { /* dann eben nicht */ }
 }
+// Startseite vor dem Anmelde-Formular: zwei Knöpfe, die die Lage der Person beschreiben
+// statt des Fachbegriffs - ein "Anmelden" klingt für Neulinge nach "ich bin neu, also melde
+// ich mich an". Wer sich auf dem Gerät schon einmal angemeldet hat, startet direkt beim
+// Anmelden (signedInHereBefore).
 function renderAuthWelcome() {
   app.innerHTML = `
     <div class="auth-box">
@@ -7219,10 +7218,8 @@ function renderTutorial() {
 let lastTutorialScreen = null;
 
 // --- Rendering: Haupt-App --------------------------------------------------
-// `prominent`: im Tutorial (Schritt 1) fällt der sonst unauffällige Text-Link
-// "aktivieren" leicht unter den Tisch – man klickt intuitiv eher gleich auf "Weiter",
-// ohne Push aktiviert zu haben. Dort deshalb als ausgefüllter Button dargestellt statt
-// als schlichter Link (im normalen Burger-Menü bleibt es bewusst unauffälliger).
+// `prominent`: als ausgefüllter Button statt als schlichter Link (sonst bleibt es bewusst
+// unauffällig).
 function renderPushRow(prominent = false) {
   if (state.pushStatus === 'unsupported') {
     return `<div class="push-row push-row--muted">${t('push.unsupported')}</div>`;
