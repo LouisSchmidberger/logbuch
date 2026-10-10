@@ -160,10 +160,10 @@ Pro Feld einstellbar, an welchen Tagen es "dran" ist (Formular "Wiederholung": T
 Auswahlliste, Wochentage als 7 runde Buttons; nicht für berechnete Felder – die sind dran,
 sobald eines ihrer aktiven Mitglieder dran ist).
 
-Gedacht nur für Dinge mit festem Rhythmus (sonntags "Diese Woche geputzt?", Monatsbudget). Was
-man mal macht und mal nicht (Sport), bleibt täglich – "Nein" ist dann ein Eintrag, das Ziel
-regelt die Ziel-Quote. Die Texte im Formular und in "Über Logbuch" sagen das so (Nutzer-
-Entscheidung 2026-10-10).
+Gedacht nur für Dinge an festen Tagen (montags wiegen). Was man mal macht und mal nicht
+(Sport), bleibt täglich – "Nein" ist dann ein Eintrag, das Ziel regelt die Ziel-Quote; "einmal
+pro Woche, egal an welchem Tag" ist ein Zeitraum-Feld (siehe oben), keine Wiederholung. Die
+Texte im Formular und in "Über Logbuch" sagen das so (Nutzer-Entscheidungen 2026-10-10/11).
 
 Format: `null` = täglich, sonst `{type:'weekly', days:[0..6]}` (0 = Montag),
 `{type:'monthly', day:1..31 | -1}` (-1 = letzter Tag), `{type:'yearly', month, day}` oder
@@ -178,8 +178,8 @@ werden als `null` gespeichert (eine einzige Darstellung von täglich).
 date)` (plpgsql, aktuelle Fassung in Migration `20260929120000_harden_reminder_inputs`).
 
 Bewusst **nicht** unterstützt: Kalender-Regeln wie "jeder erste Montag im Monat" (Nutzer:
-unübersichtlich und eher irrelevant) und Häufigkeits-Ziele ohne feste Tage ("3x pro Woche"
-– anderes Konzept, eher Richtung Ziel-Quote).
+unübersichtlich und eher irrelevant). Häufigkeiten ohne feste Tage ("3x pro Woche") regelt
+die Ziel-Quote eines täglichen Felds, "1x pro Woche" ein Wochenfeld.
 
 - **"Heute"**: nicht geplante Felder stehen eingeklappt unter "Heute nicht geplant (N)"
   (`<details class="unplanned">`) – ausnahmsweise eintragen geht dort trotzdem. Die
