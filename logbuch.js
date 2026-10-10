@@ -1333,9 +1333,10 @@ const STRINGS = {
     'stats.legend.title': 'Was bedeuten Farben und Zahlen?',
     'stats.legend.bad': 'weniger gut',
     'stats.legend.good': 'gut',
-    'stats.legend.week': 'Jedes Kästchen zeigt, wie gut der Wert an dem Tag war – gemessen daran, was du beim Feld unter „Bewertung“ eingestellt hast (bei „Niedrige Werte erstrebenswert“ ist wenig grün). Leer: nichts eingetragen. Schraffiert: an dem Tag nicht geplant. Ø: bei Feldern mit zwei Stufen (z. B. Ja/Nein), an wie vielen der eingetragenen Tage es der gute Wert war (2/5), sonst der Durchschnitt – bei Skalen mit eigenen Bezeichnungen als Punkt: je weiter rechts, desto besser; berechnete Felder in Prozent. Antippen zeigt es ausgeschrieben.',
+    'stats.legend.week': 'Jedes Kästchen zeigt, wie gut der Wert an dem Tag war – gemessen daran, was du beim Feld unter „Bewertung“ eingestellt hast (bei „Niedrige Werte erstrebenswert“ ist wenig grün). Leer: nichts eingetragen. Schraffiert: an dem Tag nicht geplant. Ø: bei Feldern mit zwei Stufen (z. B. Ja/Nein), an wie vielen der eingetragenen Tage es der gute Wert war (2/5), bei Skalen der Durchschnitt als Punkt auf der Skala (links der erste, rechts der letzte Wert); berechnete Felder in Prozent. Antippen zeigt es ausgeschrieben.',
     'stats.legend.stats': 'Im Kalender zeigt jeder Tag die Tagesfarbe: den Durchschnitt aller bewerteten Felder. Darunter pro Feld: bei Feldern mit zwei Stufen (z. B. Ja/Nein), an wie vielen der eingetragenen Tage es der gute Wert war, sonst der Durchschnitt und in Klammern, an wie vielen Tagen du eingetragen hast. Berechnete Felder in Prozent – 100 % wäre jeden Tag der beste Wert.',
     'stats.yesNoDays': 'an {n} von {total} Tagen',
+    'stats.scaleOf': 'Ø {value} von {max}',
     'stats.yesNoDaysLabel': 'an {n} von {total} Tagen „{label}“',
     'stats.legend.common': 'Felder ohne Bewertung zeigen nur, ob etwas eingetragen ist. Das Streifenmuster (abschaltbar in den Einstellungen) zeigt dasselbe wie die Farbe – für alle, die Rot und Grün schlecht unterscheiden.',
     'global.title': 'Gesamt',
@@ -2006,9 +2007,10 @@ const STRINGS = {
     'stats.legend.title': 'What do the colors and numbers mean?',
     'stats.legend.bad': 'less good',
     'stats.legend.good': 'good',
-    'stats.legend.week': 'Each box shows how good the value was that day – measured by what you set under “Valuation” for the field (with “Low values desirable”, little is green). Empty: nothing entered. Hatched: not planned that day. Ø: for fields with two steps (e.g. yes/no), on how many of the days you entered it was the good value (2/5), otherwise the average – for scales with your own labels as a dot: the further right, the better; calculated fields in percent. Tap it to see it spelled out.',
+    'stats.legend.week': 'Each box shows how good the value was that day – measured by what you set under “Valuation” for the field (with “Low values desirable”, little is green). Empty: nothing entered. Hatched: not planned that day. Ø: for fields with two steps (e.g. yes/no), on how many of the days you entered it was the good value (2/5), for scales the average as a dot on the scale (left the first, right the last value); calculated fields in percent. Tap it to see it spelled out.',
     'stats.legend.stats': 'In the calendar, each day shows the day color: the average of all rated fields. Below, for each field: for fields with two steps (e.g. yes/no), on how many of the days you entered it was the good value, otherwise the average and in parentheses on how many days you entered something. Calculated fields in percent – 100 % would be the best value every day.',
     'stats.yesNoDays': 'on {n} of {total} days',
+    'stats.scaleOf': 'Ø {value} of {max}',
     'stats.yesNoDaysLabel': 'on {n} of {total} days “{label}”',
     'stats.legend.common': 'Fields without a rating only show whether something was entered. The stripe pattern (can be turned off in the settings) shows the same as the color – for everyone who has trouble telling red and green apart.',
     'global.title': 'Overall',
@@ -6674,15 +6676,19 @@ function avgLabelSpan(h, avg) {
   const upper = Math.ceil(v - 0.05);
   return lower >= upper ? scaleLabelAt(h, lower) : `${scaleLabelAt(h, lower)}–${scaleLabelAt(h, upper)}`;
 }
-// Kurzform für die schmale Ø-Spalte der Woche (HTML). Skalen mit eigenen Bezeichnungen:
-// eine Mini-Skala mit Punkt statt Zahl - die Zahl dahinter (Stufe 0,6) sähe man sonst
-// nirgends, eine Bezeichnung passt oft nicht in die Spalte. Rechts ist immer besser
-// (avg ist schon "wie gut", auch bei "Niedrige Werte erstrebenswert"); den genauen Wert
-// zeigt Antippen bzw. Monat/Jahr/Gesamt (Nutzer-Entscheidung 2026-10-10).
+// Mini-Skala mit Punkt an der Stelle des Ø (Skalen ab drei Stufen): eine Zahl allein verrät
+// nicht, wie viele Stufen es gibt, eine Bezeichnung passt oft nicht in die Wochenspalte.
+// Ausgerichtet wie das Feld selbst (links der erste Wert, wie die Knöpfe in "Heute"); ob gut
+// oder schlecht, zeigt die Farbe (Nutzer-Entscheidung 2026-10-11 - "rechts = besser" war bei
+// "Niedrige Werte erstrebenswert" verwirrend).
+function isMultiStepScale(h) { return h.kind === 'scale' && !!h.good && h.max - h.min > 1; }
+function avgMiniScale(h, avg, extraClass = '') {
+  const pos = h.good === 'low' ? 1 - avg : avg; // avg ist "wie gut" - zurück auf die Feldrichtung
+  return `<span class="avg-scale${extraClass}" aria-hidden="true"><span class="avg-scale-dot" style="left:${(pos * 100).toFixed(1)}%"></span></span>`;
+}
+// Kurzform für die schmale Ø-Spalte der Woche (HTML); den genauen Wert zeigt Antippen.
 function habitAvgShort(h, avg, count) {
-  if (h.kind === 'scale' && h.labels && !isYesNoScale(h)) {
-    return `<span class="avg-scale" aria-hidden="true"><span class="avg-scale-dot" style="left:${(avg * 100).toFixed(1)}%"></span></span>`;
-  }
+  if (isMultiStepScale(h)) return avgMiniScale(h, avg);
   if (isYesNoScale(h)) return `${Math.round(avg * count)}/${count}`;
   if (h.kind === 'scale') return formatNumber(round1(avgScaleValue(h, avg)));
   return Math.round(avg * 100) + '%';
@@ -6693,8 +6699,12 @@ function habitAvgLong(h, avg, count) {
     return tPlain(h.labels ? 'stats.yesNoDaysLabel' : 'stats.yesNoDays', { n: Math.round(avg * count), total: count, label: best });
   }
   if (h.kind === 'scale') {
-    const span = avgLabelSpan(h, avg);
-    return `Ø ${formatNumber(round1(avgScaleValue(h, avg)))}${span ? ' · ' + span : ''}`;
+    // Eigene Bezeichnungen: nur die Bezeichnungen (die Stufenzahl dahinter sieht man sonst
+    // nirgends; die genaue Lage zeigt die Mini-Skala). Sonst die Zahl samt Spanne - "von 5"
+    // bei Skalen ab 1 (alle neuen), bei älteren, die bei 0 anfangen, "(0–10)".
+    if (h.labels) return `Ø ${avgLabelSpan(h, avg)}`;
+    const v = formatNumber(round1(avgScaleValue(h, avg)));
+    return h.min === 1 ? tPlain('stats.scaleOf', { value: v, max: h.max }) : `Ø ${v} (${h.min}–${h.max})`;
   }
   return Math.round(avg * 100) + '%';
 }
@@ -6704,7 +6714,7 @@ function renderStatsRows(stats) {
       <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
       ${isNeutralScale(habit)
         ? `<span class="month-stat-value"><span class="month-stat-count">${count}×</span></span>`
-        : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : habitColor(habit, applyGoal(habit, avg))}">${avg !== null ? esc(habitAvgLong(habit, avg, count)) : '–'}${avg !== null && !isYesNoScale(habit) ? ` <span class="month-stat-count">(${count}×)</span>` : ''}</span>`}
+        : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : habitColor(habit, applyGoal(habit, avg))}">${avg !== null && isMultiStepScale(habit) ? avgMiniScale(habit, avg, ' avg-scale--inline') : ''}${avg !== null ? esc(habitAvgLong(habit, avg, count)) : '–'}${avg !== null && !isYesNoScale(habit) ? ` <span class="month-stat-count">(${count}×)</span>` : ''}</span>`}
     </div>
   `).join('');
 }

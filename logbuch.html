@@ -713,9 +713,10 @@
   .grid-cell--avg { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--on-score); font-weight: 600; cursor: default; }
   /* Ø-Zelle als Knopf (Antippen zeigt den Wert ausgeschrieben, siehe habitAvgLong). */
   button.grid-cell--avg { font-family: inherit; padding: 0; cursor: pointer; font-variant-numeric: tabular-nums; }
-  /* Mini-Skala (habitAvgShort): Linie über ~3/4 der Zelle, Punkt an der Stelle des Ø,
-     rechts = besser. In Textfarbe der Zelle (textOnScore), damit sie auf jeder Farbe steht. */
+  /* Mini-Skala (avgMiniScale): Linie über ~3/4 der Zelle, Punkt an der Stelle des Ø, in
+     Feldrichtung. In der Textfarbe (Woche: textOnScore der Zelle, Listen: Farbe des Werts). */
   .avg-scale { position: relative; width: 70%; height: 2px; border-radius: 1px; background: color-mix(in srgb, currentColor 55%, transparent); }
+  .avg-scale--inline { display: inline-block; width: 3rem; vertical-align: middle; margin-right: 0.5rem; }
   .avg-scale-dot { position: absolute; top: 50%; width: 0.5rem; height: 0.5rem; margin: -0.25rem 0 0 -0.25rem; border-radius: 50%; background: currentColor; }
 
   .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 20px; }
@@ -1209,6 +1210,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=224e5eb086"></script>
+<script type="module" src="./logbuch.js?v=052440e05c"></script>
 </body>
 </html>

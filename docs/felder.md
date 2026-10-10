@@ -253,15 +253,18 @@ Tagen", mehrstufige Skala "„X“ oder besser", berechnete Felder weiter in %. 
 knapp verfehlt. Keine Option heißt "Standard" (könnte Druck machen).
 
 **Ø in der Auswertung** je Feldart statt Prozent für alle (`habitAvgShort`/`habitAvgLong`):
-zwei Stufen "an 2 von 5 Tagen „Ja“" bzw. "2/5", mehrstufige Skala "Ø 3,4" in den Werten des
-Felds, mit eigenen Bezeichnungen zusätzlich "· mittel–gut"; berechnete Felder in %. Gezählt
+zwei Stufen "an 2 von 5 Tagen „Ja“" bzw. "2/5", mehrstufige Skala Mini-Skala + "Ø 3,4 von 5"
+(ältere Skalen ab 0: "Ø 4,2 (0–10)"), mit eigenen Bezeichnungen Mini-Skala + "Ø mittel–gut"
+ohne Stufenzahl; berechnete Felder in %. Gezählt
 werden für alle Felder gleich nur die eingetragenen Tage (verworfen: "leer = Nein" nur für
 zwei Stufen – gleich aussehende Felder hätten unsichtbar verschieden gerechnet). "Zwei
 Stufen" ist eine Skala mit genau zwei Werten und Bewertung, unabhängig von den Bezeichnungen.
-In der schmalen Ø-Spalte der Woche zeigen Skalen mit eigenen Bezeichnungen eine Mini-Skala
-mit Punkt (rechts = besser) statt der Stufenzahl; die Ø-Zelle ist ein Knopf, Antippen zeigt den
-Wert ausgeschrieben als Meldung. Verworfen: gerundete Bezeichnung (lange passen nicht, die
-Kommazahl ginge verloren), zweizeilig (Schrift unter 13 px).
+In der schmalen Ø-Spalte der Woche zeigen alle Skalen ab drei Stufen nur die Mini-Skala
+(`avgMiniScale`, Punkt in Feldrichtung: links der erste Wert wie die Knöpfe in "Heute", gut/
+schlecht zeigt die Farbe); die Ø-Zelle ist ein Knopf, Antippen zeigt den Wert ausgeschrieben
+als Meldung. Verworfen: Zahl allein (verrät nicht, wie viele Stufen), gerundete Bezeichnung
+(lange passen nicht), zweizeilig (Schrift unter 13 px), "rechts = besser" (bei "Niedrige Werte
+erstrebenswert" verwirrend).
 
 ## Auswertung: Erklärungen
 
