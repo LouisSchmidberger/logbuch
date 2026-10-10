@@ -95,7 +95,12 @@ export async function tapText(page, text, { exact = false, selector = 'button, a
   const handle = await page.evaluateHandle((text, exact, selector) => {
     const norm = (s) => s.replace(/\s+/g, ' ').trim();
     const all = [...document.querySelectorAll(selector)].filter((el) => el.offsetParent !== null || el.getClientRects().length);
-    return all.find((el) => (exact ? norm(el.textContent) === text : norm(el.textContent).includes(text))) || null;
+    // Genauer Treffer vor Teil-Treffer, Knöpfe vor Labels - sonst träfe z.B. "Keine Wertung"
+    // das Label, in dessen Erklärtext der Begriff auch vorkommt.
+    const isButton = (el) => el.matches('button, [role="button"]');
+    const exactHits = all.filter((el) => norm(el.textContent) === text);
+    const partHits = exact ? [] : all.filter((el) => norm(el.textContent).includes(text));
+    return exactHits.find(isButton) || exactHits[0] || partHits.find(isButton) || partHits[0] || null;
   }, text, exact, selector);
   const el = handle.asElement();
   if (!el) {

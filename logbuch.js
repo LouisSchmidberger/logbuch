@@ -1354,7 +1354,7 @@ const STRINGS = {
     'habitForm.schedule.unitWeeks': 'Wochen',
     'habitForm.schedule.start': 'ab',
     'habitForm.schedule.shortMonthNote': 'Gibt es den Tag in einem Monat nicht (z.B. den 31.), ist das Feld am Monatsletzten dran.',
-    'habitForm.schedule.hint': 'Ob das Feld jeden Tag dran ist oder nur an bestimmten Tagen – zum Beispiel Sport montags und donnerstags.',
+    'habitForm.schedule.hint': 'Nur für Dinge mit festem Rhythmus, etwa einen Wochenrückblick am Sonntag. Was du mal machst und mal nicht (z. B. Sport), lass besser täglich – „Nein“ ist auch ein Eintrag.',
     'habitForm.schedule.explain': 'An den übrigen Tagen erinnert Logbuch nicht an das Feld, und es steht in „Heute“ unten unter „Heute nicht geplant“. Eintragen kannst du dort trotzdem.',
     'habitForm.error.scheduleNoDays': 'Bitte mindestens einen Wochentag auswählen.',
     'habitForm.error.scheduleInterval': 'Bitte eine Anzahl von 1 bis 365 und ein Startdatum angeben.',
@@ -1670,8 +1670,8 @@ const STRINGS = {
     'about.tip.customReminder.body': 'Jedes Feld kann eine eigene Erinnerungszeit bekommen, statt sich an die Standardzeit zu halten — sinnvoll z. B. für etwas, das du morgens einträgst, statt abends. Auch eine Gruppe kann eine eigene Zeit haben: Ihre Felder werden dann gemeinsam zu dieser Zeit erinnert, mit einer Nachricht für die ganze Gruppe. Hat ein Feld darin selbst eine eigene Zeit, gilt seine.',
     'about.tip.sections.title': 'Gruppen',
     'about.tip.sections.body': 'Felder lassen sich in Gruppen ordnen, z. B. „Morgens“ und „Abends“ oder „Körper“ und „Kopf“. In „Heute“ und in der Auswertung erscheinen sie dann unter einer eigenen Überschrift, die du auf- und zuklappen kannst – was du oft nicht brauchst, klappst du einfach weg. Gruppen ordnen nur; einen gemeinsamen Wert berechnet ein Feld vom Typ „Berechnet“.',
-    'about.tip.schedule.title': 'Nicht jeden Tag? Wiederholung',
-    'about.tip.schedule.body': 'Nicht jedes Feld ist täglich dran: Im Feld-Formular stellst du unter „Wiederholung“ ein, an welchen Wochentagen, an welchem Tag im Monat oder Jahr oder in welchem Abstand (z. B. alle 2 Wochen). An anderen Tagen steht das Feld in „Heute“ eingeklappt unter „Heute nicht geplant“ – eintragen kannst du dort trotzdem –, und es löst keine Erinnerung aus. In der Woche sind solche Tage schraffiert, damit „nicht dran“ nicht wie „vergessen“ aussieht.',
+    'about.tip.schedule.title': 'Fester Rhythmus? Wiederholung',
+    'about.tip.schedule.body': 'Für Dinge mit festem Rhythmus, etwa einen Wochenrückblick am Sonntag: Im Feld-Formular stellst du unter „Wiederholung“ ein, an welchen Wochentagen, an welchem Tag im Monat oder Jahr oder in welchem Abstand (z. B. alle 2 Wochen). An anderen Tagen steht das Feld in „Heute“ eingeklappt unter „Heute nicht geplant“ – eintragen kannst du dort trotzdem –, und es löst keine Erinnerung aus. In der Woche sind solche Tage schraffiert, damit „nicht dran“ nicht wie „vergessen“ aussieht.',
     'about.tip.archiveVsDelete.title': 'Archivieren statt löschen',
     'about.tip.archiveVsDelete.body': 'Archivierte Felder verschwinden aus der Tageseingabe und standardmäßig auch aus der Auswertung – ihre bisherigen Werte bleiben aber erhalten. Willst du sie weiter sehen (z. B. die Vorgeschichte eines Feldes, das du durch ein neues ersetzt hast), setz in „Felder verwalten“ beim archivierten Feld den Haken „In der Auswertung anzeigen“. Archivierte Felder lassen sich jederzeit reaktivieren; endgültiges Löschen entfernt dagegen auch die bisherigen Werte.',
     'about.tip.theme.title': 'Dark Mode',
@@ -2010,7 +2010,7 @@ const STRINGS = {
     'habitForm.schedule.unitWeeks': 'weeks',
     'habitForm.schedule.start': 'starting',
     'habitForm.schedule.shortMonthNote': 'If a month does not have that day (e.g. the 31st), the field is due on the last day of that month.',
-    'habitForm.schedule.hint': 'Whether the field is due every day or only on certain days – for example sport on Mondays and Thursdays.',
+    'habitForm.schedule.hint': 'Only for things with a fixed rhythm, like a weekly review on Sundays. For things you do on some days and not on others (e.g. sport), keep it daily – “No” is an entry too.',
     'habitForm.schedule.explain': 'On the other days Logbuch won’t remind you of it, and it sits at the bottom of “Today” under “Not planned today”. You can still fill it in there.',
     'habitForm.error.scheduleNoDays': 'Please select at least one weekday.',
     'habitForm.error.scheduleInterval': 'Please enter a number from 1 to 365 and a start date.',
@@ -2326,8 +2326,8 @@ const STRINGS = {
     'about.tip.customReminder.body': 'Each field can get its own reminder time instead of using the default — useful e.g. for something you enter in the morning instead of the evening. A group can have its own time too: its fields are then reminded together at that time, with one notification for the whole group. If a field in it has its own time, that one applies.',
     'about.tip.sections.title': 'Groups',
     'about.tip.sections.body': 'You can arrange fields in groups, e.g. "Morning" and "Evening" or "Body" and "Mind". In "Today" and in the statistics they then appear under their own heading, which you can collapse and expand – whatever you rarely need, just fold away. Groups only arrange; a combined value comes from a field of type "Calculated".',
-    'about.tip.schedule.title': 'Not every day? Repeats',
-    'about.tip.schedule.body': 'Not every field is due every day: in the field form, under "Repeats", you set on which weekdays, on which day of the month or year, or at which interval (e.g. every 2 weeks). On other days the field sits collapsed under "Not planned today" in "Today" – you can still enter something there – and it triggers no reminder. In the week view such days are hatched, so that "not due" does not look like "forgotten".',
+    'about.tip.schedule.title': 'Fixed rhythm? Repeats',
+    'about.tip.schedule.body': 'For things with a fixed rhythm, like a weekly review on Sundays: in the field form, under "Repeats", you set on which weekdays, on which day of the month or year, or at which interval (e.g. every 2 weeks). On other days the field sits collapsed under "Not planned today" in "Today" – you can still enter something there – and it triggers no reminder. In the week view such days are hatched, so that "not due" does not look like "forgotten".',
     'about.tip.archiveVsDelete.title': 'Archiving instead of deleting',
     'about.tip.archiveVsDelete.body': 'Archived fields disappear from daily entry and, by default, from the statistics too – but their existing values are kept. If you still want to see them (e.g. the history of a field you replaced with a new one), tick “Show in statistics” for the archived field under “Manage fields”. Archived fields can be reactivated anytime; permanent deletion, on the other hand, also removes the existing values.',
     'about.tip.theme.title': 'Dark mode',
@@ -5679,9 +5679,18 @@ function previewHabitFromForm(f) {
     sliderShowValue: f.sliderShowValue,
   };
 }
+// Solange man die Vorschau nicht selbst angetippt hat (previewValue undefined), steht der
+// beste Wert drin - so sieht man gleich, dass und wie ein Wert eingefärbt wird, und beim
+// Umstellen der Bewertung wandert er mit. Selbst entfernt (null) bleibt sie leer.
+function effectivePreviewValue(f) {
+  const v = f.previewValue === undefined
+    ? (f.good === 'low' ? f.min : f.good === 'high' ? f.max : Math.round((f.min + f.max) / 2))
+    : f.previewValue;
+  return Number.isInteger(v) && v >= f.min && v <= f.max ? v : undefined;
+}
 function renderHabitFormPreview(f) {
   const previewHabit = previewHabitFromForm(f);
-  const value = Number.isInteger(f.previewValue) && f.previewValue >= f.min && f.previewValue <= f.max ? f.previewValue : undefined;
+  const value = effectivePreviewValue(f);
   const widget = f.displayStyle === 'slider'
     ? renderHabitSlider(previewHabit, value, { preview: true })
     : `<div class="habit-options">${renderHabitOptions(previewHabit, value, { preview: true })}</div>`;
@@ -7905,9 +7914,9 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'preview-select') {
     // Wie in "Heute": derselbe Wert nochmal entfernt ihn wieder.
     const v = JSON.parse(el.dataset.value);
-    setPreviewValue(state.habitForm?.previewValue === v ? undefined : v, `[data-value='${JSON.stringify(v)}']`);
+    setPreviewValue(state.habitForm && effectivePreviewValue(state.habitForm) === v ? null : v, `[data-value='${JSON.stringify(v)}']`);
   } else if (action === 'preview-clear') {
-    setPreviewValue(undefined, '.value-slider');
+    setPreviewValue(null, '.value-slider');
   } else if (action === 'enable-push') {
     enablePush();
   } else if (action === 'disable-push') {

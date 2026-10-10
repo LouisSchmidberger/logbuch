@@ -144,6 +144,11 @@ Pro Feld einstellbar, an welchen Tagen es "dran" ist (Formular "Wiederholung": T
 Auswahlliste, Wochentage als 7 runde Buttons; nicht für berechnete Felder – die sind dran,
 sobald eines ihrer aktiven Mitglieder dran ist).
 
+Gedacht nur für Dinge mit festem Rhythmus (Wochenrückblick am Sonntag, Monatsbudget). Was
+man mal macht und mal nicht (Sport), bleibt täglich – "Nein" ist dann ein Eintrag, das Ziel
+regelt die Ziel-Quote. Die Texte im Formular und in "Über Logbuch" sagen das so (Nutzer-
+Entscheidung 2026-10-10).
+
 Format: `null` = täglich, sonst `{type:'weekly', days:[0..6]}` (0 = Montag),
 `{type:'monthly', day:1..31 | -1}` (-1 = letzter Tag), `{type:'yearly', month, day}` oder
 `{type:'interval', every: 1..365, unit:'day'|'week', start:'YYYY-MM-DD'}` (davor nie dran).
