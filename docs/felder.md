@@ -283,7 +283,16 @@ und Notiz-Wege laufen über `entryKeyFor` (erster Tag des Zeitraums). In "Heute"
 Zeitraum ein Bereich (`renderPeriodBlock`, Optik wie eine Gruppe, von Hand einklappbar,
 `sectionCollapsed:today:period-<p>`), nur wenn es solche Felder gibt; zählt nicht für "alles
 eingetragen" und nicht in der Tagesfarbe; berechnete Felder nehmen nur Tagesfelder auf.
-Auswertung: bis zur eigenen Darstellung ausgeblendet (`inStats`).
+
+Auswertung (`renderPeriodStats`): aus den Tagesfeld-Listen heraus (`inStats`), stattdessen je
+Zeitraum ein Block "Wöchentliche/Monatliche/Jährliche Felder" **ganz unten** (dazwischen
+zerrissen sie die Tagesfeld-Ansicht). Woche zeigt Wochenfelder, Monat zusätzlich
+Monatsfelder, Jahr/Gesamt alle. Gerechnet mit denselben Bausteinen wie Tagesfelder, nur über
+die ersten Tage der Zeiträume, die in der Ansicht beginnen (`periodAnchors`): zwei Stufen
+"in 3 von 4 Wochen „Ja“", Skala Mini-Skala + Ø, Zahlen als Verlauf (ein Punkt je Zeitraum),
+Text als Rückblick mit Zeitraum statt Datum. Umfasst die Ansicht genau einen Zeitraum, steht
+nur dessen Wert da. "Tage mit Eintrag" in Gesamt zählt nur Tage mit Tagesfeld-Werten
+(`dayHasDayValues`).
 
 ## Auswertung: Erklärungen
 

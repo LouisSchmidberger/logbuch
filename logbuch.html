@@ -1024,6 +1024,14 @@
   .section-block--today > .section-content > :last-child { border-bottom: none; }
   .section-block--today.section-block--collapsed > .section-head { border-bottom: none; }
   /* Zeitraum-Bereich (renderPeriodBlock): der Datumsbereich als Zusatz, nicht als Teil des Titels. */
+  /* Zeitraum-Felder in der Auswertung (renderPeriodStats): Überschrift wie eine Gruppe. */
+  .period-stats { margin-top: 1.25rem; }
+  .period-stats-title {
+    font-family: 'Fraunces', serif; font-style: italic; font-weight: 700; font-size: 1.1875rem;
+    margin: 0; padding-bottom: 6px; /* Linie darunter kommt von der Liste (.month-stats) */
+  }
+  .month-stat-row--text { flex-wrap: wrap; }
+  .period-text-value { flex-basis: 100%; margin: 0.25rem 0 0; color: var(--ink); }
   .period-range { font-family: 'IBM Plex Sans', sans-serif; font-style: normal; font-weight: 400; font-size: 0.9375rem; color: var(--sand); } /* nichts darunter - die Linie säße am Blockrand */
   .grid-scroll .section-content { padding-left: 0; }
   /* Die Gruppen-Überschrift hat schon eine Linie unten - sonst doppelt mit der oberen Linie der ersten Zeile. */
@@ -1212,6 +1220,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=a2328a17a3"></script>
+<script type="module" src="./logbuch.js?v=9c414a3721"></script>
 </body>
 </html>

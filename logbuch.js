@@ -1369,6 +1369,15 @@ const STRINGS = {
     'stats.scaleOf': 'Ø {value} von {max}',
     'stats.scaleRange': 'Ø {value} ({min} bis {max})',
     'stats.yesNoDaysLabel': 'an {n} von {total} Tagen „{label}“',
+    'stats.yesNoDays.week': 'in {n} von {total} Wochen',
+    'stats.yesNoDaysLabel.week': 'in {n} von {total} Wochen „{label}“',
+    'stats.yesNoDays.month': 'in {n} von {total} Monaten',
+    'stats.yesNoDaysLabel.month': 'in {n} von {total} Monaten „{label}“',
+    'stats.yesNoDays.year': 'in {n} von {total} Jahren',
+    'stats.yesNoDaysLabel.year': 'in {n} von {total} Jahren „{label}“',
+    'periodStats.week': 'Wöchentliche Felder',
+    'periodStats.month': 'Monatliche Felder',
+    'periodStats.year': 'Jährliche Felder',
     'stats.legend.common': 'Felder ohne Bewertung zeigen nur, ob etwas eingetragen ist. Das Streifenmuster (abschaltbar in den Einstellungen) zeigt dasselbe wie die Farbe – für alle, die Rot und Grün schlecht unterscheiden.',
     'global.title': 'Gesamt',
     'numberChart.meta': '{last} zuletzt · Ø {avg} · {count}×',
@@ -2077,6 +2086,15 @@ const STRINGS = {
     'stats.scaleOf': 'Ø {value} of {max}',
     'stats.scaleRange': 'Ø {value} ({min} to {max})',
     'stats.yesNoDaysLabel': 'on {n} of {total} days “{label}”',
+    'stats.yesNoDays.week': 'in {n} of {total} weeks',
+    'stats.yesNoDaysLabel.week': 'in {n} of {total} weeks “{label}”',
+    'stats.yesNoDays.month': 'in {n} of {total} months',
+    'stats.yesNoDaysLabel.month': 'in {n} of {total} months “{label}”',
+    'stats.yesNoDays.year': 'in {n} of {total} years',
+    'stats.yesNoDaysLabel.year': 'in {n} of {total} years “{label}”',
+    'periodStats.week': 'Weekly fields',
+    'periodStats.month': 'Monthly fields',
+    'periodStats.year': 'Yearly fields',
     'stats.legend.common': 'Fields without a rating only show whether something was entered. The stripe pattern (can be turned off in the settings) shows the same as the color – for everyone who has trouble telling red and green apart.',
     'global.title': 'Overall',
     'numberChart.meta': 'last: {last} · avg. {avg} · {count}×',
@@ -6382,14 +6400,15 @@ function renderTodayIntro() {
 // Felder dieses Zeitraums gibt. Optik wie eine Gruppe (getönter Block, einklappbar von Hand,
 // Zustand pro Gerät); zählt nicht für "alles eingetragen". Blättert man zu einem anderen
 // Tag, zeigt er dessen Zeitraum.
-function periodBlockTitle(period, date) {
-  const current = formatKey(periodStart(period, date)) === formatKey(periodStart(period, new Date()));
-  const title = t(`period.${period}.${current ? 'current' : 'other'}`);
+function periodRangeLabel(period, date) {
   const start = periodStart(period, date);
-  const range = period === 'week'
+  return period === 'week'
     ? dtf({ day: 'numeric', month: 'short' }).formatRange(start, periodEnd(period, date))
     : period === 'month' ? dtf({ month: 'long', year: 'numeric' }).format(start) : String(start.getFullYear());
-  return { title, range };
+}
+function periodBlockTitle(period, date) {
+  const current = formatKey(periodStart(period, date)) === formatKey(periodStart(period, new Date()));
+  return { title: t(`period.${period}.${current ? 'current' : 'other'}`), range: periodRangeLabel(period, date) };
 }
 function renderPeriodBlock(period, fields) {
   if (!fields.length) return '';
@@ -6492,6 +6511,58 @@ function renderStatsLegend(kind) {
   `;
 }
 
+// --- Auswertung: Zeitraum-Felder ----------------------------------------------
+// Je Zeitraum ein eigener Block ganz unten, nach allem zu den Tagesfeldern (wie die Bereiche
+// in "Heute" - dazwischen zerrissen sie die Tagesfeld-Ansicht): Woche
+// zeigt Wochenfelder, Monat zusätzlich Monatsfelder, Jahr und Gesamt alle. Gerechnet wird
+// mit denselben Bausteinen wie bei Tagesfeldern (computeHabitStats, Verläufe, Text-Rückblick)
+// - nur über die ersten Tage der Zeiträume statt über alle Tage. Umfasst die Ansicht genau
+// einen Zeitraum (Wochenfeld in der Woche), steht einfach dessen Wert da.
+function periodAnchors(period, rangeKeys) {
+  const inRange = new Set(rangeKeys);
+  return [...new Set(rangeKeys.map((k) => formatKey(periodStart(period, parseDateKey(k)))))].filter((k) => inRange.has(k)).sort();
+}
+function periodFieldsInStats(period, anchors) {
+  return state.habits.filter((h) => h.period === period && (h.archivedAt ? h.archivedInStats : !h.hideInStats)
+    && (!h.archivedAt || anchors.some((k) => state.entries[k]?.[h.id] !== undefined)));
+}
+function periodValueText(h, v) {
+  if (v === undefined) return '–';
+  if (h.kind === 'scale') return scaleLabelAt(h, v);
+  if (isNumberKind(h)) return formatNumber(v) + (h.unit ? ` ${h.unit}` : '');
+  return String(v);
+}
+function renderPeriodValueRows(fields, anchor) {
+  return `<div class="month-stats">${fields.map((h) => {
+    const v = state.entries[anchor]?.[h.id];
+    const score = h.kind === 'scale' && h.good ? habitScore(h, anchor) : null;
+    const color = v === undefined ? 'var(--sand)' : score !== null ? habitColor(h, applyGoal(h, score)) : 'var(--ink)';
+    const name = `<span class="habit-name">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>`;
+    return isTextKind(h) && v !== undefined
+      ? `<div class="month-stat-row month-stat-row--text">${name}<p class="period-text-value">${esc(periodValueText(h, v))}</p></div>`
+      : `<div class="month-stat-row">${name}<span class="month-stat-value" style="color:${color}">${esc(periodValueText(h, v))}</span></div>`;
+  }).join('')}</div>`;
+}
+function renderPeriodStats(periods, rangeKeys) {
+  return periods.map((period) => {
+    const anchors = periodAnchors(period, rangeKeys);
+    const fields = periodFieldsInStats(period, anchors);
+    if (!fields.length || !anchors.length) return '';
+    const label = (k) => periodRangeLabel(period, parseDateKey(k));
+    let body;
+    if (anchors.length === 1) body = renderPeriodValueRows(fields, anchors[0]);
+    else {
+      const stats = computeHabitStats(fields.filter(isScoredKind), anchors);
+      body = `
+        ${stats.length ? `<div class="month-stats">${renderStatsRows(stats)}</div>` : ''}
+        ${renderNumberCharts(fields, anchors)}
+        ${renderTextReviews(fields, anchors, label)}
+      `;
+    }
+    return `<section class="period-stats"><h2 class="period-stats-title">${t('periodStats.' + period)}</h2>${body}</section>`;
+  }).join('');
+}
+
 // --- Rendering: Week -----------------------------------------------------
 function renderWeek() {
   const days = Array.from({ length: 7 }, (_, i) => addDays(state.weekAnchor, i));
@@ -6544,6 +6615,7 @@ function renderWeek() {
     ${renderStatsLegend('week')}
     ${renderNumberCharts(visibleHabits, days.map(formatKey), true)}
     ${renderTextReviews(visibleHabits, days.map(formatKey))}
+    ${renderPeriodStats(['week'], dayKeys)}
     `}
   `;
 }
@@ -6587,6 +6659,7 @@ function renderMonth() {
     ${renderStatsLegend('stats')}
     ${renderNumberCharts(visibleHabits, cellKeys, true)}
     ${renderTextReviews(visibleHabits, cellKeys)}
+    ${renderPeriodStats(['week', 'month'], cellKeys)}
     `}
   `;
 }
@@ -6626,6 +6699,7 @@ function renderYear() {
     ${renderStatsLegend('stats')}
     ${renderNumberCharts(visibleHabits, yearKeys)}
     ${renderTextReviews(visibleHabits, yearKeys)}
+    ${renderPeriodStats(PERIODS, yearKeys)}
     `}
   `;
 }
@@ -6636,8 +6710,11 @@ function renderYear() {
 function dayHasValues(day) {
   return Object.keys(day || {}).some((k) => !k.startsWith('_'));
 }
+function dayHasDayValues(day) {
+  return Object.keys(day || {}).some((k) => !k.startsWith('_') && !isPeriodField(state.habits.find((h) => h.id === k)));
+}
 function renderGlobal() {
-  const dateKeys = Object.keys(state.entries).filter((k) => dayHasValues(state.entries[k])).sort();
+  const dateKeys = Object.keys(state.entries).filter((k) => dayHasDayValues(state.entries[k])).sort();
   const statsHabits = state.habits.filter(inStats);
   const stats = computeHabitStats(statsHabits.filter(isScoredKind), dateKeys);
   const rangeNote = dateKeys.length
@@ -6654,6 +6731,7 @@ function renderGlobal() {
     ${renderStatsLegend('stats')}
     ${renderNumberCharts(statsHabits, dateKeys)}
     ${renderTextReviews(statsHabits, dateKeys)}
+    ${renderPeriodStats(PERIODS, Object.keys(state.entries).sort())}
     `}
   `;
 }
@@ -6905,7 +6983,8 @@ function habitAvgShort(h, avg, count) {
 function habitAvgLong(h, avg, count) {
   if (isYesNoScale(h)) {
     const best = scaleLabelAt(h, h.good === 'low' ? h.min : h.max);
-    return tPlain(h.labels ? 'stats.yesNoDaysLabel' : 'stats.yesNoDays', { n: Math.round(avg * count), total: count, label: best });
+    const unit = isPeriodField(h) ? `.${h.period}` : '';
+    return tPlain((h.labels ? 'stats.yesNoDaysLabel' : 'stats.yesNoDays') + unit, { n: Math.round(avg * count), total: count, label: best });
   }
   if (h.kind === 'scale') {
     // Eigene Bezeichnungen: nur die Bezeichnungen (die Stufenzahl dahinter sieht man sonst
@@ -7037,7 +7116,7 @@ function renderNumberCharts(visibleHabits, dateKeys, interactive = false) {
 // Titel, neueste zuerst (in langen Listen ist das Neueste meist das Relevanteste - eine
 // je nach Ansicht umgekehrte Reihenfolge war verwirrend). Felder ohne Antwort im
 // Zeitraum erscheinen gar nicht.
-function renderTextReviews(habits, dateKeys) {
+function renderTextReviews(habits, dateKeys, labelFor = formatDMY) {
   const renderOne = (h) => {
     const entries = dateKeys
       .map((k) => ({ key: k, text: state.entries[k]?.[h.id] }))
@@ -7049,7 +7128,7 @@ function renderTextReviews(habits, dateKeys) {
       <ul class="text-review-list">
         ${entries.map((e) => `
           <li><button type="button" class="text-review-entry" data-action="open-day" data-date="${e.key}" data-focus-habit="${h.id}">
-            <span class="text-review-date">${formatDMY(e.key)}</span>
+            <span class="text-review-date">${esc(labelFor(e.key))}</span>
             <span class="text-review-text">${esc(e.text.trim())}</span>
           </button></li>
         `).join('')}

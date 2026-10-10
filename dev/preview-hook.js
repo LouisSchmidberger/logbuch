@@ -74,6 +74,7 @@ export function install(app) {
         // Zeitraum-Felder: Wert im ersten Tag des Zeitraums (siehe periodStart in logbuch.js)
         { key: 'fputz', name: 'Zimmer geputzt', kind: 'scale', min: 1, max: 2, good: 'high', labels: ['Nein', 'Ja'], period: 'week' },
         { key: 'fmonat', name: 'Monatsrückblick', kind: 'text', period: 'month' },
+        { key: 'fbuch', name: 'Gelesene Bücher', kind: 'number', period: 'month' },
       ];
       let topOrder = 1; // 1 = Gruppe "Morgens", 10 = "Abends"
       const inSection = { morgens: 0, abends: 0 };
@@ -124,6 +125,11 @@ export function install(app) {
         const d = new Date(monday); d.setDate(monday.getDate() - 7 * w);
         app.state.entries = { ...app.state.entries, [dateKey(d)]: { ...(app.state.entries[dateKey(d)] || {}), fputz: rnd() < 0.75 ? 2 : 1 } };
         await app.saveDayNow(dateKey(d));
+      }
+      for (let m = 1; m <= 5; m++) {
+        const first = new Date(today.getFullYear(), today.getMonth() - m, 1);
+        app.state.entries = { ...app.state.entries, [dateKey(first)]: { ...(app.state.entries[dateKey(first)] || {}), fbuch: Math.floor(rnd() * 4) } };
+        await app.saveDayNow(dateKey(first));
       }
       const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
       app.state.entries = { ...app.state.entries, [dateKey(prevMonth)]: { ...(app.state.entries[dateKey(prevMonth)] || {}), fmonat: 'Viel draußen gewesen, neuer Sport-Rhythmus.' } };
