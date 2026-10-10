@@ -20,7 +20,7 @@ const TABLES = {
       id: crypto.randomUUID(), slug: null, name: null, min: null, max: null, labels: null, good: null,
       sort_order: 0, archived_at: null, created_at: now(), kind: 'scale', unit: null, reminder_minute: null,
       goal_threshold: null, display_style: 'buttons', slider_show_value: true, group_members: null,
-      schedule: null, enc: null, section_id: null,
+      schedule: null, enc: null, section_id: null, period: 'day', period_reminder_day: null,
     }),
   },
   habit_entries: {

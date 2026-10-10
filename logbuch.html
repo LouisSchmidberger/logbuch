@@ -1022,7 +1022,9 @@
     padding: 0 10px; margin: 10px -10px 14px;
   }
   .section-block--today > .section-content > :last-child { border-bottom: none; }
-  .section-block--today.section-block--collapsed > .section-head { border-bottom: none; } /* nichts darunter - die Linie säße am Blockrand */
+  .section-block--today.section-block--collapsed > .section-head { border-bottom: none; }
+  /* Zeitraum-Bereich (renderPeriodBlock): der Datumsbereich als Zusatz, nicht als Teil des Titels. */
+  .period-range { font-family: 'IBM Plex Sans', sans-serif; font-style: normal; font-weight: 400; font-size: 0.9375rem; color: var(--sand); } /* nichts darunter - die Linie säße am Blockrand */
   .grid-scroll .section-content { padding-left: 0; }
   /* Die Gruppen-Überschrift hat schon eine Linie unten - sonst doppelt mit der oberen Linie der ersten Zeile. */
   .section-content > .habit-row:first-child, .section-content > .number-box:first-child { border-top: none; }
@@ -1210,6 +1212,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=890b258512"></script>
+<script type="module" src="./logbuch.js?v=a2328a17a3"></script>
 </body>
 </html>

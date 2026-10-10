@@ -71,12 +71,15 @@ export function install(app) {
         { key: 'fwohl', name: 'Wohlbefinden', kind: 'computed', groupMembers: ['fstimmung', 'fenergie'], good: null },
         { key: 'fkopf', name: 'Kopfschmerzen', kind: 'scale', section: 'abends', min: 1, max: 4, good: 'low', labels: ['keine', 'leicht', 'mittel', 'stark'] },
         { key: 'fdank', name: 'Dankbar für', kind: 'text', section: 'abends' },
+        // Zeitraum-Felder: Wert im ersten Tag des Zeitraums (siehe periodStart in logbuch.js)
+        { key: 'fputz', name: 'Zimmer geputzt', kind: 'scale', min: 1, max: 2, good: 'high', labels: ['Nein', 'Ja'], period: 'week' },
+        { key: 'fmonat', name: 'Monatsrückblick', kind: 'text', period: 'month' },
       ];
       let topOrder = 1; // 1 = Gruppe "Morgens", 10 = "Abends"
       const inSection = { morgens: 0, abends: 0 };
       for (const f of fields) {
         const payload = { ...base, ...f };
-        delete payload.kind; delete payload.section; delete payload.schedule;
+        delete payload.kind; delete payload.section; delete payload.schedule; delete payload.period;
         const { error } = await sb.from('habit_definitions').insert({
           user_id: uid,
           kind: f.kind,
@@ -84,6 +87,7 @@ export function install(app) {
           reminder_minute: null,
           section_id: f.section ? sectionIds[f.section] : null,
           sort_order: f.section ? ++inSection[f.section] : ++topOrder,
+          period: f.period || 'day',
           enc: await enc(payload),
           ...app.DEF_PLAINTEXT_CLEARED,
         });
@@ -112,6 +116,18 @@ export function install(app) {
         app.state.entries = { ...app.state.entries, [dateKey(d)]: day };
         await app.saveDayNow(dateKey(d));
       }
+
+      // Zeitraum-Werte: frühere Wochen meist geputzt, die laufende noch offen; Rückblick nur für
+      // den Vormonat.
+      const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+      for (let w = 1; w * 7 <= days + 6; w++) {
+        const d = new Date(monday); d.setDate(monday.getDate() - 7 * w);
+        app.state.entries = { ...app.state.entries, [dateKey(d)]: { ...(app.state.entries[dateKey(d)] || {}), fputz: rnd() < 0.75 ? 2 : 1 } };
+        await app.saveDayNow(dateKey(d));
+      }
+      const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      app.state.entries = { ...app.state.entries, [dateKey(prevMonth)]: { ...(app.state.entries[dateKey(prevMonth)] || {}), fmonat: 'Viel draußen gewesen, neuer Sport-Rhythmus.' } };
+      await app.saveDayNow(dateKey(prevMonth));
 
       await sb.from('user_settings').update({ onboarding_completed: true }).eq('user_id', uid);
       await sb.from('user_encryption').update({ recovery_key_confirmed: true }).eq('user_id', uid);

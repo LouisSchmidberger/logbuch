@@ -225,6 +225,8 @@ function habitFromParts(row, payload) {
     goalThreshold: payload.goalThreshold, // nur bei kind === 'scale'/'computed', 0-1 oder null (= 1 = 100%)
     sortOrder: row.sort_order,
     archivedAt: row.archived_at,
+    period: row.period || 'day',          // 'day' | 'week' | 'month' | 'year' (Klartext, siehe periodStart)
+    periodReminderDay: row.period_reminder_day ?? null, // Tag der Erinnerung im Zeitraum, null = Standard
   };
 }
 // Noch nicht umgestellte Zeile (Klartext-Spalten) -> dieselbe payload-Form.
@@ -466,7 +468,9 @@ function renderBySection(habits, scope, renderList) {
 // Vorgeschichte eines abgelösten Felds zu sehen (Skala ändern = archivieren + neu anlegen).
 // Wirkt nur auf die Anzeige: die Tages-Gesamtfarbe (dayOverallScore) und berechnete
 // Felder, in denen das Feld Mitglied ist, rechnen unverändert mit.
-function inStats(h) { return h.archivedAt ? h.archivedInStats : !h.hideInStats; }
+// Zeitraum-Felder haben (noch) keine eigene Darstellung in der Auswertung - ihr Wert steht
+// am ersten Tag des Zeitraums und sähe dort wie ein Tageswert aus.
+function inStats(h) { return !isPeriodField(h) && (h.archivedAt ? h.archivedInStats : !h.hideInStats); }
 // Berechnete Felder (kind='computed', bis 2026-09-27 "Gruppen" genannt) gibt es in zwei
 // Arten: aus Skalen (Durchschnitt der normalisierten Bewertungen, mit Farbe/Ziel-Quote -
 // der ursprüngliche Fall) und aus Zahlen (fassen Zahlenwert-Felder derselben Einheit per
@@ -576,6 +580,32 @@ function parseDateKey(key) {
   return new Date(y, m - 1, d);
 }
 function startOfWeek(date) { const d = startOfDay(date); const off = (d.getDay() + 6) % 7; d.setDate(d.getDate() - off); return d; }
+// Zeitraum-Felder (period 'week'/'month'/'year', siehe docs/datenmodell.md): ein Wert pro
+// Zeitraum, gespeichert im Eintrag des ersten Tags des Zeitraums. Gegenstück zu
+// public.habit_period_start (SQL) - synchron halten.
+const PERIODS = ['week', 'month', 'year'];
+function isPeriodField(h) { return !!h && !!h.period && h.period !== 'day'; }
+function periodStart(period, date) {
+  const d = startOfDay(date);
+  if (period === 'week') return startOfWeek(d);
+  if (period === 'month') return new Date(d.getFullYear(), d.getMonth(), 1);
+  if (period === 'year') return new Date(d.getFullYear(), 0, 1);
+  return d;
+}
+function periodEnd(period, date) {
+  const start = periodStart(period, date);
+  if (period === 'week') return addDays(start, 6);
+  if (period === 'month') return new Date(start.getFullYear(), start.getMonth() + 1, 0);
+  if (period === 'year') return new Date(start.getFullYear(), 11, 31);
+  return start;
+}
+// Unter welchem Tag der Wert eines Felds steht: Tagesfelder am Tag selbst, Zeitraum-Felder am
+// ersten Tag ihres Zeitraums. Alle Speicher-Wege (handleSelect & Co., Notizen) laufen hier
+// durch - so bleibt der Rest (saveDay, mergeDay, Verschlüsselung) unverändert.
+function entryKeyFor(habitId, dateKey) {
+  const h = state.habits.find((x) => x.id === habitId);
+  return isPeriodField(h) ? formatKey(periodStart(h.period, parseDateKey(dateKey))) : dateKey;
+}
 function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
 
 // --- Erinnerungszeit-Helfer (Minuten seit Mitternacht <-> "HH:MM") ---------
@@ -749,7 +779,7 @@ function dayOverallScore(date) {
   const dateKey = formatKey(date);
   const day = state.entries[dateKey];
   if (!day) return null;
-  const scores = state.habits.filter((h) => h.kind === 'scale' && !isNeutralScale(h))
+  const scores = state.habits.filter((h) => h.kind === 'scale' && !isNeutralScale(h) && !isPeriodField(h))
     .map((h) => applyGoal(h, habitScore(h, dateKey)))
     .filter((s) => s !== null);
   if (!scores.length) return null;
@@ -944,7 +974,7 @@ function isOverlayOpen() {
 // unsichtbar, zählte aber weiter als offene Ebene.
 function isNoteEditorOpen() {
   const ed = state.noteEditor;
-  if (!ed || state.view !== 'today' || ed.dateKey !== formatKey(state.currentDate)) return false;
+  if (!ed || state.view !== 'today' || ed.dateKey !== entryKeyFor(ed.key, formatKey(state.currentDate))) return false;
   if (ed.key === DAY_NOTE_KEY) return true;
   if (ed.key.startsWith(SECTION_NOTE_PREFIX)) return sectionShownToday(ed.key.slice(SECTION_NOTE_PREFIX.length));
   return activeHabits().some((h) => h.id === ed.key && !isTextKind(h));
@@ -1353,6 +1383,15 @@ const STRINGS = {
     'habitForm.goalYesNoLabel': 'Ziel für die Auswertung: an wie vielen von 7 Tagen „{label}“?',
     'habitForm.goalEveryDay': 'jeden Tag',
     'habitForm.goalDays': 'an {n} von 7 Tagen',
+    'habitForm.goalYesNoLabel.week': 'Ziel für die Auswertung: in wie vielen von 4 Wochen „{label}“?',
+    'habitForm.goalYesNoLabel.month': 'Ziel für die Auswertung: in wie vielen von 12 Monaten „{label}“?',
+    'habitForm.goalYesNoLabel.year': 'Ziel für die Auswertung: in wie vielen von 5 Jahren „{label}“?',
+    'habitForm.goalEveryDay.week': 'jede Woche',
+    'habitForm.goalEveryDay.month': 'jeden Monat',
+    'habitForm.goalEveryDay.year': 'jedes Jahr',
+    'habitForm.goalDays.week': 'in {n} von 4 Wochen',
+    'habitForm.goalDays.month': 'in {n} von 12 Monaten',
+    'habitForm.goalDays.year': 'in {n} von 5 Jahren',
     'habitForm.goalValueLabel': 'Ziel für die Auswertung: ab wann voll erreicht?',
     'habitForm.goalBestOnly': '„{label}“',
     'habitForm.goalOrBetter': '„{label}“ oder besser',
@@ -1370,6 +1409,16 @@ const STRINGS = {
     'habitForm.stepsExplain': 'In Fragebögen haben sich 5 bis 7 Stufen bewährt – mehr Abstufungen machen Antworten selten genauer. Deshalb gehen Buttons und eigene Bezeichnungen bis 7. Für ein feineres „ungefähr wie viel“ gibt es den Schieberegler ohne Bezeichnungen (bis 100).',
     'habitForm.sliderRangeExplain': 'Der Regler zeigt nie eine Min/Max-Beschriftung beim Eintragen (nur hier in der Verwaltung).',
     'habitForm.rangeLocked': 'Bereich {min}–{max} (durch vorhandene Einträge gesperrt).',
+    'habitForm.period': 'Wie oft trägst du das ein?',
+    'habitForm.period.day': 'Täglich',
+    'habitForm.period.week': 'Wöchentlich',
+    'habitForm.period.month': 'Monatlich',
+    'habitForm.period.year': 'Jährlich',
+    'habitForm.periodHint.week': 'Ein Wert pro Woche, an jedem Tag der Woche eintragbar – in „Heute“ unten unter „Diese Woche“.',
+    'habitForm.periodHint.month': 'Ein Wert pro Monat, an jedem Tag des Monats eintragbar – in „Heute“ unten unter „Dieser Monat“.',
+    'habitForm.periodHint.year': 'Ein Wert pro Jahr, an jedem Tag des Jahres eintragbar – in „Heute“ unten unter „Dieses Jahr“.',
+    'habitForm.periodReminderDay': 'Erinnerung am',
+    'habitForm.periodReminderNote': 'Zur Standardzeit oder zu deiner eigenen Erinnerungszeit – nur, wenn bis dahin noch nichts eingetragen ist.',
     'habitForm.numbers': 'Zahlen',
     'habitForm.numbersRange': '{min} bis {max}',
     'habitForm.numbersExplain': 'Manche Skalen beginnen üblicherweise bei 0, z. B. Schmerz oder Stress von 0 („gar nicht“) bis 10.',
@@ -1427,6 +1476,12 @@ const STRINGS = {
     'today.openField': '(noch offen)',
     'today.sectionHasOpen': '(enthält noch offene Felder)',
     'today.sectionDone': '✓ erledigt',
+    'period.week.current': 'Diese Woche',
+    'period.week.other': 'Woche',
+    'period.month.current': 'Dieser Monat',
+    'period.month.other': 'Monat',
+    'period.year.current': 'Dieses Jahr',
+    'period.year.other': 'Jahr',
     'today.allDoneToday': 'Alles eingetragen für heute.',
     'today.allDoneDay': 'Alles eingetragen für diesen Tag.',
     'todayIntro.label': 'Kurz erklärt',
@@ -1463,6 +1518,9 @@ const STRINGS = {
     'manage.sectionName': 'Name der Gruppe',
     'manage.sectionNamePlaceholder': 'z. B. Gesundheit',
     'manage.sectionEmpty': 'Noch leer – über „Bearbeiten“ Felder hinzufügen.',
+    'manage.period.week': 'wöchentlich',
+    'manage.period.month': 'monatlich',
+    'manage.period.year': 'jährlich',
     'manage.groupTip': 'Viele Felder? Ordne sie in Gruppen nach Tageszeit, z. B. „Morgens“ und „Abends“. Dann trägst du jeden Block in einem Rutsch ein, und jede Gruppe kann zu ihrer eigenen Zeit erinnern.',
     'manage.groupTipHide': 'Ausblenden',
     'sectionForm.collapse': 'In „Heute“',
@@ -1484,6 +1542,7 @@ const STRINGS = {
     'habitForm.showInStatsNote': 'Aus: erscheint nur in „Heute“, nicht in Woche, Monat, Jahr und Gesamt – z. B. wenn dir ein berechnetes Feld daraus reicht. Die Tagesfarbe rechnet es trotzdem mit ein.',
     'habitForm.more': 'Mehr Einstellungen',
     'habitForm.moreSub': 'Wiederholung, Erinnerungszeit und mehr – kannst du auch später ändern',
+    'habitForm.moreSubPeriod': 'Ziel, Erinnerung und mehr – kannst du auch später ändern',
     'habitForm.computedExplain': 'Ein berechnetes Feld fasst mehrere Felder zu einem live berechneten Wert zusammen – Skalen als Durchschnitt, Zahlenwerte z. B. als Summe. Selbst ausfüllen kann man es nicht.',
     'common.finish': 'Fertig',
     'menu.defaultReminderTime': 'Standard-Erinnerungszeit',
@@ -2032,6 +2091,15 @@ const STRINGS = {
     'habitForm.goalYesNoLabel': 'Goal for the statistics: on how many of 7 days “{label}”?',
     'habitForm.goalEveryDay': 'every day',
     'habitForm.goalDays': 'on {n} of 7 days',
+    'habitForm.goalYesNoLabel.week': 'Goal for the statistics: in how many of 4 weeks “{label}”?',
+    'habitForm.goalYesNoLabel.month': 'Goal for the statistics: in how many of 12 months “{label}”?',
+    'habitForm.goalYesNoLabel.year': 'Goal for the statistics: in how many of 5 years “{label}”?',
+    'habitForm.goalEveryDay.week': 'every week',
+    'habitForm.goalEveryDay.month': 'every month',
+    'habitForm.goalEveryDay.year': 'every year',
+    'habitForm.goalDays.week': 'in {n} of 4 weeks',
+    'habitForm.goalDays.month': 'in {n} of 12 months',
+    'habitForm.goalDays.year': 'in {n} of 5 years',
     'habitForm.goalValueLabel': 'Goal for the statistics: when is it fully reached?',
     'habitForm.goalBestOnly': '“{label}”',
     'habitForm.goalOrBetter': '“{label}” or better',
@@ -2049,6 +2117,16 @@ const STRINGS = {
     'habitForm.stepsExplain': 'In questionnaires, 5 to 7 steps have proven themselves – more gradations rarely make answers more accurate. That is why buttons and custom labels go up to 7. For a finer “roughly how much”, there is the slider without custom labels (up to 100).',
     'habitForm.sliderRangeExplain': 'The slider never shows a min/max label while entering a value (only here in management).',
     'habitForm.rangeLocked': 'Range {min}–{max} (locked due to existing entries).',
+    'habitForm.period': 'How often do you fill this in?',
+    'habitForm.period.day': 'Daily',
+    'habitForm.period.week': 'Weekly',
+    'habitForm.period.month': 'Monthly',
+    'habitForm.period.year': 'Yearly',
+    'habitForm.periodHint.week': 'One value per week, can be filled in on any day of the week – at the bottom of “Today” under “This week”.',
+    'habitForm.periodHint.month': 'One value per month, can be filled in on any day of the month – at the bottom of “Today” under “This month”.',
+    'habitForm.periodHint.year': 'One value per year, can be filled in on any day of the year – at the bottom of “Today” under “This year”.',
+    'habitForm.periodReminderDay': 'Reminder on',
+    'habitForm.periodReminderNote': 'At the default time or your own reminder time – only if nothing has been entered by then.',
     'habitForm.numbers': 'Numbers',
     'habitForm.numbersRange': '{min} to {max}',
     'habitForm.numbersExplain': 'Some scales usually start at 0, e.g. pain or stress from 0 (“not at all”) to 10.',
@@ -2106,6 +2184,12 @@ const STRINGS = {
     'today.openField': '(not filled in yet)',
     'today.sectionHasOpen': '(has fields not filled in yet)',
     'today.sectionDone': '✓ done',
+    'period.week.current': 'This week',
+    'period.week.other': 'Week',
+    'period.month.current': 'This month',
+    'period.month.other': 'Month',
+    'period.year.current': 'This year',
+    'period.year.other': 'Year',
     'today.allDoneToday': 'Everything filled in for today.',
     'today.allDoneDay': 'Everything filled in for this day.',
     'todayIntro.label': 'Quick explanation',
@@ -2142,6 +2226,9 @@ const STRINGS = {
     'manage.sectionName': 'Group name',
     'manage.sectionNamePlaceholder': 'e.g. Health',
     'manage.sectionEmpty': 'Still empty – add fields via “Edit”.',
+    'manage.period.week': 'weekly',
+    'manage.period.month': 'monthly',
+    'manage.period.year': 'yearly',
     'manage.groupTip': 'Lots of fields? Sort them into groups by time of day, e.g. “Morning” and “Evening”. Then you fill in each block in one go, and each group can remind you at its own time.',
     'manage.groupTipHide': 'Hide',
     'sectionForm.collapse': 'In “Today”',
@@ -2163,6 +2250,7 @@ const STRINGS = {
     'habitForm.showInStatsNote': 'Off: only appears in “Today”, not in the week, month, year, and overall views – e.g. if a calculated field made from it is enough for you. It still counts towards the day’s color.',
     'habitForm.more': 'More settings',
     'habitForm.moreSub': 'Repetition, reminder time and more – you can also change these later',
+    'habitForm.moreSubPeriod': 'Goal, reminder and more – you can change these later',
     'habitForm.computedExplain': 'A calculated field combines multiple fields into one live-calculated value – scales as an average, number fields e.g. as a sum. You cannot fill it in yourself.',
     'common.finish': 'Done',
     'menu.defaultReminderTime': 'Default reminder time',
@@ -3490,6 +3578,46 @@ function resizeLabels(labels, newLength, defaultForIndex) {
 }
 // Aktuelle Stufenzahl eines Skala-Formulars, abgeleitet aus Darstellung + Bereich -
 // einzige Quelle dafür, sowohl für die Bezeichnungs-Liste als auch die Live-Vorschau.
+// Erinnerungstag eines Zeitraum-Felds (habit_definitions.period_reminder_day): Woche ISO-
+// Wochentag 1-7, Monat 1-31 oder -1 = letzter Tag, Jahr MMTT. Standard: Sonntag / letzter
+// Tag / 31.12. (gespeichert als null).
+const PERIOD_REMINDER_DEFAULT = { week: 7, month: -1, year: 1231 };
+function periodReminderControl(f) {
+  const day = f.periodReminderDay ?? PERIOD_REMINDER_DEFAULT[f.period];
+  const dayOptions = (selected) => Array.from({ length: 31 }, (_, i) => i + 1)
+    .map((d) => `<option value="${d}" ${d === selected ? 'selected' : ''}>${d}.</option>`).join('');
+  let control;
+  if (f.period === 'week') {
+    control = `<select id="habit-form-period-day">${Array.from({ length: 7 }, (_, i) => i + 1)
+      .map((d) => `<option value="${d}" ${d === day ? 'selected' : ''}>${esc(weekdayLong(new Date(2024, 0, d)))}</option>`).join('')}</select>`;
+  } else if (f.period === 'month') {
+    control = `<select id="habit-form-period-day">${dayOptions(day)}<option value="-1" ${day === -1 ? 'selected' : ''}>${t('habitForm.schedule.lastDay')}</option></select>`;
+  } else {
+    const month = Math.floor(day / 100);
+    control = `
+      <div class="schedule-inline">
+        <select id="habit-form-period-yday" aria-label="${esc(t('habitForm.schedule.dayAria'))}">${dayOptions(day % 100)}</select>
+        <select id="habit-form-period-ymonth" aria-label="${esc(t('habitForm.schedule.monthAria'))}">
+          ${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${i + 1 === month ? 'selected' : ''}>${esc(monthName(new Date(2024, i, 1)))}</option>`).join('')}
+        </select>
+      </div>`;
+  }
+  return `
+    <div class="auth-field">
+      <label ${f.period === 'year' ? '' : 'for="habit-form-period-day"'}>${t('habitForm.periodReminderDay')}</label>
+      ${control}
+      <p class="habit-form-lock-note">${t('habitForm.periodReminderNote')}</p>
+    </div>
+  `;
+}
+function readPeriodReminderFromDom(f) {
+  const dayEl = document.getElementById('habit-form-period-day');
+  if (dayEl) { f.periodReminderDay = Number(dayEl.value); return; }
+  const yd = document.getElementById('habit-form-period-yday');
+  const ym = document.getElementById('habit-form-period-ymonth');
+  if (yd && ym) f.periodReminderDay = Number(ym.value) * 100 + Number(yd.value);
+}
+
 function habitFormStepCount(f) {
   return f.max - f.min + 1;
 }
@@ -3525,12 +3653,15 @@ function goalControlHtml(f) {
   }
   const steps = habitFormStepCount(f);
   if (steps === 2) {
+    // Bezugsgröße: 7 Tage; bei Zeitraum-Feldern 4 Wochen, 12 Monate bzw. 5 Jahre.
+    const total = { day: 7, week: 4, month: 12, year: 5 }[f.period] || 7;
+    const unitKey = f.period && f.period !== 'day' ? `.${f.period}` : '';
     const bestIndex = f.good === 'low' ? 0 : 1;
-    const n = Math.min(7, Math.max(1, Math.round(f.goal * 7)));
-    const options = [7, 6, 5, 4, 3, 2, 1].map((d) => `<option value="${d / 7}" ${d === n ? 'selected' : ''}>${d === 7 ? t('habitForm.goalEveryDay') : tPlain('habitForm.goalDays', { n: d })}</option>`).join('');
+    const n = Math.min(total, Math.max(1, Math.round(f.goal * total)));
+    const options = Array.from({ length: total }, (_, i) => total - i).map((d) => `<option value="${d / total}" ${d === n ? 'selected' : ''}>${d === total ? t('habitForm.goalEveryDay' + unitKey) : tPlain('habitForm.goalDays' + unitKey, { n: d })}</option>`).join('');
     return `
       <div class="auth-field">
-        <label for="habit-form-goal">${tPlain('habitForm.goalYesNoLabel', { label: goalScaleLabel(f, bestIndex) })}${explain}</label>
+        <label for="habit-form-goal">${tPlain('habitForm.goalYesNoLabel' + unitKey, { label: goalScaleLabel(f, bestIndex) })}${explain}</label>
         <select id="habit-form-goal" data-goal-mode="choice" aria-describedby="habit-form-goal-note">${options}</select>
         ${note}
       </div>
@@ -3631,6 +3762,7 @@ function defaultHabitForm() {
     goal: 1, // Ziel-Quote als Bruchteil (siehe goalControlHtml); 1 = nur der beste Wert
     unit: '', reminderEnabled: false, reminderMinute: state.userSettings.defaultReminderMinute,
     schedule: scheduleToForm(null),
+    period: 'day', periodReminderDay: null, // siehe periodReminderControl
   };
 }
 
@@ -3716,6 +3848,8 @@ function habitToForm(h) {
     reminderEnabled: h.reminderMinute !== null && h.reminderMinute !== undefined,
     reminderMinute: h.reminderMinute ?? state.userSettings.defaultReminderMinute,
     schedule: scheduleToForm(h.schedule),
+    period: h.period || 'day',
+    periodReminderDay: h.periodReminderDay ?? null,
   };
 }
 
@@ -3773,6 +3907,7 @@ function syncHabitFormFromDom() {
     if (reminderTime !== null) f.reminderMinute = reminderTime;
   }
   if (f.kind !== 'computed') readScheduleFromDom(f);
+  readPeriodReminderFromDom(f);
   const showInStatsEl = document.getElementById('habit-form-show-in-stats');
   if (showInStatsEl) f.showInStats = showInStatsEl.checked;
   const sectionEl = document.getElementById('habit-form-section');
@@ -3913,7 +4048,14 @@ async function handleHabitSaveInner() {
   // Wiederholung - berechnete Felder haben keinen eigenen Plan (DB-Check erzwingt das ebenfalls).
   // Auch bei gesperrten Feldern änderbar: ändert nur, an welchen Tagen das Feld dran ist,
   // deutet keine vorhandenen Werte um.
-  if (f.kind === 'computed') {
+  // Zeitraum-Felder: keine Wiederholung, keine Gruppe, nie "Berechnet" (DB-Check
+  // habit_definitions_period_combination_check). Der Erinnerungstag als null, wenn er dem
+  // Standard entspricht (Sonntag / letzter Tag / 31.12.) - eine Darstellung für "Standard".
+  readPeriodReminderFromDom(f);
+  const period = f.kind === 'computed' ? 'day' : f.period;
+  const periodReminderDay = period === 'day' || f.periodReminderDay === null || f.periodReminderDay === PERIOD_REMINDER_DEFAULT[period]
+    ? null : f.periodReminderDay;
+  if (f.kind === 'computed' || period !== 'day') {
     fields.schedule = null;
   } else {
     const result = formToSchedule(f.schedule);
@@ -3944,12 +4086,14 @@ async function handleHabitSaveInner() {
     hideInStats: !f.showInStats,
     archivedInStats: f.defId ? !!state.habits.find((h) => h.defId === f.defId)?.archivedInStats : false,
   };
-  const sectionId = state.sections.some((sec) => sec.id === f.sectionId) ? f.sectionId : null;
+  const sectionId = period === 'day' && state.sections.some((sec) => sec.id === f.sectionId) ? f.sectionId : null;
   const row = {
     kind: fields.kind,
     schedule: fields.schedule,
     reminder_minute: reminderMinute,
     section_id: sectionId,
+    period,
+    period_reminder_day: periodReminderDay,
     enc: await encryptData(currentDek, payload),
     ...DEF_PLAINTEXT_CLEARED,
   };
@@ -4321,7 +4465,7 @@ function discardNoteDraft() {
   saveDay(ed.dateKey);
 }
 function openNoteEditor(key) {
-  const dateKey = formatKey(state.currentDate);
+  const dateKey = entryKeyFor(key, formatKey(state.currentDate)); // Notiz eines Zeitraum-Felds: am Zeitraum
   // Schon offen (z.B. erneut über das Zeilen-Menü gewählt, während man darin schreibt):
   // nichts neu anlegen, nur zurück ins Textfeld - sonst passierte scheinbar gar nichts.
   if (!(state.noteEditor?.dateKey === dateKey && state.noteEditor.key === key)) {
@@ -4549,6 +4693,7 @@ function offerUndoRemoval(dateKey, habitId, previous) {
 }
 
 function handleSelect(dateKey, habitId, value) {
+  dateKey = entryKeyFor(habitId, dateKey);
   const day = { ...(state.entries[dateKey] || {}) };
   if (day[habitId] === value) {
     delete day[habitId];
@@ -4565,6 +4710,7 @@ function handleSelect(dateKey, habitId, value) {
 // keine Absicht zum Löschen, dafür gibt es das ×). Idempotent, da der Regler-Commit auf
 // zwei Wegen ankommen kann (siehe 'change' und 'pointerup' weiter unten).
 function handleSetValue(dateKey, habitId, value) {
+  dateKey = entryKeyFor(habitId, dateKey);
   const day = { ...(state.entries[dateKey] || {}) };
   if (day[habitId] === value) return;
   day[habitId] = value;
@@ -4583,6 +4729,7 @@ function handleSetValue(dateKey, habitId, value) {
 const TEXT_SAVE_DELAY_MS = 1000;
 const pendingDaySaves = new Map(); // dateKey -> Timer
 function updateTextValue(dateKey, habitId, raw) {
+  dateKey = entryKeyFor(habitId, dateKey);
   const day = { ...(state.entries[dateKey] || {}) };
   if (raw.trim()) day[habitId] = raw.slice(0, NOTE_MAX_LENGTH);
   else delete day[habitId];
@@ -4620,6 +4767,7 @@ function handleReset(dateKey) {
 // anders als Buttons (nochmal klicken) oder Zahlenfeld (leeren) sonst keine
 // Möglichkeit hat, einen Wert wieder auszutragen.
 function handleClearValue(dateKey, habitId) {
+  dateKey = entryKeyFor(habitId, dateKey);
   const day = { ...(state.entries[dateKey] || {}) };
   if (day[habitId] !== undefined) offerUndoRemoval(dateKey, habitId, day[habitId]);
   delete day[habitId];
@@ -4630,6 +4778,7 @@ function handleClearValue(dateKey, habitId) {
 }
 
 function handleSaveNumber(dateKey, habitId, rawValue) {
+  dateKey = entryKeyFor(habitId, dateKey);
   const day = { ...(state.entries[dateKey] || {}) };
   const trimmed = String(rawValue).trim().replace(',', '.');
   if (trimmed === '') {
@@ -6055,7 +6204,7 @@ function renderNote(dateKey, key, label) {
 // sobald alles eingetragen ist (renderToday).
 function isOpenToday(h, dayEntry) { return h.kind !== 'computed' && dayEntry[h.id] === undefined; }
 function todayTrackedFields() {
-  return activeHabits().filter((h) => h.kind !== 'computed' && isPlannedOn(h, state.currentDate));
+  return activeHabits().filter((h) => h.kind !== 'computed' && !isPeriodField(h) && isPlannedOn(h, state.currentDate));
 }
 function todayAllDone(dayEntry) {
   const tracked = todayTrackedFields();
@@ -6070,8 +6219,10 @@ function openMarkerHtml(h, dayEntry) {
 // Abschluss-Hinweis hier direkt nachziehen.
 function syncTodayOpenMarkers() {
   const dayEntry = state.entries[formatKey(state.currentDate)] || {};
+  const dateKey = formatKey(state.currentDate);
   document.querySelectorAll('.open-marker[data-open-for]').forEach((m) => {
-    m.hidden = dayEntry[m.dataset.openFor] !== undefined;
+    const id = m.dataset.openFor;
+    m.hidden = (state.entries[entryKeyFor(id, dateKey)] || {})[id] !== undefined;
   });
   document.querySelectorAll('.section-done[data-done-fields]').forEach((m) => {
     const ids = m.dataset.doneFields.split(' ').filter(Boolean);
@@ -6104,8 +6255,13 @@ function renderTextBox(h, dayEntry, marker = '') {
 // bewusst nicht: dort tippt man auf eine Zelle zum Nachsehen, eine aufspringende Tastatur
 // verdeckte dann die Hälfte.
 function focusTodayField(habitId, { editInput = false } = {}) {
-  // Liegt das Feld in einer eingeklappten Gruppe, erst aufklappen.
+  // Liegt das Feld in einer eingeklappten Gruppe bzw. einem eingeklappten Zeitraum-Bereich,
+  // erst aufklappen.
   const target = state.habits.find((h) => h.id === habitId);
+  if (isPeriodField(target) && isSectionCollapsed('today', `period-${target.period}`)) {
+    expandSection('today', `period-${target.period}`);
+    render();
+  }
   if (target?.sectionId && document.querySelector(`[data-action="section-toggle"][data-section="${target.sectionId}"][data-scope="today"][aria-expanded="false"]`)) {
     expandSection('today', target.sectionId);
     render();
@@ -6222,6 +6378,40 @@ function renderTodayIntro() {
   `;
 }
 
+// Bereich "Diese Woche" / "Dieser Monat" / "Dieses Jahr" unten in "Heute" - nur, wenn es
+// Felder dieses Zeitraums gibt. Optik wie eine Gruppe (getönter Block, einklappbar von Hand,
+// Zustand pro Gerät); zählt nicht für "alles eingetragen". Blättert man zu einem anderen
+// Tag, zeigt er dessen Zeitraum.
+function periodBlockTitle(period, date) {
+  const current = formatKey(periodStart(period, date)) === formatKey(periodStart(period, new Date()));
+  const title = t(`period.${period}.${current ? 'current' : 'other'}`);
+  const start = periodStart(period, date);
+  const range = period === 'week'
+    ? dtf({ day: 'numeric', month: 'short' }).formatRange(start, periodEnd(period, date))
+    : period === 'month' ? dtf({ month: 'long', year: 'numeric' }).format(start) : String(start.getFullYear());
+  return { title, range };
+}
+function renderPeriodBlock(period, fields) {
+  if (!fields.length) return '';
+  const id = `period-${period}`;
+  const anchorKey = formatKey(periodStart(period, state.currentDate));
+  const entry = state.entries[anchorKey] || {};
+  const collapsed = isSectionCollapsed('today', id);
+  const hasOpen = fields.some((h) => isOpenToday(h, entry));
+  const { title, range } = periodBlockTitle(period, state.currentDate);
+  return `
+    <div class="section-block section-block--today period-block${collapsed ? ' section-block--collapsed' : ''}">
+      <div class="section-head">
+        <button type="button" class="section-toggle section-toggle--today" data-action="section-toggle" data-section="${id}" data-scope="today" aria-expanded="${!collapsed}">
+          <svg class="section-chevron" width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>${esc(title)}<span class="period-range"> · ${esc(range)}</span>${collapsed && hasOpen ? `<span class="open-dot" aria-hidden="true"></span><span class="visually-hidden">${t('today.sectionHasOpen')}</span>` : ''}</span>
+        </button>
+      </div>
+      ${collapsed ? '' : `<div class="section-content">${fields.map((h) => renderTodayHabitRow(h, anchorKey, entry, { trackOpen: true })).join('')}</div>`}
+    </div>
+  `;
+}
+
 function renderToday() {
   const dateKey = formatKey(state.currentDate);
   const isToday = dateKey === formatKey(new Date());
@@ -6235,7 +6425,8 @@ function renderToday() {
   // richtet sich nur nach dem Plan, nicht nach vorhandenen Werten (sonst spränge ein
   // Feld beim ersten Antippen aus dem Bereich heraus); stattdessen ist der Bereich
   // automatisch offen, sobald dort an diesem Tag etwas eingetragen ist.
-  const habits = activeHabits();
+  const allActive = activeHabits();
+  const habits = allActive.filter((h) => !isPeriodField(h));
   const planned = habits.filter((h) => isPlannedOn(h, state.currentDate));
   const unplanned = habits.filter((h) => !isPlannedOn(h, state.currentDate));
   const unplannedOpen = state.unplannedOpenFor === dateKey
@@ -6257,7 +6448,7 @@ function renderToday() {
     ${renderTodayIntro()}
     <div class="habit-list">
       ${renderBySection(planned, 'today', (list) => list.map(renderPlannedRow).join(''))}
-      ${!habits.length ? `<p class="manage-meta">${t('today.noFields')}</p>` : !planned.length ? `<p class="manage-meta">${t('today.nothingPlanned')}</p>` : ''}
+      ${!allActive.length ? `<p class="manage-meta">${t('today.noFields')}</p>` : habits.length && !planned.length ? `<p class="manage-meta">${t('today.nothingPlanned')}</p>` : ''}
     </div>
     <p class="today-complete"${todayAllDone(dayEntry) ? '' : ' hidden'}><span aria-hidden="true">✓ </span>${t(isToday ? 'today.allDoneToday' : 'today.allDoneDay')}</p>
     ${unplanned.length ? `
@@ -6266,6 +6457,7 @@ function renderToday() {
         <div class="habit-list">${unplanned.map(renderTodayRow).join('')}</div>
       </details>
     ` : ''}
+    ${PERIODS.map((period) => renderPeriodBlock(period, allActive.filter((h) => h.period === period))).join('')}
     ${renderDayNote(dateKey)}
     <div class="today-footer">
       <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="today-new-field">${icon('newField')}${t('habitForm.title.newField')}</button>
@@ -6979,7 +7171,9 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // noch Felder mit derselben Einheit dazunehmen (andere erscheinen deaktiviert) - sonst
   // käme still eine falsche Zahl heraus (5 km + 800 m).
   const isNumberComputedForm = f.computedType === 'number';
+  // Nur Tagesfelder: Tages- und Zeitraum-Werte zu mitteln ergibt nichts Sinnvolles.
   const memberCandidates = state.habits.filter((h) => h.defId !== f.defId && (!h.archivedAt || f.members.includes(h.id))
+    && !isPeriodField(h)
     && (isNumberComputedForm ? h.kind === 'number' : h.kind === 'scale' && !isNeutralScale(h)));
   const chosenUnit = isNumberComputedForm
     ? (() => { const first = memberCandidates.find((h) => f.members.includes(h.id)); return first ? (first.unit || '').trim() : null; })()
@@ -7119,12 +7313,24 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     || (state.sections.length > 0 && !!f.sectionId) || !f.showInStats);
   // "Berechnet" nur anbieten, wenn es etwas zu berechnen gibt (mind. 2 passende Felder) -
   // beim allerersten Feld im Tutorial führte die Auswahl sonst nur zu "noch keine Felder".
-  const others = state.habits.filter((h) => !h.archivedAt && h.defId !== f.defId);
+  const others = state.habits.filter((h) => !h.archivedAt && h.defId !== f.defId && !isPeriodField(h));
   const computedPossible = isComputed || (!tutorialForm && (false
     || others.filter((h) => h.kind === 'scale' && !isNeutralScale(h)).length >= 2
     || others.filter((h) => h.kind === 'number').length >= 2));
   const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber'], ['text', 'habitForm.kindText']]
     .concat(computedPossible ? [['computed', 'habitForm.kindComputed']] : []);
+  // Zeitraum (Tag/Woche/Monat/Jahr): nicht im Tutorial (das erste Feld ist ein Tagesfeld) und
+  // nicht bei "Berechnet". Mit Daten gesperrt - die Werte stünden sonst am falschen Tag.
+  const isPeriod = !isComputed && f.period !== 'day';
+  const periodField = tutorialForm || isComputed ? '' : `
+    <div class="auth-field">
+      <label id="habit-form-period-label">${t('habitForm.period')}</label>
+      <div class="pill-group" role="group" aria-labelledby="habit-form-period-label">
+        ${['day', ...PERIODS].map((p) => `<button type="button" class="pill-toggle${f.period === p ? ' pill-toggle--active' : ''}" data-action="habit-period" data-period="${p}" aria-pressed="${f.period === p}" ${f.locked ? 'disabled' : ''}>${t('habitForm.period.' + p)}</button>`).join('')}
+      </div>
+      ${isPeriod ? `<p class="habit-form-lock-note">${t('habitForm.periodHint.' + f.period)}</p>` : ''}
+    </div>
+  `;
   return `
     <div class="habit-form" id="habit-form">
       ${titleInHeader ? '' : `<h2>${t(habitFormTitleKey(f))}</h2>`}
@@ -7144,15 +7350,16 @@ function renderHabitForm({ titleInHeader = false } = {}) {
           `).join('')}
         </div>
       </div>
+      ${periodField}
       ${stage < 3 ? `<button type="button" class="auth-submit" data-action="habit-reveal-next">${t('common.next')}</button>` : `
       ${tutorialForm ? tipBox(`tutorial.form.tip.${f.kind}`, 'tutorial.form.tipScaleMoreTitle', f.kind === 'scale' ? 'tutorial.form.tipScaleMore' : null) : ''}
       <div id="habit-form-details"></div>
       ${isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : numberBody}
       <details class="habit-form-more" ${moreOpen ? 'open' : ''}>
-        <summary><span class="habit-form-more-title">${t('habitForm.more')}</span><span class="habit-form-more-sub">${t('habitForm.moreSub')}</span></summary>
+        <summary><span class="habit-form-more-title">${t('habitForm.more')}</span><span class="habit-form-more-sub">${t(isPeriod ? 'habitForm.moreSubPeriod' : 'habitForm.moreSub')}</span></summary>
       ${showGoal ? goalField : ''}
-      ${!isComputed ? scheduleBody + reminderBody : ''}
-      ${state.sections.length ? `
+      ${!isComputed ? (isPeriod ? periodReminderControl(f) : scheduleBody) + reminderBody : ''}
+      ${state.sections.length && !isPeriod ? `
         <div class="auth-field">
           <label for="habit-form-section">${t('habitForm.section')}</label>
           <select id="habit-form-section">
@@ -7193,7 +7400,7 @@ function habitFormReminderNote(f) {
 // (Wiederholung, eigene Erinnerungszeit) - siehe "Verwaltungsliste entschlackt".
 function manageFieldMeta(h) {
   const parts = [
-    scheduleSummary(h.schedule),
+    isPeriodField(h) ? t('manage.period.' + h.period) : scheduleSummary(h.schedule),
     h.reminderMinute !== null && h.reminderMinute !== undefined ? t('manage.reminderAt', { time: minutesToTimeStr(h.reminderMinute) }) : '',
     h.hideInStats && !h.archivedAt ? t('manage.hiddenInStats') : '',
   ].filter(Boolean);
@@ -8300,6 +8507,13 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'habit-good') {
     syncHabitFormFromDom();
     state.habitForm.good = el.dataset.good || null;
+    render();
+  } else if (action === 'habit-period') {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    f.period = el.dataset.period;
+    f.periodReminderDay = null; // Standardtag des neuen Zeitraums
+    if (f.period !== 'day') { f.sectionId = null; f.schedule = scheduleToForm(null); }
     render();
   } else if (action === 'habit-start') {
     syncHabitFormFromDom();

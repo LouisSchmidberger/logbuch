@@ -272,6 +272,19 @@ als Meldung. Verworfen: Zahl allein (verrät nicht, wie viele Stufen), gerundete
 (lange passen nicht), zweizeilig (Schrift unter 13 px), "rechts = besser" (bei "Niedrige Werte
 erstrebenswert" verwirrend).
 
+## Zeitraum-Felder (Woche/Monat/Jahr)
+
+Datenmodell und Erinnerung: [datenmodell.md](datenmodell.md) → Zeitraum-Felder. Im Formular
+"Wie oft trägst du das ein?" (Täglich/Wöchentlich/Monatlich/Jährlich) nach dem Feld-Typ –
+nicht im Tutorial, nicht bei "Berechnet", mit Daten gesperrt; bei Zeitraum-Feldern stehen in
+"Mehr Einstellungen" "Erinnerung am" (`periodReminderControl`) statt Wiederholung und keine
+Gruppe. Ziel bei zwei Stufen "in [n] von 4 Wochen / 12 Monaten / 5 Jahren". Alle Speicher-
+und Notiz-Wege laufen über `entryKeyFor` (erster Tag des Zeitraums). In "Heute" unten je
+Zeitraum ein Bereich (`renderPeriodBlock`, Optik wie eine Gruppe, von Hand einklappbar,
+`sectionCollapsed:today:period-<p>`), nur wenn es solche Felder gibt; zählt nicht für "alles
+eingetragen" und nicht in der Tagesfarbe; berechnete Felder nehmen nur Tagesfelder auf.
+Auswertung: bis zur eigenen Darstellung ausgeblendet (`inStats`).
+
 ## Auswertung: Erklärungen
 
 Ohne jeden Eintrag zeigen Woche/Monat/Jahr/Gesamt statt leerer Kästchen einen Satz, was hier
