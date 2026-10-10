@@ -1337,6 +1337,7 @@ const STRINGS = {
     'stats.legend.stats': 'Im Kalender zeigt jeder Tag die Tagesfarbe: den Durchschnitt aller bewerteten Felder. Darunter pro Feld: bei Feldern mit zwei Stufen (z. B. Ja/Nein), an wie vielen der eingetragenen Tage es der gute Wert war, sonst der Durchschnitt und in Klammern, an wie vielen Tagen du eingetragen hast. Berechnete Felder in Prozent – 100 % wäre jeden Tag der beste Wert.',
     'stats.yesNoDays': 'an {n} von {total} Tagen',
     'stats.scaleOf': 'Ø {value} von {max}',
+    'stats.scaleRange': 'Ø {value} ({min} bis {max})',
     'stats.yesNoDaysLabel': 'an {n} von {total} Tagen „{label}“',
     'stats.legend.common': 'Felder ohne Bewertung zeigen nur, ob etwas eingetragen ist. Das Streifenmuster (abschaltbar in den Einstellungen) zeigt dasselbe wie die Farbe – für alle, die Rot und Grün schlecht unterscheiden.',
     'global.title': 'Gesamt',
@@ -2011,6 +2012,7 @@ const STRINGS = {
     'stats.legend.stats': 'In the calendar, each day shows the day color: the average of all rated fields. Below, for each field: for fields with two steps (e.g. yes/no), on how many of the days you entered it was the good value, otherwise the average and in parentheses on how many days you entered something. Calculated fields in percent – 100 % would be the best value every day.',
     'stats.yesNoDays': 'on {n} of {total} days',
     'stats.scaleOf': 'Ø {value} of {max}',
+    'stats.scaleRange': 'Ø {value} ({min} to {max})',
     'stats.yesNoDaysLabel': 'on {n} of {total} days “{label}”',
     'stats.legend.common': 'Fields without a rating only show whether something was entered. The stripe pattern (can be turned off in the settings) shows the same as the color – for everyone who has trouble telling red and green apart.',
     'global.title': 'Overall',
@@ -6701,10 +6703,13 @@ function habitAvgLong(h, avg, count) {
   if (h.kind === 'scale') {
     // Eigene Bezeichnungen: nur die Bezeichnungen (die Stufenzahl dahinter sieht man sonst
     // nirgends; die genaue Lage zeigt die Mini-Skala). Sonst die Zahl samt Spanne - "von 5"
-    // bei Skalen ab 1 (alle neuen), bei älteren, die bei 0 anfangen, "(0–10)".
+    // bei Skalen ab 1 (alle seit 2026-09-18 angelegten); ältere Felder mit Daten behalten
+    // ihren Startwert (Schieberegler ab 0, Knöpfe auch z.B. -2 bis 2), dort "(0 bis 10)".
     if (h.labels) return `Ø ${avgLabelSpan(h, avg)}`;
     const v = formatNumber(round1(avgScaleValue(h, avg)));
-    return h.min === 1 ? tPlain('stats.scaleOf', { value: v, max: h.max }) : `Ø ${v} (${h.min}–${h.max})`;
+    return h.min === 1
+      ? tPlain('stats.scaleOf', { value: v, max: h.max })
+      : tPlain('stats.scaleRange', { value: v, min: formatNumber(h.min), max: formatNumber(h.max) });
   }
   return Math.round(avg * 100) + '%';
 }

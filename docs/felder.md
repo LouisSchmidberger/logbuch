@@ -254,7 +254,7 @@ knapp verfehlt. Keine Option heißt "Standard" (könnte Druck machen).
 
 **Ø in der Auswertung** je Feldart statt Prozent für alle (`habitAvgShort`/`habitAvgLong`):
 zwei Stufen "an 2 von 5 Tagen „Ja“" bzw. "2/5", mehrstufige Skala Mini-Skala + "Ø 3,4 von 5"
-(ältere Skalen ab 0: "Ø 4,2 (0–10)"), mit eigenen Bezeichnungen Mini-Skala + "Ø mittel–gut"
+(ältere Felder mit anderem Startwert, vor 2026-09-18 angelegt: "Ø 4,2 (0 bis 10)"), mit eigenen Bezeichnungen Mini-Skala + "Ø mittel–gut"
 ohne Stufenzahl; berechnete Felder in %. Gezählt
 werden für alle Felder gleich nur die eingetragenen Tage (verworfen: "leer = Nein" nur für
 zwei Stufen – gleich aussehende Felder hätten unsichtbar verschieden gerechnet). "Zwei
