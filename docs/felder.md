@@ -254,7 +254,10 @@ staucht den Score auf `min(1, score/threshold)` (ohne Ziel = `null` = exakter Du
 Nur für die Farbgebung (`dayOverallScore`, Wochen-Grid inkl. Ø, `renderStatsRows`) und bewusst
 **nicht** in "Heute" (dort zählt der rohe Wert des Tages). Eingabe je Feldart in natürlichen
 Begriffen (`goalControlHtml`, Nutzer-Entscheidung 2026-10-10): zwei Stufen "an [n] von 7
-Tagen", mehrstufige Skala "„X“ oder besser", berechnete Felder weiter in %. Gespeichert als
+Tagen", mehrstufige Skala **stufenlos** per Regler in Zehnteln "ab Ø 4,3" / "bis Ø 1,6", bei
+eigenen Bezeichnungen darunter "zwischen „gut“ (4) und „sehr gut“ (5)" (2026-10-11 – das Ziel
+wirkt vor allem auf Durchschnitte, die zwischen den Stufen liegen; verworfen: nur ganze, dann
+halbe Stufen), berechnete Felder weiter in %. Gespeichert als
 **genauer Bruch** (n/7), nicht als ganze Prozentzahl – 2/7 als 29 % hätte genau 2 von 7 Tagen
 knapp verfehlt. Keine Option heißt "Standard" (könnte Druck machen).
 

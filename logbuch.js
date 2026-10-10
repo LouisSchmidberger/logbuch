@@ -1402,8 +1402,10 @@ const STRINGS = {
     'habitForm.goalDays.month': 'in {n} von 12 Monaten',
     'habitForm.goalDays.year': 'in {n} von 5 Jahren',
     'habitForm.goalValueLabel': 'Ziel für die Auswertung: ab wann voll erreicht?',
-    'habitForm.goalBestOnly': '„{label}“',
-    'habitForm.goalOrBetter': '„{label}“ oder besser',
+    'habitForm.goalFrom': 'ab Ø {value}',
+    'habitForm.goalUpTo': 'bis Ø {value}',
+    'habitForm.goalLabelAt': '„{label}“ ({value})',
+    'habitForm.goalBetween': 'zwischen {a} und {b}',
     'habitForm.goalNote': 'Gilt für Woche, Monat, Jahr und Gesamt – „Heute“ bleibt unverändert.',
     'habitForm.goalExplain': 'Ab deinem Ziel ist das Feld in den Übersichten voll grün – bei Durchschnitten ab diesem Wert, bei Tagen ab dieser Anzahl. Gezählt werden die Tage, an denen du etwas eingetragen hast.',
     'habitForm.ownLabels': 'Eigene Bezeichnungen verwenden',
@@ -2119,8 +2121,10 @@ const STRINGS = {
     'habitForm.goalDays.month': 'in {n} of 12 months',
     'habitForm.goalDays.year': 'in {n} of 5 years',
     'habitForm.goalValueLabel': 'Goal for the statistics: when is it fully reached?',
-    'habitForm.goalBestOnly': '“{label}”',
-    'habitForm.goalOrBetter': '“{label}” or better',
+    'habitForm.goalFrom': 'from avg. {value}',
+    'habitForm.goalUpTo': 'up to avg. {value}',
+    'habitForm.goalLabelAt': '“{label}” ({value})',
+    'habitForm.goalBetween': 'between {a} and {b}',
     'habitForm.goalNote': 'Applies to Week, Month, Year and Overall – “Today” stays unchanged.',
     'habitForm.goalExplain': 'From your goal on, the field is fully green in the overviews – for averages from this value, for days from this number. Days on which you entered something count.',
     'habitForm.ownLabels': 'Use custom labels',
@@ -3642,11 +3646,10 @@ function habitFormStepCount(f) {
 
 // Ziel ("ab wann voll erreicht", goalThreshold) je Feldart in natürlichen Begriffen statt
 // Prozent (Nutzer-Entscheidung 2026-10-10): Ja/Nein "an 2 von 7 Tagen", mehrstufige Skala
-// "„X“ oder besser" (für beide Bewertungsrichtungen gleich), berechnete Felder weiter in %
+// stufenlos "ab Ø 4,3" (siehe goalSliderText), berechnete Felder weiter in %
 // (dort gibt es nichts Natürlicheres). Gespeichert wird wie bisher der Bruchteil 0-1 - als
 // genauer Bruch, nicht gerundet: 2/7 als 29 % gespeichert hätte genau 2 von 7 Tagen knapp
 // verfehlt.
-const GOAL_SELECT_MAX_STEPS = 11; // darüber (Schieberegler bis 100) Zahl eintippen statt Liste
 function goalScaleValue(f, i) { return habitFormStepValue(f, i); }
 function goalScaleLabel(f, i) {
   const label = f.labelsEnabled ? (f.labels[i] || '').trim() : '';
@@ -3685,35 +3688,37 @@ function goalControlHtml(f) {
       </div>
     `;
   }
-  const label = t('habitForm.goalValueLabel');
-  if (steps > GOAL_SELECT_MAX_STEPS) {
-    const value = f.good === 'low' ? f.max - f.goal * (f.max - f.min) : f.min + f.goal * (f.max - f.min);
-    return `
-      <div class="auth-field">
-        <label for="habit-form-goal">${label}${explain}</label>
-        <input type="number" id="habit-form-goal" data-goal-mode="value" min="${f.min}" max="${f.max}" step="1" value="${Math.round(value)}" aria-describedby="habit-form-goal-note" />
-        ${note}
-      </div>
-    `;
-  }
-  // Vom besten Wert abwärts; der schlechteste fehlt (Ziel "ab dem schlechtesten Wert" hieße:
-  // immer voll erreicht). Ein alter Prozentwert landet beim nächstliegenden Wert.
-  const indices = [...Array(steps).keys()].filter((i) => goalForValue(f, goalScaleValue(f, i)) > 0)
-    .sort((a, b) => goalForValue(f, goalScaleValue(f, b)) - goalForValue(f, goalScaleValue(f, a)));
-  const nearest = indices.reduce((best, i) => (Math.abs(goalForValue(f, goalScaleValue(f, i)) - f.goal) < Math.abs(goalForValue(f, goalScaleValue(f, best)) - f.goal) ? i : best), indices[0]);
-  const options = indices.map((i, pos) => {
-    const text = pos === 0
-      ? tPlain('habitForm.goalBestOnly', { label: goalScaleLabel(f, i) })
-      : tPlain('habitForm.goalOrBetter', { label: goalScaleLabel(f, i) });
-    return `<option value="${goalForValue(f, goalScaleValue(f, i))}" ${i === nearest ? 'selected' : ''}>${esc(text)}</option>`;
-  }).join('');
+  // Skalen ab drei Stufen: stufenlos per Regler in Zehnteln (Nutzer-Entscheidung 2026-10-11) -
+  // das Ziel wirkt vor allem auf Durchschnitte, und die liegen beliebig zwischen den Stufen.
+  // Der schlechteste Wert ist ausgenommen (Ziel "ab dem schlechtesten" hieße: immer erreicht).
+  const lo = f.good === 'low' ? f.min : f.min + 0.1;
+  const hi = f.good === 'low' ? f.max - 0.1 : f.max;
+  const raw = f.good === 'low' ? f.max - f.goal * (f.max - f.min) : f.min + f.goal * (f.max - f.min);
+  const value = Math.min(hi, Math.max(lo, Math.round(raw * 10) / 10));
+  const { text, span } = goalSliderText(f, value);
   return `
     <div class="auth-field">
-      <label for="habit-form-goal">${label}${explain}</label>
-      <select id="habit-form-goal" data-goal-mode="choice" aria-describedby="habit-form-goal-note">${options}</select>
+      <label for="habit-form-goal">${t('habitForm.goalValueLabel')}${explain}</label>
+      <div class="goal-slider-row">
+        <input type="range" id="habit-form-goal" class="goal-slider" data-goal-mode="value" data-action="goal-slider"
+          min="${lo}" max="${hi}" step="0.1" value="${value}" aria-valuetext="${esc(text + (span ? ' · ' + span : ''))}"
+          aria-describedby="habit-form-goal-span habit-form-goal-note" />
+        <span class="goal-slider-value" id="habit-form-goal-text" aria-hidden="true">${esc(text)}</span>
+      </div>
+      <p class="habit-form-lock-note" id="habit-form-goal-span"${span ? '' : ' hidden'}>${esc(span)}</p>
       ${note}
     </div>
   `;
+}
+// "ab Ø 4,3" (bzw. "bis Ø 1,6" bei "Niedrige Werte erstrebenswert") und - bei eigenen
+// Bezeichnungen - wo das zwischen den Stufen liegt: "zwischen „gut“ (4) und „sehr gut“ (5)".
+function goalSliderText(f, value) {
+  const text = tPlain(f.good === 'low' ? 'habitForm.goalUpTo' : 'habitForm.goalFrom', { value: formatNumber(value) });
+  if (!f.labelsEnabled) return { text, span: '' };
+  const lower = Math.floor(value + 0.05);
+  const upper = Math.ceil(value - 0.05);
+  const at = (v) => tPlain('habitForm.goalLabelAt', { label: goalScaleLabel(f, v - f.min), value: formatNumber(v) });
+  return { text, span: lower >= upper ? at(lower) : tPlain('habitForm.goalBetween', { a: at(lower), b: at(upper) }) };
 }
 function readGoalFromDom(f) {
   const el = document.getElementById('habit-form-goal');
@@ -8725,6 +8730,17 @@ app.addEventListener('click', async (e) => {
   }
 });
 
+// Ziel-Regler im Feld-Formular: Text beim Ziehen mitführen, ohne render() (Fokus bleibt).
+app.addEventListener('input', (e) => {
+  const goalSliderEl = e.target.closest?.('[data-action="goal-slider"]');
+  if (!goalSliderEl || !state.habitForm) return;
+  const { text, span } = goalSliderText(state.habitForm, Number(goalSliderEl.value));
+  document.getElementById('habit-form-goal-text').textContent = text;
+  const spanEl = document.getElementById('habit-form-goal-span');
+  spanEl.textContent = span;
+  spanEl.hidden = !span;
+  goalSliderEl.setAttribute('aria-valuetext', text + (span ? ' · ' + span : ''));
+});
 app.addEventListener('change', async (e) => {
   state.notice = null; // siehe Kommentar beim 'click'-Listener oben
   // Berechnetes Feld aus Zahlen: nach jeder Mitglieder-Änderung neu rendern, damit Felder mit anderer

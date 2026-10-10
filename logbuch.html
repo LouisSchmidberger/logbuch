@@ -1158,6 +1158,10 @@
   /* Wert der Stufe vor jeder Bezeichnung - gebraucht, um danach "Hohe/Niedrige Werte
      erstrebenswert" richtig zu wählen (die Bezeichnungen allein verraten die Richtung nicht). */
   .label-input-row { display: flex; align-items: center; gap: 0.5rem; }
+  /* Ziel stufenlos (goalControlHtml): Regler + live "ab Ø 4,3". */
+  .goal-slider-row { display: flex; align-items: center; gap: 0.75rem; }
+  .goal-slider { flex: 1; min-width: 0; height: 2.75rem; accent-color: var(--moss); }
+  .goal-slider-value { flex-shrink: 0; min-width: 5.5rem; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
   .label-input-step { min-width: 1.5rem; text-align: right; font-size: 0.8125rem; color: var(--sand); font-variant-numeric: tabular-nums; }
   .field-preview { padding: 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--input-bg); }
   /* Wie in "Heute" in einer Zeile (kein Umbruch) - sonst verdeckte die Vorschau genau den
@@ -1220,6 +1224,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=ff29f9af46"></script>
+<script type="module" src="./logbuch.js?v=5545f37cfe"></script>
 </body>
 </html>
