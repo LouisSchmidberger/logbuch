@@ -426,6 +426,15 @@
   .habit-row--buttons > .row-head { flex: 1 1 40%; }
   .habit-row--buttons > .habit-options { flex: 0 0 auto; max-width: 100%; margin-left: auto; }
 
+  /* Zähler (renderCounterBox): "−" Zahl "+", Tippflächen 44px; "+" als Hauptaktion in Grün. */
+  .counter-controls { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+  .counter-btn {
+    width: 2.75rem; height: 2.75rem; border-radius: 50%; border: 1px solid var(--sand); background: transparent;
+    color: var(--ink); font-family: inherit; font-size: 1.375rem; line-height: 1; cursor: pointer; touch-action: manipulation;
+  }
+  .counter-btn:disabled { opacity: 0.4; cursor: default; }
+  .counter-btn--plus { border-color: var(--moss); color: var(--moss); font-weight: 600; }
+  .counter-value { min-width: 2.5rem; text-align: center; font-size: 1.25rem; font-weight: 600; font-variant-numeric: tabular-nums; }
   .opt-btn {
     position: relative; font-family: inherit; font-size: 0.875rem; width: 2rem; height: 2rem; border-radius: 50%; flex-shrink: 0;
     border: 1px solid var(--sand); background: transparent; color: var(--ink); cursor: pointer;
@@ -1230,6 +1239,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=9431edfed1"></script>
+<script type="module" src="./logbuch.js?v=2fa01426a8"></script>
 </body>
 </html>

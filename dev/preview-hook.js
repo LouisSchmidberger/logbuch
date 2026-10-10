@@ -68,6 +68,7 @@ export function install(app) {
         { key: 'fenergie', name: 'Energie', kind: 'scale', min: 1, max: 10, good: 'high', displayStyle: 'slider' },
         { key: 'fsport', name: 'Sport', kind: 'scale', min: 1, max: 2, good: 'high', labels: ['Nein', 'Ja'], goalThreshold: 3 / 7 },
         { key: 'fwasser', name: 'Wassergläser', kind: 'number' },
+        { key: 'fzig', name: 'Zigaretten', kind: 'counter', step: 1 },
         { key: 'fwohl', name: 'Wohlbefinden', kind: 'computed', groupMembers: ['fstimmung', 'fenergie'], good: null },
         { key: 'fkopf', name: 'Kopfschmerzen', kind: 'scale', section: 'abends', min: 1, max: 4, good: 'low', labels: ['keine', 'leicht', 'mittel', 'stark'] },
         { key: 'fdank', name: 'Dankbar für', kind: 'text', section: 'abends' },
@@ -89,6 +90,8 @@ export function install(app) {
           section_id: f.section ? sectionIds[f.section] : null,
           sort_order: f.section ? ++inSection[f.section] : ++topOrder,
           period: f.period || 'day',
+          // Wie echt angelegt, bevor die Beispiel-Einträge beginnen (Zähler: leer = 0 erst ab dem Anlegen).
+          created_at: new Date(Date.now() - (days + 1) * 86400000).toISOString(),
           enc: await enc(payload),
           ...app.DEF_PLAINTEXT_CLEARED,
         });
@@ -110,6 +113,7 @@ export function install(app) {
           day.fenergie = 1 + Math.floor(rnd() * 10);
           day.fkopf = rnd() < 0.7 ? 1 : 2 + Math.floor(rnd() * 3);
           day.fwasser = 3 + Math.floor(rnd() * 6);
+          if (rnd() < 0.6) day.fzig = 1 + Math.floor(rnd() * 6); // Zähler: Tage ohne Wert zählen als 0
           day.fsport = [1, 3, 5].includes(d.getDay()) && rnd() < 0.8 ? 2 : 1;
           if (rnd() < 0.4) day.fdank = pick(['Gutes Gespräch mit Mia', 'Sonne beim Spaziergang', 'Ruhiger Abend', 'Leckeres Essen']);
           if (rnd() < 0.15) day._notes = { _day: pick(['Lange gearbeitet.', 'Besuch da.', 'Erkältet.']) };

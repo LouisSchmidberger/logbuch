@@ -226,6 +226,8 @@ function habitFromParts(row, payload) {
     sortOrder: row.sort_order,
     archivedAt: row.archived_at,
     period: row.period || 'day',          // 'day' | 'week' | 'month' | 'year' (Klartext, siehe periodStart)
+    step: payload.step ?? 1,              // nur kind 'counter': um wie viel "+"/"−" ändern
+    createdAt: row.created_at,            // Zähler: ab wann ein leerer Tag als 0 zählt
     periodReminderDay: row.period_reminder_day ?? null, // Tag der Erinnerung im Zeitraum, null = Standard
   };
 }
@@ -332,6 +334,10 @@ async function clearFieldNamesForPush() {
 }
 
 function isNumberKind(h) { return h.kind === 'number'; }
+// Zähler (kind 'counter', Nutzer-Entscheidung 2026-10-11): eine Zahl, die man im Lauf des
+// Zeitraums per "+" hochzählt. Ohne Antippen gilt 0 - auch in der Auswertung (ab dem Anlegen,
+// bis heute) und für Erinnerungen (nie "fehlend", siehe Migration add_counter_kind).
+function isCounterKind(h) { return h.kind === 'counter'; }
 
 // --- Gruppen (intern: sections): Anordnung -------------------------------------
 // "Gruppe" in der App = "section" im Code/in der DB (habit_sections) - NICHT zu
@@ -480,7 +486,7 @@ function isNumberComputed(h) { return h.kind === 'computed' && !!h.aggregate; }
 // Felder mit Gut/Schlecht-Score (Farben, Heatmap, Prozent-Statistik).
 function isScoredKind(h) { return h.kind === 'scale' || (h.kind === 'computed' && !h.aggregate); }
 // Felder mit Zahlen-Verlauf (Graph statt Farbe).
-function hasNumericSeries(h) { return isNumberKind(h) || isNumberComputed(h); }
+function hasNumericSeries(h) { return isNumberKind(h) || isCounterKind(h) || isNumberComputed(h); }
 // Nur Mitglieder vom passenden Typ: der Typ eines Mitglieds lässt sich ändern, solange es
 // noch keine Daten hat - ein Skala-Mittelwert über ein inzwischen zum Zahlenwert gewordenes
 // Feld ergäbe sonst NaN (und umgekehrt).
@@ -513,7 +519,16 @@ function numberComputedDay(h, dateKey) {
 function habitNumericValue(h, dateKey) {
   if (isNumberComputed(h)) return numberComputedDay(h, dateKey).value;
   const v = state.entries[dateKey]?.[h.id];
+  if (v === undefined && isCounterKind(h)) return counterZeroApplies(h, dateKey) ? 0 : null;
   return v === undefined ? null : v;
+}
+// Leerer Tag (bzw. Zeitraum) eines Zählers = 0 - aber nur zwischen Anlegen und heute, sonst
+// stünden Nullen vor seiner Zeit und in der Zukunft.
+function counterZeroApplies(h, dateKey) {
+  const period = h.period || 'day';
+  const created = h.createdAt ? formatKey(periodStart(period, new Date(h.createdAt))) : null;
+  const now = formatKey(periodStart(period, new Date()));
+  return (!created || dateKey >= created) && dateKey <= now;
 }
 function isTextKind(h) { return h.kind === 'text'; }
 
@@ -1456,6 +1471,13 @@ const STRINGS = {
     'habitForm.kindScale': 'Skala',
     'habitForm.kindNumber': 'Zahl',
     'habitForm.kindText': 'Text',
+    'habitForm.kindCounter': 'Zähler',
+    'habitForm.counterNote': 'Zählt mit „+“ hoch, zum Beispiel Zigaretten oder Gläser Wasser – jeder neue Tag (bzw. Zeitraum) beginnt bei 0. Ohne Antippen zählt 0, deshalb gibt es dafür keine Erinnerung.',
+    'habitForm.counterStep': 'Schritt pro Tippen',
+    'habitForm.counterStepNote': 'Um so viel ändern „+“ und „−“ den Wert, z. B. 1 oder 0,5.',
+    'habitForm.error.counterStep': 'Der Schritt muss eine Zahl größer als 0 sein.',
+    'counter.less': 'Um {step} verringern',
+    'counter.more': 'Um {step} erhöhen',
     'habitForm.kindComputed': 'Berechnet',
     'habitForm.schedule': 'Wiederholung',
     'habitForm.schedule.daily': 'Täglich',
@@ -2175,6 +2197,13 @@ const STRINGS = {
     'habitForm.kindScale': 'Scale',
     'habitForm.kindNumber': 'Number',
     'habitForm.kindText': 'Text',
+    'habitForm.kindCounter': 'Counter',
+    'habitForm.counterNote': 'Counts up with “+”, for example cigarettes or glasses of water – every new day (or period) starts at 0. Not tapping counts as 0, so there is no reminder for it.',
+    'habitForm.counterStep': 'Step per tap',
+    'habitForm.counterStepNote': '“+” and “−” change the value by this much, e.g. 1 or 0.5.',
+    'habitForm.error.counterStep': 'The step must be a number greater than 0.',
+    'counter.less': 'Decrease by {step}',
+    'counter.more': 'Increase by {step}',
     'habitForm.kindComputed': 'Calculated',
     'habitForm.schedule': 'Repeats',
     'habitForm.schedule.daily': 'Daily',
@@ -3786,6 +3815,7 @@ function defaultHabitForm() {
     unit: '', reminderEnabled: false, reminderMinute: state.userSettings.defaultReminderMinute,
     schedule: scheduleToForm(null),
     period: 'day', periodReminderDay: null, // siehe periodReminderControl
+    step: 1, // nur Zähler
   };
 }
 
@@ -3873,6 +3903,7 @@ function habitToForm(h) {
     schedule: scheduleToForm(h.schedule),
     period: h.period || 'day',
     periodReminderDay: h.periodReminderDay ?? null,
+    step: h.step ?? 1,
   };
 }
 
@@ -3924,6 +3955,8 @@ function syncHabitFormFromDom() {
   } else {
     const unitEl = document.getElementById('habit-form-unit');
     if (unitEl) f.unit = unitEl.value;
+    const stepEl = document.getElementById('habit-form-step');
+    if (stepEl) f.step = Number(String(stepEl.value).replace(',', '.'));
     const reminderEnabledEl = document.getElementById('habit-form-reminder-enabled');
     if (reminderEnabledEl) f.reminderEnabled = reminderEnabledEl.checked;
     const reminderTime = readTimeInput('habit-form-reminder-time');
@@ -3982,7 +4015,7 @@ async function handleHabitSaveInner() {
   const isInsert = !f.defId;
   const reminderEnabled = document.getElementById('habit-form-reminder-enabled')?.checked ?? f.reminderEnabled;
   const reminderTime = readTimeInput('habit-form-reminder-time');
-  const reminderMinute = reminderEnabled
+  const reminderMinute = reminderEnabled && f.kind !== 'counter'
     ? (reminderTime !== null ? reminderTime : f.reminderMinute)
     : null;
 
@@ -3997,9 +4030,18 @@ async function handleHabitSaveInner() {
   let fields; // { kind, min, max, labels, good, unit, display_style, slider_show_value, group_members, goal_threshold }
   if (f.kind === 'text') {
     fields = { kind: 'text', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
-  } else if (f.kind === 'number') {
+  } else if (f.kind === 'number' || f.kind === 'counter') {
     const unit = (document.getElementById('habit-form-unit')?.value || '').trim();
-    fields = { kind: 'number', min: null, max: null, labels: null, good: null, unit: unit || null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
+    if (f.kind === 'counter') {
+      const stepEl = document.getElementById('habit-form-step');
+      const step = Number(String(stepEl ? stepEl.value : f.step).replace(',', '.'));
+      if (!Number.isFinite(step) || step <= 0 || step > 1000) {
+        state.notice = { type: 'error', text: t('habitForm.error.counterStep') };
+        return;
+      }
+      f.step = step;
+    }
+    fields = { kind: f.kind, min: null, max: null, labels: null, good: null, unit: unit || null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
   } else if (f.kind === 'computed') {
     const memberKeys = [...document.querySelectorAll('[data-member-key]:checked')].map((el) => el.dataset.memberKey);
     if (memberKeys.length < 2) {
@@ -4107,6 +4149,7 @@ async function handleHabitSaveInner() {
     goalThreshold: fields.goal_threshold,
     aggregate: fields.aggregate ?? null,
     hideInStats: !f.showInStats,
+    step: f.kind === 'counter' ? f.step : undefined,
     archivedInStats: f.defId ? !!state.habits.find((h) => h.defId === f.defId)?.archivedInStats : false,
   };
   const sectionId = period === 'day' && state.sections.some((sec) => sec.id === f.sectionId) ? f.sectionId : null;
@@ -4794,6 +4837,21 @@ function handleClearValue(dateKey, habitId) {
   const day = { ...(state.entries[dateKey] || {}) };
   if (day[habitId] !== undefined) offerUndoRemoval(dateKey, habitId, day[habitId]);
   delete day[habitId];
+  state.entries = { ...state.entries, [dateKey]: day };
+  haptic();
+  render();
+  saveDay(dateKey);
+}
+
+// Zähler um einen Schritt ändern; nie unter 0. Auf 0 heruntergezählt = kein Eintrag (gilt
+// ohnehin als 0). Gerundet, damit z.B. 0,1-Schritte keine Fließkomma-Reste ansammeln.
+function handleCounterStep(dateKey, habitId, dir) {
+  dateKey = entryKeyFor(habitId, dateKey);
+  const h = state.habits.find((x) => x.id === habitId);
+  if (!h) return;
+  const day = { ...(state.entries[dateKey] || {}) };
+  const next = Math.max(0, Math.round(((day[habitId] ?? 0) + dir * h.step) * 1e6) / 1e6);
+  if (next === 0) delete day[habitId]; else day[habitId] = next;
   state.entries = { ...state.entries, [dateKey]: day };
   haptic();
   render();
@@ -6225,9 +6283,9 @@ function renderNote(dateKey, key, label) {
 // sie sind; kein Zähler "5 von 8" (Nutzer-Entscheidung: würde eher Druck machen, wie die
 // verworfene Mindestquote bei den Übersichten), stattdessen ein stiller Abschluss-Hinweis,
 // sobald alles eingetragen ist (renderToday).
-function isOpenToday(h, dayEntry) { return h.kind !== 'computed' && dayEntry[h.id] === undefined; }
+function isOpenToday(h, dayEntry) { return h.kind !== 'computed' && !isCounterKind(h) && dayEntry[h.id] === undefined; }
 function todayTrackedFields() {
-  return activeHabits().filter((h) => h.kind !== 'computed' && !isPeriodField(h) && isPlannedOn(h, state.currentDate));
+  return activeHabits().filter((h) => h.kind !== 'computed' && !isCounterKind(h) && !isPeriodField(h) && isPlannedOn(h, state.currentDate));
 }
 function todayAllDone(dayEntry) {
   const tracked = todayTrackedFields();
@@ -6330,8 +6388,29 @@ function renderNumberBox(h, dateKey, dayEntry, marker = '') {
 // Eine Feld-Zeile in "Heute" - gemeinsam für geplante Felder und den eingeklappten
 // Bereich "Heute nicht geplant" (dort ohne "noch offen"-Markierung, trackOpen=false:
 // nicht geplante Felder fehlen nicht).
+// Zähler: Zahl groß, daneben "−" und "+" (Korrigieren statt Rückgängig-Meldung, Nutzer-
+// Entscheidung 2026-10-11). Ohne Antippen steht 0.
+function renderCounterBox(h, dateKey, dayEntry) {
+  const value = dayEntry[h.id] ?? 0;
+  const nameWithUnit = `${esc(h.name)}${h.unit ? ` (${esc(h.unit)})` : ''}`;
+  const step = formatNumber(h.step);
+  return `
+    <div class="habit-row habit-row--counter">
+      ${renderRowHead(h, nameWithUnit)}
+      <div class="counter-controls" role="group" aria-label="${esc(h.name)}">
+        <button type="button" class="counter-btn" data-action="counter-step" data-habit="${h.id}" data-dir="-1" ${value <= 0 ? 'disabled' : ''} aria-label="${esc(tPlain('counter.less', { step }))}">−</button>
+        <span class="counter-value" aria-live="polite">${esc(formatNumber(value))}</span>
+        <button type="button" class="counter-btn counter-btn--plus" data-action="counter-step" data-habit="${h.id}" data-dir="1" aria-label="${esc(tPlain('counter.more', { step }))}">+</button>
+      </div>
+      ${renderNote(dateKey, h.id, noteLabel(h))}
+      ${renderRowMenuPanel(h)}
+    </div>
+  `;
+}
+
 function renderTodayHabitRow(h, dateKey, dayEntry, { trackOpen = false } = {}) {
   const marker = trackOpen && h.kind !== 'computed' ? openMarkerHtml(h, dayEntry) : '';
+  if (isCounterKind(h)) return renderCounterBox(h, dateKey, dayEntry);
   if (isNumberKind(h)) return renderNumberBox(h, dateKey, dayEntry, marker);
   if (isTextKind(h)) return renderTextBox(h, dayEntry, marker);
   if (h.kind === 'computed') return `
@@ -6532,9 +6611,10 @@ function periodFieldsInStats(period, anchors) {
     && (!h.archivedAt || anchors.some((k) => state.entries[k]?.[h.id] !== undefined)));
 }
 function periodValueText(h, v) {
+  if (v === undefined && isCounterKind(h)) v = 0;
   if (v === undefined) return '–';
   if (h.kind === 'scale') return scaleLabelAt(h, v);
-  if (isNumberKind(h)) return formatNumber(v) + (h.unit ? ` ${h.unit}` : '');
+  if (isNumberKind(h) || isCounterKind(h)) return formatNumber(v) + (h.unit ? ` ${h.unit}` : '');
   return String(v);
 }
 function renderPeriodValueRows(fields, anchor) {
@@ -7038,7 +7118,19 @@ function trendDirection(series, range) {
   return delta > 0 ? 'up' : 'down';
 }
 
+// Zähler-Tagesfelder lückenlos über alle Tage des Bereichs: Jahr und Gesamt übergeben nur Tage
+// mit irgendeinem Eintrag - ein Tag ohne App-Nutzung zählte dort sonst nicht als 0, im Monat
+// (alle Tage) aber schon.
+function counterDayKeys(dateKeys) {
+  if (!dateKeys.length) return dateKeys;
+  const sorted = [...dateKeys].sort();
+  const todayKey = formatKey(new Date());
+  const keys = [];
+  for (let d = parseDateKey(sorted[0]); formatKey(d) <= sorted[sorted.length - 1] && formatKey(d) <= todayKey; d = addDays(d, 1)) keys.push(formatKey(d));
+  return keys;
+}
 function renderNumberChart(habit, dateKeys, interactive) {
+  if (isCounterKind(habit) && !isPeriodField(habit)) dateKeys = counterDayKeys(dateKeys);
   const stats = numberFieldStats(habit, dateKeys);
   const unit = isNumberComputed(habit) ? computedUnit(habit) : habit.unit;
   const unitSuffix = unit ? ` ${unit}` : '';
@@ -7252,6 +7344,15 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       <input type="text" id="habit-form-unit" value="${esc(f.unit)}" maxlength="10" placeholder="${esc(t('habitForm.unitPlaceholder'))}" />
     </div>
   `;
+  const counterBody = `
+    <p class="habit-form-lock-note">${t('habitForm.counterNote')}</p>
+    ${numberBody}
+    <div class="auth-field">
+      <label for="habit-form-step">${t('habitForm.counterStep')}</label>
+      <input type="number" id="habit-form-step" inputmode="decimal" min="0.01" step="any" value="${esc(f.step)}" aria-describedby="habit-form-step-note" />
+      <p class="habit-form-lock-note" id="habit-form-step-note">${t('habitForm.counterStepNote')}</p>
+    </div>
+  `;
 
   // Mitglieder-Auswahl: aktive, bewertete Skala-Felder (nicht sich selbst, keine
   // unbewerteten - die haben kein Gut/Schlecht zum Mitteln), plus bereits gewählte
@@ -7407,11 +7508,14 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const computedPossible = isComputed || (!tutorialForm && (false
     || others.filter((h) => h.kind === 'scale' && !isNeutralScale(h)).length >= 2
     || others.filter((h) => h.kind === 'number').length >= 2));
-  const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber'], ['text', 'habitForm.kindText']]
+  const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber']]
+    .concat(tutorialForm ? [] : [['counter', 'habitForm.kindCounter']])
+    .concat([['text', 'habitForm.kindText']])
     .concat(computedPossible ? [['computed', 'habitForm.kindComputed']] : []);
   // Zeitraum (Tag/Woche/Monat/Jahr): nicht im Tutorial (das erste Feld ist ein Tagesfeld) und
   // nicht bei "Berechnet". Mit Daten gesperrt - die Werte stünden sonst am falschen Tag.
   const isPeriod = !isComputed && f.period !== 'day';
+  const isCounter = f.kind === 'counter';
   const periodField = tutorialForm || isComputed ? '' : `
     <div class="auth-field">
       <label id="habit-form-period-label">${t('habitForm.period')}</label>
@@ -7444,11 +7548,11 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       ${stage < 3 ? `<button type="button" class="auth-submit" data-action="habit-reveal-next">${t('common.next')}</button>` : `
       ${tutorialForm ? tipBox(`tutorial.form.tip.${f.kind}`, 'tutorial.form.tipScaleMoreTitle', f.kind === 'scale' ? 'tutorial.form.tipScaleMore' : null) : ''}
       <div id="habit-form-details"></div>
-      ${isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : numberBody}
+      ${isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : f.kind === 'counter' ? counterBody : numberBody}
       <details class="habit-form-more" ${moreOpen ? 'open' : ''}>
         <summary><span class="habit-form-more-title">${t('habitForm.more')}</span><span class="habit-form-more-sub">${t(isPeriod ? 'habitForm.moreSubPeriod' : 'habitForm.moreSub')}</span></summary>
       ${showGoal ? goalField : ''}
-      ${!isComputed ? (isPeriod ? periodReminderControl(f) : scheduleBody) + reminderBody : ''}
+      ${!isComputed ? (isPeriod ? (isCounter ? '' : periodReminderControl(f)) : scheduleBody) + (isCounter ? '' : reminderBody) : ''}
       ${state.sections.length && !isPeriod ? `
         <div class="auth-field">
           <label for="habit-form-section">${t('habitForm.section')}</label>
@@ -8486,6 +8590,8 @@ app.addEventListener('click', async (e) => {
     closeNoteEditor(true);
   } else if (action === 'note-cancel') {
     closeNoteEditor(false);
+  } else if (action === 'counter-step') {
+    handleCounterStep(formatKey(state.currentDate), el.dataset.habit, Number(el.dataset.dir));
   } else if (action === 'clear-value') {
     handleClearValue(formatKey(state.currentDate), el.dataset.habit);
   } else if (action === 'preview-select') {

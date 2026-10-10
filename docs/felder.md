@@ -276,6 +276,19 @@ als Meldung. Verworfen: Zahl allein (verrät nicht, wie viele Stufen), gerundete
 (lange passen nicht), zweizeilig (Schrift unter 13 px), "rechts = besser" (bei "Niedrige Werte
 erstrebenswert" verwirrend).
 
+## Zähler (`kind = 'counter'`)
+
+Eine Zahl, die man im Lauf des Tages (bzw. Zeitraums) per "+" hochzählt (Zigaretten, Gläser
+Wasser); jeder neue Tag/Zeitraum beginnt bei 0 (Nutzer-Entscheidung 2026-10-11). **Eigener
+Typ statt Darstellung eines Zahlenfelds**, weil `get_due_notifications` nur den Klartext-Typ
+sieht und Zähler nie als "fehlend" erinnern darf. **Ohne Antippen = 0** – in "Heute" sichtbar
+als 0, nie "offen", zählt nicht für "alles eingetragen"; in der Auswertung zählt ein leerer
+Tag ab dem Anlegen (`created_at`) bis heute als 0 (`habitNumericValue`/`counterZeroApplies`),
+Verläufe lückenlos über alle Tage (`counterDayKeys` – Jahr/Gesamt übergeben sonst nur Tage mit
+Eintrag). "−" daneben zum Korrigieren statt Rückgängig-Meldung; Schritt pro Tippen einstellbar
+(`step` in `enc`, Standard 1); keine Erinnerungs-Einstellungen; nicht im Tutorial. Auf 0
+heruntergezählt wird der Schlüssel entfernt (gilt ohnehin als 0).
+
 ## Zeitraum-Felder (Woche/Monat/Jahr)
 
 Datenmodell und Erinnerung: [datenmodell.md](datenmodell.md) → Zeitraum-Felder. Im Formular

@@ -19,7 +19,7 @@ Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `schedule
 
 - `slug` (Key in `habit_entries.data`; verschlüsselt als `key`, bei neuen Feldern ein
   zufälliger Schlüssel aus `newHabitKey` statt aus dem Namen abgeleitet), `name`, `kind`
-  (`'scale'`, `'number'`, `'computed'` ("Berechnet") oder `'text'`), `min`/`max` (nur
+  (`'scale'`, `'number'`, `'counter'` ("Zähler"), `'computed'` ("Berechnet") oder `'text'`), `min`/`max` (nur
   `scale`; neue Felder immer `min=1`, `max=<Stufenzahl>`; ältere können eine andere Basis
   haben), `labels` (nur `scale`; `null` = nummerierte Stufen, sonst Array der Länge
   `max-min+1`), `good` (`'high'`/`'low'`/`null` = keine Wertung, nur `scale`), `unit` (nur

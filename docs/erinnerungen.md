@@ -39,6 +39,8 @@ Offline-Caching). Alle Zeiten/Daten gelten in der **Ortszeit des Nutzers**
   angezeigt; im Feld-Formular sagt der Hinweis unter "Eigene Erinnerungszeit", dass die
   Gruppe die Zeit regelt (`habitFormReminderNote`, wechselt beim Ändern der Gruppe mit).
   `get_due_notifications` liefert dafür `section_missing` (`[{id, fields}]`).
+- **Zähler** (`kind = 'counter'`) gelten nie als fehlend – ohne Antippen steht 0, und 0 ist ein
+  gültiges Ergebnis (Migration `20261011140000_add_counter_kind`, wie `computed` ausgenommen).
 - **Zeitraum-Felder** (Woche/Monat/Jahr, siehe [datenmodell.md](datenmodell.md)): eine
   Erinnerung pro Zeitraum, am Erinnerungstag (`period_reminder_day`, Standard Sonntag /
   Monatsletzter / 31.12., `habit_period_reminder_due`) zur eigenen Zeit des Felds oder zur
