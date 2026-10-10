@@ -1333,8 +1333,10 @@ const STRINGS = {
     'stats.legend.title': 'Was bedeuten Farben und Zahlen?',
     'stats.legend.bad': 'weniger gut',
     'stats.legend.good': 'gut',
-    'stats.legend.week': 'Jedes Kästchen zeigt, wie gut der Wert an dem Tag war – gemessen daran, was du beim Feld unter „Bewertung“ eingestellt hast (bei „Niedrige Werte erstrebenswert“ ist wenig grün). Leer: nichts eingetragen. Schraffiert: an dem Tag nicht geplant. Ø: Durchschnitt der Woche – 100 % wäre jeden eingetragenen Tag der beste Wert.',
-    'stats.legend.stats': 'Im Kalender zeigt jeder Tag die Tagesfarbe: den Durchschnitt aller bewerteten Felder. Darunter pro Feld der Durchschnitt in Prozent – 100 % wäre jeden eingetragenen Tag der beste Wert – und in Klammern, an wie vielen Tagen du eingetragen hast.',
+    'stats.legend.week': 'Jedes Kästchen zeigt, wie gut der Wert an dem Tag war – gemessen daran, was du beim Feld unter „Bewertung“ eingestellt hast (bei „Niedrige Werte erstrebenswert“ ist wenig grün). Leer: nichts eingetragen. Schraffiert: an dem Tag nicht geplant. Ø: bei Feldern mit zwei Stufen (z. B. Ja/Nein), an wie vielen der eingetragenen Tage es der gute Wert war (2/5), sonst der Durchschnitt – bei Skalen mit eigenen Bezeichnungen als Punkt: je weiter rechts, desto besser; berechnete Felder in Prozent. Antippen zeigt es ausgeschrieben.',
+    'stats.legend.stats': 'Im Kalender zeigt jeder Tag die Tagesfarbe: den Durchschnitt aller bewerteten Felder. Darunter pro Feld: bei Feldern mit zwei Stufen (z. B. Ja/Nein), an wie vielen der eingetragenen Tage es der gute Wert war, sonst der Durchschnitt und in Klammern, an wie vielen Tagen du eingetragen hast. Berechnete Felder in Prozent – 100 % wäre jeden Tag der beste Wert.',
+    'stats.yesNoDays': 'an {n} von {total} Tagen',
+    'stats.yesNoDaysLabel': 'an {n} von {total} Tagen „{label}“',
     'stats.legend.common': 'Felder ohne Bewertung zeigen nur, ob etwas eingetragen ist. Das Streifenmuster (abschaltbar in den Einstellungen) zeigt dasselbe wie die Farbe – für alle, die Rot und Grün schlecht unterscheiden.',
     'global.title': 'Gesamt',
     'numberChart.meta': '{last} zuletzt · Ø {avg} · {count}×',
@@ -1345,8 +1347,14 @@ const STRINGS = {
     'numberChart.trend.flat': 'gleichbleibend',
     'numberChart.summary': '{name}: {count} Einträge, zuletzt {last}, Durchschnitt {avg}, Spanne {min} bis {max}, Trend {trend}.',
     'numberChart.withNotes': 'Davon {count} mit Notiz.',
-    'habitForm.goalLabel': 'Ab wann als voll erreicht gilt (%)',
-    'habitForm.goalExplain': 'Bei unter 100%: schon eine niedrigere Quote/Wert zählt farblich als voll erreicht (grün) – z. B. bei "Kraftsport gemacht" reichen vielleicht schon 3 von 7 Tagen die Woche als Ziel. Ändert nur die Farbe, nie die angezeigte Prozentzahl. Wirkt sich nicht auf „Heute“ aus. Standard 100% = nur der Maximalwert zählt als voll erreicht.',
+    'habitForm.goalLabel': 'Ziel: ab wie viel Prozent voll erreicht?',
+    'habitForm.goalYesNoLabel': 'Ziel: an wie vielen von 7 Tagen „{label}“?',
+    'habitForm.goalEveryDay': 'jeden Tag',
+    'habitForm.goalDays': 'an {n} von 7 Tagen',
+    'habitForm.goalValueLabel': 'Ziel: ab wann voll erreicht?',
+    'habitForm.goalBestOnly': '„{label}“',
+    'habitForm.goalOrBetter': '„{label}“ oder besser',
+    'habitForm.goalExplain': 'Ändert nur die Farbe in Woche, Monat, Jahr und Gesamt: Ab deinem Ziel ist das Feld dort voll grün. Gezählt werden die Tage, an denen du etwas eingetragen hast. „Heute“ bleibt unverändert.',
     'habitForm.ownLabels': 'Eigene Bezeichnungen verwenden',
     'habitForm.labelForStep': 'Bezeichnung für Stufe {step}',
     'habitForm.preview': 'Vorschau',
@@ -1719,7 +1727,7 @@ const STRINGS = {
     'about.tip.computed.title': 'Berechnete Felder',
     'about.tip.computed.body': 'Ein Feld vom Typ „Berechnet“ fasst mehrere Felder zu einem Wert zusammen: Skala-Felder zu einem Durchschnitt, z. B. „Sport gemacht“ aus „Ausdauersport“ + „Kraftsport“ – oder Zahlenwert-Felder mit derselben Einheit als Summe, Durchschnitt, Minimum oder Maximum, z. B. „Bewegung gesamt (km)“ aus „Laufen“ + „Radfahren“. Selbst ausfüllen kann man es nicht – der Wert berechnet sich immer live aus den anderen Feldern.',
     'about.tip.goalThreshold.title': 'Ziel-Quote statt 100 %',
-    'about.tip.goalThreshold.body': 'Bei manchen Feldern ist täglich 100 % unrealistisch. Stell im Feld-Formular eine niedrigere Quote ein, ab der ein Tag farblich schon als voll erreicht gilt.',
+    'about.tip.goalThreshold.body': 'Nicht alles muss jeden Tag klappen. Unter „Mehr Einstellungen“ im Feld-Formular stellst du ein Ziel ein, z. B. Sport an 3 von 7 Tagen – ab dann ist das Feld in der Auswertung voll grün.',
     'about.tip.slider.title': 'Schieberegler statt Buttons',
     'about.tip.slider.body': 'Stufen lassen sich auch als Schieberegler statt als Auswahl-Buttons darstellen. Buttons gehen bis 7 Stufen, damit jede gut sichtbar und gezielt wählbar bleibt – für feinere Skalen mit bis zu 100 Stufen (z. B. 1 bis 100) nimm den Schieberegler.',
     'about.tip.customReminder.title': 'Eigene Erinnerungszeit pro Feld oder Gruppe',
@@ -1998,8 +2006,10 @@ const STRINGS = {
     'stats.legend.title': 'What do the colors and numbers mean?',
     'stats.legend.bad': 'less good',
     'stats.legend.good': 'good',
-    'stats.legend.week': 'Each box shows how good the value was that day – measured by what you set under “Valuation” for the field (with “Low values desirable”, little is green). Empty: nothing entered. Hatched: not planned that day. Ø: average of the week – 100 % would be the best value on every day you entered.',
-    'stats.legend.stats': 'In the calendar, each day shows the day color: the average of all rated fields. Below, for each field, the average in percent – 100 % would be the best value on every day you entered – and in parentheses on how many days you entered something.',
+    'stats.legend.week': 'Each box shows how good the value was that day – measured by what you set under “Valuation” for the field (with “Low values desirable”, little is green). Empty: nothing entered. Hatched: not planned that day. Ø: for fields with two steps (e.g. yes/no), on how many of the days you entered it was the good value (2/5), otherwise the average – for scales with your own labels as a dot: the further right, the better; calculated fields in percent. Tap it to see it spelled out.',
+    'stats.legend.stats': 'In the calendar, each day shows the day color: the average of all rated fields. Below, for each field: for fields with two steps (e.g. yes/no), on how many of the days you entered it was the good value, otherwise the average and in parentheses on how many days you entered something. Calculated fields in percent – 100 % would be the best value every day.',
+    'stats.yesNoDays': 'on {n} of {total} days',
+    'stats.yesNoDaysLabel': 'on {n} of {total} days “{label}”',
     'stats.legend.common': 'Fields without a rating only show whether something was entered. The stripe pattern (can be turned off in the settings) shows the same as the color – for everyone who has trouble telling red and green apart.',
     'global.title': 'Overall',
     'numberChart.meta': 'last: {last} · avg. {avg} · {count}×',
@@ -2010,8 +2020,14 @@ const STRINGS = {
     'numberChart.trend.flat': 'steady',
     'numberChart.summary': '{name}: {count} entries, last {last}, average {avg}, range {min} to {max}, trend {trend}.',
     'numberChart.withNotes': '{count} of them with a note.',
-    'habitForm.goalLabel': 'Counts as fully reached from (%)',
-    'habitForm.goalExplain': 'Below 100%: even a lower ratio/value already counts as fully reached (green) in terms of color – e.g. for "did strength training", maybe 3 out of 7 days a week is already the goal. Only changes the color, never the displayed percentage. Has no effect on "Today". Default 100% = only the maximum value counts as fully reached.',
+    'habitForm.goalLabel': 'Goal: fully reached from what percentage?',
+    'habitForm.goalYesNoLabel': 'Goal: on how many of 7 days “{label}”?',
+    'habitForm.goalEveryDay': 'every day',
+    'habitForm.goalDays': 'on {n} of 7 days',
+    'habitForm.goalValueLabel': 'Goal: when is it fully reached?',
+    'habitForm.goalBestOnly': '“{label}”',
+    'habitForm.goalOrBetter': '“{label}” or better',
+    'habitForm.goalExplain': 'Only changes the color in Week, Month, Year and Overall: from your goal on, the field is fully green there. Days on which you entered something count. “Today” stays unchanged.',
     'habitForm.ownLabels': 'Use custom labels',
     'habitForm.labelForStep': 'Label for step {step}',
     'habitForm.preview': 'Preview',
@@ -2384,7 +2400,7 @@ const STRINGS = {
     'about.tip.computed.title': 'Calculated fields',
     'about.tip.computed.body': 'A field of type “Calculated” combines multiple fields into one value: scale fields into an average, e.g. “exercised” from “cardio” + “strength training” – or number fields with the same unit as a sum, average, minimum, or maximum, e.g. “total movement (km)” from “running” + “cycling”. You cannot fill it in yourself – the value is always calculated live from the other fields.',
     'about.tip.goalThreshold.title': 'Goal threshold instead of 100%',
-    'about.tip.goalThreshold.body': 'For some fields, 100% every day is unrealistic. Set a lower threshold in the field form, from which a day already counts as fully reached in color.',
+    'about.tip.goalThreshold.body': 'Not everything has to work out every day. Under “More settings” in the field form you set a goal, e.g. sport on 3 of 7 days – from then on the field is fully green in the statistics.',
     'about.tip.slider.title': 'Slider instead of buttons',
     'about.tip.slider.body': 'Steps can also be shown as a slider instead of buttons. Buttons go up to 7 steps, so that each one stays clearly visible and easy to pick – for finer scales with up to 100 steps (e.g. 1 to 100), use the slider.',
     'about.tip.customReminder.title': 'Custom reminder time per field or group',
@@ -3465,6 +3481,82 @@ function resizeLabels(labels, newLength, defaultForIndex) {
 function habitFormStepCount(f) {
   return f.max - f.min + 1;
 }
+
+// Ziel ("ab wann voll erreicht", goalThreshold) je Feldart in natürlichen Begriffen statt
+// Prozent (Nutzer-Entscheidung 2026-10-10): Ja/Nein "an 2 von 7 Tagen", mehrstufige Skala
+// "„X“ oder besser" (für beide Bewertungsrichtungen gleich), berechnete Felder weiter in %
+// (dort gibt es nichts Natürlicheres). Gespeichert wird wie bisher der Bruchteil 0-1 - als
+// genauer Bruch, nicht gerundet: 2/7 als 29 % gespeichert hätte genau 2 von 7 Tagen knapp
+// verfehlt.
+const GOAL_SELECT_MAX_STEPS = 11; // darüber (Schieberegler bis 100) Zahl eintippen statt Liste
+function goalScaleValue(f, i) { return habitFormStepValue(f, i); }
+function goalScaleLabel(f, i) {
+  const label = f.labelsEnabled ? (f.labels[i] || '').trim() : '';
+  return label || String(goalScaleValue(f, i));
+}
+function goalForValue(f, value) {
+  const raw = (value - f.min) / (f.max - f.min);
+  return f.good === 'low' ? 1 - raw : raw;
+}
+function goalControlHtml(f) {
+  const explain = infoTip(t('habitForm.goalExplain'));
+  if (f.kind === 'computed') {
+    return `
+      <div class="auth-field">
+        <label for="habit-form-goal">${t('habitForm.goalLabel')}${explain}</label>
+        <input type="number" id="habit-form-goal" data-goal-mode="percent" min="1" max="100" step="1" value="${Math.round(f.goal * 100)}" />
+      </div>
+    `;
+  }
+  const steps = habitFormStepCount(f);
+  if (steps === 2) {
+    const bestIndex = f.good === 'low' ? 0 : 1;
+    const n = Math.min(7, Math.max(1, Math.round(f.goal * 7)));
+    const options = [7, 6, 5, 4, 3, 2, 1].map((d) => `<option value="${d / 7}" ${d === n ? 'selected' : ''}>${d === 7 ? t('habitForm.goalEveryDay') : tPlain('habitForm.goalDays', { n: d })}</option>`).join('');
+    return `
+      <div class="auth-field">
+        <label for="habit-form-goal">${tPlain('habitForm.goalYesNoLabel', { label: goalScaleLabel(f, bestIndex) })}${explain}</label>
+        <select id="habit-form-goal" data-goal-mode="choice">${options}</select>
+      </div>
+    `;
+  }
+  const label = t('habitForm.goalValueLabel');
+  if (steps > GOAL_SELECT_MAX_STEPS) {
+    const value = f.good === 'low' ? f.max - f.goal * (f.max - f.min) : f.min + f.goal * (f.max - f.min);
+    return `
+      <div class="auth-field">
+        <label for="habit-form-goal">${label}${explain}</label>
+        <input type="number" id="habit-form-goal" data-goal-mode="value" min="${f.min}" max="${f.max}" step="1" value="${Math.round(value)}" />
+      </div>
+    `;
+  }
+  // Vom besten Wert abwärts; der schlechteste fehlt (Ziel "ab dem schlechtesten Wert" hieße:
+  // immer voll erreicht). Ein alter Prozentwert landet beim nächstliegenden Wert.
+  const indices = [...Array(steps).keys()].filter((i) => goalForValue(f, goalScaleValue(f, i)) > 0)
+    .sort((a, b) => goalForValue(f, goalScaleValue(f, b)) - goalForValue(f, goalScaleValue(f, a)));
+  const nearest = indices.reduce((best, i) => (Math.abs(goalForValue(f, goalScaleValue(f, i)) - f.goal) < Math.abs(goalForValue(f, goalScaleValue(f, best)) - f.goal) ? i : best), indices[0]);
+  const options = indices.map((i, pos) => {
+    const text = pos === 0
+      ? tPlain('habitForm.goalBestOnly', { label: goalScaleLabel(f, i) })
+      : tPlain('habitForm.goalOrBetter', { label: goalScaleLabel(f, i) });
+    return `<option value="${goalForValue(f, goalScaleValue(f, i))}" ${i === nearest ? 'selected' : ''}>${esc(text)}</option>`;
+  }).join('');
+  return `
+    <div class="auth-field">
+      <label for="habit-form-goal">${label}${explain}</label>
+      <select id="habit-form-goal" data-goal-mode="choice">${options}</select>
+    </div>
+  `;
+}
+function readGoalFromDom(f) {
+  const el = document.getElementById('habit-form-goal');
+  if (!el) return;
+  const v = Number(el.value);
+  if (!Number.isFinite(v)) return;
+  if (el.dataset.goalMode === 'percent') f.goal = v / 100;
+  else if (el.dataset.goalMode === 'value') f.goal = Math.min(1, Math.max(0, goalForValue(f, v)));
+  else f.goal = v;
+}
 // Stufenzahl-Obergrenzen, eine Regel für alle Darstellungen (seit 2026-09-28): jede
 // Stufe mit eigener Bedeutung muss man sehen und gezielt treffen können. Buttons (mit
 // oder ohne Bezeichnungen) und eigene Bezeichnungen beim Schieberegler deshalb höchstens
@@ -3518,7 +3610,7 @@ function defaultHabitForm() {
     computedType: 'scale', aggregate: 'sum', // nur bei kind='computed', siehe isNumberComputed
     showInStats: true,
     sectionId: null,
-    goalPercent: 100,
+    goal: 1, // Ziel-Quote als Bruchteil (siehe goalControlHtml); 1 = nur der beste Wert
     unit: '', reminderEnabled: false, reminderMinute: state.userSettings.defaultReminderMinute,
     schedule: scheduleToForm(null),
   };
@@ -3601,7 +3693,7 @@ function habitToForm(h) {
     aggregate: h.aggregate || 'sum',
     showInStats: !h.hideInStats,
     sectionId: h.sectionId,
-    goalPercent: Math.round((h.goalThreshold ?? 1) * 100),
+    goal: h.goalThreshold ?? 1,
     unit: h.unit || '',
     reminderEnabled: h.reminderMinute !== null && h.reminderMinute !== undefined,
     reminderMinute: h.reminderMinute ?? state.userSettings.defaultReminderMinute,
@@ -3640,8 +3732,7 @@ function syncHabitFormFromDom() {
         f.labels[Number(el.dataset.labelIndex)] = el.value;
       });
     }
-    const goalEl = document.getElementById('habit-form-goal');
-    if (goalEl) f.goalPercent = Number(goalEl.value);
+    readGoalFromDom(f);
     const reminderEnabledEl = document.getElementById('habit-form-reminder-enabled');
     if (reminderEnabledEl) f.reminderEnabled = reminderEnabledEl.checked;
     const reminderTime = readTimeInput('habit-form-reminder-time');
@@ -3654,8 +3745,7 @@ function syncHabitFormFromDom() {
       if (el.checked) { if (!f.members.includes(slug)) f.members.push(slug); }
       else { f.members = f.members.filter((s) => s !== slug); }
     });
-    const goalEl = document.getElementById('habit-form-goal');
-    if (goalEl) f.goalPercent = Number(goalEl.value);
+    readGoalFromDom(f);
   } else {
     const unitEl = document.getElementById('habit-form-unit');
     if (unitEl) f.unit = unitEl.value;
@@ -3720,13 +3810,12 @@ async function handleHabitSaveInner() {
     ? (reminderTime !== null ? reminderTime : f.reminderMinute)
     : null;
 
-  const goalEl = document.getElementById('habit-form-goal');
-  const goalPercent = goalEl ? Number(goalEl.value) : f.goalPercent;
+  readGoalFromDom(f);
   // Ziel-Quote ergibt bei "Keine Wertung" keinen Sinn (kein Gut/Schlecht zum Stauchen)
-  // - das Formularfeld ist dann versteckt (siehe scaleBody), aber f.goalPercent könnte
-  // noch einen alten Wert von vor dem Umschalten auf "Keine Wertung" tragen.
-  const goalThreshold = ((f.kind === 'scale' && f.good) || (f.kind === 'computed' && f.computedType !== 'number')) && Number.isFinite(goalPercent) && goalPercent > 0 && goalPercent < 100
-    ? goalPercent / 100
+  // - das Formularfeld ist dann versteckt (siehe scaleBody), aber f.goal könnte noch einen
+  // alten Wert von vor dem Umschalten auf "Keine Wertung" tragen.
+  const goalThreshold = ((f.kind === 'scale' && f.good) || (f.kind === 'computed' && f.computedType !== 'number')) && Number.isFinite(f.goal) && f.goal > 0 && f.goal < 1
+    ? f.goal
     : null;
 
   let fields; // { kind, min, max, labels, good, unit, display_style, slider_show_value, group_members, goal_threshold }
@@ -6205,12 +6294,17 @@ function renderWeek() {
     const scores = dayKeys.map((k) => habitScore(h, k));
     const valid = scores.filter((s) => s !== null);
     const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
+    const avgLong = avg !== null ? `${h.name}: ${habitAvgLong(h, avg, valid.length)}${isYesNoScale(h) ? '' : ` (${valid.length}×)`}` : '';
     // Unbewertete Felder: nur "eingetragen", kein Streifenmuster (das kodiert die
     // Bewertungsstufe) und kein Ø - siehe isNeutralScale.
     const neutral = isNeutralScale(h);
     const avgCell = neutral
       ? '<div class="grid-cell grid-cell--avg grid-cell--blank"></div>'
-      : `<div class="grid-cell grid-cell--avg" style="background:${habitColor(h, applyGoal(h, avg))};color:${textOnScore(habitColor(h, applyGoal(h, avg)))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'}</div>`;
+      : avg === null
+        ? `<div class="grid-cell grid-cell--avg" style="background:${habitColor(h, null)}">–</div>`
+        // Antippen zeigt den Wert ausgeschrieben (z.B. "an 2 von 5 Tagen „Ja“", "Ø 1,2 · leicht–mittel") -
+        // in der schmalen Spalte ist nur die Kurzform ("2/5", "1,2") Platz.
+        : `<button type="button" class="grid-cell grid-cell--avg" data-action="avg-info" data-text="${esc(avgLong)}" aria-label="${esc(avgLong)}" style="background:${habitColor(h, applyGoal(h, avg))};color:${textOnScore(habitColor(h, applyGoal(h, avg)))}">${habitAvgShort(h, avg, valid.length)}</button>`;
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
@@ -6563,13 +6657,54 @@ async function handleFeedbackSubmit() {
   render();
 }
 
+// Durchschnitt eines bewerteten Felds in natürlichen Begriffen (Nutzer-Entscheidung
+// 2026-10-10, statt Prozent für alle): Ja/Nein "an 2 von 5 Tagen „Ja“", mehrstufige Skala
+// "Ø 3,4" in den Werten des Felds (bei eigenen Bezeichnungen zusätzlich, zwischen welchen
+// sie liegt), berechnete Felder weiter in % (sie mitteln über verschiedene Skalen).
+// avg = Mittel der normalisierten Scores über die eingetragenen Tage, count = deren Anzahl.
+function isYesNoScale(h) { return h.kind === 'scale' && !!h.good && h.max - h.min === 1; }
+function scaleLabelAt(h, value) { return h.labels ? h.labels[value - h.min] : String(value); }
+function avgScaleValue(h, avg) {
+  return h.good === 'low' ? h.max - avg * (h.max - h.min) : h.min + avg * (h.max - h.min);
+}
+function avgLabelSpan(h, avg) {
+  if (!h.labels) return '';
+  const v = avgScaleValue(h, avg);
+  const lower = Math.floor(v + 0.05);
+  const upper = Math.ceil(v - 0.05);
+  return lower >= upper ? scaleLabelAt(h, lower) : `${scaleLabelAt(h, lower)}–${scaleLabelAt(h, upper)}`;
+}
+// Kurzform für die schmale Ø-Spalte der Woche (HTML). Skalen mit eigenen Bezeichnungen:
+// eine Mini-Skala mit Punkt statt Zahl - die Zahl dahinter (Stufe 0,6) sähe man sonst
+// nirgends, eine Bezeichnung passt oft nicht in die Spalte. Rechts ist immer besser
+// (avg ist schon "wie gut", auch bei "Niedrige Werte erstrebenswert"); den genauen Wert
+// zeigt Antippen bzw. Monat/Jahr/Gesamt (Nutzer-Entscheidung 2026-10-10).
+function habitAvgShort(h, avg, count) {
+  if (h.kind === 'scale' && h.labels && !isYesNoScale(h)) {
+    return `<span class="avg-scale" aria-hidden="true"><span class="avg-scale-dot" style="left:${(avg * 100).toFixed(1)}%"></span></span>`;
+  }
+  if (isYesNoScale(h)) return `${Math.round(avg * count)}/${count}`;
+  if (h.kind === 'scale') return formatNumber(round1(avgScaleValue(h, avg)));
+  return Math.round(avg * 100) + '%';
+}
+function habitAvgLong(h, avg, count) {
+  if (isYesNoScale(h)) {
+    const best = scaleLabelAt(h, h.good === 'low' ? h.min : h.max);
+    return tPlain(h.labels ? 'stats.yesNoDaysLabel' : 'stats.yesNoDays', { n: Math.round(avg * count), total: count, label: best });
+  }
+  if (h.kind === 'scale') {
+    const span = avgLabelSpan(h, avg);
+    return `Ø ${formatNumber(round1(avgScaleValue(h, avg)))}${span ? ' · ' + span : ''}`;
+  }
+  return Math.round(avg * 100) + '%';
+}
 function renderStatsRows(stats) {
   return stats.map(({ habit, avg, count }) => `
     <div class="month-stat-row">
       <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
       ${isNeutralScale(habit)
         ? `<span class="month-stat-value"><span class="month-stat-count">${count}×</span></span>`
-        : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : habitColor(habit, applyGoal(habit, avg))}">${avg !== null ? Math.round(avg * 100) + '%' : '–'} <span class="month-stat-count">(${count}×)</span></span>`}
+        : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : habitColor(habit, applyGoal(habit, avg))}">${avg !== null ? esc(habitAvgLong(habit, avg, count)) : '–'}${avg !== null && !isYesNoScale(habit) ? ` <span class="month-stat-count">(${count}×)</span>` : ''}</span>`}
     </div>
   `).join('');
 }
@@ -6716,12 +6851,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const f = state.habitForm;
   const defaultReminderMinute = state.userSettings.defaultReminderMinute;
 
-  const goalField = `
-    <div class="auth-field">
-      <label for="habit-form-goal">${t('habitForm.goalLabel')}${infoTip(t('habitForm.goalExplain'))}</label>
-      <input type="number" id="habit-form-goal" min="1" max="100" step="1" value="${f.goalPercent}" />
-    </div>
-  `;
+  const goalField = goalControlHtml(f);
 
   // Ein gesperrtes Feld mit mehr Stufen als CHOICE_STEP_CAP kann seine Stufenzahl nicht
   // mehr verkleinern - Buttons/Bezeichnungen sind dann direkt hier gesperrt (mit
@@ -6947,7 +7077,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // dort schon etwas vom Standard abweicht, sonst zu; offen/zu übersteht Re-Renders
   // (f.moreOpen, gesetzt vom toggle-Listener).
   const showGoal = (f.kind === 'scale' && f.good) || (isComputed && f.computedType !== 'number');
-  const moreOpen = f.moreOpen ?? ((showGoal && f.goalPercent !== 100) || (!isComputed && (f.schedule.type !== 'daily' || f.reminderEnabled))
+  const moreOpen = f.moreOpen ?? ((showGoal && f.goal < 1) || (!isComputed && (f.schedule.type !== 'daily' || f.reminderEnabled))
     || (state.sections.length > 0 && !!f.sectionId) || !f.showInStats);
   // "Berechnet" nur anbieten, wenn es etwas zu berechnen gibt (mind. 2 passende Felder) -
   // beim allerersten Feld im Tutorial führte die Auswahl sonst nur zu "noch keine Felder".
@@ -7812,6 +7942,9 @@ app.addEventListener('click', async (e) => {
     state.authMode = el.dataset.mode === 'guided' && state.authMode === 'mode' ? 'overview' : 'signup';
     render();
     document.querySelector('.auth-box h1, .auth-box .sub')?.focus({ preventScroll: true });
+  } else if (action === 'avg-info') {
+    state.notice = { type: 'ok', text: el.dataset.text };
+    render();
   } else if (action === 'group-tip-hide') {
     try { localStorage.setItem('groupTipDismissed', 'true'); } catch { /* dann eben nur bis zum Neuladen */ }
     render();

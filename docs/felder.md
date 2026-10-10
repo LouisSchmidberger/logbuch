@@ -243,13 +243,25 @@ Felds (Skala ändern = archivieren + neu anlegen) nicht verloren ist. Verworfen:
 Felder ausnahmslos ausblenden. Wirkt nur auf die Anzeige – Tagesfarbe und berechnete
 Felder rechnen unverändert mit (Nutzer-Entscheidung).
 
-**Ziel-Quote** (`goal_threshold`, `scale` und `computed` aus Skalen): bei manchen Feldern
-ist eine 100%-Quote unrealistisch (z.B. Kraftsport jeden Tag). Formular "Ab wann als voll
-erreicht gilt (%)", Standard 100 = `null`. `applyGoal(habit, score)` staucht den Score auf
-`min(1, score/threshold)` (bei Standard exakter Durchreicher). Nur für die Farbgebung
-(`dayOverallScore`, Wochen-Grid inkl. Ø, `renderStatsRows`) – nie auf angezeigte
-Prozentzahlen und bewusst **nicht** in `renderHabitOptions`/`renderHabitSlider` (in "Heute"
-zählt der rohe Wert des Tages).
+**Ziel-Quote** (`goal_threshold`, `scale` und `computed` aus Skalen): `applyGoal(habit, score)`
+staucht den Score auf `min(1, score/threshold)` (ohne Ziel = `null` = exakter Durchreicher).
+Nur für die Farbgebung (`dayOverallScore`, Wochen-Grid inkl. Ø, `renderStatsRows`) und bewusst
+**nicht** in "Heute" (dort zählt der rohe Wert des Tages). Eingabe je Feldart in natürlichen
+Begriffen (`goalControlHtml`, Nutzer-Entscheidung 2026-10-10): zwei Stufen "an [n] von 7
+Tagen", mehrstufige Skala "„X“ oder besser", berechnete Felder weiter in %. Gespeichert als
+**genauer Bruch** (n/7), nicht als ganze Prozentzahl – 2/7 als 29 % hätte genau 2 von 7 Tagen
+knapp verfehlt. Keine Option heißt "Standard" (könnte Druck machen).
+
+**Ø in der Auswertung** je Feldart statt Prozent für alle (`habitAvgShort`/`habitAvgLong`):
+zwei Stufen "an 2 von 5 Tagen „Ja“" bzw. "2/5", mehrstufige Skala "Ø 3,4" in den Werten des
+Felds, mit eigenen Bezeichnungen zusätzlich "· mittel–gut"; berechnete Felder in %. Gezählt
+werden für alle Felder gleich nur die eingetragenen Tage (verworfen: "leer = Nein" nur für
+zwei Stufen – gleich aussehende Felder hätten unsichtbar verschieden gerechnet). "Zwei
+Stufen" ist eine Skala mit genau zwei Werten und Bewertung, unabhängig von den Bezeichnungen.
+In der schmalen Ø-Spalte der Woche zeigen Skalen mit eigenen Bezeichnungen eine Mini-Skala
+mit Punkt (rechts = besser) statt der Stufenzahl; die Ø-Zelle ist ein Knopf, Antippen zeigt den
+Wert ausgeschrieben als Meldung. Verworfen: gerundete Bezeichnung (lange passen nicht, die
+Kommazahl ginge verloren), zweizeilig (Schrift unter 13 px).
 
 ## Auswertung: Erklärungen
 

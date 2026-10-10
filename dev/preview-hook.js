@@ -66,7 +66,7 @@ export function install(app) {
         { key: 'fschlaf', name: 'Schlafstunden', kind: 'number', section: 'morgens', unit: 'h' },
         { key: 'fstimmung', name: 'Stimmung', kind: 'scale', section: 'morgens', min: 1, max: 5, good: 'high' },
         { key: 'fenergie', name: 'Energie', kind: 'scale', min: 0, max: 10, good: 'high', displayStyle: 'slider' },
-        { key: 'fsport', name: 'Sport', kind: 'scale', min: 0, max: 1, good: 'high', labels: ['Nein', 'Ja'], schedule: { type: 'weekly', days: [0, 2, 4] } },
+        { key: 'fsport', name: 'Sport', kind: 'scale', min: 0, max: 1, good: 'high', labels: ['Nein', 'Ja'], goalThreshold: 3 / 7 },
         { key: 'fwasser', name: 'Wassergläser', kind: 'number' },
         { key: 'fwohl', name: 'Wohlbefinden', kind: 'computed', groupMembers: ['fstimmung', 'fenergie'], good: null },
         { key: 'fkopf', name: 'Kopfschmerzen', kind: 'scale', section: 'abends', min: 0, max: 3, good: 'low', labels: ['keine', 'leicht', 'mittel', 'stark'] },
@@ -105,7 +105,7 @@ export function install(app) {
           day.fenergie = Math.floor(rnd() * 11);
           day.fkopf = rnd() < 0.7 ? 0 : 1 + Math.floor(rnd() * 3);
           day.fwasser = 3 + Math.floor(rnd() * 6);
-          if ([1, 3, 5].includes(d.getDay())) day.fsport = rnd() < 0.7 ? 1 : 0;
+          day.fsport = [1, 3, 5].includes(d.getDay()) && rnd() < 0.8 ? 1 : 0;
           if (rnd() < 0.4) day.fdank = pick(['Gutes Gespräch mit Mia', 'Sonne beim Spaziergang', 'Ruhiger Abend', 'Leckeres Essen']);
           if (rnd() < 0.15) day._notes = { _day: pick(['Lange gearbeitet.', 'Besuch da.', 'Erkältet.']) };
         }
