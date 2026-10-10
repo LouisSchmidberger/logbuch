@@ -210,8 +210,7 @@ Gruppe steht").
   Sprung zu einem Feld in einer eingeklappten Gruppe klappt sie auf.
 - **Einklappen in "Heute"** pro Gruppe (Nutzer-Entscheidung 2026-10-10, eine Auswahl statt
   mehrerer Schalter; `collapse` verschlüsselt mit dem Namen in `habit_sections.enc`, ohne
-  Wert = `'done'`): `'done'` (Standard) Zuklappen, wenn alles eingetragen ist, mit
-  "✓ erledigt" in der Überschrift; `'manual'` nur von Hand; `'start'` startet eingeklappt;
+  Wert = `'done'`): `'done'` (Standard) Zuklappen, wenn alles eingetragen ist; `'manual'` nur von Hand; `'start'` startet eingeklappt;
   `'never'` reine Überschrift ohne Knopf (auch in der Auswertung). Automatisch zugeklappt
   wird **nur beim Betreten des Tages** (`todayAutoCollapse`, neu bestimmt bei Tag- oder
   Ansichtswechsel, Neuladen und nach `refreshAfterReturn`), nie während man einträgt – sonst
@@ -219,6 +218,9 @@ Gruppe steht").
   Problem wie beim verworfenen Einklappen eingetragener Felder, siehe
   docs/design-bedienung.md). Von Hand Aufklappen hebt das automatische Zuklappen für diesen
   Besuch auf (`expandSection`).
+- **"✓ erledigt"** steht in "Heute" in jeder Gruppen-Überschrift, sobald alle Felder der
+  Gruppe eingetragen sind – auch aufgeklappt und unabhängig von der Einklapp-Einstellung
+  (umgeschaltet auch ohne Neuzeichnen in `syncTodayOpenMarkers`).
 - **Tipp zum Gruppieren**: einmalig in "Felder verwalten" ab 6 aktiven Feldern ohne Gruppe
   (`GROUP_TIP_MIN_FIELDS`, ausblendbar, `localStorage` `groupTipDismissed`), dazu
   `about.tip.sections`.

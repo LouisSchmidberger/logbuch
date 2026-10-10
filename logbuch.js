@@ -404,12 +404,18 @@ function expandSection(scope, id) {
   setSectionCollapsed(scope, id, false);
   if (scope === 'today') todayAutoCollapse?.ids.delete(id);
 }
-function renderSectionToggle(section, scope, collapsed, hasOpen = false, done = false) {
+// doneFields (nur "Heute"): die Felder, die für "✓ erledigt" eingetragen sein müssen. Die
+// Markierung steht immer im DOM (versteckt, solange etwas offen ist), damit
+// syncTodayOpenMarkers sie beim Tippen in Text-Feldern ohne Neuzeichnen umschalten kann.
+function renderSectionToggle(section, scope, collapsed, hasOpen = false, doneFields = null) {
+  const doneMarker = doneFields
+    ? `<span class="section-done" data-done-fields="${doneFields.map((h) => h.id).join(' ')}"${sectionDoneOn(doneFields, state.entries[formatKey(state.currentDate)] || {}) ? '' : ' hidden'}>${t('today.sectionDone')}</span>`
+    : '';
   const marker = hasOpen
     ? `<span class="open-dot" aria-hidden="true"></span><span class="visually-hidden">${t('today.sectionHasOpen')}</span>`
-    : done ? `<span class="section-done">${t('today.sectionDone')}</span>` : '';
+    : doneMarker;
   const toggle = section.collapse === 'never'
-    ? `<div class="section-toggle section-toggle--${scope} section-toggle--static"><span>${esc(section.name)}</span></div>`
+    ? `<div class="section-toggle section-toggle--${scope} section-toggle--static"><span>${esc(section.name)}${doneMarker}</span></div>`
     : `
     <button type="button" class="section-toggle section-toggle--${scope}" data-action="section-toggle" data-section="${section.id}" data-scope="${scope}" aria-expanded="${!collapsed}">
       <svg class="section-chevron" width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -447,8 +453,8 @@ function renderBySection(habits, scope, renderList) {
     // Überschrift den Punkt (siehe isOpenToday), bzw. "erledigt", wenn nichts mehr offen ist.
     const dayEntry = state.entries[dateKey] || {};
     const hasOpen = scope === 'today' && collapsed && block.habits.some((h) => isOpenToday(h, dayEntry));
-    const done = scope === 'today' && collapsed && sectionDoneOn(block.habits, dayEntry);
-    out.push(`<div class="section-block section-block--${scope}${collapsed ? ' section-block--collapsed' : ''}">${renderSectionToggle(block.section, scope, collapsed, hasOpen, done)}${collapsed ? '' : `<div class="section-content">${renderList(block.habits)}</div>`}</div>`);
+    const doneFields = scope === 'today' ? block.habits.filter((h) => h.kind !== 'computed') : null;
+    out.push(`<div class="section-block section-block--${scope}${collapsed ? ' section-block--collapsed' : ''}">${renderSectionToggle(block.section, scope, collapsed, hasOpen, doneFields)}${collapsed ? '' : `<div class="section-content">${renderList(block.habits)}</div>`}</div>`);
   }
   flush();
   return out.join('');
@@ -5958,6 +5964,10 @@ function syncTodayOpenMarkers() {
   const dayEntry = state.entries[formatKey(state.currentDate)] || {};
   document.querySelectorAll('.open-marker[data-open-for]').forEach((m) => {
     m.hidden = dayEntry[m.dataset.openFor] !== undefined;
+  });
+  document.querySelectorAll('.section-done[data-done-fields]').forEach((m) => {
+    const ids = m.dataset.doneFields.split(' ').filter(Boolean);
+    m.hidden = !ids.length || ids.some((id) => dayEntry[id] === undefined);
   });
   const done = document.querySelector('.today-complete');
   if (done) done.hidden = !todayAllDone(dayEntry);
