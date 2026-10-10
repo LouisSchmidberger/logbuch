@@ -496,9 +496,12 @@
      --slider-pct (siehe renderHabitSlider/input-Listener in logbuch.html). Bewusst
      NICHT über accent-color, das bei jedem Live-Update in manchen Browsern kurz
      glitchte, statt sauber mitzuziehen. */
+  /* touch-action: pan-y - senkrechtes Wischen, das auf dem Regler beginnt, scrollt die
+     Seite, statt einen Wert zu setzen (siehe pointercancel-Listener in logbuch.js). */
   .value-slider {
     flex: 1; -webkit-appearance: none; appearance: none; background: transparent;
     height: 22px; cursor: pointer; --slider-color: var(--moss); --slider-pct: 50%;
+    touch-action: pan-y;
   }
   .value-slider--unset { --slider-color: var(--sand); }
   .value-slider::-webkit-slider-runnable-track {
@@ -727,10 +730,11 @@
     display: flex; align-items: flex-start; gap: 0.25rem; padding: 1rem; margin: 0.5rem 0 1.25rem;
     border: 1px dashed var(--sand); border-radius: 4px; font-size: 0.9375rem; line-height: 1.5;
   }
-  .stats-legend { margin: 0.75rem 0 1.25rem; font-size: 0.875rem; line-height: 1.5; }
-  .stats-legend summary { cursor: pointer; color: var(--ink); font-weight: 600; padding: 0.375rem 0; }
-  .stats-legend p { margin: 0.5rem 0 0; color: var(--sand); }
-  .stats-legend-scale { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.375rem; font-size: 0.8125rem; color: var(--sand); }
+  /* Erklärung in der Optik der übrigen Erklär-Kästen (.why-box) - als schlichte Zeile sah
+     sie aus wie ein weiterer Eintrag der Auswertung (z.B. die Text-Felder darunter). */
+  .why-box.stats-legend { margin: 1rem 0 1.25rem; } /* doppelte Klasse: .why-box steht weiter unten und gewönne sonst */
+  .why-box.stats-legend p { margin: 0.5rem 0 0; }
+  .stats-legend-scale { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.375rem; font-size: 0.8125rem; color: var(--ink); } /* --sand hätte auf dem getönten Kasten hell nur 4,3:1 */
   .stats-legend-bar { flex: 1; height: 0.75rem; border-radius: 2px; }
   .month-stats { border-top: 1px solid var(--line); padding-top: 8px; }
   .month-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 0.875rem; }
@@ -784,6 +788,12 @@
   }
   @keyframes toast-in { from { transform: translateY(12px); opacity: 0; } }
   .loading { font-size: 0.9375rem; color: var(--sand); padding: 40px 0; text-align: center; }
+  /* Startbildschirm beim Öffnen (renderStartupScreen; dieselbe Box steht schon im
+     statischen HTML, damit nichts springt). Der Hinweis auf langsames Laden blendet erst
+     nach der im style gesetzten Verzögerung ein. */
+  .startup { text-align: center; }
+  .startup-slow { opacity: 0; visibility: hidden; animation: startup-reveal 0.4s ease forwards; } /* hidden: Screenreader lesen ihn auch erst dann */
+  @keyframes startup-reveal { to { opacity: 1; visibility: visible; } }
 
   .auth-box { max-width: 20rem; margin: 60px auto; }
   .auth-box h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 1.625rem; margin: 0 0 4px; text-align: center; }
@@ -1104,9 +1114,14 @@
 
   .label-inputs { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
   .label-inputs input {
+    flex: 1; min-width: 0;
     font-family: inherit; font-size: 0.9375rem; padding: 7px 9px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
+  /* Wert der Stufe vor jeder Bezeichnung - gebraucht, um danach "Hohe/Niedrige Werte
+     erstrebenswert" richtig zu wählen (die Bezeichnungen allein verraten die Richtung nicht). */
+  .label-input-row { display: flex; align-items: center; gap: 0.5rem; }
+  .label-input-step { min-width: 1.5rem; text-align: right; font-size: 0.8125rem; color: var(--sand); font-variant-numeric: tabular-nums; }
   .field-preview { padding: 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--input-bg); }
   /* Wie in "Heute" in einer Zeile (kein Umbruch) - sonst verdeckte die Vorschau genau den
      Fall, dass die Buttons nicht passen (siehe syncPreviewFitHint). */
@@ -1162,11 +1177,11 @@
 </style>
 </head>
 <body>
-<div id="app"><div class="loading">Lädt …</div></div>
+<div id="app"><div class="auth-box startup"><h1>Logbuch</h1></div></div>
 <div id="sr-announcer" class="visually-hidden" aria-live="polite"></div>
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=cc6d82c18c"></script>
+<script type="module" src="./logbuch.js?v=563313a951"></script>
 </body>
 </html>

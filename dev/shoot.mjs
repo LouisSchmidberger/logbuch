@@ -42,7 +42,11 @@ try {
       case 'seeded': await seededAccount(page, { deviceState: { installHintDismissed: 'true', ...deviceState } }); break;
       case 'signin': await signInFresh(page); break;
       case 'tap': await tapText(page, arg); break;
-      case 'type': { const j = arg.indexOf('='); await type(page, arg.slice(0, j), arg.slice(j + 1)); break; }
+      case 'type': { // Trenner ist das erste '=' nach einer evtl. [attr="x"]-Klammer im Selektor
+        const j = arg.indexOf('=', arg.lastIndexOf(']') + 1);
+        await type(page, arg.slice(0, j), arg.slice(j + 1));
+        break;
+      }
       case 'submit': await page.$eval(arg, (f) => f.requestSubmit()); await settle(page, 500); break;
       case 'mail': {
         const link = await page.evaluate((k) => window.__logbuchPreview.admin.lastMailLink(k || undefined), arg);

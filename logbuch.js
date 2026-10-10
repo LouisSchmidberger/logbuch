@@ -1354,7 +1354,8 @@ const STRINGS = {
     'habitForm.schedule.unitWeeks': 'Wochen',
     'habitForm.schedule.start': 'ab',
     'habitForm.schedule.shortMonthNote': 'Gibt es den Tag in einem Monat nicht (z.B. den 31.), ist das Feld am Monatsletzten dran.',
-    'habitForm.schedule.explain': 'An anderen Tagen steht das Feld in „Heute“ eingeklappt unter „Heute nicht geplant“ – eintragen geht dort trotzdem – und löst keine Erinnerung aus.',
+    'habitForm.schedule.hint': 'Ob das Feld jeden Tag dran ist oder nur an bestimmten Tagen – zum Beispiel Sport montags und donnerstags.',
+    'habitForm.schedule.explain': 'An den übrigen Tagen erinnert Logbuch nicht an das Feld, und es steht in „Heute“ unten unter „Heute nicht geplant“. Eintragen kannst du dort trotzdem.',
     'habitForm.error.scheduleNoDays': 'Bitte mindestens einen Wochentag auswählen.',
     'habitForm.error.scheduleInterval': 'Bitte eine Anzahl von 1 bis 365 und ein Startdatum angeben.',
     'today.unplanned': 'Heute nicht geplant ({count})',
@@ -1690,6 +1691,8 @@ const STRINGS = {
     'deleteAccount.deleting': 'Wird gelöscht …',
     'deleteAccount.deletePermanently': 'Endgültig löschen',
     'common.loading': 'Lädt …',
+    'startup.opening': 'Dein Logbuch wird geöffnet …',
+    'startup.slow': 'Das dauert gerade länger als sonst – meist ist die Internetverbindung langsam. Es geht gleich von selbst weiter.',
     'tabs.today': 'Heute',
     'tabs.week': 'Woche',
     'tabs.month': 'Monat',
@@ -2007,7 +2010,8 @@ const STRINGS = {
     'habitForm.schedule.unitWeeks': 'weeks',
     'habitForm.schedule.start': 'starting',
     'habitForm.schedule.shortMonthNote': 'If a month does not have that day (e.g. the 31st), the field is due on the last day of that month.',
-    'habitForm.schedule.explain': 'On other days the field is tucked away in “Today” under “Not planned today” – you can still fill it in there – and does not trigger reminders.',
+    'habitForm.schedule.hint': 'Whether the field is due every day or only on certain days – for example sport on Mondays and Thursdays.',
+    'habitForm.schedule.explain': 'On the other days Logbuch won’t remind you of it, and it sits at the bottom of “Today” under “Not planned today”. You can still fill it in there.',
     'habitForm.error.scheduleNoDays': 'Please select at least one weekday.',
     'habitForm.error.scheduleInterval': 'Please enter a number from 1 to 365 and a start date.',
     'today.unplanned': 'Not planned today ({count})',
@@ -2343,6 +2347,8 @@ const STRINGS = {
     'deleteAccount.deleting': 'Deleting …',
     'deleteAccount.deletePermanently': 'Delete permanently',
     'common.loading': 'Loading …',
+    'startup.opening': 'Opening your Logbuch …',
+    'startup.slow': 'This is taking longer than usual – usually the internet connection is slow. It will continue on its own.',
     'tabs.today': 'Today',
     'tabs.week': 'Week',
     'tabs.month': 'Month',
@@ -5888,7 +5894,12 @@ function renderTextBox(h, dayEntry, marker = '') {
 // (Screenreader lesen dort "Optionen für <Name>")
 // (bewusst nicht ins Textfeld: das würde die Tastatur öffnen, man will ja erst lesen).
 // Archivierte Felder stehen nicht in "Heute" - dann bleibt es beim Tag.
-function focusTodayField(habitId) {
+// editInput (Sprung aus einer Erinnerung): hat das Feld ein Eingabefeld (Zahl, Text), dort
+// hinein statt auf die Menü-Punkte - man will ja gleich eintragen. Ob die Tastatur dabei
+// aufgeht, entscheidet der Browser (ohne Antippen oft nicht). Beim Sprung aus Woche/Monat
+// bewusst nicht: dort tippt man auf eine Zelle zum Nachsehen, eine aufspringende Tastatur
+// verdeckte dann die Hälfte.
+function focusTodayField(habitId, { editInput = false } = {}) {
   // Liegt das Feld in einer eingeklappten Gruppe, erst aufklappen.
   const target = state.habits.find((h) => h.id === habitId);
   if (target?.sectionId && isSectionCollapsed('today', target.sectionId)) {
@@ -5905,7 +5916,8 @@ function focusTodayField(habitId) {
   const row = trigger?.closest('.habit-row, .number-box');
   if (!row) return;
   row.scrollIntoView({ block: 'center' });
-  trigger.focus({ preventScroll: true });
+  const input = editInput && row.querySelector(`#number-input-${habitId}, #text-input-${habitId}`);
+  (input || trigger).focus({ preventScroll: true });
   row.classList.add('field-highlight');
   row.addEventListener('animationend', () => row.classList.remove('field-highlight'), { once: true });
 }
@@ -6071,8 +6083,8 @@ function renderStatsEmpty() {
 function renderStatsLegend(kind) {
   const stops = [0, 0.25, 0.5, 0.75, 1].map((v) => `${scoreColor(v)} ${v * 100}%`).join(', ');
   return `
-    <details class="stats-legend">
-      <summary>${t('stats.legend.title')}</summary>
+    <details class="why-box stats-legend">
+      <summary class="why-box-title">${t('stats.legend.title')}</summary>
       <div class="stats-legend-scale" aria-hidden="true">
         <span>${t('stats.legend.bad')}</span>
         <span class="stats-legend-bar" style="background: linear-gradient(to right, ${stops})"></span>
@@ -6664,7 +6676,11 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     ${f.labelsEnabled ? `
       <div class="auth-field">
         <div class="label-inputs">
-          ${currentLabels.map((l, i) => `<input type="text" data-label-index="${i}" value="${esc(l)}" maxlength="20" aria-label="${esc(t('habitForm.labelForStep', { step: habitFormStepValue(f, i) }))}" />`).join('')}
+          ${currentLabels.map((l, i) => `
+            <div class="label-input-row">
+              <span class="label-input-step" aria-hidden="true">${habitFormStepValue(f, i)}</span>
+              <input type="text" data-label-index="${i}" value="${esc(l)}" maxlength="20" aria-label="${esc(t('habitForm.labelForStep', { step: habitFormStepValue(f, i) }))}" />
+            </div>`).join('')}
         </div>
       </div>
     ` : ''}
@@ -6816,7 +6832,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         ${scheduleTypeOption('interval', 'habitForm.schedule.interval')}
       </select>
       ${scheduleDetail}
-      ${sch.type !== 'daily' ? `<p class="habit-form-lock-note">${t('habitForm.schedule.explain')}</p>` : ''}
+      <p class="habit-form-lock-note">${t(sch.type === 'daily' ? 'habitForm.schedule.hint' : 'habitForm.schedule.explain')}</p>
     </div>
   `;
 
@@ -7567,6 +7583,31 @@ function focusModalIfOpen() {
 // Seitenwechsel), z.B. wäre man nach dem Wechsel von einem herunter gescrollten
 // "Heute" zu "Monat" dort ebenfalls mitten in der Seite statt oben gelandet.
 let lastRenderedView = null;
+// Startbildschirm statt Passwort-Abfrage, solange der Schlüssel gerade ohne Zutun geladen
+// wird: beim Öffnen mit gespeicherter Anmeldung (sessionRestoreInFlight, siehe
+// onAuthStateChange) und nach dem Absenden der Anmeldung (authFlowInFlight). Vorher stand
+// dort sekundenlang "Passwort eingeben" - man tippte es ein, obwohl die App gleich von
+// selbst aufging. startupShownAt: seit wann er steht (für den Hinweis bei langem Laden).
+let sessionRestoreInFlight = false;
+let startupShownAt = null;
+const STARTUP_SLOW_HINT_MS = 8000;
+function isOpeningAccount() {
+  return Boolean(state.session) && !currentDek && (sessionRestoreInFlight || authFlowInFlight)
+    && !state.unlockError && !state.unlockBusy;
+}
+function renderStartupScreen() {
+  startupShownAt ??= Date.now();
+  // Der Hinweis erscheint per CSS-Verzögerung - gerechnet ab dem ersten Anzeigen, damit
+  // ein zwischendurch neu gezeichneter Bildschirm die Wartezeit nicht neu startet.
+  const hintDelay = Math.max(0, STARTUP_SLOW_HINT_MS - (Date.now() - startupShownAt));
+  app.innerHTML = `
+    <div class="auth-box startup" role="status">
+      <h1>Logbuch</h1>
+      <p class="sub">${t('startup.opening')}</p>
+      <p class="onb-hint startup-slow" style="animation-delay:${hintDelay}ms">${t('startup.slow')}</p>
+    </div>
+  `;
+}
 // Tastatur-Fokus über render() hinweg erhalten: render() ersetzt das ganze #app, das
 // fokussierte Element verschwindet also bei jeder Aktion - wer per Tastatur, Schalter-
 // Steuerung oder Screenreader einen Wert wählt, eine Gruppe aufklappt oder im Formular
@@ -7605,6 +7646,7 @@ function render() {
   // wird hier zentral gespeichert und geschlossen, statt an jeder der vielen Stellen,
   // die Tag oder Ansicht ändern (Klicks, Wischen, Deep-Links, Kalenderzellen, ...).
   if (state.noteEditor && !isNoteEditorOpen()) commitPendingNoteDraft();
+  if (!isOpeningAccount()) startupShownAt = null;
   if (state.passwordRecovery) { renderPasswordRecovery(); }
   else if (!state.session) {
     // Die Installations-Seite kommt erst nach Startseite bzw. Einstiegsfrage - direkt vor
@@ -7614,6 +7656,7 @@ function render() {
   else if (state.confirmLanding) { renderConfirmLanding(); }
   else if (state.recoveryKeyToShow) { renderRecoveryKeyDisplay(); }
   else if (state.encryptionSetupInProgress) { app.innerHTML = `<div class="loading">${t('common.encryptingData')}</div>`; }
+  else if (isOpeningAccount()) { renderStartupScreen(); }
   else if (!currentDek) { renderUnlockPrompt(); }
   else if (!state.loading && !state.userSettings.onboardingCompleted) { renderTutorial(); }
   else { renderApp(); }
@@ -8310,6 +8353,15 @@ document.addEventListener('pointerup', () => {
     if (slider.isConnected) commitSliderValue(slider);
   });
 });
+// Wird aus dem Anfassen ein Scrollen (touch-action: pan-y, siehe CSS), bricht der Browser
+// die Geste ab - einen dabei schon vorläufig angezeigten Wert verwerfen statt speichern.
+document.addEventListener('pointercancel', () => {
+  const slider = sliderPointerTarget;
+  sliderPointerTarget = null;
+  if (!slider?.dataset.dirty || !slider.isConnected) return;
+  delete slider.dataset.dirty;
+  renderUnlessTyping();
+});
 document.addEventListener('pointercancel', () => { sliderPointerTarget = null; });
 
 // Merkt sich, wenn einer der "Über Logbuch"-Abschnitte zu-/aufgeklappt wird (siehe
@@ -8761,7 +8813,7 @@ function consumePendingFieldFocus() {
       || state.recoveryKeyToShow || !state.userSettings.onboardingCompleted || state.view !== 'today') return;
   const habit = state.habits.find((h) => h.defId === pendingFieldFocus);
   pendingFieldFocus = null;
-  if (habit && !habit.archivedAt) focusTodayField(habit.id);
+  if (habit && !habit.archivedAt) focusTodayField(habit.id, { editInput: true });
 }
 function applyDeepLink({ view, date, field }) {
   pendingFieldFocus = view === 'today' ? field : null;
@@ -8843,6 +8895,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     // Kein Passwort verfügbar (Session-Wiederherstellung, z.B. Browser-Reload) - nur
     // der lokale Cache kann hier helfen, sonst muss renderUnlockPrompt() greifen.
     state.loading = true;
+    sessionRestoreInFlight = true;
     render();
     // Ohne Verbindung lässt sich der Cache nicht gegen die aktuelle Kennung prüfen -
     // dann lieber das Passwort abfragen als womöglich mit einem veralteten Schlüssel
@@ -8850,20 +8903,25 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     let cached = null;
     let row = null;
     try {
-      row = await fetchEncryptionRow(session.user.id);
-      const result = await usableCachedDek(session.user.id, row);
-      cached = result.dek;
-      if (result.stale) state.unlockError = t('unlock.keyChanged');
-    } catch { /* -> renderUnlockPrompt */ }
-    if (cached) {
-      setCurrentDek(cached, row.dek_id, session.user.id);
-      spareKeyPending = !row.recovery_key_confirmed;
-      await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections()]);
-      saveFieldNamesForPush(); // siehe completeAuthFlow
-      repadOldEntries();
-      checkPushStatus().then(render);
+      try {
+        row = await fetchEncryptionRow(session.user.id);
+        const result = await usableCachedDek(session.user.id, row);
+        cached = result.dek;
+        if (result.stale) state.unlockError = t('unlock.keyChanged');
+      } catch { /* -> renderUnlockPrompt */ }
+      if (cached) {
+        setCurrentDek(cached, row.dek_id, session.user.id);
+        spareKeyPending = !row.recovery_key_confirmed;
+        await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections()]);
+        saveFieldNamesForPush(); // siehe completeAuthFlow
+        repadOldEntries();
+        checkPushStatus().then(render);
+      }
+    } finally {
+      // Auch bei einem unerwarteten Fehler, sonst bliebe der Startbildschirm für immer stehen.
+      state.loading = false;
+      sessionRestoreInFlight = false;
     }
-    state.loading = false;
     maybeShowSpareKey();
   } else {
     clearLoadedAccountState();

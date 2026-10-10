@@ -74,7 +74,9 @@ function withDb(fn) {
 }
 
 const clone = (v) => (v === undefined ? v : JSON.parse(JSON.stringify(v)));
-const delay = () => new Promise((r) => setTimeout(r, 30)); // ein Hauch Netz, damit "läuft …"-Zustände kurz sichtbar sind
+// Ein Hauch Netz, damit "läuft …"-Zustände kurz sichtbar sind. Langsames Netz nachstellen:
+// localStorage.setItem('logbuchPreviewDelayMs', '2000') (gilt für jeden Aufruf).
+const delay = () => new Promise((r) => setTimeout(r, Number(localStorage.getItem('logbuchPreviewDelayMs')) || 30));
 
 // --- Auth -------------------------------------------------------------------
 function publicUser(u) {

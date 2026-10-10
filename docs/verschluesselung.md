@@ -84,6 +84,11 @@ entschlüsselte Objekte, die übrige App arbeitet nur damit.
 - Bestehende Session ohne frisches Passwort (Reload): erst der Cache, sonst
   `renderUnlockPrompt()` (falsches Passwort erkennt man daran, dass `unwrapDek`
   fehlschlägt).
+- Solange der Schlüssel ohne Zutun geladen wird (Reload: `sessionRestoreInFlight`; nach dem
+  Absenden der Anmeldung: `authFlowInFlight`), zeigt `render()` den Startbildschirm
+  (`isOpeningAccount`/`renderStartupScreen`) statt der Entsperr-Maske – vorher stand dort
+  sekundenlang "Passwort eingeben", obwohl die App gleich von selbst aufging. Die Maske kommt
+  nur, wenn das Passwort wirklich gebraucht wird (kein Cache, Fehler, eigenes Absenden dort).
 - `authFlowInFlight` verhindert, dass `onAuthStateChange` (feuert bei jedem
   `signIn`/`signUp`/`updateUser`) parallel einen zweiten Entsperr-Versuch startet – **muss
   VOR dem jeweiligen Supabase-Auth-Aufruf gesetzt werden**, sonst Race Condition.

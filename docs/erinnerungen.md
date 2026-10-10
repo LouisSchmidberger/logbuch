@@ -82,7 +82,9 @@ App mit dieser URL oder schickt einer offenen App das Ziel per `postMessage`
 entfernen die Parameter per `history.replaceState`. Erinnerungen an ein Feld tragen
 zusätzlich `&field=<Feld-ID>` (bei mehreren das erste): "Heute" scrollt zum Feld und hebt es
 hervor (`pendingFieldFocus`, eingelöst am Ende von `render()`, sobald "Heute" mit geladenen
-Feldern angezeigt wird – beim Kaltstart kann davor Entsperren/Laden liegen).
+Feldern angezeigt wird – beim Kaltstart kann davor Entsperren/Laden liegen). Hat das Feld
+ein Eingabefeld (Zahl, Text), bekommt das den Fokus, sonst die Menü-Punkte der Zeile; beim
+Sprung aus Woche/Monat immer die Menü-Punkte (keine aufspringende Tastatur beim Nachsehen).
 
 ## Zeitzone pro Nutzer
 

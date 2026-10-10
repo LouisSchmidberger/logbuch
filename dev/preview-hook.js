@@ -28,6 +28,7 @@ function dateKey(d) {
 export function install(app) {
   const api = {
     admin: previewAdmin,
+    state: app.state, // zum Nachsehen in Skripten (z.B. Feld-IDs für Deep-Links)
 
     // Alles weg: nachgebaute Datenbank, Schlüssel-Cache, Gerätespuren. Danach neu laden.
     async resetAll() {
