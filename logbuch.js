@@ -1349,14 +1349,15 @@ const STRINGS = {
     'numberChart.trend.flat': 'gleichbleibend',
     'numberChart.summary': '{name}: {count} Einträge, zuletzt {last}, Durchschnitt {avg}, Spanne {min} bis {max}, Trend {trend}.',
     'numberChart.withNotes': 'Davon {count} mit Notiz.',
-    'habitForm.goalLabel': 'Ziel: ab wie viel Prozent voll erreicht?',
-    'habitForm.goalYesNoLabel': 'Ziel: an wie vielen von 7 Tagen „{label}“?',
+    'habitForm.goalLabel': 'Ziel für die Auswertung: ab wie viel Prozent voll erreicht?',
+    'habitForm.goalYesNoLabel': 'Ziel für die Auswertung: an wie vielen von 7 Tagen „{label}“?',
     'habitForm.goalEveryDay': 'jeden Tag',
     'habitForm.goalDays': 'an {n} von 7 Tagen',
-    'habitForm.goalValueLabel': 'Ziel: ab wann voll erreicht?',
+    'habitForm.goalValueLabel': 'Ziel für die Auswertung: ab wann voll erreicht?',
     'habitForm.goalBestOnly': '„{label}“',
     'habitForm.goalOrBetter': '„{label}“ oder besser',
-    'habitForm.goalExplain': 'Ändert nur die Farbe in Woche, Monat, Jahr und Gesamt: Ab deinem Ziel ist das Feld dort voll grün. Gezählt werden die Tage, an denen du etwas eingetragen hast. „Heute“ bleibt unverändert.',
+    'habitForm.goalNote': 'Gilt für Woche, Monat, Jahr und Gesamt – „Heute“ bleibt unverändert.',
+    'habitForm.goalExplain': 'Ab deinem Ziel ist das Feld in den Übersichten voll grün – bei Durchschnitten ab diesem Wert, bei Tagen ab dieser Anzahl. Gezählt werden die Tage, an denen du etwas eingetragen hast.',
     'habitForm.ownLabels': 'Eigene Bezeichnungen verwenden',
     'habitForm.labelForStep': 'Bezeichnung für Stufe {step}',
     'habitForm.preview': 'Vorschau',
@@ -2027,14 +2028,15 @@ const STRINGS = {
     'numberChart.trend.flat': 'steady',
     'numberChart.summary': '{name}: {count} entries, last {last}, average {avg}, range {min} to {max}, trend {trend}.',
     'numberChart.withNotes': '{count} of them with a note.',
-    'habitForm.goalLabel': 'Goal: fully reached from what percentage?',
-    'habitForm.goalYesNoLabel': 'Goal: on how many of 7 days “{label}”?',
+    'habitForm.goalLabel': 'Goal for the statistics: fully reached from what percentage?',
+    'habitForm.goalYesNoLabel': 'Goal for the statistics: on how many of 7 days “{label}”?',
     'habitForm.goalEveryDay': 'every day',
     'habitForm.goalDays': 'on {n} of 7 days',
-    'habitForm.goalValueLabel': 'Goal: when is it fully reached?',
+    'habitForm.goalValueLabel': 'Goal for the statistics: when is it fully reached?',
     'habitForm.goalBestOnly': '“{label}”',
     'habitForm.goalOrBetter': '“{label}” or better',
-    'habitForm.goalExplain': 'Only changes the color in Week, Month, Year and Overall: from your goal on, the field is fully green there. Days on which you entered something count. “Today” stays unchanged.',
+    'habitForm.goalNote': 'Applies to Week, Month, Year and Overall – “Today” stays unchanged.',
+    'habitForm.goalExplain': 'From your goal on, the field is fully green in the overviews – for averages from this value, for days from this number. Days on which you entered something count.',
     'habitForm.ownLabels': 'Use custom labels',
     'habitForm.labelForStep': 'Label for step {step}',
     'habitForm.preview': 'Preview',
@@ -3510,11 +3512,14 @@ function goalForValue(f, value) {
 }
 function goalControlHtml(f) {
   const explain = infoTip(t('habitForm.goalExplain'));
+  // Sichtbar statt nur hinter dem "?": das Ziel betrifft nur die Übersichten, nicht "Heute".
+  const note = `<p class="habit-form-lock-note" id="habit-form-goal-note">${t('habitForm.goalNote')}</p>`;
   if (f.kind === 'computed') {
     return `
       <div class="auth-field">
         <label for="habit-form-goal">${t('habitForm.goalLabel')}${explain}</label>
-        <input type="number" id="habit-form-goal" data-goal-mode="percent" min="1" max="100" step="1" value="${Math.round(f.goal * 100)}" />
+        <input type="number" id="habit-form-goal" data-goal-mode="percent" min="1" max="100" step="1" value="${Math.round(f.goal * 100)}" aria-describedby="habit-form-goal-note" />
+        ${note}
       </div>
     `;
   }
@@ -3526,7 +3531,8 @@ function goalControlHtml(f) {
     return `
       <div class="auth-field">
         <label for="habit-form-goal">${tPlain('habitForm.goalYesNoLabel', { label: goalScaleLabel(f, bestIndex) })}${explain}</label>
-        <select id="habit-form-goal" data-goal-mode="choice">${options}</select>
+        <select id="habit-form-goal" data-goal-mode="choice" aria-describedby="habit-form-goal-note">${options}</select>
+        ${note}
       </div>
     `;
   }
@@ -3536,7 +3542,8 @@ function goalControlHtml(f) {
     return `
       <div class="auth-field">
         <label for="habit-form-goal">${label}${explain}</label>
-        <input type="number" id="habit-form-goal" data-goal-mode="value" min="${f.min}" max="${f.max}" step="1" value="${Math.round(value)}" />
+        <input type="number" id="habit-form-goal" data-goal-mode="value" min="${f.min}" max="${f.max}" step="1" value="${Math.round(value)}" aria-describedby="habit-form-goal-note" />
+        ${note}
       </div>
     `;
   }
@@ -3554,7 +3561,8 @@ function goalControlHtml(f) {
   return `
     <div class="auth-field">
       <label for="habit-form-goal">${label}${explain}</label>
-      <select id="habit-form-goal" data-goal-mode="choice">${options}</select>
+      <select id="habit-form-goal" data-goal-mode="choice" aria-describedby="habit-form-goal-note">${options}</select>
+      ${note}
     </div>
   `;
 }
