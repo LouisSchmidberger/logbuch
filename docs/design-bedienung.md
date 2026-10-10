@@ -24,8 +24,9 @@ geräte-lokal statt kontoweit gedacht (anders als die Sprache). `applyTheme()`/
 name="theme-color">` wird per JS synchronisiert (`syncThemeColorMeta`), da Meta-Tags keine
 CSS-Variablen lesen können.
 
-**Kontrast, Projektwerte**: `--sand` (Nebentext) ist im hellen Modus `#6b6354` (~4,8:1 auf
-`--paper`), im dunklen ~6,5:1. Knopf-Rahmen in `--sand`, nicht `--line` (zu blass). Text auf
+**Kontrast, Projektwerte**: `--sand` (Nebentext) ist im hellen Modus `#665e4f` (5,2:1 auf
+`--paper`, 4,7:1 auf den getönten Flächen: Gruppen-Blöcke in "Heute" mit `--ink` 5 %,
+Erklär-Kästen mit `--moss` 9 % – neue getönte Flächen dagegen nachrechnen), im dunklen ~6,5:1. Knopf-Rahmen in `--sand`, nicht `--line` (zu blass). Text auf
 Score-Farben (gewählte Buttons, berechnete Felder in "Heute", Ø-Zellen) wählt
 `textOnScore()` je Farbe: reines Weiß oder Schwarz, je nachdem was mehr Kontrast hat – nur
 so erreicht jede Stufe der Skala 4,5:1 (fester heller Text lag auf hellen Stufen bei ~3:1).

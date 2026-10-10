@@ -148,7 +148,7 @@
     --line: #c7c1b2;
     --moss: #4b6b4f;
     --rust: #a2503a;
-    --sand: #6b6354; /* Nebentext: ~4,8:1 auf --paper (vorher #8c8371, nur ~3:1 - zu blass für kleine Schrift) */
+    --sand: #665e4f; /* Nebentext: 5,2:1 auf --paper, 4,7:1 auf getönten Flächen (Gruppen in "Heute", Erklär-Kästen) - heller war es dort unter 4,5:1 */
     --surface: #eae7df;
     --popover-bg: #f4f1e9;
     --input-bg: #ffffff;
@@ -978,10 +978,10 @@
   /* Einklappbare Gruppen-Überschrift ("Heute" und Auswertung). */
   .section-toggle {
     display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; cursor: pointer;
-    font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 1.0625rem; color: var(--ink);
+    font-family: 'Fraunces', serif; font-style: italic; font-weight: 700; font-size: 1.1875rem; color: var(--ink);
     background: none; border: none; border-bottom: 1px solid var(--line); padding: 12px 0 6px;
   }
-  .section-chevron { flex-shrink: 0; color: var(--sand); transition: transform 0.15s ease; }
+  .section-chevron { flex-shrink: 0; color: var(--ink); transition: transform 0.15s ease; }
   .section-toggle[aria-expanded="true"] .section-chevron { transform: rotate(90deg); }
   @media (prefers-reduced-motion: reduce) { .section-chevron { transition: none; } }
   .section-block--stats > .section-toggle { font-size: 0.9375rem; padding-top: 10px; }
@@ -1004,6 +1004,18 @@
      Wochen-Raster nur der Feldname: eine eingerückte ganze Zeile würde die Tageskästchen
      gegen die Wochentag-Köpfe verschieben. */
   .section-content { padding-left: 19px; }
+  /* In "Heute" ist jede Gruppe ein leicht getönter Block (Nutzer-Entscheidung 2026-10-10):
+     zeigt, wo sie endet - auch bei zwei Gruppen direkt nacheinander, die sonst ineinander
+     verschwammen. Ragt links/rechts etwas über die Spalte hinaus, damit der Inhalt seine
+     volle Breite behält (sonst brachen Wert-Knöpfe um). Nicht in der Auswertung: dort
+     stehen Gruppen in Tabellen, ein Block würde die Spalten stören. Tönung mit --ink 5 % -
+     --sand ist darauf abgestimmt (Nebentext >= 4,5:1). */
+  .section-block--today {
+    background: color-mix(in srgb, var(--ink) 5%, transparent); border-radius: 6px;
+    padding: 0 10px; margin: 10px -10px 14px;
+  }
+  .section-block--today > .section-content > :last-child { border-bottom: none; }
+  .section-block--today.section-block--collapsed > .section-head { border-bottom: none; } /* nichts darunter - die Linie säße am Blockrand */
   .grid-scroll .section-content { padding-left: 0; }
   /* Die Gruppen-Überschrift hat schon eine Linie unten - sonst doppelt mit der oberen Linie der ersten Zeile. */
   .section-content > .habit-row:first-child, .section-content > .number-box:first-child { border-top: none; }
@@ -1191,6 +1203,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=077e1f98a0"></script>
+<script type="module" src="./logbuch.js?v=aa4cb5f5a1"></script>
 </body>
 </html>

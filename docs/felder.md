@@ -203,6 +203,8 @@ Gruppe steht").
   Überschrift (`section-toggle`, `aria-expanded`) und eingerücktem Inhalt
   (`.section-content`, bewusst ohne senkrechte Linie – wirkte überladen; im Wochen-Raster
   nur der Feldname eingerückt, sonst stünden die Kästchen nicht unter den Wochentagen).
+  In "Heute" zusätzlich als leicht getönter Block (2026-10-10, aus Vergleichsbildern
+  gewählt; verworfen: Doppellinie am Gruppenende, Tönung nur des Inhalts).
   Eingeklappt-Zustand pro Gerät, getrennt für "Heute" und Auswertung (`localStorage`
   `sectionCollapsed:<today|stats>:<id>`). "Heute nicht geplant" bleibt ungegliedert. Ein
   Sprung zu einem Feld in einer eingeklappten Gruppe klappt sie auf.

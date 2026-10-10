@@ -52,23 +52,28 @@ export function install(app) {
       const uid = session.user.id;
       const enc = (obj) => app.encryptData(dek, obj);
 
-      const { data: section, error: secErr } = await sb.from('habit_sections')
-        .insert({ user_id: uid, sort_order: 1, enc: await enc({ name: 'Morgens' }) }).select().single();
-      if (secErr) throw secErr;
+      // Zwei Gruppen mit ungruppierten Feldern dazwischen - so sieht man, wo eine Gruppe endet.
+      const sectionIds = {};
+      for (const [key, name, order] of [['morgens', 'Morgens', 1], ['abends', 'Abends', 10]]) {
+        const { data, error } = await sb.from('habit_sections')
+          .insert({ user_id: uid, sort_order: order, enc: await enc({ name }) }).select().single();
+        if (error) throw error;
+        sectionIds[key] = data.id;
+      }
 
       const base = { unit: null, min: null, max: null, labels: null, good: null, displayStyle: 'buttons', sliderShowValue: true, groupMembers: null, goalThreshold: null, aggregate: null, hideInStats: false, archivedInStats: false };
       const fields = [
-        { key: 'fschlaf', name: 'Schlafstunden', kind: 'number', section: true, unit: 'h' },
-        { key: 'fstimmung', name: 'Stimmung', kind: 'scale', section: true, min: 1, max: 5, good: 'high' },
+        { key: 'fschlaf', name: 'Schlafstunden', kind: 'number', section: 'morgens', unit: 'h' },
+        { key: 'fstimmung', name: 'Stimmung', kind: 'scale', section: 'morgens', min: 1, max: 5, good: 'high' },
         { key: 'fenergie', name: 'Energie', kind: 'scale', min: 0, max: 10, good: 'high', displayStyle: 'slider' },
         { key: 'fsport', name: 'Sport', kind: 'scale', min: 0, max: 1, good: 'high', labels: ['Nein', 'Ja'], schedule: { type: 'weekly', days: [0, 2, 4] } },
-        { key: 'fkopf', name: 'Kopfschmerzen', kind: 'scale', min: 0, max: 3, good: 'low', labels: ['keine', 'leicht', 'mittel', 'stark'] },
         { key: 'fwasser', name: 'Wassergläser', kind: 'number' },
         { key: 'fwohl', name: 'Wohlbefinden', kind: 'computed', groupMembers: ['fstimmung', 'fenergie'], good: null },
-        { key: 'fdank', name: 'Dankbar für', kind: 'text' },
+        { key: 'fkopf', name: 'Kopfschmerzen', kind: 'scale', section: 'abends', min: 0, max: 3, good: 'low', labels: ['keine', 'leicht', 'mittel', 'stark'] },
+        { key: 'fdank', name: 'Dankbar für', kind: 'text', section: 'abends' },
       ];
-      let topOrder = 1; // 1 = die Gruppe
-      let sectionOrder = 0;
+      let topOrder = 1; // 1 = Gruppe "Morgens", 10 = "Abends"
+      const inSection = { morgens: 0, abends: 0 };
       for (const f of fields) {
         const payload = { ...base, ...f };
         delete payload.kind; delete payload.section; delete payload.schedule;
@@ -77,8 +82,8 @@ export function install(app) {
           kind: f.kind,
           schedule: f.schedule ?? null,
           reminder_minute: null,
-          section_id: f.section ? section.id : null,
-          sort_order: f.section ? ++sectionOrder : ++topOrder,
+          section_id: f.section ? sectionIds[f.section] : null,
+          sort_order: f.section ? ++inSection[f.section] : ++topOrder,
           enc: await enc(payload),
           ...app.DEF_PLAINTEXT_CLEARED,
         });

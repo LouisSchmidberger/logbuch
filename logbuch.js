@@ -448,7 +448,7 @@ function renderBySection(habits, scope, renderList) {
     const dayEntry = state.entries[dateKey] || {};
     const hasOpen = scope === 'today' && collapsed && block.habits.some((h) => isOpenToday(h, dayEntry));
     const done = scope === 'today' && collapsed && sectionDoneOn(block.habits, dayEntry);
-    out.push(`<div class="section-block section-block--${scope}">${renderSectionToggle(block.section, scope, collapsed, hasOpen, done)}${collapsed ? '' : `<div class="section-content">${renderList(block.habits)}</div>`}</div>`);
+    out.push(`<div class="section-block section-block--${scope}${collapsed ? ' section-block--collapsed' : ''}">${renderSectionToggle(block.section, scope, collapsed, hasOpen, done)}${collapsed ? '' : `<div class="section-content">${renderList(block.habits)}</div>`}</div>`);
   }
   flush();
   return out.join('');
