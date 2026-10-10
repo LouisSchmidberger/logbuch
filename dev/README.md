@@ -39,8 +39,8 @@ Die Bilder landen in `dev/screenshots/<rundgang>-<gerät>[-dark][-<größe>]/` (
 jeder Lauf leert seinen Ordner vorher.
 
 **Aufräumen:** Vergleichsbilder für eine Gestaltungsfrage kommen nach
-`dev/screenshots/vergleich/` und werden gelöscht, sobald die Frage entschieden ist (die
-Entscheidung steht dann in docs/). Mit `--keep` angelegte Browser-Profile (`dev/.profile-*`)
+`dev/screenshots/vergleich/` und werden am Ende der Sitzung gelöscht (nicht schon nach der
+Entscheidung - man will oft nochmal zurückschauen; die Entscheidung steht in docs/). Mit `--keep` angelegte Browser-Profile (`dev/.profile-*`)
 nach dem Test löschen. Alles unter `dev/screenshots/` lässt sich jederzeit neu erzeugen.
 Geräte: `handy` (390 px), `schmal` (360 px), `iphone`, `pc`. Größen wie die Einstellung
 Textgröße: `small`, `large`, `xlarge`.
