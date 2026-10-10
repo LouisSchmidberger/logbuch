@@ -51,8 +51,8 @@ Felder ohne Antwort im Zeitraum erscheinen nicht. Erklärt in "Über Logbuch"
 ## Darstellung von Skalen (`display_style`)
 
 `buttons` (Standard) zeigt Auswahl-Buttons, `slider` einen Schieberegler
-(`renderHabitSlider`). Beim Anlegen gibt es nur eine Stufenzahl (gespeichert als
-`min=1`/`max=<Stufenzahl>`), keine freie Von/Bis-Spanne. Der Regler zeigt **nie** eine
+(`renderHabitSlider`). Beim Anlegen gibt es eine Stufenzahl (gespeichert als
+`min`/`max=min+Stufenzahl-1`), keine freie Von/Bis-Spanne. Der Regler zeigt **nie** eine
 Min/Max-Beschriftung; `slider_show_value` steuert nur, ob der gewählte Wert sichtbar ist.
 
 Live-Vorschau (Wert + Farbe) beim Ziehen über einen `input`-Listener ohne Re-Render;
@@ -64,12 +64,16 @@ dort los, feuerte kein `change`, er sah eingetragen aus, war aber nicht gespeich
 
 **Bezeichnungen (`labels`) sind kein eigener Modus, sondern ein optionaler Text-Overlay über
 denselben Stufen** (zwei sich ausschließende Formular-Modi verworfen, weil die DB nie
-zwischen ihnen unterschied). **Neue bzw. unbefüllte Skala-Felder starten immer bei
-`min=1`** – wer andere Bezeichnungen will, nutzt eigene Bezeichnungen statt eines
-verschobenen Zahlenbereichs.
+zwischen ihnen unterschied). **Neue bzw. unbefüllte Skala-Felder starten bei `min=1`**,
+Zahlenskalen ohne eigene Bezeichnungen wahlweise bei 0 (Auswahl "Zahlen: 1 bis 5 | 0 bis 4",
+Nutzer-Entscheidung 2026-10-11 – Schmerz-/Stressskalen werden üblicherweise 0 bis 10
+abgefragt). Ein frei wählbarer Startwert (auch negativ) wurde am 2026-09-18 bewusst
+abgeschafft; Felder mit Daten aus der Zeit davor behalten ihren Startwert (eine Übersetzung
+auf 1 mit den alten Zahlen als Bezeichnungen wurde verworfen: alle Einträge umzuschreiben
+wäre ein Datenrisiko für drei Zeilen Sonderfall, und über 7 Stufen gibt es keine Bezeichnungen).
 
 Formular (`scaleBody` in `renderHabitForm`), in dieser Reihenfolge: Darstellung →
-**eine** "Anzahl Stufen"-Eingabe → Checkbox "Eigene Bezeichnungen verwenden", darunter nur
+**eine** "Anzahl Stufen"-Eingabe → "Zahlen" (Start 1 oder 0, nur ohne Bezeichnungen) → Checkbox "Eigene Bezeichnungen verwenden", darunter nur
 dann eine Zeile pro Stufe (Textfeld, die Zahl als Startwert; ohne Bezeichnungen keine
 ausgegrauten Zahlen-Felder – sie wirkten wie kaputte Eingabefelder) → Live-Vorschau →
 Bewertung/Ziel-Quote. Die Vorschau rendert `renderHabitOptions`/`renderHabitSlider` mit

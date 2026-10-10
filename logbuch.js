@@ -1369,6 +1369,9 @@ const STRINGS = {
     'habitForm.stepsExplain': 'In Fragebögen haben sich 5 bis 7 Stufen bewährt – mehr Abstufungen machen Antworten selten genauer. Deshalb gehen Buttons und eigene Bezeichnungen bis 7. Für ein feineres „ungefähr wie viel“ gibt es den Schieberegler ohne Bezeichnungen (bis 100).',
     'habitForm.sliderRangeExplain': 'Der Regler zeigt nie eine Min/Max-Beschriftung beim Eintragen (nur hier in der Verwaltung).',
     'habitForm.rangeLocked': 'Bereich {min}–{max} (durch vorhandene Einträge gesperrt).',
+    'habitForm.numbers': 'Zahlen',
+    'habitForm.numbersRange': '{min} bis {max}',
+    'habitForm.numbersExplain': 'Manche Skalen beginnen üblicherweise bei 0, z. B. Schmerz oder Stress von 0 („gar nicht“) bis 10.',
     'habitForm.showValueWhileEntering': 'Aktuellen Wert beim Eintragen anzeigen',
     'habitForm.goalDirection': 'Bewertung',
     'habitForm.goalDirectionExplain': 'Legt fest, was als "gut" gilt und entsprechend grün eingefärbt wird. Meist "hohe Werte" (z. B. Sport, gesunde Ernährung). "Niedrige Werte" eignet sich für Dinge, von denen weniger besser ist (z. B. Konsum von etwas, das man reduzieren möchte). "Keine Wertung" trackt den Wert einfach nur, ohne Rot-Grün-Färbung – z. B. für Dinge, die du beobachten, aber nicht bewerten willst.',
@@ -2044,6 +2047,9 @@ const STRINGS = {
     'habitForm.stepsExplain': 'In questionnaires, 5 to 7 steps have proven themselves – more gradations rarely make answers more accurate. That is why buttons and custom labels go up to 7. For a finer “roughly how much”, there is the slider without custom labels (up to 100).',
     'habitForm.sliderRangeExplain': 'The slider never shows a min/max label while entering a value (only here in management).',
     'habitForm.rangeLocked': 'Range {min}–{max} (locked due to existing entries).',
+    'habitForm.numbers': 'Numbers',
+    'habitForm.numbersRange': '{min} to {max}',
+    'habitForm.numbersExplain': 'Some scales usually start at 0, e.g. pain or stress from 0 (“not at all”) to 10.',
     'habitForm.showValueWhileEntering': 'Show current value while entering',
     'habitForm.goalDirection': 'Valuation',
     'habitForm.goalDirectionExplain': 'Determines what counts as "good" and is colored green accordingly. Usually "high values" (e.g. exercise, healthy eating). "Low values" suits things you want less of (e.g. consumption of something you want to reduce). "No valuation" simply tracks the value without red/green coloring - e.g. for things you want to observe but not judge.',
@@ -3867,9 +3873,10 @@ async function handleHabitSaveInner() {
     }
     fields = { kind: 'scale', min: original.min, max: original.max, labels: f.labelsEnabled ? f.labels : null, good: f.good, unit: null, display_style: f.displayStyle, slider_show_value: f.sliderShowValue, group_members: null, goal_threshold: goalThreshold };
   } else {
-    // Neue/unbefüllte Skala-Felder starten immer bei 1 (siehe defaultHabitForm) - nur
-    // noch die Stufenzahl ist für beide Darstellungen einheitlich einzugeben.
-    const min = 1;
+    // Neue/unbefüllte Skala-Felder starten bei 1, Zahlenskalen ohne eigene Bezeichnungen
+    // wahlweise bei 0 (Schmerz/Stress "0 bis 10", Nutzer-Entscheidung 2026-10-11). Mit
+    // eigenen Bezeichnungen sieht man die Zahlen nie - dort immer 1.
+    const min = !f.labelsEnabled && f.min === 0 ? 0 : 1;
     const stepsEl = document.getElementById('habit-form-steps');
     const steps = Math.round(Number(stepsEl ? stepsEl.value : habitFormStepCount(f)));
     const isSlider = f.displayStyle === 'slider';
@@ -6899,6 +6906,14 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         <button type="button" class="link-btn tip-link" data-action="habit-steps-to-slider">${t(f.displayStyle === 'buttons' ? 'habitForm.stepCapToSlider' : 'habitForm.stepCapLabelsOff')}</button>
       ` : ''}
     </div>
+    ${!f.locked && !f.labelsEnabled ? `
+      <div class="auth-field">
+        <label>${t('habitForm.numbers')}${infoTip(t('habitForm.numbersExplain'))}</label>
+        <div class="pill-group">
+          ${[1, 0].map((start) => `<button type="button" class="pill-toggle${(f.min === 0 ? 0 : 1) === start ? ' pill-toggle--active' : ''}" data-action="habit-start" data-start="${start}">${tPlain('habitForm.numbersRange', { min: start, max: start + stepCount - 1 })}</button>`).join('')}
+        </div>
+      </div>
+    ` : ''}
     ${f.displayStyle === 'slider' ? `
       <div class="auth-field">
         <label class="checkbox-field">
@@ -8278,6 +8293,13 @@ app.addEventListener('click', async (e) => {
     syncHabitFormFromDom();
     state.habitForm.good = el.dataset.good || null;
     render();
+  } else if (action === 'habit-start') {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    const steps = habitFormStepCount(f);
+    f.min = Number(el.dataset.start) === 0 ? 0 : 1;
+    f.max = f.min + steps - 1;
+    render();
   } else if (action === 'habit-display-style') {
     syncHabitFormFromDom();
     const f = state.habitForm;
@@ -8466,6 +8488,9 @@ app.addEventListener('change', async (e) => {
     // Beim Aktivieren bleiben die Zahlen als Startwert stehen (siehe resizeLabels) -
     // macht sichtbar, dass es weiterhin dieselbe Skala ist, bis man sie überschreibt.
     f.labels = resizeLabels(f.labels, habitFormStepCount(f), f.labelsEnabled ? (i) => String(habitFormStepValue(f, i)) : undefined);
+    // Mit eigenen Bezeichnungen sind die Zahlen unsichtbar - intern wieder ab 1 (beim
+    // Speichern ohnehin, siehe saveHabitForm); die vorbelegten Texte behalten "0 …".
+    if (f.labelsEnabled && !f.locked && f.min !== 1) { f.max = f.max - f.min + 1; f.min = 1; }
     render();
     return;
   }
