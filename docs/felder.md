@@ -73,7 +73,9 @@ auf 1 mit den alten Zahlen als Bezeichnungen wurde verworfen: alle Einträge umz
 wäre ein Datenrisiko für drei Zeilen Sonderfall, und über 7 Stufen gibt es keine Bezeichnungen).
 
 Formular (`scaleBody` in `renderHabitForm`), in dieser Reihenfolge: Darstellung →
-**eine** "Anzahl Stufen"-Eingabe → "Zahlen" (Start 1 oder 0, nur ohne Bezeichnungen) → Checkbox "Eigene Bezeichnungen verwenden", darunter nur
+**eine** "Anzahl Stufen"-Eingabe → Checkbox "Eigene Bezeichnungen verwenden" → ohne
+Bezeichnungen "Zahlen" (Start 1 oder 0; steht danach, weil Bezeichnungen die Frage
+erübrigen), mit Bezeichnungen nur
 dann eine Zeile pro Stufe (Textfeld, die Zahl als Startwert; ohne Bezeichnungen keine
 ausgegrauten Zahlen-Felder – sie wirkten wie kaputte Eingabefelder) → Live-Vorschau →
 Bewertung/Ziel-Quote. Die Vorschau rendert `renderHabitOptions`/`renderHabitSlider` mit

@@ -6906,14 +6906,6 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         <button type="button" class="link-btn tip-link" data-action="habit-steps-to-slider">${t(f.displayStyle === 'buttons' ? 'habitForm.stepCapToSlider' : 'habitForm.stepCapLabelsOff')}</button>
       ` : ''}
     </div>
-    ${!f.locked && !f.labelsEnabled ? `
-      <div class="auth-field">
-        <label>${t('habitForm.numbers')}${infoTip(t('habitForm.numbersExplain'))}</label>
-        <div class="pill-group">
-          ${[1, 0].map((start) => `<button type="button" class="pill-toggle${(f.min === 0 ? 0 : 1) === start ? ' pill-toggle--active' : ''}" data-action="habit-start" data-start="${start}">${tPlain('habitForm.numbersRange', { min: start, max: start + stepCount - 1 })}</button>`).join('')}
-        </div>
-      </div>
-    ` : ''}
     ${f.displayStyle === 'slider' ? `
       <div class="auth-field">
         <label class="checkbox-field">
@@ -6929,6 +6921,14 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       </label>
       ${labelsBlocked && !buttonsBlocked ? lockedCapNote : ''}
     </div>
+    ${!f.locked && !f.labelsEnabled ? `
+      <div class="auth-field">
+        <label>${t('habitForm.numbers')}${infoTip(t('habitForm.numbersExplain'))}</label>
+        <div class="pill-group">
+          ${[1, 0].map((start) => `<button type="button" class="pill-toggle${(f.min === 0 ? 0 : 1) === start ? ' pill-toggle--active' : ''}" data-action="habit-start" data-start="${start}">${tPlain('habitForm.numbersRange', { min: start, max: start + stepCount - 1 })}</button>`).join('')}
+        </div>
+      </div>
+    ` : ''}
     ${f.labelsEnabled ? `
       <div class="auth-field">
         <div class="label-inputs">
