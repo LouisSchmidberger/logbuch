@@ -14,8 +14,8 @@ anlegen, umbenennen, archivieren, reaktivieren.
 
 **Größtenteils verschlüsselt**: die Eigenschaften stehen nicht in Klartext-Spalten, sondern
 verschlüsselt in `enc` (Details siehe [verschluesselung.md](verschluesselung.md) →
-Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `schedule`,
-`archived_at`, `sort_order`, `section_id`. Im Client heißen die Eigenschaften wie unten.
+Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `schedule`, `period`,
+`period_reminder_day`, `archived_at`, `sort_order`, `section_id`. Im Client heißen die Eigenschaften wie unten.
 
 - `slug` (Key in `habit_entries.data`; verschlüsselt als `key`, bei neuen Feldern ein
   zufälliger Schlüssel aus `newHabitKey` statt aus dem Namen abgeleitet), `name`, `kind`
@@ -86,6 +86,22 @@ Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `schedule
   Vortag ein) und nach ≥ 5 Min. Abwesenheit Neuladen von Einträgen, Feldern und Gruppen
   (`refreshAfterReturn`, nicht bei offenem Formular/Editor; verwirft das Ergebnis, falls
   währenddessen schon etwas geändert wurde).
+
+## Zeitraum-Felder (`habit_definitions.period`)
+
+`period` = `'day'` (Standard, alle bisherigen Felder) | `'week'` | `'month'` | `'year'`. Ein
+Zeitraum-Feld hat **einen Wert pro Zeitraum**, an jedem Tag darin setzbar, gespeichert im
+Eintrag des **ersten Tags des Zeitraums** (Montag, Monatserster, 1.1.) unter dem
+Feldschlüssel – bewusst keine eigene Tabelle: Verschlüsselung, `saveDay`/`mergeDay`, Export
+und Löschen funktionieren so unverändert. Erster Tag: `periodStart` (JS) und
+`public.habit_period_start` (SQL) – **synchron halten**. Zeitraum-Felder haben keine
+Wiederholung, sind nie "Berechnet" und in keiner Gruppe (DB-Check
+`habit_definitions_period_combination_check`). `period_reminder_day`: Tag der Erinnerung im
+Zeitraum, `null` = Standard (Woche: ISO-Wochentag 1–7, Std. 7 = Sonntag; Monat: 1–31 oder
+-1 = letzter, Std. letzter; Jahr: MMTT, Std. 1231; ein Tag, den es im Monat nicht gibt, gilt
+als Monatsletzter), DB-Check `habit_definitions_period_check`. Beides Klartext, weil
+`get_due_notifications` es braucht (Entscheidung 2026-10-11, wie `schedule`). Erinnerung
+siehe [erinnerungen.md](erinnerungen.md).
 
 ## `habit_sections` – Gruppen
 

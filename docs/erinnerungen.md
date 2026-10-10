@@ -2,7 +2,7 @@
 
 Eine Edge Function `send-notifications` läuft **alle 15 Minuten** (pg_cron). Wer was
 bekommt, entscheidet komplett die SQL-Funktion `public.get_due_notifications(p_now,
-p_after, p_limit)` (aktuelle Fassung in Migration `20260928100000_add_section_reminders`,
+p_after, p_limit)` (aktuelle Fassung in Migration `20261011120000_add_habit_period`,
 Eingaben seit `20260929120000_harden_reminder_inputs` von der DB geprüft, siehe
 [datenmodell.md](datenmodell.md) → Robustheit). Die Function übersetzt deren Zeilen nur in
 Nachrichten (`PUSH_TEXTS`) und verschickt sie. `sw.js` macht nur Push-Empfang/-Klick (kein
@@ -39,6 +39,12 @@ Offline-Caching). Alle Zeiten/Daten gelten in der **Ortszeit des Nutzers**
   angezeigt; im Feld-Formular sagt der Hinweis unter "Eigene Erinnerungszeit", dass die
   Gruppe die Zeit regelt (`habitFormReminderNote`, wechselt beim Ändern der Gruppe mit).
   `get_due_notifications` liefert dafür `section_missing` (`[{id, fields}]`).
+- **Zeitraum-Felder** (Woche/Monat/Jahr, siehe [datenmodell.md](datenmodell.md)): eine
+  Erinnerung pro Zeitraum, am Erinnerungstag (`period_reminder_day`, Standard Sonntag /
+  Monatsletzter / 31.12., `habit_period_reminder_due`) zur eigenen Zeit des Felds oder zur
+  Standardzeit – nur wenn im ersten Tag des Zeitraums noch kein Wert steht. Immer mit Namen
+  (in `custom_missing`), da einzeln und selten. Standard-, Gruppen- und Feld-Erinnerung der
+  Tagesfelder zählen nur `period = 'day'`.
 - Uhrzeiten überall (Feld, Gruppe, Standardzeit, Tutorial) als zwei Auswahllisten Stunde :
   Minute (00/15/30/45, `reminderTimeInputHtml`/`readTimeInput`) – bewusst kein natives
   `<input type="time">`, dessen `step` viele Browser/Betriebssysteme ignorieren.
