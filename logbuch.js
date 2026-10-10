@@ -3700,8 +3700,8 @@ function goalControlHtml(f) {
     <div class="auth-field">
       <label for="habit-form-goal">${t('habitForm.goalValueLabel')}${explain}</label>
       <div class="goal-slider-row">
-        <input type="range" id="habit-form-goal" class="goal-slider" data-goal-mode="value" data-action="goal-slider"
-          min="${lo}" max="${hi}" step="0.1" value="${value}" aria-valuetext="${esc(text + (span ? ' · ' + span : ''))}"
+        <input type="range" id="habit-form-goal" class="value-slider goal-slider" data-goal-mode="value" data-action="goal-slider"
+          min="${lo}" max="${hi}" step="0.1" value="${value}" style="--slider-pct:${((value - lo) / (hi - lo)) * 100}%" aria-valuetext="${esc(text + (span ? ' · ' + span : ''))}"
           aria-describedby="habit-form-goal-span habit-form-goal-note" />
         <span class="goal-slider-value" id="habit-form-goal-text" aria-hidden="true">${esc(text)}</span>
       </div>
@@ -8740,6 +8740,8 @@ app.addEventListener('input', (e) => {
   spanEl.textContent = span;
   spanEl.hidden = !span;
   goalSliderEl.setAttribute('aria-valuetext', text + (span ? ' · ' + span : ''));
+  const lo = Number(goalSliderEl.min), hi = Number(goalSliderEl.max);
+  goalSliderEl.style.setProperty('--slider-pct', ((Number(goalSliderEl.value) - lo) / (hi - lo)) * 100 + '%');
 });
 app.addEventListener('change', async (e) => {
   state.notice = null; // siehe Kommentar beim 'click'-Listener oben

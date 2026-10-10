@@ -504,11 +504,16 @@
     touch-action: pan-y;
   }
   .value-slider--unset { --slider-color: var(--sand); }
+  /* Linie um den halben Knopf (8px) eingerückt: der Knopf bleibt ganz innerhalb des Reglers,
+     seine Mitte erreicht die Enden also nie - ohne Einrückung stand er an beiden Anschlägen
+     sichtbar vor dem Linienende. --slider-pct (0-100%) bezieht sich so genau auf den Weg der
+     Knopfmitte. */
   .value-slider::-webkit-slider-runnable-track {
-    height: 4px; border-radius: 2px;
-    background: linear-gradient(to right, var(--slider-color) 0%, var(--slider-color) var(--slider-pct), var(--line) var(--slider-pct), var(--line) 100%);
+    height: 4px;
+    background: linear-gradient(to right, var(--slider-color) 0%, var(--slider-color) var(--slider-pct), var(--line) var(--slider-pct), var(--line) 100%)
+      center / calc(100% - 16px) 100% no-repeat;
   }
-  .value-slider::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line); }
+  .value-slider::-moz-range-track { height: 4px; background: linear-gradient(var(--line), var(--line)) center / calc(100% - 16px) 100% no-repeat; }
   .value-slider::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--slider-color); }
   .value-slider::-webkit-slider-thumb {
     -webkit-appearance: none; appearance: none; margin-top: -6px;
@@ -1160,7 +1165,8 @@
   .label-input-row { display: flex; align-items: center; gap: 0.5rem; }
   /* Ziel stufenlos (goalControlHtml): Regler + live "ab Ø 4,3". */
   .goal-slider-row { display: flex; align-items: center; gap: 0.75rem; }
-  .goal-slider { flex: 1; min-width: 0; height: 2.75rem; accent-color: var(--moss); }
+  .goal-slider { min-width: 0; height: 2.75rem; } /* Optik von .value-slider */
+  .auth-field input.goal-slider { border: none; background: transparent; padding: 0; } /* nicht die Kasten-Optik der Eingabefelder */
   .goal-slider-value { flex-shrink: 0; min-width: 5.5rem; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
   .label-input-step { min-width: 1.5rem; text-align: right; font-size: 0.8125rem; color: var(--sand); font-variant-numeric: tabular-nums; }
   .field-preview { padding: 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--input-bg); }
@@ -1224,6 +1230,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=5545f37cfe"></script>
+<script type="module" src="./logbuch.js?v=9431edfed1"></script>
 </body>
 </html>
