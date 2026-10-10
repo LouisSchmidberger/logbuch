@@ -1,6 +1,6 @@
 # Felder, Gruppen und Auswertung
 
-Begriffe: in der App heißt **"Gruppe"** eine einklappbare Überschrift, unter der Felder
+Begriffe: in der App heißt **"Gruppe"** eine (meist einklappbare) Überschrift, unter der Felder
 stehen – im Code/in der DB **`section`** (`habit_sections`, `state.sections`,
 `renderBySection` …). Der Feldtyp **"Berechnet"** heißt intern **`kind='computed'`**
 (umbenannt von `kind='group'`, Migration `20260927220000_rename_group_kind_to_computed`,
@@ -206,6 +206,20 @@ Gruppe steht").
   Eingeklappt-Zustand pro Gerät, getrennt für "Heute" und Auswertung (`localStorage`
   `sectionCollapsed:<today|stats>:<id>`). "Heute nicht geplant" bleibt ungegliedert. Ein
   Sprung zu einem Feld in einer eingeklappten Gruppe klappt sie auf.
+- **Einklappen in "Heute"** pro Gruppe (Nutzer-Entscheidung 2026-10-10, eine Auswahl statt
+  mehrerer Schalter; `collapse` verschlüsselt mit dem Namen in `habit_sections.enc`, ohne
+  Wert = `'done'`): `'done'` (Standard) Zuklappen, wenn alles eingetragen ist, mit
+  "✓ erledigt" in der Überschrift; `'manual'` nur von Hand; `'start'` startet eingeklappt;
+  `'never'` reine Überschrift ohne Knopf (auch in der Auswertung). Automatisch zugeklappt
+  wird **nur beim Betreten des Tages** (`todayAutoCollapse`, neu bestimmt bei Tag- oder
+  Ansichtswechsel, Neuladen und nach `refreshAfterReturn`), nie während man einträgt – sonst
+  verschwände eine Gruppe, wenn man den letzten Wert kurz danach nochmal ändert (dasselbe
+  Problem wie beim verworfenen Einklappen eingetragener Felder, siehe
+  docs/design-bedienung.md). Von Hand Aufklappen hebt das automatische Zuklappen für diesen
+  Besuch auf (`expandSection`).
+- **Tipp zum Gruppieren**: einmalig in "Felder verwalten" ab 6 aktiven Feldern ohne Gruppe
+  (`GROUP_TIP_MIN_FIELDS`, ausblendbar, `localStorage` `groupTipDismissed`), dazu
+  `about.tip.sections`.
 
 ## Feld-Formular: "Mehr Einstellungen" und Sichtbarkeit
 

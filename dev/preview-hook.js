@@ -12,7 +12,7 @@ import { previewAdmin } from './mock-supabase.js';
 // the device") - für einen sauberen Neuanfang mit weg.
 const DEVICE_KEYS = [
   'onboardingMode', 'onboardingInProgress', 'onboardingWithInstall', 'signedInHere',
-  'installGateSkipped', 'installHintDismissed', 'todayIntroPending',
+  'installGateSkipped', 'installHintDismissed', 'todayIntroPending', 'groupTipDismissed',
 ];
 
 // Fester Zufall, damit Screenshots von Lauf zu Lauf gleich aussehen.
@@ -29,6 +29,7 @@ export function install(app) {
   const api = {
     admin: previewAdmin,
     state: app.state, // zum Nachsehen in Skripten (z.B. Feld-IDs für Deep-Links)
+    render: app.render, // nach Änderungen an state von Hand neu zeichnen
 
     // Alles weg: nachgebaute Datenbank, Schlüssel-Cache, Gerätespuren. Danach neu laden.
     async resetAll() {

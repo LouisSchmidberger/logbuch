@@ -985,6 +985,14 @@
   .section-toggle[aria-expanded="true"] .section-chevron { transform: rotate(90deg); }
   @media (prefers-reduced-motion: reduce) { .section-chevron { transition: none; } }
   .section-block--stats > .section-toggle { font-size: 0.9375rem; padding-top: 10px; }
+  /* Gruppe "nicht einklappbar": reine Überschrift, kein Knopf. */
+  .section-toggle--static { cursor: default; }
+  /* "✓ erledigt" hinter dem Namen einer zugeklappten Gruppe - in der Schrift des Fließtexts,
+     damit es als Status und nicht als Teil des Namens gelesen wird. */
+  .section-done {
+    margin-left: 0.5rem; font-family: 'IBM Plex Sans', sans-serif; font-style: normal;
+    font-size: 0.8125rem; font-weight: 600; color: var(--moss);
+  }
   /* "Heute": ⋮-Button links neben der Überschrift, die Linie trägt dann der Kopf. */
   .section-head { display: flex; align-items: center; border-bottom: 1px solid var(--line); padding-top: 6px; }
   .section-head > .row-menu-btn { margin-left: -8px; }
@@ -1142,6 +1150,7 @@
   }
   .form-tip p { margin: 0; }
   .form-tip .why-box { margin: 0.5rem 0 0; padding: 0; border: none; background: none; }
+  .manage-group-tip-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; }
   .habit-form-more { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 6px 0 4px; padding: 0.5rem 0; }
   .habit-form-more[open] { padding-bottom: 0.75rem; }
   .habit-form-more > summary { cursor: pointer; padding: 0.375rem 0; }
@@ -1182,6 +1191,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=677211cb35"></script>
+<script type="module" src="./logbuch.js?v=077e1f98a0"></script>
 </body>
 </html>

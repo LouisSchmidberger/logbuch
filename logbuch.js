@@ -373,11 +373,47 @@ function setSectionCollapsed(scope, id, collapsed) {
     else localStorage.removeItem(`sectionCollapsed:${scope}:${id}`);
   } catch { /* privater Modus o.ä. - wirkt dann nur bis zum nächsten Neuladen nicht */ }
 }
-function renderSectionToggle(section, scope, collapsed, hasOpen = false) {
-  const toggle = `
+// Wie sich eine Gruppe in "Heute" einklappt (Gruppen-Formular, verschlüsselt mit dem Namen
+// in habit_sections.enc): 'done' (Standard) klappt eine Gruppe zu, in der für den Tag alles
+// eingetragen ist - aber nur beim Betreten des Tages (Öffnen der App, Tag- oder
+// Ansichtswechsel, Rückkehr nach längerer Pause), nie während man einträgt: wer einen Wert
+// nach kurzem Innehalten nochmal ändert, dem darf die Gruppe nicht unter den Fingern
+// zuklappen. 'start' startet bei jedem Betreten eingeklappt, 'manual' nur von Hand,
+// 'never' ist eine reine Überschrift ohne Zuklappen (auch in der Auswertung).
+const SECTION_COLLAPSE_MODES = ['done', 'manual', 'start', 'never'];
+// Für den aktuellen Besuch eines Tages automatisch eingeklappte Gruppen. null = beim
+// nächsten Zeichnen von "Heute" neu bestimmen (siehe invalidateTodayAutoCollapse).
+let todayAutoCollapse = null; // { dateKey, ids: Set }
+function invalidateTodayAutoCollapse() { todayAutoCollapse = null; }
+function sectionDoneOn(habits, dayEntry) {
+  const tracked = habits.filter((h) => h.kind !== 'computed');
+  return tracked.length > 0 && !tracked.some((h) => isOpenToday(h, dayEntry));
+}
+function todayAutoCollapsedIds(blocks, dateKey) {
+  if (todayAutoCollapse?.dateKey === dateKey) return todayAutoCollapse.ids;
+  const dayEntry = state.entries[dateKey] || {};
+  const ids = new Set(blocks
+    .filter((b) => b.type === 'section' && (b.section.collapse === 'start' || (b.section.collapse === 'done' && sectionDoneOn(b.habits, dayEntry))))
+    .map((b) => b.section.id));
+  // Erst mit geladenen Einträgen festhalten - sonst wäre beim Start noch nichts "erledigt".
+  if (!state.loading) todayAutoCollapse = { dateKey, ids };
+  return ids;
+}
+// Aufklappen (von Hand oder per Sprung zu einem Feld) hebt beides auf.
+function expandSection(scope, id) {
+  setSectionCollapsed(scope, id, false);
+  if (scope === 'today') todayAutoCollapse?.ids.delete(id);
+}
+function renderSectionToggle(section, scope, collapsed, hasOpen = false, done = false) {
+  const marker = hasOpen
+    ? `<span class="open-dot" aria-hidden="true"></span><span class="visually-hidden">${t('today.sectionHasOpen')}</span>`
+    : done ? `<span class="section-done">${t('today.sectionDone')}</span>` : '';
+  const toggle = section.collapse === 'never'
+    ? `<div class="section-toggle section-toggle--${scope} section-toggle--static"><span>${esc(section.name)}</span></div>`
+    : `
     <button type="button" class="section-toggle section-toggle--${scope}" data-action="section-toggle" data-section="${section.id}" data-scope="${scope}" aria-expanded="${!collapsed}">
       <svg class="section-chevron" width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>${esc(section.name)}${hasOpen ? `<span class="open-dot" aria-hidden="true"></span><span class="visually-hidden">${t('today.sectionHasOpen')}</span>` : ''}</span>
+      <span>${esc(section.name)}${marker}</span>
     </button>
   `;
   // Nur in "Heute" mit Zeilen-Menü (siehe renderRowMenuButton), in der Auswertung nicht.
@@ -398,16 +434,21 @@ function renderBySection(habits, scope, renderList) {
   const out = [];
   let run = [];
   const flush = () => { if (run.length) { out.push(renderList(run)); run = []; } };
-  for (const block of layoutBlocks(habits)) {
+  const blocks = layoutBlocks(habits);
+  const dateKey = formatKey(state.currentDate);
+  const autoCollapsed = scope === 'today' ? todayAutoCollapsedIds(blocks, dateKey) : new Set();
+  for (const block of blocks) {
     if (block.type === 'habit') { run.push(block.habit); continue; }
     if (!block.habits.length) continue;
     flush();
-    const collapsed = isSectionCollapsed(scope, block.section.id);
+    const collapsed = block.section.collapse !== 'never'
+      && (isSectionCollapsed(scope, block.section.id) || autoCollapsed.has(block.section.id));
     // Eingeklappt verdeckt die Gruppe die Punkte ihrer offenen Felder - dann trägt die
-    // Überschrift den Punkt (siehe isOpenToday).
-    const dayEntry = state.entries[formatKey(state.currentDate)] || {};
+    // Überschrift den Punkt (siehe isOpenToday), bzw. "erledigt", wenn nichts mehr offen ist.
+    const dayEntry = state.entries[dateKey] || {};
     const hasOpen = scope === 'today' && collapsed && block.habits.some((h) => isOpenToday(h, dayEntry));
-    out.push(`<div class="section-block section-block--${scope}">${renderSectionToggle(block.section, scope, collapsed, hasOpen)}${collapsed ? '' : `<div class="section-content">${renderList(block.habits)}</div>`}</div>`);
+    const done = scope === 'today' && collapsed && sectionDoneOn(block.habits, dayEntry);
+    out.push(`<div class="section-block section-block--${scope}">${renderSectionToggle(block.section, scope, collapsed, hasOpen, done)}${collapsed ? '' : `<div class="section-content">${renderList(block.habits)}</div>`}</div>`);
   }
   flush();
   return out.join('');
@@ -1354,7 +1395,7 @@ const STRINGS = {
     'habitForm.schedule.unitWeeks': 'Wochen',
     'habitForm.schedule.start': 'ab',
     'habitForm.schedule.shortMonthNote': 'Gibt es den Tag in einem Monat nicht (z.B. den 31.), ist das Feld am Monatsletzten dran.',
-    'habitForm.schedule.hint': 'Nur für Dinge mit festem Rhythmus, etwa einen Wochenrückblick am Sonntag. Was du mal machst und mal nicht (z. B. Sport), lass besser täglich – „Nein“ ist auch ein Eintrag.',
+    'habitForm.schedule.hint': 'Nur für Dinge mit festem Rhythmus, etwa sonntags „Diese Woche geputzt?“. Was du mal machst und mal nicht (z. B. Sport), lass besser täglich – „Nein“ ist auch ein Eintrag.',
     'habitForm.schedule.explain': 'An den übrigen Tagen erinnert Logbuch nicht an das Feld, und es steht in „Heute“ unten unter „Heute nicht geplant“. Eintragen kannst du dort trotzdem.',
     'habitForm.error.scheduleNoDays': 'Bitte mindestens einen Wochentag auswählen.',
     'habitForm.error.scheduleInterval': 'Bitte eine Anzahl von 1 bis 365 und ein Startdatum angeben.',
@@ -1365,6 +1406,7 @@ const STRINGS = {
     'day.tomorrow': 'Morgen',
     'today.openField': '(noch offen)',
     'today.sectionHasOpen': '(enthält noch offene Felder)',
+    'today.sectionDone': '✓ erledigt',
     'today.allDoneToday': 'Alles eingetragen für heute.',
     'today.allDoneDay': 'Alles eingetragen für diesen Tag.',
     'todayIntro.label': 'Kurz erklärt',
@@ -1394,13 +1436,21 @@ const STRINGS = {
     'manage.archivedSectionLabel': 'Archiviert',
     'manage.computedTag': 'Berechnet',
     'manage.sectionTag': 'Gruppe',
-    'sectionForm.explain': 'Eine Gruppe ordnet Felder unter einer einklappbaren Überschrift – in „Heute“ und in der Auswertung. Jedes Feld kann in höchstens einer Gruppe sein.',
+    'sectionForm.explain': 'Eine Gruppe ordnet Felder unter einer Überschrift – in „Heute“ und in der Auswertung. Jedes Feld kann in höchstens einer Gruppe sein.',
     'sectionForm.members': 'Felder in dieser Gruppe',
     'sectionForm.inOtherGroup': '(in „{name}“)',
     'sectionForm.noFields': 'Noch keine Felder vorhanden.',
     'manage.sectionName': 'Name der Gruppe',
     'manage.sectionNamePlaceholder': 'z. B. Gesundheit',
     'manage.sectionEmpty': 'Noch leer – über „Bearbeiten“ Felder hinzufügen.',
+    'manage.groupTip': 'Viele Felder? Ordne sie in Gruppen nach Tageszeit, z. B. „Morgens“ und „Abends“. Dann trägst du jeden Block in einem Rutsch ein, und jede Gruppe kann zu ihrer eigenen Zeit erinnern.',
+    'manage.groupTipHide': 'Ausblenden',
+    'sectionForm.collapse': 'In „Heute“',
+    'sectionForm.collapse.done': 'Zuklappen, wenn erledigt',
+    'sectionForm.collapse.manual': 'Nur von Hand zuklappen',
+    'sectionForm.collapse.start': 'Immer eingeklappt starten',
+    'sectionForm.collapse.never': 'Nicht einklappbar (nur Überschrift)',
+    'sectionForm.collapseNote': 'Erledigt heißt: alles eingetragen. Zu klappt die Gruppe erst beim nächsten Öffnen, nie während du gerade einträgst.',
     'sectionForm.ownReminderTime': 'Eigene Erinnerungszeit für diese Gruppe',
     'sectionForm.reminderExplain': 'Die Felder dieser Gruppe werden dann nicht mehr zur Standardzeit erinnert, sondern gemeinsam zu dieser Zeit – eine Nachricht für die ganze Gruppe, sobald darin noch etwas fehlt. Felder mit eigener Erinnerungszeit behalten ihre.',
     'sectionForm.defaultReminderNote': 'Ohne eigene Zeit werden die Felder zur Standard-Erinnerungszeit erinnert (aktuell {time}).',
@@ -1669,9 +1719,9 @@ const STRINGS = {
     'about.tip.customReminder.title': 'Eigene Erinnerungszeit pro Feld oder Gruppe',
     'about.tip.customReminder.body': 'Jedes Feld kann eine eigene Erinnerungszeit bekommen, statt sich an die Standardzeit zu halten — sinnvoll z. B. für etwas, das du morgens einträgst, statt abends. Auch eine Gruppe kann eine eigene Zeit haben: Ihre Felder werden dann gemeinsam zu dieser Zeit erinnert, mit einer Nachricht für die ganze Gruppe. Hat ein Feld darin selbst eine eigene Zeit, gilt seine.',
     'about.tip.sections.title': 'Gruppen',
-    'about.tip.sections.body': 'Felder lassen sich in Gruppen ordnen, z. B. „Morgens“ und „Abends“ oder „Körper“ und „Kopf“. In „Heute“ und in der Auswertung erscheinen sie dann unter einer eigenen Überschrift, die du auf- und zuklappen kannst – was du oft nicht brauchst, klappst du einfach weg. Gruppen ordnen nur; einen gemeinsamen Wert berechnet ein Feld vom Typ „Berechnet“.',
+    'about.tip.sections.body': 'Felder lassen sich in Gruppen ordnen – am besten nach Tageszeit, z. B. „Morgens“ und „Abends“: Dann trägst du jeden Block in einem Rutsch ein, und jede Gruppe kann zu ihrer eigenen Zeit erinnern. Ist in einer Gruppe alles eingetragen, ist sie beim nächsten Öffnen zugeklappt; das stellst du pro Gruppe ein. Gruppen ordnen nur; einen gemeinsamen Wert berechnet ein Feld vom Typ „Berechnet“.',
     'about.tip.schedule.title': 'Fester Rhythmus? Wiederholung',
-    'about.tip.schedule.body': 'Für Dinge mit festem Rhythmus, etwa einen Wochenrückblick am Sonntag: Im Feld-Formular stellst du unter „Wiederholung“ ein, an welchen Wochentagen, an welchem Tag im Monat oder Jahr oder in welchem Abstand (z. B. alle 2 Wochen). An anderen Tagen steht das Feld in „Heute“ eingeklappt unter „Heute nicht geplant“ – eintragen kannst du dort trotzdem –, und es löst keine Erinnerung aus. In der Woche sind solche Tage schraffiert, damit „nicht dran“ nicht wie „vergessen“ aussieht.',
+    'about.tip.schedule.body': 'Für Dinge mit festem Rhythmus, etwa sonntags „Diese Woche geputzt?“: Im Feld-Formular stellst du unter „Wiederholung“ ein, an welchen Wochentagen, an welchem Tag im Monat oder Jahr oder in welchem Abstand (z. B. alle 2 Wochen). An anderen Tagen steht das Feld in „Heute“ eingeklappt unter „Heute nicht geplant“ – eintragen kannst du dort trotzdem –, und es löst keine Erinnerung aus. In der Woche sind solche Tage schraffiert, damit „nicht dran“ nicht wie „vergessen“ aussieht.',
     'about.tip.archiveVsDelete.title': 'Archivieren statt löschen',
     'about.tip.archiveVsDelete.body': 'Archivierte Felder verschwinden aus der Tageseingabe und standardmäßig auch aus der Auswertung – ihre bisherigen Werte bleiben aber erhalten. Willst du sie weiter sehen (z. B. die Vorgeschichte eines Feldes, das du durch ein neues ersetzt hast), setz in „Felder verwalten“ beim archivierten Feld den Haken „In der Auswertung anzeigen“. Archivierte Felder lassen sich jederzeit reaktivieren; endgültiges Löschen entfernt dagegen auch die bisherigen Werte.',
     'about.tip.theme.title': 'Dark Mode',
@@ -2010,7 +2060,7 @@ const STRINGS = {
     'habitForm.schedule.unitWeeks': 'weeks',
     'habitForm.schedule.start': 'starting',
     'habitForm.schedule.shortMonthNote': 'If a month does not have that day (e.g. the 31st), the field is due on the last day of that month.',
-    'habitForm.schedule.hint': 'Only for things with a fixed rhythm, like a weekly review on Sundays. For things you do on some days and not on others (e.g. sport), keep it daily – “No” is an entry too.',
+    'habitForm.schedule.hint': 'Only for things with a fixed rhythm, like “Cleaned this week?” on Sundays. For things you do on some days and not on others (e.g. sport), keep it daily – “No” is an entry too.',
     'habitForm.schedule.explain': 'On the other days Logbuch won’t remind you of it, and it sits at the bottom of “Today” under “Not planned today”. You can still fill it in there.',
     'habitForm.error.scheduleNoDays': 'Please select at least one weekday.',
     'habitForm.error.scheduleInterval': 'Please enter a number from 1 to 365 and a start date.',
@@ -2021,6 +2071,7 @@ const STRINGS = {
     'day.tomorrow': 'Tomorrow',
     'today.openField': '(not filled in yet)',
     'today.sectionHasOpen': '(has fields not filled in yet)',
+    'today.sectionDone': '✓ done',
     'today.allDoneToday': 'Everything filled in for today.',
     'today.allDoneDay': 'Everything filled in for this day.',
     'todayIntro.label': 'Quick explanation',
@@ -2050,13 +2101,21 @@ const STRINGS = {
     'manage.archivedSectionLabel': 'Archived',
     'manage.computedTag': 'Calculated',
     'manage.sectionTag': 'Group',
-    'sectionForm.explain': 'A group arranges fields under a collapsible heading – in “Today” and in the statistics. Each field can be in at most one group.',
+    'sectionForm.explain': 'A group arranges fields under a heading – in “Today” and in the statistics. Each field can be in at most one group.',
     'sectionForm.members': 'Fields in this group',
     'sectionForm.inOtherGroup': '(in “{name}”)',
     'sectionForm.noFields': 'No fields yet.',
     'manage.sectionName': 'Group name',
     'manage.sectionNamePlaceholder': 'e.g. Health',
     'manage.sectionEmpty': 'Still empty – add fields via “Edit”.',
+    'manage.groupTip': 'Lots of fields? Sort them into groups by time of day, e.g. “Morning” and “Evening”. Then you fill in each block in one go, and each group can remind you at its own time.',
+    'manage.groupTipHide': 'Hide',
+    'sectionForm.collapse': 'In “Today”',
+    'sectionForm.collapse.done': 'Collapse when done',
+    'sectionForm.collapse.manual': 'Collapse by hand only',
+    'sectionForm.collapse.start': 'Always start collapsed',
+    'sectionForm.collapse.never': 'Not collapsible (heading only)',
+    'sectionForm.collapseNote': 'Done means: everything filled in. The group only collapses the next time you open it, never while you’re entering values.',
     'sectionForm.ownReminderTime': 'Custom reminder time for this group',
     'sectionForm.reminderExplain': 'The fields in this group are then no longer reminded at the default time, but together at this time – one notification for the whole group as soon as something in it is missing. Fields with their own reminder time keep it.',
     'sectionForm.defaultReminderNote': 'Without a custom time, the fields are reminded at the default reminder time (currently {time}).',
@@ -2325,9 +2384,9 @@ const STRINGS = {
     'about.tip.customReminder.title': 'Custom reminder time per field or group',
     'about.tip.customReminder.body': 'Each field can get its own reminder time instead of using the default — useful e.g. for something you enter in the morning instead of the evening. A group can have its own time too: its fields are then reminded together at that time, with one notification for the whole group. If a field in it has its own time, that one applies.',
     'about.tip.sections.title': 'Groups',
-    'about.tip.sections.body': 'You can arrange fields in groups, e.g. "Morning" and "Evening" or "Body" and "Mind". In "Today" and in the statistics they then appear under their own heading, which you can collapse and expand – whatever you rarely need, just fold away. Groups only arrange; a combined value comes from a field of type "Calculated".',
+    'about.tip.sections.body': 'You can arrange fields in groups – ideally by time of day, e.g. "Morning" and "Evening": then you fill in each block in one go, and each group can remind you at its own time. Once everything in a group is filled in, it is collapsed the next time you open it; you can set this per group. Groups only arrange; a combined value comes from a field of type "Calculated".',
     'about.tip.schedule.title': 'Fixed rhythm? Repeats',
-    'about.tip.schedule.body': 'For things with a fixed rhythm, like a weekly review on Sundays: in the field form, under "Repeats", you set on which weekdays, on which day of the month or year, or at which interval (e.g. every 2 weeks). On other days the field sits collapsed under "Not planned today" in "Today" – you can still enter something there – and it triggers no reminder. In the week view such days are hatched, so that "not due" does not look like "forgotten".',
+    'about.tip.schedule.body': 'For things with a fixed rhythm, like “Cleaned this week?” on Sundays: in the field form, under "Repeats", you set on which weekdays, on which day of the month or year, or at which interval (e.g. every 2 weeks). On other days the field sits collapsed under "Not planned today" in "Today" – you can still enter something there – and it triggers no reminder. In the week view such days are hatched, so that "not due" does not look like "forgotten".',
     'about.tip.archiveVsDelete.title': 'Archiving instead of deleting',
     'about.tip.archiveVsDelete.body': 'Archived fields disappear from daily entry and, by default, from the statistics too – but their existing values are kept. If you still want to see them (e.g. the history of a field you replaced with a new one), tick “Show in statistics” for the archived field under “Manage fields”. Archived fields can be reactivated anytime; permanent deletion, on the other hand, also removes the existing values.',
     'about.tip.theme.title': 'Dark mode',
@@ -2956,8 +3015,13 @@ async function loadSections() {
   const sections = [];
   for (const row of data) {
     let name = '?';
-    try { name = (await decryptData(currentDek, row.enc)).name; } catch { /* unlesbar - Platzhalter statt Absturz */ }
-    sections.push({ id: row.id, name, sortOrder: row.sort_order, reminderMinute: row.reminder_minute ?? null });
+    let collapse = 'done';
+    try {
+      const payload = await decryptData(currentDek, row.enc);
+      name = payload.name;
+      if (SECTION_COLLAPSE_MODES.includes(payload.collapse)) collapse = payload.collapse;
+    } catch { /* unlesbar - Platzhalter statt Absturz */ }
+    sections.push({ id: row.id, name, collapse, sortOrder: row.sort_order, reminderMinute: row.reminder_minute ?? null });
   }
   state.sections = sections;
 }
@@ -3299,6 +3363,7 @@ async function refreshAfterReturn() {
   if (!currentDek || !state.session || authFlowInFlight || state.loading || isEditingSomething()) return;
   await Promise.all([loadEntries({ keepLocalChanges: true }), loadHabits(), loadSections()]);
   if (!currentDek) return;
+  invalidateTodayAutoCollapse(); // zählt als neues Betreten des Tages
   saveFieldNamesForPush();
   if (!isEditingSomething()) renderUnlessTyping();
 }
@@ -3865,6 +3930,7 @@ function openSectionForm(id, { returnToTab = false } = {}) {
   state.sectionForm = {
     id: sec ? sec.id : null,
     name: sec ? sec.name : '',
+    collapse: sec ? sec.collapse : 'done',
     members: sec ? state.habits.filter((h) => !h.archivedAt && h.sectionId === sec.id).map((h) => h.defId) : [],
     reminderEnabled: sec ? sec.reminderMinute !== null : false,
     reminderMinute: sec && sec.reminderMinute !== null ? sec.reminderMinute : state.userSettings.defaultReminderMinute,
@@ -3886,6 +3952,8 @@ function readSectionFormFromDom() {
   const sf = state.sectionForm;
   const nameEl = document.getElementById('section-form-name');
   if (nameEl) sf.name = nameEl.value;
+  const collapseEl = document.getElementById('section-form-collapse');
+  if (collapseEl && SECTION_COLLAPSE_MODES.includes(collapseEl.value)) sf.collapse = collapseEl.value;
   const boxes = [...document.querySelectorAll('[data-section-member]')];
   if (boxes.length) sf.members = boxes.filter((b) => b.checked && !b.disabled).map((b) => b.dataset.sectionMember);
   const reminderEnabledEl = document.getElementById('section-form-reminder-enabled');
@@ -3903,7 +3971,8 @@ async function saveSectionForm() {
     render();
     return;
   }
-  const enc = await encryptData(currentDek, { name });
+  const collapse = sf.collapse;
+  const enc = await encryptData(currentDek, { name, collapse });
   const reminderMinute = sf.reminderEnabled ? sf.reminderMinute : null;
   let id = sf.id;
   if (id) {
@@ -3913,7 +3982,7 @@ async function saveSectionForm() {
       render();
       return;
     }
-    state.sections = state.sections.map((sec) => (sec.id === id ? { ...sec, name, reminderMinute } : sec));
+    state.sections = state.sections.map((sec) => (sec.id === id ? { ...sec, name, collapse, reminderMinute } : sec));
   } else {
     const sortOrder = containerMaxSortOrder(null) + 1;
     const { data, error } = await supabase.from('habit_sections')
@@ -3925,7 +3994,7 @@ async function saveSectionForm() {
       return;
     }
     id = data.id;
-    state.sections = [...state.sections, { id, name, sortOrder, reminderMinute }];
+    state.sections = [...state.sections, { id, name, collapse, sortOrder, reminderMinute }];
   }
   saveFieldNamesForPush();
   // Mitgliedschaft abgleichen: neu angekreuzte Felder ans Ende der Gruppe (in der
@@ -3952,6 +4021,7 @@ async function saveSectionForm() {
   if (failed) {
     state.notice = errorNotice('notice.saveFailed', failed.error.message);
   }
+  invalidateTodayAutoCollapse(); // neue Einstellung gleich beim Zurück nach "Heute" anwenden
   closeSectionForm();
   render();
 }
@@ -3981,6 +4051,13 @@ function renderSectionForm() {
             }).join('')}
           </div>
         ` : `<p class="habit-form-lock-note">${t('sectionForm.noFields')}</p>`}
+      </div>
+      <div class="auth-field">
+        <label for="section-form-collapse">${t('sectionForm.collapse')}</label>
+        <select id="section-form-collapse" aria-describedby="section-form-collapse-note">
+          ${SECTION_COLLAPSE_MODES.map((m) => `<option value="${m}" ${sf.collapse === m ? 'selected' : ''}>${t('sectionForm.collapse.' + m)}</option>`).join('')}
+        </select>
+        <p class="habit-form-lock-note" id="section-form-collapse-note">${t('sectionForm.collapseNote')}</p>
       </div>
       <div class="auth-field section-form-reminder">
         <label class="checkbox-field">
@@ -4738,7 +4815,7 @@ async function handleExportData() {
 // Textgröße, Streifenmuster, Vibration) bleiben bewusst erhalten.
 function clearDeviceAccountTraces() {
   try {
-    ['signedInHere', 'onboardingMode', 'onboardingInProgress', 'onboardingWithInstall', 'installGateSkipped', 'installHintDismissed', 'todayIntroPending']
+    ['signedInHere', 'onboardingMode', 'onboardingInProgress', 'onboardingWithInstall', 'installGateSkipped', 'installHintDismissed', 'todayIntroPending', 'groupTipDismissed']
       .forEach((key) => localStorage.removeItem(key));
     Object.keys(localStorage).filter((key) => key.startsWith('sectionCollapsed:')).forEach((key) => localStorage.removeItem(key));
   } catch { /* nichts gespeichert oder kein Zugriff - dann gibt es auch nichts zu löschen */ }
@@ -5911,8 +5988,8 @@ function renderTextBox(h, dayEntry, marker = '') {
 function focusTodayField(habitId, { editInput = false } = {}) {
   // Liegt das Feld in einer eingeklappten Gruppe, erst aufklappen.
   const target = state.habits.find((h) => h.id === habitId);
-  if (target?.sectionId && isSectionCollapsed('today', target.sectionId)) {
-    setSectionCollapsed('today', target.sectionId, false);
+  if (target?.sectionId && document.querySelector(`[data-action="section-toggle"][data-section="${target.sectionId}"][data-scope="today"][aria-expanded="false"]`)) {
+    expandSection('today', target.sectionId);
     render();
   }
   let trigger = document.querySelector(`.row-menu-trigger[data-menu="${habitId}"]`);
@@ -6948,6 +7025,10 @@ function manageFieldMeta(h) {
 // Alle Felder (auch berechnete, erkennbar an ihrer Mitglieder-Zeile "Ø aus …"/"Summe
 // aus …") stehen in EINER frei sortierbaren Liste, dazwischen Gruppen als Blöcke (intern
 // "sections", siehe layoutBlocks).
+const GROUP_TIP_MIN_FIELDS = 6;
+function isGroupTipDismissed() {
+  try { return localStorage.getItem('groupTipDismissed') === 'true'; } catch { return false; }
+}
 function renderManage() {
   const active = state.habits.filter((h) => !h.archivedAt);
   const archived = state.habits.filter((h) => h.archivedAt);
@@ -7050,12 +7131,25 @@ function renderManage() {
     `;
   };
   const activeBlocks = layoutBlocks(active);
+  // Einmaliger Tipp, sobald die Liste lang wird und es noch keine Gruppe gibt.
+  const showGroupTip = active.length >= GROUP_TIP_MIN_FIELDS && !state.sections.length && !isGroupTipDismissed();
 
   return `
     <div class="manage-new-row">
       <button type="button" class="manage-new-btn" data-action="habit-new">${icon('newField')}${t('habitForm.title.newField')}</button>
       <button type="button" class="manage-new-btn manage-new-btn--secondary" data-action="group-new">${icon('newGroup')}${t('habitForm.title.newGroup')}</button>
     </div>
+    ${showGroupTip ? `
+      <div class="form-tip manage-group-tip">
+        <span class="item-icon" aria-hidden="true">💡</span>
+        <div>
+          <p>${t('manage.groupTip')}</p>
+          <div class="manage-group-tip-actions">
+            <button type="button" class="manage-btn" data-action="group-tip-hide">${t('manage.groupTipHide')}</button>
+          </div>
+        </div>
+      </div>
+    ` : ''}
     <div class="manage-list">${activeBlocks.map((b, i) => (b.type === 'habit' ? row(b.habit, i, activeBlocks) : sectionBlock(b, i, activeBlocks))).join('')}</div>
     ${archived.length ? `
       <p class="habit-form-lock-note">${t('manage.archivedSectionLabel')}</p>
@@ -7656,6 +7750,7 @@ function render() {
   // die Tag oder Ansicht ändern (Klicks, Wischen, Deep-Links, Kalenderzellen, ...).
   if (state.noteEditor && !isNoteEditorOpen()) commitPendingNoteDraft();
   if (!isOpeningAccount()) startupShownAt = null;
+  if (!state.session || state.view !== 'today') invalidateTodayAutoCollapse();
   if (state.passwordRecovery) { renderPasswordRecovery(); }
   else if (!state.session) {
     // Die Installations-Seite kommt erst nach Startseite bzw. Einstiegsfrage - direkt vor
@@ -7707,6 +7802,10 @@ app.addEventListener('click', async (e) => {
     state.authMode = el.dataset.mode === 'guided' && state.authMode === 'mode' ? 'overview' : 'signup';
     render();
     document.querySelector('.auth-box h1, .auth-box .sub')?.focus({ preventScroll: true });
+  } else if (action === 'group-tip-hide') {
+    try { localStorage.setItem('groupTipDismissed', 'true'); } catch { /* dann eben nur bis zum Neuladen */ }
+    render();
+    document.querySelector('[data-action="group-new"]')?.focus({ preventScroll: true });
   } else if (action === 'today-intro-next') {
     // Ohne data-Merkmal für "letzte Karte", damit der Fokus beim Weiterblättern auf dem
     // Knopf bleibt (restoreFocus findet ihn über data-action).
@@ -7983,7 +8082,8 @@ app.addEventListener('click', async (e) => {
     render();
   } else if (action === 'section-toggle') {
     const { section, scope } = el.dataset;
-    setSectionCollapsed(scope, section, !isSectionCollapsed(scope, section));
+    if (el.getAttribute('aria-expanded') === 'false') expandSection(scope, section);
+    else setSectionCollapsed(scope, section, true);
     render();
     document.querySelector(`[data-action="section-toggle"][data-section="${section}"][data-scope="${scope}"]`)?.focus();
   } else if (action === 'section-delete-arm') {
