@@ -2383,6 +2383,11 @@ function applyLocale(locale) {
   currentLocale = locale;
   document.documentElement.lang = locale;
 }
+// Zahlen im Text in der Schreibweise der Sprache ("6,5" statt "6.5"); Eingabefelder
+// (type="number") machen das selbst.
+function formatNumber(n) {
+  return new Intl.NumberFormat(currentLocale, { maximumFractionDigits: 2 }).format(n);
+}
 
 function detectInitialLocale() {
   try {
@@ -5725,7 +5730,7 @@ function renderComputedInfo(habit, dateKey) {
     const { value, filled, total } = numberComputedDay(habit, dateKey);
     const unit = computedUnit(habit);
     return `
-      <div class="computed-readout computed-readout--number">${value !== null ? esc(String(value)) + (unit ? ' ' + esc(unit) : '') : '–'}</div>
+      <div class="computed-readout computed-readout--number">${value !== null ? esc(formatNumber(value)) + (unit ? ' ' + esc(unit) : '') : '–'}</div>
       <span class="manage-meta">${t('computedInfo.aggOf', { agg: t('aggregate.' + habit.aggregate), names: members.map((m) => m.name).join(', '), filled, total })}</span>
     `;
   }
@@ -5911,7 +5916,7 @@ function renderNumberBox(h, dateKey, dayEntry, marker = '') {
   const unitSuffix = h.unit ? ` ${h.unit}` : '';
   const lastNote =
     last && last.dateKey !== dateKey
-      ? t('numberBox.last', { value: last.value + unitSuffix, date: formatDMY(last.dateKey) })
+      ? t('numberBox.last', { value: formatNumber(last.value) + unitSuffix, date: formatDMY(last.dateKey) })
       : '';
   // Der Name öffnet per Tipp das Zeilen-Menü (siehe renderRowHead), kann also kein
   // <label> sein (das würde zusätzlich das Eingabefeld fokussieren) - das Eingabefeld
@@ -6357,7 +6362,7 @@ function renderPrivacySection() {
 // automatisch aus Git ableiten könnte, und ein Datum genügt hier als Rückverfolgbarkeit
 // (siehe Diskussion in CLAUDE.md-Kontext: keine echte Versionsnummer nötig, solange es
 // keine Release-Branches/nennenswerten externen Nutzerkreis gibt).
-const APP_STATUS_DATE = '2026-10-01';
+const APP_STATUS_DATE = '2026-10-10';
 
 function renderAbout() {
   return `
@@ -6485,7 +6490,7 @@ function renderNumberChart(habit, dateKeys, interactive) {
   const head = `
     <div class="number-chart-head">
       <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
-      ${stats ? `<span class="number-chart-meta">${t('numberChart.meta', { last: stats.last + unitSuffix, avg: round1(stats.avg) + unitSuffix, count: stats.count })}</span>` : ''}
+      ${stats ? `<span class="number-chart-meta">${t('numberChart.meta', { last: formatNumber(stats.last) + unitSuffix, avg: formatNumber(round1(stats.avg)) + unitSuffix, count: stats.count })}</span>` : ''}
     </div>
   `;
   if (!stats || stats.series.length < 2) {
@@ -6531,10 +6536,10 @@ function renderNumberChart(habit, dateKeys, interactive) {
   const summary = t('numberChart.summary', {
     name: habit.name,
     count: stats.count,
-    last: stats.last + unitSuffix,
-    avg: round1(stats.avg) + unitSuffix,
-    min: stats.min + unitSuffix,
-    max: stats.max + unitSuffix,
+    last: formatNumber(stats.last) + unitSuffix,
+    avg: formatNumber(round1(stats.avg)) + unitSuffix,
+    min: formatNumber(stats.min) + unitSuffix,
+    max: formatNumber(stats.max) + unitSuffix,
     trend: t(`numberChart.trend.${trend}`),
   });
   return `

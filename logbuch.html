@@ -354,8 +354,10 @@
     padding: 0 2px; flex-shrink: 0;
   }
 
+  /* Abstand schrumpft auf schmalen Handys mit (vw), damit alle fünf Tabs auch bei großer
+     Schrift sichtbar bleiben - die Leiste ist zwar wischbar, das sieht aber niemand. */
   .tabs {
-    display: flex; gap: 14px; border-bottom: 1px solid var(--line); margin-bottom: 20px;
+    display: flex; gap: min(0.875rem, 2.5vw); border-bottom: 1px solid var(--line); margin-bottom: 20px;
     overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
   }
   .tabs::-webkit-scrollbar { display: none; }
@@ -598,6 +600,9 @@
     background: var(--ink); box-shadow: 0 0 0 1.5px var(--paper);
   }
   .month-cell.has-note::after { top: auto; bottom: 3px; right: 3px; }
+  /* Wochentag: unter der Tageszahl, in der Lücke zur ersten Zeile - oben rechts lag er bei
+     schmalen Spalten (großer Schrift) auf dem Wochentag. */
+  .grid-col-header.has-note::after { top: 100%; right: auto; left: 50%; transform: translateX(-50%); }
 
   .member-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
   .member-check { font-size: 0.9375rem; }
@@ -606,7 +611,10 @@
   .habit-row--computed .computed-readout--number { color: var(--ink); border: 1px solid var(--line); background: transparent; }
 
   .number-chart-box { padding: 10px 0; border-bottom: 1px solid var(--line); }
-  .number-chart-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  /* Reicht der Platz nicht für Name und Kennzahlen, rutschen die Kennzahlen in eine eigene
+     Zeile (min-width: auto = der Name schrumpft nicht unter sein längstes Wort). */
+  .number-chart-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 8px; margin-bottom: 6px; }
+  .number-chart-head .habit-name { min-width: auto; }
   .number-chart-meta { font-size: 0.8125rem; color: var(--sand); flex-shrink: 0; white-space: nowrap; }
   .number-chart-svg { display: block; width: 100%; height: 56px; }
   .number-chart-plot { position: relative; }
@@ -684,7 +692,7 @@
   /* Feldnamen bekommen gut ein Drittel der Breite, die Tageskästchen teilen sich den Rest -
      vorher brachen die Namen in einer schmalen Spalte mitten im Wort um. Umbruch an
      Silbengrenzen (hyphens, Sprache aus <html lang>), mitten im Wort nur als Notlösung. */
-  .grid-row { display: grid; grid-template-columns: minmax(0, 35%) repeat(7, minmax(0, 1fr)) minmax(2.25rem, 2.75rem); align-items: center; gap: 1px; }
+  .grid-row { display: grid; grid-template-columns: minmax(0, 35%) repeat(7, minmax(0, 1fr)) minmax(2.25rem, 2.5rem); align-items: center; gap: 1px; }
   .grid-row--header { padding-bottom: 6px; }
   /* Zeilen besser auseinanderhalten: Trennlinie + jede zweite Zeile leicht getönt (Ton
      statt Schraffur - schraffiert sind schon die nicht geplanten Tage, und das
@@ -693,7 +701,9 @@
   .grid-scroll .grid-row:nth-child(even of .grid-row:not(.grid-row--header)) { background: color-mix(in srgb, var(--ink) 6%, transparent); }
   .grid-label { font-size: 0.75rem; padding-right: 3px; line-height: 1.2; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
   .grid-col-header { display: flex; flex-direction: column; align-items: center; font-size: 0.75rem; color: var(--sand); cursor: pointer; }
-  .grid-col-date { font-size: 0.8125rem; color: var(--ink); }
+  /* Zweistellige Tage stoßen bei großer Schrift auf schmalen Handys fast aneinander ("1011") -
+     gleich breite, leicht enger gesetzte Ziffern halten sie auseinander. */
+  .grid-col-date { font-size: 0.8125rem; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.06em; }
   .grid-col-header--avg { font-family: 'Fraunces', serif; font-style: italic; color: var(--ink); cursor: default; }
   .grid-cell { height: 1.5rem; margin: 1px; border-radius: 2px; border: 1px solid var(--line); cursor: pointer; }
   .grid-cell--blank { border-color: transparent; }
@@ -1157,6 +1167,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=029ec336e4"></script>
+<script type="module" src="./logbuch.js?v=cc6d82c18c"></script>
 </body>
 </html>
