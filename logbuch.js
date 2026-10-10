@@ -6956,12 +6956,17 @@ function scaleLabelAt(h, value) { return h.labels ? h.labels[value - h.min] : St
 function avgScaleValue(h, avg) {
   return h.good === 'low' ? h.max - avg * (h.max - h.min) : h.min + avg * (h.max - h.min);
 }
+// Zwischen welchen Bezeichnungen der Ø liegt, mit ihren Zahlen (dieselben wie im
+// Feld-Formular vor den Bezeichnungen), damit die Zahl davor zuzuordnen ist:
+// "keine (1) – leicht (2)"; liegt der Ø auf einer Stufe, nur deren Bezeichnung.
 function avgLabelSpan(h, avg) {
   if (!h.labels) return '';
   const v = avgScaleValue(h, avg);
   const lower = Math.floor(v + 0.05);
   const upper = Math.ceil(v - 0.05);
-  return lower >= upper ? scaleLabelAt(h, lower) : `${scaleLabelAt(h, lower)}–${scaleLabelAt(h, upper)}`;
+  return lower >= upper
+    ? scaleLabelAt(h, lower)
+    : `${scaleLabelAt(h, lower)} (${formatNumber(lower)}) – ${scaleLabelAt(h, upper)} (${formatNumber(upper)})`;
 }
 // Mini-Skala mit Punkt an der Stelle des Ø (Skalen ab drei Stufen): eine Zahl allein verrät
 // nicht, wie viele Stufen es gibt, eine Bezeichnung passt oft nicht in die Wochenspalte.
@@ -6987,12 +6992,13 @@ function habitAvgLong(h, avg, count) {
     return tPlain((h.labels ? 'stats.yesNoDaysLabel' : 'stats.yesNoDays') + unit, { n: Math.round(avg * count), total: count, label: best });
   }
   if (h.kind === 'scale') {
-    // Eigene Bezeichnungen: nur die Bezeichnungen (die Stufenzahl dahinter sieht man sonst
-    // nirgends; die genaue Lage zeigt die Mini-Skala). Sonst die Zahl samt Spanne - "von 5"
-    // bei Skalen ab 1 (alle seit 2026-09-18 angelegten); ältere Felder mit Daten behalten
-    // ihren Startwert (Schieberegler ab 0, Knöpfe auch z.B. -2 bis 2), dort "(0 bis 10)".
-    if (h.labels) return `Ø ${avgLabelSpan(h, avg)}`;
+    // Eigene Bezeichnungen: Zahl + zwischen welchen Bezeichnungen sie liegt (Nutzer-
+    // Entscheidung 2026-10-11: die Zahl soll stehen bleiben, die Zuordnung klar sein).
+    // Sonst die Zahl samt Spanne - "von 5" bei Skalen ab 1 (alle seit 2026-09-18 angelegten);
+    // ältere Felder mit Daten behalten ihren Startwert (Schieberegler ab 0, Knöpfe auch z.B.
+    // -2 bis 2), dort "(0 bis 10)".
     const v = formatNumber(round1(avgScaleValue(h, avg)));
+    if (h.labels) return `Ø ${v} · ${avgLabelSpan(h, avg)}`;
     return h.min === 1
       ? tPlain('stats.scaleOf', { value: v, max: h.max })
       : tPlain('stats.scaleRange', { value: v, min: formatNumber(h.min), max: formatNumber(h.max) });
