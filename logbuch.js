@@ -6566,7 +6566,7 @@ function renderPrivacySection() {
 // automatisch aus Git ableiten könnte, und ein Datum genügt hier als Rückverfolgbarkeit
 // (siehe Diskussion in CLAUDE.md-Kontext: keine echte Versionsnummer nötig, solange es
 // keine Release-Branches/nennenswerten externen Nutzerkreis gibt).
-const APP_STATUS_DATE = '2026-10-10';
+const APP_STATUS_DATE = '2026-10-11';
 
 function renderAbout() {
   return `
