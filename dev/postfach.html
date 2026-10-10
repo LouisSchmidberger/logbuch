@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vorschau-Postfach</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 1rem; max-width: 40rem; line-height: 1.5; }
+  li { margin-bottom: 0.75rem; }
+  a { display: inline-block; padding: 0.5rem 0; }
+</style>
+</head>
+<body>
+<h1>Vorschau-Postfach</h1>
+<p>Mails, die das nachgebaute Supabase „verschickt“ hätte (neueste oben). Der Link öffnet die App wie der Link aus der echten Mail.</p>
+<ul id="list"></ul>
+<script type="module">
+  const db = JSON.parse(localStorage.getItem('logbuchPreviewDb') || '{"mails":[]}');
+  const list = document.getElementById('list');
+  const labels = { signup: 'Registrierung bestätigen', recovery: 'Passwort zurücksetzen', email_change: 'Neue Adresse bestätigen' };
+  if (!db.mails.length) list.innerHTML = '<li>Noch keine Mails.</li>';
+  for (const m of [...db.mails].reverse()) {
+    const li = document.createElement('li');
+    li.textContent = `${new Date(m.at).toLocaleString('de-DE')} – an ${m.to}: `;
+    const a = document.createElement('a');
+    a.href = m.link;
+    a.textContent = labels[m.kind] || m.kind;
+    li.append(a);
+    list.append(li);
+  }
+</script>
+</body>
+</html>

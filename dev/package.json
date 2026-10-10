@@ -1,0 +1,13 @@
+{
+  "name": "logbuch-preview",
+  "private": true,
+  "type": "module",
+  "description": "Lokale Vorschau von Logbuch mit nachgebautem Supabase (siehe README.md)",
+  "scripts": {
+    "start": "node server.mjs",
+    "shots": "node shoot.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.43.1"
+  }
+}

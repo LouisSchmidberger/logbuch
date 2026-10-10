@@ -25,6 +25,7 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
 | Startseite, Installation, Registrieren, Tutorial, Ersatzschlüssel-Seite, Erklär-Karten | [docs/onboarding.md](docs/onboarding.md) |
 | Texte/`STRINGS`/`t()`, Sprache, Datumsformate | [docs/i18n.md](docs/i18n.md) |
 | Konto löschen, Export, Feedback, Auth/Passwort, E-Mail-Versand, Secrets | [docs/datenschutz-sicherheit.md](docs/datenschutz-sicherheit.md) |
+| Lokale Vorschau, Screenshots, `dev/` (nachgebautes Supabase) | [dev/README.md](dev/README.md) |
 
 ## Stack und Hosting
 
@@ -108,6 +109,9 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
 
 ## Pflichten bei Änderungen
 
+- **Sichtbare Änderungen vorher ansehen**: mit der lokalen Vorschau (`dev/`, siehe
+  dev/README.md) Screenshots machen, bevor live geht. Neue Tabelle/Spalte/Supabase-Aufruf →
+  `dev/mock-supabase.js` nachziehen.
 - **Mobil zuerst**: die Nutzer sind mit großem Abstand auf Handy und Tablet (Android/iOS).
   Jede Gestaltungs-/Bedienentscheidung geht von Mobilgeräten und deren Konventionen aus; der
   PC muss funktionieren, gibt aber nicht die Richtung vor.
