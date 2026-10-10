@@ -46,6 +46,8 @@ Eigene Abläufe ohne neues Skript: `node dev/shoot.mjs <Schritte>`, zum Beispiel
 Von Hand im Browser: Server starten, `http://localhost:5180/` öffnen. In der Konsole
 `await __logbuchPreview.resetAll()` (alles frisch) oder nach dem Anmelden
 `await __logbuchPreview.seedDemo()` (Beispieldaten), danach neu laden.
+Langsames Netz nachstellen: `localStorage.setItem('logbuchPreviewDelayMs', '2000')`
+(Verzögerung pro Supabase-Aufruf, Standard 30 ms).
 
 ## Grenzen
 
