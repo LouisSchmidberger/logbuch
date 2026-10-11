@@ -117,9 +117,11 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   PC muss funktionieren, gibt aber nicht die Richtung vor.
 - **Texte in beiden Sprachen**: neue Strings immer über `STRINGS`/`t()` in `de` UND `en`,
   in identischer Key-Reihenfolge.
-- **`APP_STATUS_DATE`** in `logbuch.js` ("Beta – Stand …" in "Über Logbuch"): bei jeder für
-  Nutzer sichtbaren Änderung mindestens mittlerer Größe im selben Commit auf das aktuelle
-  Datum setzen. Reine Interna, Doku oder winzige Textkorrekturen zählen nicht.
+- **`CHANGELOG`** in `logbuch.js` ("Was ist neu"): jede für Nutzer sichtbare Änderung
+  mindestens mittlerer Größe bekommt vor dem Live-Gang einen Eintrag (de + en, kurz, ohne
+  Fachbegriffe) – spätestens am Sitzungsende; neuer Eintrag mit dem Datum des Live-Gangs
+  oder den obersten erweitern, solange er noch nicht live ist. Das Datum ist zugleich
+  "Beta – Stand …" in "Über Logbuch". Reine Interna, Doku oder winzige Textkorrekturen nicht.
 - **Datenschutz-Text in "Über Logbuch"** (`renderPrivacySection`, `about.privacy.*`) sagt
   konkret, was der Betreiber sehen kann und was nicht. Jede Änderung, die daran etwas
   verschiebt (neue unverschlüsselte Spalte, zusätzliches Log, serverseitige Auswertung,
@@ -131,6 +133,13 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   Dashboard gleich halten.
 
 ## Deployment
+
+**Erst Beta, dann live** (Nutzer-Entscheidung 2026-10-11): Commits zuerst `git push beta main`
+→ https://louisschmidberger.github.io/logbuch-beta/ (Repo `logbuch-beta`, gleicher Code); der
+Nutzer nutzt die Beta täglich mit seinem echten Konto und testet dort. Erst auf sein Okay
+`git push origin main` (live) – dann mit fertigem `CHANGELOG`-Eintrag. **Datenbank und Edge
+Functions sind für beide dieselben**: Migrationen/Deploys wirken sofort auch live, deshalb so
+bauen, dass die alte Live-Version damit weiterläuft.
 
 1. `logbuch.html`, `logbuch.js`, `sw.js`, `vendor/`, `fonts/` → GitHub Pages (Root).
 2. `supabase functions deploy <name>` für `send-notifications`, `delete-account`,
