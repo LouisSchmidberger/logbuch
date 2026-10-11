@@ -289,11 +289,13 @@ der Nutzer fand die Trennung Zahl/Zähler nicht gelungen).
 höchstens X (`good` 'high'/'low' + `target` in `enc`). Mit Ziel gelten sie als bewertet
 (`hasNumberGoal` in `isScoredKind`): Tagesscore `numberGoalScore` (mindestens: Wert/Ziel;
 höchstens: bis zum Ziel 1, darüber linear bis 0 beim Doppelten), damit eigene Zeile im
-Wochenraster, Ø-Spalte "4/7" = Tage mit erreichtem Ziel, Listen "Ziel an 4 von 7 Tagen
-erreicht", Tagesfarbe, gestrichelte Ziellinie im Verlauf. Ohne Ziel neutraler Verlauf wie
+Wochenraster, Ø-Spalte = **Durchschnitt** ("6,2", gefärbt nach Zielnähe; verworfen: "4/7" –
+sah wie ein Wert aus), Langform "Ø 6,2 · Ziel an 4 von 7 Tagen erreicht", Tagesfarbe,
+gestrichelte Ziellinie im Verlauf. Ohne Ziel neutraler Verlauf wie
 bisher – nicht jede Zahl braucht eins. **Ohne Antippen = 0** – in "Heute" sichtbar
 als 0, nie "offen", zählt nicht für "alles eingetragen"; in der Auswertung zählt ein leerer
-Tag ab dem Anlegen (`created_at`) bis heute als 0 (`habitNumericValue`/`counterZeroApplies`),
+Tag ab dem Anlegen (`created_at`) bis **gestern** als 0 – der laufende Tag erst, wenn getippt
+wurde (sonst wäre "mindestens 8" morgens rot) (`habitNumericValue`/`counterZeroApplies`),
 Verläufe lückenlos über alle Tage (`counterDayKeys` – Jahr/Gesamt übergeben sonst nur Tage mit
 Eintrag). "−" daneben zum Korrigieren statt Rückgängig-Meldung; Schritt pro Tippen einstellbar
 (`step` in `enc`, Standard 1); keine Erinnerungs-Einstellungen; nicht im Tutorial. Auf 0

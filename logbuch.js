@@ -538,14 +538,15 @@ function habitNumericValue(h, dateKey) {
   if (v === undefined && isCounterKind(h)) return counterZeroApplies(h, dateKey) ? 0 : null;
   return v === undefined ? null : v;
 }
-// Leerer Tag (bzw. Zeitraum) eines Zählers = 0 - aber nur zwischen Anlegen und heute, sonst
-// stünden Nullen vor seiner Zeit und in der Zukunft.
+// Leerer Tag (bzw. Zeitraum) eines Zählers = 0 - aber nur zwischen Anlegen und gestern: der
+// laufende Tag zählt erst, wenn getippt wurde (sonst wäre "mindestens 8" schon morgens rot und
+// der Schnitt gedrückt), davor und in der Zukunft stünden sonst Nullen außerhalb seiner Zeit.
 function counterZeroApplies(h, dateKey) {
   const period = h.period || 'day';
   const since = h.counterSince ? parseDateKey(h.counterSince) : h.createdAt ? new Date(h.createdAt) : null;
   const created = since ? formatKey(periodStart(period, since)) : null;
   const now = formatKey(periodStart(period, new Date()));
-  return (!created || dateKey >= created) && dateKey <= now;
+  return (!created || dateKey >= created) && dateKey < now;
 }
 function isTextKind(h) { return h.kind === 'text'; }
 
@@ -823,12 +824,15 @@ function dayOverallScore(date) {
 // ('YYYY-MM-DD').
 function computeHabitStats(habits, dateKeys) {
   return habits.map((h) => {
-    let sum = 0, count = 0, hits = 0;
+    let sum = 0, count = 0, hits = 0, numSum = 0;
     for (const k of dateKeys) {
       const s = habitScore(h, k);
-      if (s !== null) { sum += s; count++; if (s >= 0.999) hits++; }
+      if (s !== null) {
+        sum += s; count++; if (s >= 0.999) hits++;
+        if (hasNumberGoal(h)) numSum += habitNumericValue(h, k);
+      }
     }
-    return { habit: h, avg: count ? sum / count : null, count, hits };
+    return { habit: h, avg: count ? sum / count : null, count, hits, numAvg: count ? numSum / count : null };
   });
 }
 
@@ -6815,7 +6819,9 @@ function renderWeek() {
     const valid = scores.filter((s) => s !== null);
     const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
     const hits = valid.filter((v) => v >= 0.999).length;
-    const avgLong = avg !== null ? `${h.name}: ${habitAvgLong(h, avg, valid.length, hits)}${isYesNoScale(h) || hasNumberGoal(h) ? '' : ` (${valid.length}×)`}` : '';
+    const numVals = hasNumberGoal(h) ? dayKeys.filter((k, i) => scores[i] !== null).map((k) => habitNumericValue(h, k)) : [];
+    const numAvg = numVals.length ? numVals.reduce((a, b) => a + b, 0) / numVals.length : null;
+    const avgLong = avg !== null ? `${h.name}: ${habitAvgLong(h, avg, valid.length, hits, numAvg)}${isYesNoScale(h) || hasNumberGoal(h) ? '' : ` (${valid.length}×)`}` : '';
     // Unbewertete Felder: nur "eingetragen", kein Streifenmuster (das kodiert die
     // Bewertungsstufe) und kein Ø - siehe isNeutralScale.
     const neutral = isNeutralScale(h);
@@ -6825,7 +6831,7 @@ function renderWeek() {
         ? `<div class="grid-cell grid-cell--avg" style="background:${habitColor(h, null)}">–</div>`
         // Antippen zeigt den Wert ausgeschrieben (z.B. "an 2 von 5 Tagen „Ja“", "Ø 1,2 · leicht–mittel") -
         // in der schmalen Spalte ist nur die Kurzform ("2/5", "1,2") Platz.
-        : `<button type="button" class="grid-cell grid-cell--avg" data-action="avg-info" data-text="${esc(avgLong)}" aria-label="${esc(avgLong)}" style="background:${habitColor(h, applyGoal(h, avg))};color:${textOnScore(habitColor(h, applyGoal(h, avg)))}">${habitAvgShort(h, avg, valid.length, hits)}</button>`;
+        : `<button type="button" class="grid-cell grid-cell--avg" data-action="avg-info" data-text="${esc(avgLong)}" aria-label="${esc(avgLong)}" style="background:${habitColor(h, applyGoal(h, avg))};color:${textOnScore(habitColor(h, applyGoal(h, avg)))}">${habitAvgShort(h, avg, valid.length, hits, numAvg)}</button>`;
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
@@ -7097,7 +7103,7 @@ function renderPrivacySection() {
 // was Nutzer weiterbringt (neue Möglichkeiten), keine Interna; de + en, kurz, ohne
 // Fachbegriffe. **Ein schon live gegangener Eintrag wird nie mehr erweitert** (wer ihn
 // geschlossen hat, sähe die Ergänzung nie) - stattdessen ein neuer; wer mehrere verpasst hat,
-// sieht sie gestapelt (bis zu 3, ältere unter "Alle Neuigkeiten"). Siehe CLAUDE.md. Nach einem Update zeigt die App die noch nicht gesehenen Einträge einmal als
+// sieht alle gestapelt (das Fenster scrollt). Siehe CLAUDE.md. Nach einem Update zeigt die App die noch nicht gesehenen Einträge einmal als
 // Fenster (renderWhatsNew), gesehen gilt pro Konto (user_settings.last_seen_changelog);
 // "Über Logbuch" zeigt alle.
 const CHANGELOG = [
@@ -7123,7 +7129,7 @@ const APP_STATUS_DATE = CHANGELOG[0].id;
 function changelogItems(entry) { return entry[currentLocale] || entry.de; }
 function unseenChangelog() {
   const last = state.userSettings.lastSeenChangelog;
-  return CHANGELOG.filter((e) => !last || e.id > last).slice(0, 3);
+  return CHANGELOG.filter((e) => !last || e.id > last);
 }
 function renderWhatsNew() {
   const entries = unseenChangelog();
@@ -7291,15 +7297,19 @@ function avgMiniScale(h, avg, extraClass = '') {
   return `<span class="avg-scale${extraClass}" aria-hidden="true"><span class="avg-scale-dot" style="left:${(pos * 100).toFixed(1)}%"></span></span>`;
 }
 // Kurzform für die schmale Ø-Spalte der Woche (HTML); den genauen Wert zeigt Antippen.
-function habitAvgShort(h, avg, count, hits = 0) {
-  if (hasNumberGoal(h)) return `${hits}/${count}`;
+// Zahlen mit Ziel: der Durchschnitt ist die Hauptzahl (Zahlen denkt man in Schnitten - "2/7"
+// sah wie ein Wert aus), wie oft das Ziel erreicht war steht in der Langform.
+function habitAvgShort(h, avg, count, hits = 0, numAvg = null) {
+  if (hasNumberGoal(h)) return formatNumber(round1(numAvg ?? 0));
   if (isMultiStepScale(h)) return avgMiniScale(h, avg);
   if (isYesNoScale(h)) return `${Math.round(avg * count)}/${count}`;
   if (h.kind === 'scale') return formatNumber(round1(avgScaleValue(h, avg)));
   return Math.round(avg * 100) + '%';
 }
-function habitAvgLong(h, avg, count, hits = 0) {
-  if (hasNumberGoal(h)) return tPlain('stats.goalHits' + (isPeriodField(h) ? `.${h.period}` : ''), { n: hits, total: count });
+function habitAvgLong(h, avg, count, hits = 0, numAvg = null) {
+  if (hasNumberGoal(h)) {
+    return `Ø ${formatNumber(round1(numAvg ?? 0))}${h.unit ? ` ${h.unit}` : ''} · ${tPlain('stats.goalHits' + (isPeriodField(h) ? `.${h.period}` : ''), { n: hits, total: count })}`;
+  }
   if (isYesNoScale(h)) {
     const best = scaleLabelAt(h, h.good === 'low' ? h.min : h.max);
     const unit = isPeriodField(h) ? `.${h.period}` : '';
@@ -7320,12 +7330,12 @@ function habitAvgLong(h, avg, count, hits = 0) {
   return Math.round(avg * 100) + '%';
 }
 function renderStatsRows(stats) {
-  return stats.map(({ habit, avg, count, hits }) => `
+  return stats.map(({ habit, avg, count, hits, numAvg }) => `
     <div class="month-stat-row">
       <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
       ${isNeutralScale(habit)
         ? `<span class="month-stat-value"><span class="month-stat-count">${count}×</span></span>`
-        : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : habitColor(habit, applyGoal(habit, avg))}">${avg !== null && isMultiStepScale(habit) ? avgMiniScale(habit, avg, ' avg-scale--inline') : ''}${avg !== null ? esc(habitAvgLong(habit, avg, count, hits)) : '–'}${avg !== null && !isYesNoScale(habit) && !hasNumberGoal(habit) ? ` <span class="month-stat-count">(${count}×)</span>` : ''}</span>`}
+        : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : habitColor(habit, applyGoal(habit, avg))}">${avg !== null && isMultiStepScale(habit) ? avgMiniScale(habit, avg, ' avg-scale--inline') : ''}${avg !== null ? esc(habitAvgLong(habit, avg, count, hits, numAvg)) : '–'}${avg !== null && !isYesNoScale(habit) && !hasNumberGoal(habit) ? ` <span class="month-stat-count">(${count}×)</span>` : ''}</span>`}
     </div>
   `).join('');
 }
