@@ -323,8 +323,11 @@
      statt oben und unten abgeschnitten zu werden - sonst wären seine Buttons unerreichbar. */
   .modal-overlay {
     position: fixed; inset: 0; background: var(--scrim); z-index: 50;
-    display: flex; justify-content: center; padding: 20px; overflow-y: auto;
+    display: flex; justify-content: center; padding: 20px; overflow-y: auto; overscroll-behavior: contain;
   }
+  /* Solange ein Dialog offen ist, scrollt nur er, nicht die Seite dahinter (passte der Dialog
+     auf den Bildschirm, reichte der Browser das Wischen sonst an die Seite weiter). */
+  html:has(.modal-overlay) { overflow: hidden; }
   .modal-box {
     background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
     padding: 18px; max-width: 340px; width: 100%; margin: auto;
@@ -431,7 +434,6 @@
   .whats-new-list { margin: 0.5rem 0 1rem; padding-left: 1.25rem; line-height: 1.5; }
   .whats-new-list li { margin-bottom: 0.4rem; }
   .whats-new-date { font-size: 0.9375rem; margin: 0.75rem 0 0; color: var(--sand); font-weight: 600; }
-  .modal-box.whats-new { max-height: 85vh; overflow-y: auto; }
   .counter-controls { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
   .counter-btn {
     width: 2.75rem; height: 2.75rem; border-radius: 50%; border: 1px solid var(--sand); background: transparent;
@@ -1244,6 +1246,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=eb19c62482"></script>
+<script type="module" src="./logbuch.js?v=c2a7d240a3"></script>
 </body>
 </html>

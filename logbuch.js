@@ -7092,10 +7092,12 @@ function renderPrivacySection() {
 // automatisch aus Git ableiten könnte, und ein Datum genügt hier als Rückverfolgbarkeit
 // (siehe Diskussion in CLAUDE.md-Kontext: keine echte Versionsnummer nötig, solange es
 // keine Release-Branches/nennenswerten externen Nutzerkreis gibt).
-// "Was ist neu" (Nutzer-Entscheidung 2026-10-11): neueste zuerst, Kennung = Datum der
-// Veröffentlichung. Bei jeder für Nutzer sichtbaren Änderung mindestens mittlerer Größe einen
-// Eintrag ergänzen bzw. den obersten erweitern (de + en, kurz, ohne Fachbegriffe) - siehe
-// CLAUDE.md. Nach einem Update zeigt die App die noch nicht gesehenen Einträge einmal als
+// "Was ist neu" (Nutzer-Entscheidung 2026-10-11): neueste zuerst, Kennung = Datum des
+// Live-Gangs (zweiter am selben Tag: "2026-10-11b" - sonst gälte er als schon gesehen). Nur,
+// was Nutzer weiterbringt (neue Möglichkeiten), keine Interna; de + en, kurz, ohne
+// Fachbegriffe. **Ein schon live gegangener Eintrag wird nie mehr erweitert** (wer ihn
+// geschlossen hat, sähe die Ergänzung nie) - stattdessen ein neuer; wer mehrere verpasst hat,
+// sieht sie gestapelt (bis zu 3, ältere unter "Alle Neuigkeiten"). Siehe CLAUDE.md. Nach einem Update zeigt die App die noch nicht gesehenen Einträge einmal als
 // Fenster (renderWhatsNew), gesehen gilt pro Konto (user_settings.last_seen_changelog);
 // "Über Logbuch" zeigt alle.
 const CHANGELOG = [
@@ -7106,14 +7108,12 @@ const CHANGELOG = [
       'Zahlen kannst du jetzt auch mit „+“ hochzählen, etwa Zigaretten oder Gläser Wasser – und ihnen ein Ziel geben wie „mindestens 8“ oder „höchstens 3“.',
       'Gruppen sind als Block hervorgehoben und klappen zu, sobald alles eingetragen ist (einstellbar pro Gruppe).',
       'Ziele und Auswertung in verständlichen Zahlen statt Prozent, zum Beispiel „an 3 von 7 Tagen“ oder „Ø 3,4 von 5“.',
-      'Beim Öffnen steht kurz ein Startbildschirm statt „Passwort eingeben“ – du musst nichts tun.',
     ],
     en: [
       'Fields can now be weekly, monthly or yearly, for example “Cleaned this week?” – you find them at the very bottom of “Today”.',
       'Numbers can now be counted up with “+”, e.g. cigarettes or glasses of water – and get a goal like “at least 8” or “at most 3”.',
       'Groups stand out as a block and collapse once everything is filled in (adjustable per group).',
       'Goals and statistics in plain numbers instead of percent, for example “on 3 of 7 days” or “avg. 3.4 of 5”.',
-      'When opening the app you briefly see a start screen instead of “Enter your password” – no need to do anything.',
     ],
   },
 ];

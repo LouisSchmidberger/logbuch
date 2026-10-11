@@ -119,8 +119,8 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   in identischer Key-Reihenfolge.
 - **`CHANGELOG`** in `logbuch.js` ("Was ist neu"): jede für Nutzer sichtbare Änderung
   mindestens mittlerer Größe bekommt vor dem Live-Gang einen Eintrag (de + en, kurz, ohne
-  Fachbegriffe) – spätestens am Sitzungsende; neuer Eintrag mit dem Datum des Live-Gangs
-  oder den obersten erweitern, solange er noch nicht live ist. Das Datum ist zugleich
+  Fachbegriffe, nur was Nutzer weiterbringt) – spätestens am Sitzungsende; neuer Eintrag mit
+  dem Datum des Live-Gangs, den obersten nur erweitern, solange er noch nicht live ist. Das Datum ist zugleich
   "Beta – Stand …" in "Über Logbuch". Reine Interna, Doku oder winzige Textkorrekturen nicht.
 - **Datenschutz-Text in "Über Logbuch"** (`renderPrivacySection`, `about.privacy.*`) sagt
   konkret, was der Betreiber sehen kann und was nicht. Jede Änderung, die daran etwas
