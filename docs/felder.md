@@ -289,6 +289,12 @@ Eintrag). "−" daneben zum Korrigieren statt Rückgängig-Meldung; Schritt pro 
 (`step` in `enc`, Standard 1); keine Erinnerungs-Einstellungen; nicht im Tutorial. Auf 0
 heruntergezählt wird der Schlüssel entfernt (gilt ohnehin als 0).
 
+**Umwandeln in einen Zähler** (nur auf Wunsch, mit Rückfrage, in "Feld bearbeiten" unter dem
+gesperrten Typ): Zahlenfelder und Skalen, die bei 0 beginnen (frühere "Anzahl"-Skalen).
+Einträge bleiben unverändert (schon Zahlen), nur die Definition wird ein Zähler; "leer = 0"
+gilt erst ab dem Tag der Umwandlung (`counterSince` in `enc`) – frühere leere Tage waren evtl.
+vergessen, nicht 0. Skalen verlieren Bezeichnungen und Bewertung. Kein Zurückwandeln.
+
 ## Zeitraum-Felder (Woche/Monat/Jahr)
 
 Datenmodell und Erinnerung: [datenmodell.md](datenmodell.md) → Zeitraum-Felder. Im Formular

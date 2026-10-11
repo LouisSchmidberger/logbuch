@@ -228,6 +228,7 @@ function habitFromParts(row, payload) {
     period: row.period || 'day',          // 'day' | 'week' | 'month' | 'year' (Klartext, siehe periodStart)
     step: payload.step ?? 1,              // nur kind 'counter': um wie viel "+"/"−" ändern
     createdAt: row.created_at,            // Zähler: ab wann ein leerer Tag als 0 zählt
+    counterSince: payload.counterSince ?? null, // umgewandelter Zähler: 0 erst ab diesem Tag (siehe convertHabitToCounter)
     periodReminderDay: row.period_reminder_day ?? null, // Tag der Erinnerung im Zeitraum, null = Standard
   };
 }
@@ -526,7 +527,8 @@ function habitNumericValue(h, dateKey) {
 // stünden Nullen vor seiner Zeit und in der Zukunft.
 function counterZeroApplies(h, dateKey) {
   const period = h.period || 'day';
-  const created = h.createdAt ? formatKey(periodStart(period, new Date(h.createdAt))) : null;
+  const since = h.counterSince ? parseDateKey(h.counterSince) : h.createdAt ? new Date(h.createdAt) : null;
+  const created = since ? formatKey(periodStart(period, since)) : null;
   const now = formatKey(periodStart(period, new Date()));
   return (!created || dateKey >= created) && dateKey <= now;
 }
@@ -1465,6 +1467,13 @@ const STRINGS = {
     'habitForm.title.newGroup': 'Neue Gruppe',
     'habitForm.title.editField': 'Feld bearbeiten',
     'habitForm.title.newField': 'Neues Feld',
+    'habitForm.convertCounter': 'In Zähler umwandeln …',
+    'habitForm.convertCounterDo': 'Umwandeln',
+    'habitForm.convertHint.number': 'Lieber mit „+“ hochzählen statt die Zahl einzutippen? Als Zähler bleiben alle bisherigen Werte erhalten.',
+    'habitForm.convertHint.scale': 'Diese Skala beginnt bei 0 – zählt sie eigentlich etwas? Als Zähler bleiben die Werte als Zahlen erhalten, und du zählst mit „+“ hoch.',
+    'habitForm.convertConfirm.number': 'Wirklich umwandeln? Die bisherigen Werte bleiben. Neu ist: Ab heute zählt ein Tag ohne Antippen als 0, frühere leere Tage bleiben leer. Zurückwandeln geht nicht.',
+    'habitForm.convertConfirm.scale': 'Wirklich umwandeln? Die bisherigen Werte bleiben als Zahlen, die Bezeichnungen der Stufen und die Bewertung entfallen. Ab heute zählt ein Tag ohne Antippen als 0, frühere leere Tage bleiben leer. Zurückwandeln geht nicht.',
+    'habitForm.convertDone': '„{name}“ ist jetzt ein Zähler.',
     'habitForm.lockedNote': 'Für dieses Feld gibt es bereits Einträge – Feld-Typ und Anzahl Stufen sind gesperrt. Bezeichnungen lassen sich trotzdem noch an-/abschalten und bearbeiten. Für eine andere Skala: archivieren und neu anlegen.',
     'habitForm.name': 'Name',
     'habitForm.fieldType': 'Feld-Typ',
@@ -2191,6 +2200,13 @@ const STRINGS = {
     'habitForm.title.newGroup': 'New group',
     'habitForm.title.editField': 'Edit field',
     'habitForm.title.newField': 'New field',
+    'habitForm.convertCounter': 'Convert to counter …',
+    'habitForm.convertCounterDo': 'Convert',
+    'habitForm.convertHint.number': 'Rather count up with “+” than type the number? As a counter, all previous values are kept.',
+    'habitForm.convertHint.scale': 'This scale starts at 0 – does it actually count something? As a counter, the values are kept as numbers and you count up with “+”.',
+    'habitForm.convertConfirm.number': 'Really convert? Previous values are kept. New: from today on, a day without tapping counts as 0; earlier empty days stay empty. You cannot convert back.',
+    'habitForm.convertConfirm.scale': 'Really convert? Previous values are kept as numbers; the step labels and the valuation are dropped. From today on, a day without tapping counts as 0; earlier empty days stay empty. You cannot convert back.',
+    'habitForm.convertDone': '“{name}” is now a counter.',
     'habitForm.lockedNote': 'This field already has entries – field type and number of steps are locked. Labels can still be switched on/off and edited. For a different scale: archive and create a new one.',
     'habitForm.name': 'Name',
     'habitForm.fieldType': 'Field type',
@@ -4196,6 +4212,39 @@ async function handleHabitSaveInner() {
 // obersten Ebene): sein alter sort_order kann inzwischen mitten zwischen anderen
 // liegen - etwa wenn seine Gruppe gelöscht wurde, während es archiviert war (dann ist
 // es ohne Gruppe, trägt aber noch seine Position von innerhalb der Gruppe).
+// In einen Zähler umwandeln (Nutzer-Entscheidung 2026-10-11, nur auf Wunsch): Zahlenfelder und
+// Skalen, die bei 0 beginnen (frühere "Anzahl"-Skalen wie Zähne 0-2). Die Einträge bleiben
+// unverändert - es sind schon Zahlen -, nur die Definition wird ein Zähler. "Leer = 0" gilt
+// erst ab heute (counterSince): frühere leere Tage waren evtl. vergessen, nicht 0. Bezeichnungen
+// und Bewertung einer Skala entfallen. Kein Zurück (bewusst nicht gebaut).
+function canConvertToCounter(f) {
+  return !!f.defId && f.locked && (f.kind === 'number' || (f.kind === 'scale' && f.min === 0));
+}
+async function convertHabitToCounter(defId) {
+  const h = state.habits.find((x) => x.defId === defId);
+  if (!h) return;
+  const payload = {
+    key: h.id, name: h.name, unit: h.kind === 'number' ? h.unit ?? null : null,
+    min: null, max: null, labels: null, good: null, displayStyle: 'buttons', sliderShowValue: true,
+    groupMembers: null, goalThreshold: null, aggregate: null,
+    hideInStats: !!h.hideInStats, archivedInStats: !!h.archivedInStats,
+    step: 1, counterSince: formatKey(new Date()),
+  };
+  const { data, error } = await supabase.from('habit_definitions')
+    .update({ kind: 'counter', reminder_minute: null, enc: await encryptData(currentDek, payload), ...DEF_PLAINTEXT_CLEARED })
+    .eq('id', defId).select().single();
+  if (error) {
+    state.notice = errorNotice('notice.saveFailed', error.message);
+    render();
+    return;
+  }
+  state.habits = state.habits.map((x) => (x.defId === defId ? habitFromParts(data, payload) : x));
+  saveFieldNamesForPush();
+  closeHabitForm();
+  state.notice = { type: 'ok', text: tPlain('habitForm.convertDone', { name: h.name }) };
+  render();
+}
+
 async function handleHabitArchive(defId, archive) {
   const habit = state.habits.find((h) => h.defId === defId);
   const sectionId = habit && state.sections.some((sec) => sec.id === habit.sectionId) ? habit.sectionId : null;
@@ -7544,6 +7593,20 @@ function renderHabitForm({ titleInHeader = false } = {}) {
           `).join('')}
         </div>
       </div>
+      ${canConvertToCounter(f) ? `
+        <div class="auth-field convert-box">
+          ${f.convertConfirm ? `
+            <p class="habit-form-lock-note" role="status">${t(f.kind === 'scale' ? 'habitForm.convertConfirm.scale' : 'habitForm.convertConfirm.number')}</p>
+            <div class="manage-group-tip-actions">
+              <button type="button" class="manage-btn" data-action="habit-convert-cancel">${t('common.cancel')}</button>
+              <button type="button" class="manage-btn" data-action="habit-convert-confirm">${t('habitForm.convertCounterDo')}</button>
+            </div>
+          ` : `
+            <p class="habit-form-lock-note">${t(f.kind === 'scale' ? 'habitForm.convertHint.scale' : 'habitForm.convertHint.number')}</p>
+            <button type="button" class="manage-btn" data-action="habit-convert-counter">${t('habitForm.convertCounter')}</button>
+          `}
+        </div>
+      ` : ''}
       ${periodField}
       ${stage < 3 ? `<button type="button" class="auth-submit" data-action="habit-reveal-next">${t('common.next')}</button>` : `
       ${tutorialForm ? tipBox(`tutorial.form.tip.${f.kind}`, 'tutorial.form.tipScaleMoreTitle', f.kind === 'scale' ? 'tutorial.form.tipScaleMore' : null) : ''}
@@ -8657,6 +8720,17 @@ app.addEventListener('click', async (e) => {
     const target = document.getElementById(f.revealStage === 2 ? 'habit-form-kind-field' : 'habit-form-details');
     target?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
     (f.revealStage === 2 ? target?.querySelector('[aria-pressed="true"]') : document.querySelector('#habit-form .form-tip ~ .auth-field button, #habit-form .form-tip ~ .auth-field input'))?.focus({ preventScroll: true });
+  } else if (action === 'habit-convert-counter') {
+    syncHabitFormFromDom();
+    state.habitForm.convertConfirm = true;
+    render();
+    document.querySelector('[data-action="habit-convert-cancel"]')?.focus();
+  } else if (action === 'habit-convert-cancel') {
+    state.habitForm.convertConfirm = false;
+    render();
+    document.querySelector('[data-action="habit-convert-counter"]')?.focus();
+  } else if (action === 'habit-convert-confirm') {
+    await convertHabitToCounter(state.habitForm.defId);
   } else if (action === 'habit-cancel') {
     closeHabitForm();
     render();
