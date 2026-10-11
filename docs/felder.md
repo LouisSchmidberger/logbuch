@@ -276,12 +276,22 @@ als Meldung. Verworfen: Zahl allein (verrät nicht, wie viele Stufen), gerundete
 (lange passen nicht), zweizeilig (Schrift unter 13 px), "rechts = besser" (bei "Niedrige Werte
 erstrebenswert" verwirrend).
 
-## Zähler (`kind = 'counter'`)
+## Zähler (`kind = 'counter'`) und Ziel für Zahlen
 
 Eine Zahl, die man im Lauf des Tages (bzw. Zeitraums) per "+" hochzählt (Zigaretten, Gläser
-Wasser); jeder neue Tag/Zeitraum beginnt bei 0 (Nutzer-Entscheidung 2026-10-11). **Eigener
-Typ statt Darstellung eines Zahlenfelds**, weil `get_due_notifications` nur den Klartext-Typ
-sieht und Zähler nie als "fehlend" erinnern darf. **Ohne Antippen = 0** – in "Heute" sichtbar
+Wasser); jeder neue Tag/Zeitraum beginnt bei 0 (Nutzer-Entscheidung 2026-10-11). **Für
+Nutzer kein eigener Typ**: im Formular "Zahl" mit "Wie trägst du ein? Eintippen / Hochzählen
+(+)"; **intern eigener `kind`**, weil `get_due_notifications` nur den Klartext-Typ sieht und
+Zähler nie als "fehlend" erinnern darf (verworfen: Zähler als eigener Typ in der Auswahl –
+der Nutzer fand die Trennung Zahl/Zähler nicht gelungen).
+
+**Ziel für Zahlen und Zähler** (optional, "Mehr Einstellungen"): keins / mindestens X /
+höchstens X (`good` 'high'/'low' + `target` in `enc`). Mit Ziel gelten sie als bewertet
+(`hasNumberGoal` in `isScoredKind`): Tagesscore `numberGoalScore` (mindestens: Wert/Ziel;
+höchstens: bis zum Ziel 1, darüber linear bis 0 beim Doppelten), damit eigene Zeile im
+Wochenraster, Ø-Spalte "4/7" = Tage mit erreichtem Ziel, Listen "Ziel an 4 von 7 Tagen
+erreicht", Tagesfarbe, gestrichelte Ziellinie im Verlauf. Ohne Ziel neutraler Verlauf wie
+bisher – nicht jede Zahl braucht eins. **Ohne Antippen = 0** – in "Heute" sichtbar
 als 0, nie "offen", zählt nicht für "alles eingetragen"; in der Auswertung zählt ein leerer
 Tag ab dem Anlegen (`created_at`) bis heute als 0 (`habitNumericValue`/`counterZeroApplies`),
 Verläufe lückenlos über alle Tage (`counterDayKeys` – Jahr/Gesamt übergeben sonst nur Tage mit
@@ -293,7 +303,9 @@ heruntergezählt wird der Schlüssel entfernt (gilt ohnehin als 0).
 gesperrten Typ): Zahlenfelder und Skalen, die bei 0 beginnen (frühere "Anzahl"-Skalen).
 Einträge bleiben unverändert (schon Zahlen), nur die Definition wird ein Zähler; "leer = 0"
 gilt erst ab dem Tag der Umwandlung (`counterSince` in `enc`) – frühere leere Tage waren evtl.
-vergessen, nicht 0. Skalen verlieren Bezeichnungen und Bewertung. Kein Zurückwandeln.
+vergessen, nicht 0. Skalen verlieren die Bezeichnungen; ihre Bewertung wird zum Ziel (hohe
+Werte gut + Ziel-Quote → "mindestens" der Wert, ab dem sie voll erreicht war). Kein
+Zurückwandeln.
 
 ## Zeitraum-Felder (Woche/Monat/Jahr)
 

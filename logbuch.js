@@ -227,6 +227,7 @@ function habitFromParts(row, payload) {
     archivedAt: row.archived_at,
     period: row.period || 'day',          // 'day' | 'week' | 'month' | 'year' (Klartext, siehe periodStart)
     step: payload.step ?? 1,              // nur kind 'counter': um wie viel "+"/"−" ändern
+    target: payload.target ?? null,       // Zahl/Zähler: Zielwert; good 'high' = mindestens, 'low' = höchstens
     createdAt: row.created_at,            // Zähler: ab wann ein leerer Tag als 0 zählt
     counterSince: payload.counterSince ?? null, // umgewandelter Zähler: 0 erst ab diesem Tag (siehe convertHabitToCounter)
     periodReminderDay: row.period_reminder_day ?? null, // Tag der Erinnerung im Zeitraum, null = Standard
@@ -485,7 +486,21 @@ function inStats(h) { return !isPeriodField(h) && (h.archivedAt ? h.archivedInSt
 // Auswertung wie ein Zahlenwert-Feld). Unterschieden über aggregate: gesetzt = aus Zahlen.
 function isNumberComputed(h) { return h.kind === 'computed' && !!h.aggregate; }
 // Felder mit Gut/Schlecht-Score (Farben, Heatmap, Prozent-Statistik).
-function isScoredKind(h) { return h.kind === 'scale' || (h.kind === 'computed' && !h.aggregate); }
+// Zahlen und Zähler mit Ziel ("mindestens/höchstens X", Nutzer-Entscheidung 2026-10-11) sind
+// ebenfalls bewertet - ohne Ziel bleiben sie ein neutraler Verlauf.
+function numberGoalText(h) {
+  return tPlain(h.good === 'high' ? 'numberGoal.min' : 'numberGoal.max', { value: formatNumber(h.target) + (h.unit ? ` ${h.unit}` : '') });
+}
+function hasNumberGoal(h) { return (isNumberKind(h) || isCounterKind(h)) && !!h.good && Number.isFinite(h.target); }
+function isScoredKind(h) { return h.kind === 'scale' || (h.kind === 'computed' && !h.aggregate) || hasNumberGoal(h); }
+// Wie gut ein Zahlenwert das Ziel trifft (0-1): "mindestens 8" -> 4 ist 0,5; "höchstens 3" ->
+// bis 3 voll, darüber linear abnehmend, ab dem Doppelten (mind. Ziel + 1) 0.
+function numberGoalScore(h, v) {
+  if (v === null || v === undefined) return null;
+  if (h.good === 'high') return h.target > 0 ? Math.max(0, Math.min(1, v / h.target)) : 1;
+  if (v <= h.target) return 1;
+  return Math.max(0, 1 - (v - h.target) / Math.max(h.target, 1));
+}
 // Felder mit Zahlen-Verlauf (Graph statt Farbe).
 function hasNumericSeries(h) { return isNumberKind(h) || isCounterKind(h) || isNumberComputed(h); }
 // Nur Mitglieder vom passenden Typ: der Typ eines Mitglieds lässt sich ändern, solange es
@@ -680,6 +695,7 @@ function normalize(habit, value) {
 // eines berechneten Felds, wirkt sich das rückwirkend auf die gesamte Historie aus, da hier bei
 // jedem Aufruf live neu gerechnet wird — beabsichtigt, siehe CLAUDE.md.
 function habitScore(h, dateKey) {
+  if (hasNumberGoal(h)) return numberGoalScore(h, habitNumericValue(h, dateKey));
   const day = state.entries[dateKey];
   if (!day) return null;
   if (isNumberComputed(h)) return null; // keine Bewertung, siehe isNumberComputed
@@ -796,7 +812,7 @@ function dayOverallScore(date) {
   const dateKey = formatKey(date);
   const day = state.entries[dateKey];
   if (!day) return null;
-  const scores = state.habits.filter((h) => h.kind === 'scale' && !isNeutralScale(h) && !isPeriodField(h))
+  const scores = state.habits.filter((h) => ((h.kind === 'scale' && !isNeutralScale(h)) || hasNumberGoal(h)) && !isPeriodField(h))
     .map((h) => applyGoal(h, habitScore(h, dateKey)))
     .filter((s) => s !== null);
   if (!scores.length) return null;
@@ -807,12 +823,12 @@ function dayOverallScore(date) {
 // ('YYYY-MM-DD').
 function computeHabitStats(habits, dateKeys) {
   return habits.map((h) => {
-    let sum = 0, count = 0;
+    let sum = 0, count = 0, hits = 0;
     for (const k of dateKeys) {
       const s = habitScore(h, k);
-      if (s !== null) { sum += s; count++; }
+      if (s !== null) { sum += s; count++; if (s >= 0.999) hits++; }
     }
-    return { habit: h, avg: count ? sum / count : null, count };
+    return { habit: h, avg: count ? sum / count : null, count, hits };
   });
 }
 
@@ -1484,6 +1500,21 @@ const STRINGS = {
     'habitForm.kindNumber': 'Zahl',
     'habitForm.kindText': 'Text',
     'habitForm.kindCounter': 'Zähler',
+    'habitForm.entryMode': 'Wie trägst du ein?',
+    'habitForm.entryMode.type': 'Eintippen',
+    'habitForm.entryMode.count': 'Hochzählen (+)',
+    'habitForm.numberGoal': 'Ziel für die Auswertung',
+    'habitForm.numberGoal.none': 'Keins',
+    'habitForm.numberGoal.min': 'Mindestens',
+    'habitForm.numberGoal.max': 'Höchstens',
+    'habitForm.numberGoalNote': 'Ab dem Ziel ist der Tag in Woche, Monat, Jahr und Gesamt grün, je weiter davon entfernt, desto röter. „Heute“ bleibt unverändert.',
+    'habitForm.error.numberGoal': 'Bitte gib als Ziel eine Zahl ein (bei „Mindestens“ größer als 0).',
+    'numberGoal.min': 'Ziel: mindestens {value}',
+    'numberGoal.max': 'Ziel: höchstens {value}',
+    'stats.goalHits': 'Ziel an {n} von {total} Tagen erreicht',
+    'stats.goalHits.week': 'Ziel in {n} von {total} Wochen erreicht',
+    'stats.goalHits.month': 'Ziel in {n} von {total} Monaten erreicht',
+    'stats.goalHits.year': 'Ziel in {n} von {total} Jahren erreicht',
     'habitForm.counterNote': 'Zählt mit „+“ hoch, zum Beispiel Zigaretten oder Gläser Wasser – jeder neue Tag (bzw. Zeitraum) beginnt bei 0. Ohne Antippen zählt 0, deshalb gibt es dafür keine Erinnerung.',
     'habitForm.counterStep': 'Schritt pro Tippen',
     'habitForm.counterStepNote': 'Um so viel ändern „+“ und „−“ den Wert, z. B. 1 oder 0,5.',
@@ -2221,6 +2252,21 @@ const STRINGS = {
     'habitForm.kindNumber': 'Number',
     'habitForm.kindText': 'Text',
     'habitForm.kindCounter': 'Counter',
+    'habitForm.entryMode': 'How do you enter it?',
+    'habitForm.entryMode.type': 'Type it in',
+    'habitForm.entryMode.count': 'Count up (+)',
+    'habitForm.numberGoal': 'Goal for the statistics',
+    'habitForm.numberGoal.none': 'None',
+    'habitForm.numberGoal.min': 'At least',
+    'habitForm.numberGoal.max': 'At most',
+    'habitForm.numberGoalNote': 'From the goal on, the day is green in Week, Month, Year and Overall, the further away, the redder. “Today” stays unchanged.',
+    'habitForm.error.numberGoal': 'Please enter a number as the goal (greater than 0 for “At least”).',
+    'numberGoal.min': 'Goal: at least {value}',
+    'numberGoal.max': 'Goal: at most {value}',
+    'stats.goalHits': 'Goal reached on {n} of {total} days',
+    'stats.goalHits.week': 'Goal reached in {n} of {total} weeks',
+    'stats.goalHits.month': 'Goal reached in {n} of {total} months',
+    'stats.goalHits.year': 'Goal reached in {n} of {total} years',
     'habitForm.counterNote': 'Counts up with “+”, for example cigarettes or glasses of water – every new day (or period) starts at 0. Not tapping counts as 0, so there is no reminder for it.',
     'habitForm.counterStep': 'Step per tap',
     'habitForm.counterStepNote': '“+” and “−” change the value by this much, e.g. 1 or 0.5.',
@@ -3780,6 +3826,25 @@ function goalSliderText(f, value) {
   const at = (v) => tPlain('habitForm.goalLabelAt', { label: goalScaleLabel(f, v - f.min), value: formatNumber(v) });
   return { text, span: lower >= upper ? at(lower) : tPlain('habitForm.goalBetween', { a: at(lower), b: at(upper) }) };
 }
+// Ziel einer Zahl / eines Zählers: keins / mindestens / höchstens + Zahl.
+function numberGoalField(f) {
+  const unit = (f.unit || '').trim();
+  return `
+    <div class="auth-field">
+      <label id="habit-form-numgoal-label">${t('habitForm.numberGoal')}</label>
+      <div class="pill-group" role="group" aria-labelledby="habit-form-numgoal-label">
+        ${[['', 'habitForm.numberGoal.none'], ['high', 'habitForm.numberGoal.min'], ['low', 'habitForm.numberGoal.max']].map(([d, key]) => `<button type="button" class="pill-toggle${(f.numberGoalDir || '') === d ? ' pill-toggle--active' : ''}" data-action="habit-numgoal" data-dir="${d}" aria-pressed="${(f.numberGoalDir || '') === d}">${t(key)}</button>`).join('')}
+      </div>
+      ${f.numberGoalDir ? `
+        <div class="schedule-inline">
+          <input type="number" id="habit-form-numgoal-value" inputmode="decimal" step="any" min="0" value="${esc(f.numberGoalValue)}" aria-labelledby="habit-form-numgoal-label" aria-describedby="habit-form-goal-note" />
+          ${unit ? `<span>${esc(unit)}</span>` : ''}
+        </div>
+      ` : ''}
+      <p class="habit-form-lock-note" id="habit-form-goal-note">${t(f.numberGoalDir ? 'habitForm.numberGoalNote' : 'habitForm.goalNote')}</p>
+    </div>
+  `;
+}
 function readGoalFromDom(f) {
   const el = document.getElementById('habit-form-goal');
   if (!el) return;
@@ -3847,6 +3912,7 @@ function defaultHabitForm() {
     schedule: scheduleToForm(null),
     period: 'day', periodReminderDay: null, // siehe periodReminderControl
     step: 1, // nur Zähler
+    numberGoalDir: null, numberGoalValue: '', // Zahl/Zähler: Ziel 'high' = mindestens, 'low' = höchstens
   };
 }
 
@@ -3935,6 +4001,8 @@ function habitToForm(h) {
     period: h.period || 'day',
     periodReminderDay: h.periodReminderDay ?? null,
     step: h.step ?? 1,
+    numberGoalDir: isNumberKind(h) || isCounterKind(h) ? h.good || null : null,
+    numberGoalValue: Number.isFinite(h.target) ? String(h.target) : '',
   };
 }
 
@@ -3988,6 +4056,8 @@ function syncHabitFormFromDom() {
     if (unitEl) f.unit = unitEl.value;
     const stepEl = document.getElementById('habit-form-step');
     if (stepEl) f.step = Number(String(stepEl.value).replace(',', '.'));
+    const numGoalEl = document.getElementById('habit-form-numgoal-value');
+    if (numGoalEl) f.numberGoalValue = numGoalEl.value;
     const reminderEnabledEl = document.getElementById('habit-form-reminder-enabled');
     if (reminderEnabledEl) f.reminderEnabled = reminderEnabledEl.checked;
     const reminderTime = readTimeInput('habit-form-reminder-time');
@@ -4072,7 +4142,15 @@ async function handleHabitSaveInner() {
       }
       f.step = step;
     }
-    fields = { kind: f.kind, min: null, max: null, labels: null, good: null, unit: unit || null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
+    // Ziel: "mindestens/höchstens X" - mit Richtung braucht es eine Zahl (bei "mindestens" > 0).
+    const goalEl = document.getElementById('habit-form-numgoal-value');
+    const goalRaw = goalEl ? goalEl.value : f.numberGoalValue;
+    const target = f.numberGoalDir ? Number(String(goalRaw).replace(',', '.')) : null;
+    if (f.numberGoalDir && (!Number.isFinite(target) || target < 0 || (f.numberGoalDir === 'high' && target === 0))) {
+      state.notice = { type: 'error', text: t('habitForm.error.numberGoal') };
+      return;
+    }
+    fields = { kind: f.kind, min: null, max: null, labels: null, good: f.numberGoalDir, target, unit: unit || null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
   } else if (f.kind === 'computed') {
     const memberKeys = [...document.querySelectorAll('[data-member-key]:checked')].map((el) => el.dataset.memberKey);
     if (memberKeys.length < 2) {
@@ -4181,6 +4259,7 @@ async function handleHabitSaveInner() {
     aggregate: fields.aggregate ?? null,
     hideInStats: !f.showInStats,
     step: f.kind === 'counter' ? f.step : undefined,
+    target: fields.target ?? undefined,
     archivedInStats: f.defId ? !!state.habits.find((h) => h.defId === f.defId)?.archivedInStats : false,
   };
   const sectionId = period === 'day' && state.sections.some((sec) => sec.id === f.sectionId) ? f.sectionId : null;
@@ -4238,9 +4317,19 @@ function canConvertToCounter(f) {
 async function convertHabitToCounter(defId) {
   const h = state.habits.find((x) => x.defId === defId);
   if (!h) return;
+  // Ziel übernehmen: aus einer Skala mit Bewertung wird "mindestens/höchstens" der Wert, ab dem
+  // sie voll erreicht war (z.B. Zähne 0-2, hohe Werte gut -> mindestens 2).
+  let good = null, target = null;
+  if (h.kind === 'number') { good = h.good || null; target = h.target ?? null; }
+  else if (h.good) {
+    const g = h.goalThreshold ?? 1;
+    good = h.good;
+    target = h.good === 'high' ? h.min + g * (h.max - h.min) : h.min + (1 - g) * (h.max - h.min);
+    target = Math.round(target * 10) / 10;
+  }
   const payload = {
-    key: h.id, name: h.name, unit: h.kind === 'number' ? h.unit ?? null : null,
-    min: null, max: null, labels: null, good: null, displayStyle: 'buttons', sliderShowValue: true,
+    key: h.id, name: h.name, unit: h.kind === 'number' ? h.unit ?? null : null, target,
+    min: null, max: null, labels: null, good, displayStyle: 'buttons', sliderShowValue: true,
     groupMembers: null, goalThreshold: null, aggregate: null,
     hideInStats: !!h.hideInStats, archivedInStats: !!h.archivedInStats,
     step: 1, counterSince: formatKey(new Date()),
@@ -6725,7 +6814,8 @@ function renderWeek() {
     const scores = dayKeys.map((k) => habitScore(h, k));
     const valid = scores.filter((s) => s !== null);
     const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
-    const avgLong = avg !== null ? `${h.name}: ${habitAvgLong(h, avg, valid.length)}${isYesNoScale(h) ? '' : ` (${valid.length}×)`}` : '';
+    const hits = valid.filter((v) => v >= 0.999).length;
+    const avgLong = avg !== null ? `${h.name}: ${habitAvgLong(h, avg, valid.length, hits)}${isYesNoScale(h) || hasNumberGoal(h) ? '' : ` (${valid.length}×)`}` : '';
     // Unbewertete Felder: nur "eingetragen", kein Streifenmuster (das kodiert die
     // Bewertungsstufe) und kein Ø - siehe isNeutralScale.
     const neutral = isNeutralScale(h);
@@ -6735,7 +6825,7 @@ function renderWeek() {
         ? `<div class="grid-cell grid-cell--avg" style="background:${habitColor(h, null)}">–</div>`
         // Antippen zeigt den Wert ausgeschrieben (z.B. "an 2 von 5 Tagen „Ja“", "Ø 1,2 · leicht–mittel") -
         // in der schmalen Spalte ist nur die Kurzform ("2/5", "1,2") Platz.
-        : `<button type="button" class="grid-cell grid-cell--avg" data-action="avg-info" data-text="${esc(avgLong)}" aria-label="${esc(avgLong)}" style="background:${habitColor(h, applyGoal(h, avg))};color:${textOnScore(habitColor(h, applyGoal(h, avg)))}">${habitAvgShort(h, avg, valid.length)}</button>`;
+        : `<button type="button" class="grid-cell grid-cell--avg" data-action="avg-info" data-text="${esc(avgLong)}" aria-label="${esc(avgLong)}" style="background:${habitColor(h, applyGoal(h, avg))};color:${textOnScore(habitColor(h, applyGoal(h, avg)))}">${habitAvgShort(h, avg, valid.length, hits)}</button>`;
     return `
       <div class="grid-row">
         <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
@@ -7013,14 +7103,14 @@ const CHANGELOG = [
     id: '2026-10-11',
     de: [
       'Felder können jetzt wöchentlich, monatlich oder jährlich sein, zum Beispiel „Diese Woche geputzt?“ – du findest sie in „Heute“ ganz unten.',
-      'Neu: Zähler. Mit „+“ zählst du im Lauf des Tages hoch, etwa Zigaretten oder Gläser Wasser.',
+      'Zahlen kannst du jetzt auch mit „+“ hochzählen, etwa Zigaretten oder Gläser Wasser – und ihnen ein Ziel geben wie „mindestens 8“ oder „höchstens 3“.',
       'Gruppen sind als Block hervorgehoben und klappen zu, sobald alles eingetragen ist (einstellbar pro Gruppe).',
       'Ziele und Auswertung in verständlichen Zahlen statt Prozent, zum Beispiel „an 3 von 7 Tagen“ oder „Ø 3,4 von 5“.',
       'Beim Öffnen steht kurz ein Startbildschirm statt „Passwort eingeben“ – du musst nichts tun.',
     ],
     en: [
       'Fields can now be weekly, monthly or yearly, for example “Cleaned this week?” – you find them at the very bottom of “Today”.',
-      'New: counters. Tap “+” during the day to count up, e.g. cigarettes or glasses of water.',
+      'Numbers can now be counted up with “+”, e.g. cigarettes or glasses of water – and get a goal like “at least 8” or “at most 3”.',
       'Groups stand out as a block and collapse once everything is filled in (adjustable per group).',
       'Goals and statistics in plain numbers instead of percent, for example “on 3 of 7 days” or “avg. 3.4 of 5”.',
       'When opening the app you briefly see a start screen instead of “Enter your password” – no need to do anything.',
@@ -7201,13 +7291,15 @@ function avgMiniScale(h, avg, extraClass = '') {
   return `<span class="avg-scale${extraClass}" aria-hidden="true"><span class="avg-scale-dot" style="left:${(pos * 100).toFixed(1)}%"></span></span>`;
 }
 // Kurzform für die schmale Ø-Spalte der Woche (HTML); den genauen Wert zeigt Antippen.
-function habitAvgShort(h, avg, count) {
+function habitAvgShort(h, avg, count, hits = 0) {
+  if (hasNumberGoal(h)) return `${hits}/${count}`;
   if (isMultiStepScale(h)) return avgMiniScale(h, avg);
   if (isYesNoScale(h)) return `${Math.round(avg * count)}/${count}`;
   if (h.kind === 'scale') return formatNumber(round1(avgScaleValue(h, avg)));
   return Math.round(avg * 100) + '%';
 }
-function habitAvgLong(h, avg, count) {
+function habitAvgLong(h, avg, count, hits = 0) {
+  if (hasNumberGoal(h)) return tPlain('stats.goalHits' + (isPeriodField(h) ? `.${h.period}` : ''), { n: hits, total: count });
   if (isYesNoScale(h)) {
     const best = scaleLabelAt(h, h.good === 'low' ? h.min : h.max);
     const unit = isPeriodField(h) ? `.${h.period}` : '';
@@ -7228,12 +7320,12 @@ function habitAvgLong(h, avg, count) {
   return Math.round(avg * 100) + '%';
 }
 function renderStatsRows(stats) {
-  return stats.map(({ habit, avg, count }) => `
+  return stats.map(({ habit, avg, count, hits }) => `
     <div class="month-stat-row">
       <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
       ${isNeutralScale(habit)
         ? `<span class="month-stat-value"><span class="month-stat-count">${count}×</span></span>`
-        : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : habitColor(habit, applyGoal(habit, avg))}">${avg !== null && isMultiStepScale(habit) ? avgMiniScale(habit, avg, ' avg-scale--inline') : ''}${avg !== null ? esc(habitAvgLong(habit, avg, count)) : '–'}${avg !== null && !isYesNoScale(habit) ? ` <span class="month-stat-count">(${count}×)</span>` : ''}</span>`}
+        : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : habitColor(habit, applyGoal(habit, avg))}">${avg !== null && isMultiStepScale(habit) ? avgMiniScale(habit, avg, ' avg-scale--inline') : ''}${avg !== null ? esc(habitAvgLong(habit, avg, count, hits)) : '–'}${avg !== null && !isYesNoScale(habit) && !hasNumberGoal(habit) ? ` <span class="month-stat-count">(${count}×)</span>` : ''}</span>`}
     </div>
   `).join('');
 }
@@ -7274,7 +7366,7 @@ function renderNumberChart(habit, dateKeys, interactive) {
   const head = `
     <div class="number-chart-head">
       <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
-      ${stats ? `<span class="number-chart-meta">${t('numberChart.meta', { last: formatNumber(stats.last) + unitSuffix, avg: formatNumber(round1(stats.avg)) + unitSuffix, count: stats.count })}</span>` : ''}
+      ${stats ? `<span class="number-chart-meta">${t('numberChart.meta', { last: formatNumber(stats.last) + unitSuffix, avg: formatNumber(round1(stats.avg)) + unitSuffix, count: stats.count })}${hasNumberGoal(habit) ? ` · ${esc(numberGoalText(habit))}` : ''}</span>` : ''}
     </div>
   `;
   if (!stats || stats.series.length < 2) {
@@ -7282,12 +7374,19 @@ function renderNumberChart(habit, dateKeys, interactive) {
   }
   const w = 280, h = 56, pad = 4;
   const n = stats.series.length;
-  const range = stats.max - stats.min || 1;
+  // Mit Ziel: Bereich so weit, dass die Ziellinie sichtbar ist.
+  const goal = hasNumberGoal(habit) ? habit.target : null;
+  const lo = goal !== null ? Math.min(stats.min, goal) : stats.min;
+  const hi = goal !== null ? Math.max(stats.max, goal) : stats.max;
+  const range = hi - lo || 1;
+  const yOf = (v) => h - pad - ((v - lo) / range) * (h - 2 * pad);
   const points = stats.series.map((p, i) => {
     const x = pad + (i / (n - 1)) * (w - 2 * pad);
-    const y = h - pad - ((p.value - stats.min) / range) * (h - 2 * pad);
-    return [x, y];
+    return [x, yOf(p.value)];
   });
+  const goalLine = goal !== null
+    ? `<line x1="0" x2="${w}" y1="${yOf(goal).toFixed(1)}" y2="${yOf(goal).toFixed(1)}" style="stroke:var(--sand);stroke-width:1;stroke-dasharray:4 3" vector-effect="non-scaling-stroke" />`
+    : '';
   const pointsAttr = points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
   const dots = points.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.6" style="fill:var(--ink)" />`).join('');
   // Tage mit Notiz zu diesem Feld: Ring um den Datenpunkt. Als HTML über dem SVG statt
@@ -7331,6 +7430,7 @@ function renderNumberChart(habit, dateKeys, interactive) {
       ${head}
       <div class="number-chart-plot">
         <svg viewBox="0 0 ${w} ${h}" class="number-chart-svg" preserveAspectRatio="none" aria-hidden="true">
+          ${goalLine}
           <polyline points="${pointsAttr}" fill="none" style="stroke:var(--moss);stroke-width:1.5" />
           ${dots}
         </svg>
@@ -7481,7 +7581,17 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       <input type="text" id="habit-form-unit" value="${esc(f.unit)}" maxlength="10" placeholder="${esc(t('habitForm.unitPlaceholder'))}" />
     </div>
   `;
+  // "Wie trägst du ein?" - eintippen oder hochzählen; nicht im Tutorial (dort nur eintippen).
+  const entryModeField = f.revealStage !== undefined ? '' : `
+    <div class="auth-field">
+      <label id="habit-form-entry-label">${t('habitForm.entryMode')}</label>
+      <div class="pill-group" role="group" aria-labelledby="habit-form-entry-label">
+        ${[['number', 'habitForm.entryMode.type'], ['counter', 'habitForm.entryMode.count']].map(([k, key]) => `<button type="button" class="pill-toggle${f.kind === k ? ' pill-toggle--active' : ''}" data-action="habit-entry-mode" data-kind="${k}" aria-pressed="${f.kind === k}" ${f.locked ? 'disabled' : ''}>${t(key)}</button>`).join('')}
+      </div>
+    </div>
+  `;
   const counterBody = `
+    ${entryModeField}
     <p class="habit-form-lock-note">${t('habitForm.counterNote')}</p>
     ${numberBody}
     <div class="auth-field">
@@ -7637,7 +7747,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // dort schon etwas vom Standard abweicht, sonst zu; offen/zu übersteht Re-Renders
   // (f.moreOpen, gesetzt vom toggle-Listener).
   const showGoal = (f.kind === 'scale' && f.good) || (isComputed && f.computedType !== 'number');
-  const moreOpen = f.moreOpen ?? ((showGoal && f.goal < 1) || (!isComputed && (f.schedule.type !== 'daily' || f.reminderEnabled))
+  const moreOpen = f.moreOpen ?? ((showGoal && f.goal < 1) || !!f.numberGoalDir || (!isComputed && (f.schedule.type !== 'daily' || f.reminderEnabled))
     || (state.sections.length > 0 && !!f.sectionId) || !f.showInStats);
   // "Berechnet" nur anbieten, wenn es etwas zu berechnen gibt (mind. 2 passende Felder) -
   // beim allerersten Feld im Tutorial führte die Auswahl sonst nur zu "noch keine Felder".
@@ -7645,9 +7755,9 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const computedPossible = isComputed || (!tutorialForm && (false
     || others.filter((h) => h.kind === 'scale' && !isNeutralScale(h)).length >= 2
     || others.filter((h) => h.kind === 'number').length >= 2));
-  const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber']]
-    .concat(tutorialForm ? [] : [['counter', 'habitForm.kindCounter']])
-    .concat([['text', 'habitForm.kindText']])
+  // Zähler ist für Nutzer eine Art, eine Zahl einzutragen ("hochzählen"), kein eigener Typ -
+  // intern 'counter', weil der Server ihn für Erinnerungen unterscheiden muss.
+  const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber'], ['text', 'habitForm.kindText']]
     .concat(computedPossible ? [['computed', 'habitForm.kindComputed']] : []);
   // Zeitraum (Tag/Woche/Monat/Jahr): nicht im Tutorial (das erste Feld ist ein Tagesfeld) und
   // nicht bei "Berechnet". Mit Daten gesperrt - die Werte stünden sonst am falschen Tag.
@@ -7677,7 +7787,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         <label id="habit-form-kind-label">${t('habitForm.fieldType')}</label>
         <div class="pill-group" role="group" aria-labelledby="habit-form-kind-label">
           ${kinds.map(([kind, key]) => `
-            <button type="button" class="pill-toggle${f.kind === kind ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="${kind}" aria-pressed="${f.kind === kind}" ${f.locked ? 'disabled' : ''}>${t(key)}</button>
+            <button type="button" class="pill-toggle${(f.kind === 'counter' ? 'number' : f.kind) === kind ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="${kind}" aria-pressed="${(f.kind === 'counter' ? 'number' : f.kind) === kind}" ${f.locked ? 'disabled' : ''}>${t(key)}</button>
           `).join('')}
         </div>
       </div>
@@ -7699,10 +7809,11 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       ${stage < 3 ? `<button type="button" class="auth-submit" data-action="habit-reveal-next">${t('common.next')}</button>` : `
       ${tutorialForm ? tipBox(`tutorial.form.tip.${f.kind}`, 'tutorial.form.tipScaleMoreTitle', f.kind === 'scale' ? 'tutorial.form.tipScaleMore' : null) : ''}
       <div id="habit-form-details"></div>
-      ${isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : f.kind === 'counter' ? counterBody : numberBody}
+      ${isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : f.kind === 'counter' ? counterBody : entryModeField + numberBody}
       <details class="habit-form-more" ${moreOpen ? 'open' : ''}>
         <summary><span class="habit-form-more-title">${t('habitForm.more')}</span><span class="habit-form-more-sub">${t(isPeriod ? 'habitForm.moreSubPeriod' : 'habitForm.moreSub')}</span></summary>
       ${showGoal ? goalField : ''}
+      ${f.kind === 'number' || f.kind === 'counter' ? numberGoalField(f) : ''}
       ${!isComputed ? (isPeriod ? (isCounter ? '' : periodReminderControl(f)) : scheduleBody) + (isCounter ? '' : reminderBody) : ''}
       ${state.sections.length && !isPeriod ? `
         <div class="auth-field">
@@ -8875,6 +8986,15 @@ app.addEventListener('click', async (e) => {
     syncHabitFormFromDom();
     state.habitForm.good = el.dataset.good || null;
     render();
+  } else if (action === 'habit-entry-mode') {
+    syncHabitFormFromDom();
+    state.habitForm.kind = el.dataset.kind;
+    render();
+  } else if (action === 'habit-numgoal') {
+    syncHabitFormFromDom();
+    state.habitForm.numberGoalDir = el.dataset.dir || null;
+    render();
+    if (state.habitForm.numberGoalDir) document.getElementById('habit-form-numgoal-value')?.focus();
   } else if (action === 'habit-period') {
     syncHabitFormFromDom();
     const f = state.habitForm;
