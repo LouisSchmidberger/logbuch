@@ -36,7 +36,7 @@ const TABLES = {
     key: ['user_id'],
     defaults: () => ({
       default_reminder_minute: 1320, created_at: now(), onboarding_completed: false, locale: 'de',
-      summary_notifications: true, timezone: 'Europe/Berlin',
+      summary_notifications: true, timezone: 'Europe/Berlin', last_seen_changelog: null,
     }),
   },
   user_encryption: {

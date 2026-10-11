@@ -139,7 +139,8 @@ export function install(app) {
       app.state.entries = { ...app.state.entries, [dateKey(prevMonth)]: { ...(app.state.entries[dateKey(prevMonth)] || {}), fmonat: 'Viel draußen gewesen, neuer Sport-Rhythmus.' } };
       await app.saveDayNow(dateKey(prevMonth));
 
-      await sb.from('user_settings').update({ onboarding_completed: true }).eq('user_id', uid);
+      // Neuigkeiten als gesehen, damit das Fenster die Rundgänge nicht verdeckt (zum Testen null setzen).
+      await sb.from('user_settings').update({ onboarding_completed: true, last_seen_changelog: '9999-12-31' }).eq('user_id', uid);
       await sb.from('user_encryption').update({ recovery_key_confirmed: true }).eq('user_id', uid);
       localStorage.removeItem('onboardingInProgress');
       localStorage.removeItem('todayIntroPending');

@@ -14,6 +14,7 @@
 //   goto:<Pfad>           z.B. goto:logbuch.html
 //   eval:<JS>             im Browser ausführen
 //   wait:<ms>
+//   key:<Taste>            echter Tastendruck, z.B. key:Escape
 //   shot:<Name>           Screenshot (ganze Seite); shotview:<Name> nur sichtbarer Bereich
 //   buttons               sichtbare Knöpfe auflisten (zum Weiterplanen)
 //
@@ -61,6 +62,7 @@ try {
       case 'goto': await open(page, arg); break;
       case 'eval': console.log(await page.evaluate(arg)); await settle(page); break;
       case 'wait': await new Promise((r) => setTimeout(r, Number(arg))); break;
+      case 'key': await page.keyboard.press(arg); await settle(page); break;
       case 'shot': await shot(page, arg || 'bild'); break;
       case 'shotview': await shot(page, arg || 'bild', { fullPage: false }); break;
       case 'buttons':

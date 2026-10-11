@@ -931,6 +931,7 @@ function restoreModalFocus() {
 // Android-Zurück) - rendert NICHT selbst, der Aufrufer muss danach render() und
 // restoreModalFocus() aufrufen (closeTopLayer läuft z.B. vor einem eigenen render()).
 function closeModals() {
+  if (state.whatsNew) closeWhatsNew(); // Schließen = gesehen (speichert)
   state.deleteConfirm = null;
   state.tutorialSkipConfirm = false;
   state.resetConfirm = null;
@@ -981,7 +982,7 @@ function leaveSubpage() {
   state.view = state.previousTabView || 'today';
 }
 function isOverlayOpen() {
-  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.regenKeyConfirm || !!state.logoutConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm;
+  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.regenKeyConfirm || !!state.logoutConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm || !!state.whatsNew;
 }
 // Der Notiz-Editor gehört zu einem bestimmten Tag in "Heute" und ist nur offen, solange
 // er dort auch sichtbar ist - wechselt man Tag/Tab, speichert render() den Entwurf und
@@ -1041,7 +1042,9 @@ function subpageBack() {
 // Overlays gleichzeitig offen, da z.B. die Menü-Aktionen state.menuOpen beim Öffnen
 // eines anderen Overlays bereits selbst auf false setzen.
 function closeTopLayer() {
-  if (state.deleteConfirm || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm) {
+  if (state.whatsNew) {
+    closeWhatsNew();
+  } else if (state.deleteConfirm || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm) {
     closeModals();
     restoreModalFocus();
   } else if (state.menuOpen) {
@@ -1862,6 +1865,10 @@ const STRINGS = {
     'deleteAccount.deleting': 'Wird gelöscht …',
     'deleteAccount.deletePermanently': 'Endgültig löschen',
     'common.loading': 'Lädt …',
+    'whatsNew.title': 'Neu in Logbuch',
+    'whatsNew.close': 'Alles klar',
+    'whatsNew.all': 'Alle Neuigkeiten',
+    'about.news.title': 'Neuigkeiten',
     'startup.opening': 'Dein Logbuch wird geöffnet …',
     'startup.slow': 'Das dauert gerade länger als sonst – meist ist die Internetverbindung langsam. Es geht gleich von selbst weiter.',
     'tabs.today': 'Heute',
@@ -2595,6 +2602,10 @@ const STRINGS = {
     'deleteAccount.deleting': 'Deleting …',
     'deleteAccount.deletePermanently': 'Delete permanently',
     'common.loading': 'Loading …',
+    'whatsNew.title': 'New in Logbuch',
+    'whatsNew.close': 'Got it',
+    'whatsNew.all': 'All updates',
+    'about.news.title': 'Updates',
     'startup.opening': 'Opening your Logbuch …',
     'startup.slow': 'This is taking longer than usual – usually the internet connection is slow. It will continue on its own.',
     'tabs.today': 'Today',
@@ -3217,7 +3228,7 @@ async function loadSections() {
 
 async function loadUserSettings() {
   const { data, error } = await supabase.from('user_settings')
-    .select('default_reminder_minute, onboarding_completed, locale, summary_notifications, timezone').maybeSingle();
+    .select('default_reminder_minute, onboarding_completed, locale, summary_notifications, timezone, last_seen_changelog').maybeSingle();
   if (error) {
     state.notice = errorNotice('notice.loadSettingsError', error.message);
     return;
@@ -3228,7 +3239,11 @@ async function loadUserSettings() {
     locale: data && data.locale ? data.locale : detectInitialLocale(),
     summaryNotifications: data ? data.summary_notifications : true,
     timezone: data ? data.timezone : 'Europe/Berlin',
+    lastSeenChangelog: data ? data.last_seen_changelog : null,
   };
+  // Nach einem Update einmal "Was ist neu" - nicht für neue Konten (die setzen beim Abschluss
+  // des Tutorials den neuesten Eintrag als gesehen, saveOnboardingCompleted).
+  state.whatsNew = !!data && data.onboarding_completed && unseenChangelog().length > 0;
   applyLocale(state.userSettings.locale);
   syncTimezone();
 }
@@ -6987,13 +7002,86 @@ function renderPrivacySection() {
 // automatisch aus Git ableiten könnte, und ein Datum genügt hier als Rückverfolgbarkeit
 // (siehe Diskussion in CLAUDE.md-Kontext: keine echte Versionsnummer nötig, solange es
 // keine Release-Branches/nennenswerten externen Nutzerkreis gibt).
-const APP_STATUS_DATE = '2026-10-11';
+// "Was ist neu" (Nutzer-Entscheidung 2026-10-11): neueste zuerst, Kennung = Datum der
+// Veröffentlichung. Bei jeder für Nutzer sichtbaren Änderung mindestens mittlerer Größe einen
+// Eintrag ergänzen bzw. den obersten erweitern (de + en, kurz, ohne Fachbegriffe) - siehe
+// CLAUDE.md. Nach einem Update zeigt die App die noch nicht gesehenen Einträge einmal als
+// Fenster (renderWhatsNew), gesehen gilt pro Konto (user_settings.last_seen_changelog);
+// "Über Logbuch" zeigt alle.
+const CHANGELOG = [
+  {
+    id: '2026-10-11',
+    de: [
+      'Felder können jetzt wöchentlich, monatlich oder jährlich sein, zum Beispiel „Diese Woche geputzt?“ – du findest sie in „Heute“ ganz unten.',
+      'Neu: Zähler. Mit „+“ zählst du im Lauf des Tages hoch, etwa Zigaretten oder Gläser Wasser.',
+      'Gruppen sind als Block hervorgehoben und klappen zu, sobald alles eingetragen ist (einstellbar pro Gruppe).',
+      'Ziele und Auswertung in verständlichen Zahlen statt Prozent, zum Beispiel „an 3 von 7 Tagen“ oder „Ø 3,4 von 5“.',
+      'Beim Öffnen steht kurz ein Startbildschirm statt „Passwort eingeben“ – du musst nichts tun.',
+    ],
+    en: [
+      'Fields can now be weekly, monthly or yearly, for example “Cleaned this week?” – you find them at the very bottom of “Today”.',
+      'New: counters. Tap “+” during the day to count up, e.g. cigarettes or glasses of water.',
+      'Groups stand out as a block and collapse once everything is filled in (adjustable per group).',
+      'Goals and statistics in plain numbers instead of percent, for example “on 3 of 7 days” or “avg. 3.4 of 5”.',
+      'When opening the app you briefly see a start screen instead of “Enter your password” – no need to do anything.',
+    ],
+  },
+];
+// "Beta – Stand …" in "Über Logbuch" = neuester Eintrag (früher eine eigene Konstante, die man
+// zusätzlich pflegen musste).
+const APP_STATUS_DATE = CHANGELOG[0].id;
+function changelogItems(entry) { return entry[currentLocale] || entry.de; }
+function unseenChangelog() {
+  const last = state.userSettings.lastSeenChangelog;
+  return CHANGELOG.filter((e) => !last || e.id > last).slice(0, 3);
+}
+function renderWhatsNew() {
+  const entries = unseenChangelog();
+  return `
+    <div class="modal-overlay">
+      <div class="modal-box whats-new" role="dialog" aria-modal="true" aria-labelledby="whats-new-title">
+        <h2 id="whats-new-title"><span aria-hidden="true">✨ </span>${t('whatsNew.title')}</h2>
+        ${entries.map((e) => `
+          ${entries.length > 1 ? `<h3 class="whats-new-date">${esc(formatDMY(e.id))}</h3>` : ''}
+          <ul class="whats-new-list">${changelogItems(e).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
+        `).join('')}
+        <div class="habit-form-actions">
+          <button type="button" class="habit-form-cancel" data-action="whats-new-all">${t('whatsNew.all')}</button>
+          <button type="button" class="auth-submit" data-action="whats-new-close">${t('whatsNew.close')}</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+// Schließen = gesehen, auf allen Wegen (Knopf, Escape, Zurück), sonst käme es beim nächsten
+// Öffnen wieder. Best effort: schlägt das Speichern fehl, kommt das Fenster eben nochmal.
+function closeWhatsNew() {
+  state.whatsNew = false;
+  const latest = CHANGELOG[0].id;
+  state.userSettings = { ...state.userSettings, lastSeenChangelog: latest };
+  if (state.session) {
+    supabase.from('user_settings').upsert({ user_id: state.session.user.id, last_seen_changelog: latest }, { onConflict: 'user_id' })
+      .then(({ error }) => { if (error) console.warn('Neuigkeiten nicht als gesehen gespeichert:', error.message); });
+  }
+}
+function renderAboutNews() {
+  return `
+    <section class="about-news" id="about-news">
+      <h2>${t('about.news.title')}</h2>
+      ${CHANGELOG.map((e) => `
+        <h3 class="whats-new-date">${esc(formatDMY(e.id))}</h3>
+        <ul class="whats-new-list">${changelogItems(e).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
+      `).join('')}
+    </section>
+  `;
+}
 
 function renderAbout() {
   return `
     <p class="about-status">${t('about.status', { date: formatDMY(APP_STATUS_DATE) })} <button type="button" class="link-btn" data-action="open-feedback">${t('menu.feedback')}</button></p>
     <p class="about-status about-status--secondary">${t('about.monetizationNote')}</p>
     <p class="about-intro">${t('about.intro')}</p>
+    ${renderAboutNews()}
     ${renderA11ySection()}
     ${renderMentalHealthSection()}
     ${renderPrivacySection()}
@@ -7808,14 +7896,14 @@ function renderManage() {
 // Formular (Schritt 3) ein versehentliches Verlassen mitten im Feld-Anlegen.
 //
 async function saveOnboardingCompleted() {
-  state.userSettings = { ...state.userSettings, onboardingCompleted: true };
+  state.userSettings = { ...state.userSettings, onboardingCompleted: true, lastSeenChangelog: CHANGELOG[0].id };
   state.tutorialStep = null;
   state.tutorialSkipConfirm = false;
   state.habitForm = null; // beim Überspringen aus Schritt 3 sonst unsichtbar weiter offen
   render();
   maybeShowSpareKey(); // direkt nach dem Tutorial, auch wenn es übersprungen wurde
   const { error } = await supabase.from('user_settings')
-    .upsert({ user_id: state.session.user.id, onboarding_completed: true }, { onConflict: 'user_id' });
+    .upsert({ user_id: state.session.user.id, onboarding_completed: true, last_seen_changelog: CHANGELOG[0].id }, { onConflict: 'user_id' });
   if (error) {
     state.notice = errorNotice('notice.saveFailed', error.message);
     render();
@@ -8279,6 +8367,7 @@ function renderApp() {
     ${state.resetConfirm ? renderResetConfirm() : ''}
     ${state.regenKeyConfirm ? renderRegenKeyConfirm() : ''}
     ${state.logoutConfirm ? renderLogoutConfirm() : ''}
+    ${state.whatsNew && !state.deleteConfirm && !state.resetConfirm && !state.regenKeyConfirm && !state.logoutConfirm ? renderWhatsNew() : ''}
   `;
   // preventScroll: der Header ist ohnehin (sticky) sichtbar - der native
   // Scroll-in-View-Effekt beim Fokussieren kennt "position: sticky" nicht und hat
@@ -8587,6 +8676,14 @@ app.addEventListener('click', async (e) => {
     enterSubpage('settings');
     render();
     focusSettingsTarget(el.dataset.target);
+  } else if (action === 'whats-new-close') {
+    closeWhatsNew();
+    render();
+  } else if (action === 'whats-new-all') {
+    closeWhatsNew();
+    enterSubpage('about');
+    render();
+    requestAnimationFrame(() => document.getElementById('about-news')?.scrollIntoView({ block: 'start' }));
   } else if (action === 'open-about') {
     enterSubpage('about');
     render();
