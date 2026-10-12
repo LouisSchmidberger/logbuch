@@ -7244,15 +7244,17 @@ function closeWhatsNew() {
       .then(({ error }) => { if (error) console.warn('Neuigkeiten nicht als gesehen gespeichert:', error.message); });
   }
 }
+// Aufklappbar und zu Beginn zu wie die übrigen Bereiche hier; "Alle Neuigkeiten" im
+// "Was ist neu"-Fenster öffnet ihn (whats-new-all).
 function renderAboutNews() {
   return `
-    <section class="about-news" id="about-news">
-      <h2>${t('about.news.title')}</h2>
+    <details class="tip-group about-news" id="about-news" data-collapse-key="aboutNewsCollapsed" ${isAboutSectionCollapsed('aboutNewsCollapsed') ? '' : 'open'}>
+      <summary class="manage-section-title">${icon('news')}${t('about.news.title')}</summary>
       ${CHANGELOG.map((e) => `
         <h3 class="whats-new-date">${esc(formatDMY(e.id))}</h3>
         <ul class="whats-new-list">${changelogItems(e).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
       `).join('')}
-    </section>
+    </details>
   `;
 }
 
@@ -7262,6 +7264,7 @@ function renderAbout() {
     <p class="about-status about-status--secondary">${t('about.monetizationNote')}</p>
     <p class="about-intro">${t('about.intro')}</p>
     ${renderAboutNews()}
+    <div class="manage-section-divider"></div>
     ${renderA11ySection()}
     ${renderMentalHealthSection()}
     ${renderPrivacySection()}
@@ -8322,7 +8325,7 @@ const ICONS = {
   newField: '✏️', newGroup: '📁',
   reminders: '🔔', display: '🎨', account: '👤',
   a11y: '♿', mentalHealth: '💚', privacy: '🔒',
-  usage: '👆', fields: '✏️', appearance: '🎨',
+  usage: '👆', fields: '✏️', appearance: '🎨', news: '✨',
 };
 function icon(name) {
   return `<span class="item-icon" aria-hidden="true">${ICONS[name]}</span>`;
@@ -8907,6 +8910,7 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'whats-new-all') {
     closeWhatsNew();
     enterSubpage('about');
+    openAboutSections.add('aboutNewsCollapsed');
     render();
     requestAnimationFrame(() => document.getElementById('about-news')?.scrollIntoView({ block: 'start' }));
   } else if (action === 'open-about') {

@@ -273,7 +273,7 @@ des Geräts und verlangt danach das Passwort) haben `role="dialog"`/Fokus-Trap/E
 Fokus-Rückgabe (`focusModalIfOpen()`/`restoreModalFocus()`/`modalTriggerSelector`,
 gemeinsamer Schließ-Weg `closeModals()`); solange einer offen ist, scrollt die Seite dahinter
 nicht mit (`html:has(.modal-overlay)`). Ebenso das Fenster "Was ist neu" (`renderWhatsNew`,
-nach Updates einmal pro Konto; jedes Schließen – Knopf, Escape, Zurück – zählt als gesehen). Der Zahlenwert-Verlaufsgraph hat eine
+nach Updates einmal pro Konto; jedes Schließen – Knopf, Escape, Zurück – zählt als gesehen; alle Einträge stehen in "Über Logbuch" → Neuigkeiten, aufklappbar und zu Beginn zu wie die anderen Bereiche dort). Der Zahlenwert-Verlaufsgraph hat eine
 `.visually-hidden`-Zusammenfassung (Anzahl/letzter Wert/Durchschnitt/Spanne/Trend) statt
 eines reinen `aria-label`. Fehlermeldungen auf Anmelde-/Entsperr-/Reset-Seite mit
 `role="alert"`. Menü: `aria-expanded`, Escape schließt. **Wenig Höhe** (Handy quer, Zoom;
