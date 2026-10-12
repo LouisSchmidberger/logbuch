@@ -877,7 +877,10 @@
   .onb-progress-label { margin: 0.5rem 0 0; font-size: 0.875rem; text-align: center; color: var(--ink); }
   /* Installations-Skizzen (sketchHtml): vereinfachte Handy-Ansicht, Hervorhebung in Moos. */
   .install-steps li > span { display: block; }
-  .install-or { margin-top: 1.25rem; font-weight: 600; }
+  /* Installieren-Knopf vorhanden: Anleitung von Hand nur als Ausweichweg, zugeklappt. */
+  .install-fallback { margin-top: 1.25rem; }
+  /* Android-Browser ohne echte Installation (otherBrowserBox): Link sieht aus wie ein Knopf. */
+  .install-chrome-link { box-sizing: border-box; text-decoration: none; }
   .install-sketch { display: block; width: 100%; max-width: 12rem; margin: 0.25rem auto 0.5rem; color: var(--ink); }
   .sk-frame { fill: var(--paper); stroke: currentColor; stroke-width: 2; }
   .sk-line { fill: color-mix(in srgb, var(--ink) 18%, transparent); }
@@ -1212,6 +1215,10 @@
   }
   .form-tip p { margin: 0; }
   .form-tip .why-box { margin: 0.5rem 0 0; padding: 0; border: none; background: none; }
+  /* Tipp zu einem schon erledigten Teil: zugeklappt, Überschrift als Zeile zum Aufklappen. */
+  .form-tip--past { display: block; }
+  .form-tip--past summary { cursor: pointer; font-weight: 600; min-height: 1.5rem; }
+  .form-tip--past > div { margin-top: 0.5rem; }
   .manage-group-tip-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; }
   .habit-form-more { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 6px 0 4px; padding: 0.5rem 0; }
   .habit-form-more[open] { padding-bottom: 0.75rem; }
@@ -1253,6 +1260,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=6357d090c2"></script>
+<script type="module" src="./logbuch.js?v=172bb197b9"></script>
 </body>
 </html>

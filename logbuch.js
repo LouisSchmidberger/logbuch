@@ -1247,6 +1247,10 @@ const STRINGS = {
     'onb.mode.guidedNote': 'Mit genauen Erklärungen und Bildern.',
     'onb.mode.short': 'Kurz und knapp',
     'onb.mode.shortNote': 'Wenn du dich mit Apps gut auskennst. Erklärungen kannst du trotzdem jederzeit aufklappen.',
+    'onb.intro.title': 'Kurz vorweg',
+    'onb.intro.body': 'Hi, ich bin Louis und hab Logbuch gebaut. Logbuch funktioniert in ein paar Punkten anders, als du es vielleicht von anderen Apps kennst – und damit es für dich richtig funktioniert, solltest du die kennen.',
+    'onb.intro.help': 'Ich erklär dir bei jedem Schritt, was zu tun ist. <strong>Lies es dir bitte in Ruhe durch</strong> – dann klappt alles beim ersten Mal.',
+    'onb.intro.ok': 'Alles klar',
     'onb.overview.title': 'So läuft’s ab',
     'onb.overview.install': 'Logbuch aufs Handy holen',
     'onb.overview.account': 'Konto erstellen und E-Mail bestätigen',
@@ -1666,6 +1670,7 @@ const STRINGS = {
     'tutorial.field.title': 'Was möchtest du festhalten?',
     'tutorial.field.intro': 'Ein <strong>Feld</strong> ist eine Sache, die du jeden Tag einträgst – zum Beispiel deine Stimmung oder ob du Sport gemacht hast. Leg jetzt dein erstes an; das Formular hier ist dasselbe, mit dem du später weitere Felder anlegst.',
     'tutorial.form.nameIdeas': 'Kurze Namen passen am besten in die Übersicht. Zum Beispiel: <strong>Schlaf</strong> – wie gut habe ich geschlafen? · <strong>Stimmung</strong> – wie geht’s mir heute? · <strong>Sport</strong> – ja oder nein? · <strong>Gewicht</strong> – in kg',
+    'tutorial.form.tipKindTitle': 'Tipp zum Feld-Typ',
     'tutorial.form.tipKind': 'Der Feld-Typ bestimmt, wie du einträgst: <strong>Skala</strong> für „wie sehr“ (z. B. Stimmung 1–5), <strong>Zahl</strong> für Messwerte (z. B. Schlafstunden oder Wassergläser), <strong>Text</strong> für ein paar Worte.',
     'tutorial.form.tipKindMoreTitle': 'Und für Ja/Nein-Fragen?',
     'tutorial.form.tipKindMore': 'Nimm eine Skala mit 2 Stufen und schalte „Eigene Bezeichnungen“ ein – dann schreibst du „Nein“ und „Ja“ hinein.',
@@ -1689,7 +1694,13 @@ const STRINGS = {
     'installGate.whyIos': 'Auf dem iPhone kommen Erinnerungen nur an, wenn Logbuch auf dem Home-Bildschirm liegt – so hat Apple das geregelt.',
     'installGate.whyAndroid': 'Dann öffnet sich Logbuch wie eine App – ohne Browser-Leisten, mit einem Tipp auf dem Startbildschirm, statt es jedes Mal im Browser suchen zu müssen.',
     'installGate.installButton': 'Logbuch installieren',
-    'installGate.orManually': 'Oder von Hand:',
+    'installGate.manualFallback': 'Klappt das nicht? So geht’s von Hand',
+    'installGate.otherBrowser': 'Mit diesem Browser wird Logbuch meist nur eine Verknüpfung statt einer eigenen App. Das funktioniert auch – Erinnerungen laufen dann aber über die Mitteilungs-Einstellungen {browser}. Lieber eine eigene App? Dann installiere Logbuch über Chrome.',
+    'installGate.browserOpera': 'von Opera',
+    'installGate.browserFirefox': 'von Firefox',
+    'installGate.browserOther': 'deines Browsers',
+    'installGate.openInChrome': 'In Chrome öffnen',
+    'installGate.openInChromeNote': 'Klappt das nicht, öffne Chrome selbst und gib diese Adresse ein: <strong>{address}</strong>',
     'installGate.vary': 'Je nach Handy und Browser sieht das etwas anders aus und die Einträge heißen leicht anders – halte nach etwas Ähnlichem Ausschau.',
     'installGate.installButtonNote': 'Danach fragt dein Handy noch einmal – tipp dort auf „Installieren“.',
     'installGate.showPictures': 'Mit Bildern zeigen',
@@ -2004,6 +2015,10 @@ const STRINGS = {
     'onb.mode.guidedNote': 'With detailed explanations and pictures.',
     'onb.mode.short': 'Short and sweet',
     'onb.mode.shortNote': 'If you know your way around apps. You can still open the explanations anytime.',
+    'onb.intro.title': 'A quick note first',
+    'onb.intro.body': 'Hi, I’m Louis and I built Logbuch. Logbuch works differently in a few ways than you might be used to from other apps – and for it to work properly for you, you should know about them.',
+    'onb.intro.help': 'I’ll explain what to do at every step. <strong>Please read it calmly</strong> – then everything works the first time.',
+    'onb.intro.ok': 'Got it',
     'onb.overview.title': 'Here’s how it goes',
     'onb.overview.install': 'Get Logbuch onto your phone',
     'onb.overview.account': 'Create an account and confirm your email',
@@ -2423,6 +2438,7 @@ const STRINGS = {
     'tutorial.field.title': 'What would you like to track?',
     'tutorial.field.intro': 'A <strong>field</strong> is one thing you enter every day – for example your mood or whether you exercised. Create your first one now; this form is the same one you will use later for more fields.',
     'tutorial.form.nameIdeas': 'Short names fit best in the overview. For example: <strong>Sleep</strong> – how well did I sleep? · <strong>Mood</strong> – how am I today? · <strong>Exercise</strong> – yes or no? · <strong>Weight</strong> – in kg',
+    'tutorial.form.tipKindTitle': 'Tip on the field type',
     'tutorial.form.tipKind': 'The field type decides how you enter things: <strong>Scale</strong> for “how much” (e.g. mood 1–5), <strong>Number</strong> for measurements (e.g. hours of sleep or glasses of water), <strong>Text</strong> for a few words.',
     'tutorial.form.tipKindMoreTitle': 'And for yes/no questions?',
     'tutorial.form.tipKindMore': 'Choose a scale with 2 steps and turn on “Custom labels” – then type “No” and “Yes”.',
@@ -2446,7 +2462,13 @@ const STRINGS = {
     'installGate.whyIos': 'On iPhone, reminders only arrive when Logbuch is on your home screen – that is how Apple set it up.',
     'installGate.whyAndroid': 'Then Logbuch opens like an app – without browser bars, with one tap on your home screen instead of looking for it in the browser every time.',
     'installGate.installButton': 'Install Logbuch',
-    'installGate.orManually': 'Or by hand:',
+    'installGate.manualFallback': 'Doesn’t work? Here’s how to do it by hand',
+    'installGate.otherBrowser': 'With this browser, Logbuch usually becomes just a shortcut instead of an app of its own. That works too – but reminders then depend on the notification settings {browser}. Prefer an app of its own? Then install Logbuch via Chrome.',
+    'installGate.browserOpera': 'of Opera',
+    'installGate.browserFirefox': 'of Firefox',
+    'installGate.browserOther': 'of your browser',
+    'installGate.openInChrome': 'Open in Chrome',
+    'installGate.openInChromeNote': 'If that doesn’t work, open Chrome yourself and enter this address: <strong>{address}</strong>',
     'installGate.vary': 'Depending on your phone and browser this looks a little different and the entries are named slightly differently – look for something similar.',
     'installGate.installButtonNote': 'Your phone then asks once more – tap “Install” there.',
     'installGate.showPictures': 'Show with pictures',
@@ -5571,11 +5593,26 @@ function renderOnbMode() {
     </div>
   `;
 }
+// Persönliche Nachricht nach der Einstiegsfrage, bei beiden Varianten (Nutzer-Entscheidung
+// 2026-10-12): Testpersonen lasen die Erklärungen oft nicht - ein paar Dinge muss man aber
+// verstehen, um Logbuch richtig zu nutzen.
+function renderOnbIntro() {
+  app.innerHTML = `
+    <div class="auth-box onb">
+      ${authBackButton('mode')}
+      <div class="onb-icon" aria-hidden="true">💬</div>
+      <h1 tabindex="-1">${t('onb.intro.title')}</h1>
+      <p class="tutorial-text">${t('onb.intro.body')}</p>
+      <p class="tutorial-text">${t('onb.intro.help')}</p>
+      <button type="button" class="auth-submit" data-action="auth-choose" data-mode="${isGuided() ? 'overview' : 'signup'}">${t('onb.intro.ok')}</button>
+    </div>
+  `;
+}
 function renderOnbOverview() {
   const icons = { install: '📱', account: '✉️', setup: '✏️', reminders: '🔔', key: '🔑' };
   app.innerHTML = `
     <div class="auth-box onb">
-      ${authBackButton('mode')}
+      ${authBackButton('intro')}
       <h1 tabindex="-1">${t('onb.overview.title')}</h1>
       <ol class="onb-overview">${onbStages().map((st) => `<li><span class="item-icon" aria-hidden="true">${icons[st]}</span>${t(`onb.overview.${st}`)}</li>`).join('')}</ol>
       <p class="onb-hint">${t('onb.overview.duration')}</p>
@@ -5613,6 +5650,7 @@ function passwordRuleText(len) {
 function renderAuth() {
   if (state.authMode === 'welcome') { renderAuthWelcome(); return; }
   if (state.authMode === 'mode') { renderOnbMode(); return; }
+  if (state.authMode === 'intro') { renderOnbIntro(); return; }
   if (state.authMode === 'overview') { renderOnbOverview(); return; }
   if (state.authMode === 'installed') { renderOnbInstalled(); return; }
   if (state.authMode === 'checkMail') { renderCheckMail(); return; }
@@ -5907,6 +5945,8 @@ function spareKeyMethodHelp(method) {
   if (method === 'copy') return t(isGuided() ? 'recoveryDisplay.help.copyGuided' : 'recoveryDisplay.help.copy');
   return t('recoveryDisplay.help.write');
 }
+// "Was, wenn ich beides verliere?" ist nur für den Ausnahmefall und deshalb auch bei
+// "Schritt für Schritt" zugeklappt (kein whyBox) - die Seite war sonst zu lang.
 function renderRecoveryKeyDisplay() {
   const shown = state.recoveryKeyToShow;
   const formatted = formatRecoveryKey(shown.hex);
@@ -5925,7 +5965,7 @@ function renderRecoveryKeyDisplay() {
         ${SPARE_KEY_METHODS.map(([m, icon]) => `<button type="button" class="spare-key-method${shown.method === m ? ' spare-key-method--active' : ''}" data-action="spare-key-method" data-method="${m}" aria-pressed="${shown.method === m}"><span class="spare-key-method-icon" aria-hidden="true">${icon}</span>${t(`recoveryDisplay.method.${m}`)}</button>`).join('')}
       </div>
       ${shown.method ? `<div class="form-tip spare-key-help" role="status"><span class="item-icon" aria-hidden="true">💡</span><p>${spareKeyMethodHelp(shown.method)}</p></div>` : ''}
-      ${whyBox('recoveryDisplay.moreLabel', 'recoveryDisplay.more')}
+      <details class="why-box"><summary class="why-box-title">${t('recoveryDisplay.moreLabel')}</summary><p>${t('recoveryDisplay.more')}</p></details>
       ${ask ? `
         <div class="spare-key-ask" role="alert">
           <p>${t(shown.method === 'write' ? 'recoveryDisplay.askWritten' : 'recoveryDisplay.askNone')}</p>
@@ -6111,17 +6151,17 @@ function renderInstallGate() {
   const how = appJustInstalled
     ? `<p class="tutorial-text"><strong>${t('installGate.installed')}</strong></p>`
     : `
+      ${otherBrowserBox()}
       ${deferredInstallPrompt ? `
         <button type="button" class="auth-submit" data-action="install-prompt">${t('installGate.installButton')}</button>
         <p class="onb-hint onb-hint--after">${t('installGate.installButtonNote')}</p>
-        <p class="onb-hint install-or">${t('installGate.orManually')}</p>
-      ` : ''}
-      ${manual}
+        <details class="why-box install-fallback"><summary class="why-box-title">${t('installGate.manualFallback')}</summary>${manual}</details>
+      ` : manual}
       <p class="onb-hint">${t('installGate.afterwards')}</p>
     `;
   app.innerHTML = `
     <div class="auth-box onb">
-      ${authBackButton(state.authMode === 'signup' ? (isGuided() ? 'overview' : 'mode') : 'welcome')}
+      ${authBackButton(state.authMode === 'signup' ? (isGuided() ? 'overview' : 'intro') : 'welcome')}
       ${isOnbInProgress() ? onbProgress('install') : ''}
       <div class="onb-icon" aria-hidden="true">📱</div>
       <h1 tabindex="-1">${t('installGate.title')}</h1>
@@ -6130,6 +6170,29 @@ function renderInstallGate() {
       ${how}
       <button type="button" class="auth-toggle" data-action="install-gate-skip">${t('installGate.skip')}</button>
       <p class="onb-hint onb-hint--after onb-center">${t(ios ? 'installGate.skipNoteIos' : 'installGate.skipNote')}</p>
+    </div>
+  `;
+}
+// Android-Browser außer Chrome/Samsung Internet: nach unserem Wissen erzeugt nur Chrome (und
+// Samsung Internet) eine eigenständige App; Opera, Firefox & Co.
+// legen eine Verknüpfung an, deren Mitteilungen an den Browser-Einstellungen hängen (am
+// Gerät des Nutzers so gesehen: "Logbuch (Opera Verknüpfung)", App-Info zeigt auf Opera).
+// Erkennen lässt sich nur der Browser, nicht, was er anlegt - deshalb informieren und den
+// Weg über Chrome anbieten, nicht drängen. Auch wenn der Browser selbst einen
+// Installieren-Knopf anbietet (beforeinstallprompt) - ob der dann eine echte App anlegt,
+// ist bei Opera & Co. nicht belegt. Der Intent-Link öffnet die Seite direkt in
+// Chrome; ?onb= nimmt dort das Einrichten wieder auf (Chrome hat einen eigenen Speicher).
+function otherBrowserBox() {
+  const browser = installBrowser();
+  if (!/Android/.test(navigator.userAgent) || !['opera', 'firefox', 'other'].includes(browser)) return '';
+  const name = t(browser === 'opera' ? 'installGate.browserOpera' : browser === 'firefox' ? 'installGate.browserFirefox' : 'installGate.browserOther');
+  const intent = `intent://${location.host}${location.pathname}?onb=${isGuided() ? 'guided' : 'short'}#Intent;scheme=https;package=com.android.chrome;end`;
+  const address = `${location.host}${location.pathname.replace(/logbuch\.html$/, '')}`;
+  return `
+    <div class="why-box install-other-browser">
+      <p>${t('installGate.otherBrowser', { browser: name })}</p>
+      <a class="auth-toggle install-chrome-link" href="${esc(intent)}">${t('installGate.openInChrome')}</a>
+      <p class="onb-hint onb-hint--after">${t('installGate.openInChromeNote', { address })}</p>
     </div>
   `;
 }
@@ -7773,6 +7836,11 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const stage = tutorialForm ? f.revealStage : 3;
   const tipBox = (key, moreTitleKey, moreKey) => `
     <div class="form-tip"><span class="item-icon" aria-hidden="true">💡</span><div><p>${t(key)}</p>${moreKey ? whyBox(moreTitleKey, moreKey) : ''}</div></div>`;
+  // Tipp zu einem schon erledigten Teil: zugeklappt (nur die Überschrift), damit offen
+  // immer nur der Tipp zum Teil steht, um den es gerade geht - mehrere offene Kästen
+  // untereinander wurden nicht mehr gelesen (Testpersonen, 2026-10-12).
+  const pastTipBox = (titleKey, key, moreTitleKey, moreKey) => `
+    <details class="form-tip form-tip--past"><summary><span class="item-icon" aria-hidden="true">💡</span>${t(titleKey)}</summary><div><p>${t(key)}</p>${moreKey ? whyBox(moreTitleKey, moreKey) : ''}</div></details>`;
   // Seltener Gebrauchtes steht unter "Mehr Einstellungen" (seit 2026-10-01; das Formular
   // war für Neulinge zu lang - und das Tutorial nutzt dasselbe Formular). Aufgeklappt, wenn
   // dort schon etwas vom Standard abweicht, sonst zu; offen/zu übersteht Re-Renders
@@ -7813,7 +7881,9 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         ${tutorialForm ? `<p class="onb-hint auth-password-hint" id="habit-form-name-ideas">${t('tutorial.form.nameIdeas')}</p>` : ''}
       </div>
       ${stage < 2 ? `<button type="button" class="auth-submit" data-action="habit-reveal-next">${t('common.next')}</button>` : `
-      ${tutorialForm ? tipBox('tutorial.form.tipKind', 'tutorial.form.tipKindMoreTitle', 'tutorial.form.tipKindMore') : ''}
+      ${!tutorialForm ? '' : stage > 2
+        ? pastTipBox('tutorial.form.tipKindTitle', 'tutorial.form.tipKind', 'tutorial.form.tipKindMoreTitle', 'tutorial.form.tipKindMore')
+        : tipBox('tutorial.form.tipKind', 'tutorial.form.tipKindMoreTitle', 'tutorial.form.tipKindMore')}
       <div class="auth-field" id="habit-form-kind-field">
         <label id="habit-form-kind-label">${t('habitForm.fieldType')}</label>
         <div class="pill-group" role="group" aria-labelledby="habit-form-kind-label">
@@ -8683,7 +8753,9 @@ app.addEventListener('click', async (e) => {
     setOnbMode(el.dataset.mode);
     setOnbInProgress(true);
     rememberOnbIncludesInstall();
-    state.authMode = el.dataset.mode === 'guided' && state.authMode === 'mode' ? 'overview' : 'signup';
+    // Von der Einstiegsfrage aus erst die persönliche Nachricht; in der frisch installierten
+    // App (iPhone) kam sie schon im Browser, dort direkt weiter.
+    state.authMode = state.authMode === 'mode' ? 'intro' : 'signup';
     render();
     document.querySelector('.auth-box h1, .auth-box .sub')?.focus({ preventScroll: true });
   } else if (action === 'avg-info') {
@@ -8716,7 +8788,7 @@ app.addEventListener('click', async (e) => {
     render();
     // Neue Seite: Fokus auf ihren Titel (nicht ins E-Mail-Feld - das öffnete auf dem Handy
     // sofort die Tastatur).
-    document.querySelector(['welcome', 'mode', 'overview', 'installed'].includes(state.authMode) ? '.auth-box h1' : '.auth-box .sub')?.focus({ preventScroll: true });
+    document.querySelector(['welcome', 'mode', 'intro', 'overview', 'installed'].includes(state.authMode) ? '.auth-box h1' : '.auth-box .sub')?.focus({ preventScroll: true });
   } else if (action === 'resend-confirm') {
     if (state.confirmEmailFor && state.confirmResend !== 'sending') resendConfirmEmail();
   } else if (action === 'start-forgot') {
@@ -9859,6 +9931,19 @@ app.addEventListener('pointerup', async (e) => {
 // Worker (sw.js, notificationclick) - dort bewusst kein Neuladen, das würde ggf. ein
 // erneutes Entsperren des Schlüssels erzwingen. Setzt nur Ansicht + Zeitraum, das
 // funktioniert unabhängig davon, ob die App gerade noch gesperrt ist.
+// "In Chrome öffnen" aus einem anderen Browser (otherBrowserBox) kommt mit ?onb=<Modus>:
+// Chrome hat einen eigenen Speicher - ohne das begänne das Einrichten wieder auf der
+// Startseite. Steht hier, nach den let-Deklarationen, die setOnbInProgress braucht.
+(() => {
+  const mode = new URLSearchParams(location.search).get('onb');
+  if (!['guided', 'short'].includes(mode)) return;
+  history.replaceState(history.state, '', location.pathname + location.hash);
+  if (signedInHereBefore() || isStandaloneDisplay()) return;
+  setOnbMode(mode);
+  setOnbInProgress(true);
+  rememberOnbIncludesInstall();
+  state.authMode = 'signup';
+})();
 const DEEP_LINK_VIEWS = ['today', 'week', 'month', 'year'];
 function parseDeepLink(search) {
   const params = new URLSearchParams(search);

@@ -16,6 +16,8 @@ async function signupAndConfirm(page, { guided }) {
   await tapText(page, 'Ich bin neu hier');
   await shot(page, 'einstiegsfrage');
   await tapText(page, guided ? 'Schritt für Schritt' : 'Kurz und knapp');
+  await shot(page, 'kurz-vorweg');
+  await tapText(page, 'Alles klar');
   if (guided) { // "Kurz und knapp" überspringt "So läuft's ab"
     await shot(page, 'so-laeufts-ab');
     await tapText(page, 'Los geht');

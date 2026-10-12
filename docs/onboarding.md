@@ -11,8 +11,8 @@ Der Weg vom ersten Öffnen bis zur eingerichteten App, für neue Konten.
 - **Einstiegsfrage nach dem Wunsch, nicht nach dem Können**: "Wie möchtest du starten?" →
   Schritt für Schritt (mit genauen Erklärungen und Bildern) / Kurz und knapp. Grund: "kennst
   du dich aus?" schätzen viele falsch ein und kann herablassend wirken.
-- **Reihenfolge**: Startseite → "Ich bin neu hier" → Einstiegsfrage → (Schritt für Schritt:
-  "So läuft's ab") → Installations-Seite (nur Handy im Browser) → Registrieren → "Schau in
+- **Reihenfolge**: Startseite → "Ich bin neu hier" → Einstiegsfrage → "Kurz vorweg" →
+  (Schritt für Schritt: "So läuft's ab") → Installations-Seite (nur Handy im Browser) → Registrieren → "Schau in
   dein Postfach" → Tutorial → Erinnerungen → Ersatzschlüssel. Die Installations-Seite kommt vor dem
   Registrieren, damit man sich gleich in der installierten App registriert – kam der Hinweis
   erst nach dem Anmelden, war ein zweites Anmelden in der App nötig und er wurde oft
@@ -22,6 +22,13 @@ Der Weg vom ersten Öffnen bis zur eingerichteten App, für neue Konten.
 - **Erinnerungen nach dem ersten Feld, als eigene Etappe** (nicht Teil des Tutorials): dann
   weiß man, woran erinnert wird – am Anfang wurde die Frage eher abgelehnt. "Tutorial
   überspringen" überspringt nur das Tutorial, die Erinnerungen kommen trotzdem.
+- **"Kurz vorweg"** (`renderOnbIntro`, bei beiden Varianten): persönliche Nachricht des
+  Machers – es gibt ein paar Dinge, die man verstehen muss, um Logbuch richtig zu nutzen;
+  bitte in Ruhe lesen. Grund: Testpersonen lasen die Erklärungen oft nicht.
+- **Kürzere Seiten statt festem Hauptknopf**: offen ist immer nur die Erklärung, um die es
+  gerade geht (Anleitung von Hand zugeklappt, wenn es den Installieren-Knopf gibt; Tipps zu
+  schon erledigten Formular-Teilen zugeklappt). Ein unten festgemachter Hauptknopf wurde
+  verworfen: er lädt gerade zum Nicht-Lesen ein und verdeckt mit offener Tastatur Felder.
 - **Gleichwertige Auswahl = gleich aussehende Karten** (`choiceCard`, Startseite und
   Einstiegsfrage), die Erklärung im Knopf statt darunter: gefüllt neben umrandet wirkte wie
   eine Empfehlung, der Satz darunter wurde überlesen, Testpersonen wählten bei der
@@ -89,7 +96,8 @@ installierte App teilen keinen Speicher.
 also melde ich mich an", und Registrieren war nur ein kleiner Link. Die Formulare haben ein ←
 zurück dorthin. Wer sich auf dem Gerät schon angemeldet hat, startet direkt beim Anmelden.
 
-**Einstiegsfrage** (`renderOnbMode`). Bei Schritt für Schritt folgt **"So läuft's ab"**
+**Einstiegsfrage** (`renderOnbMode`), danach "Kurz vorweg" (`authMode: 'intro'`; in der frisch
+installierten App auf dem iPhone nicht noch einmal). Bei Schritt für Schritt folgt **"So läuft's ab"**
 (`renderOnbOverview`: Etappen, Dauer etwa 5 bis 10 Minuten, Hinweis "hol dir gern jemanden
 dazu" als Angebot), bei Kurz und knapp direkt das Registrieren (bzw. davor die
 Installations-Seite).
@@ -115,7 +123,18 @@ Startbildschirm). Opera hat eine eigene (Menü ⋮ → „Hinzufügen zu …“ 
 einem Nutzer-Screenshot). Bei Schritt für Schritt stehen die Skizzen im Ablauf, sonst kurze
 Text-Schritte mit "Mit Bildern zeigen" zum Aufklappen; danach ein Satz Vorwarnung "Browser
 schließt sich oft von selbst …". Auf Android/Chrome zusätzlich ein echter
-Installieren-Knopf (`beforeinstallprompt`). "Ich bleib erst mal im Browser" merkt sich das
+Installieren-Knopf (`beforeinstallprompt`); dann steht die Anleitung von Hand zugeklappt
+darunter ("Klappt das nicht? …").
+
+**Andere Android-Browser als Chrome/Samsung Internet** (`otherBrowserBox`, Opera, Firefox,
+sonst): Kasten, dass Logbuch dort meist nur eine Verknüpfung wird und Erinnerungen dann an
+den Mitteilungs-Einstellungen dieses Browsers hängen, mit "In Chrome öffnen" (Android-Intent-
+Link, `?onb=<Modus>` nimmt das Einrichten in Chrome wieder auf, weil Chrome einen eigenen
+Speicher hat) und der Adresse zum Abtippen. Informieren statt drängen: die Verknüpfung
+funktioniert, wichtig ist der Unterschied für alle, die Browser-Mitteilungen aus haben (am
+Gerät des Nutzers so passiert: "Logbuch (Opera Verknüpfung)", App-Info zeigt auf Opera).
+Erscheint auch, wenn der Browser einen eigenen Installieren-Knopf anbietet – ob der eine
+echte App anlegt, ist für Opera & Co. nicht belegt. "Ich bleib erst mal im Browser" merkt sich das
 Gerät (`installGateSkipped`).
 
 Auf iOS ist die Installation **Voraussetzung** für Web-Push (Safari liefert sonst keinen
@@ -191,7 +210,8 @@ Tab-Leiste/kein Menü; eine `beforeunload`-Warnung verhindert versehentliches Ve
    (`f.revealStage`: 1 Name mit Ideen als Text darunter → 2 + Feld-Typ → 3 + Einstellungen
    zum Typ, Vorschau, "Mehr Einstellungen" (zu), "Feld anlegen"; Aktion
    `habit-reveal-next`). Ausgefülltes bleibt stehen. Je neu aufgedecktem Teil ein Tipp-Kasten
-   (`.form-tip`, "Genauer erklärt" bei Schritt für Schritt offen). Kein "Abbrechen"
+   (`.form-tip`, "Genauer erklärt" bei Schritt für Schritt offen); der Tipp zu einem schon
+   erledigten Teil ist zugeklappt (`pastTipBox`). Kein "Abbrechen"
    (Zurück/Überspringen in der Fußleiste). Nach erfolgreichem Anlegen (Insert-Zweig in
    `handleHabitSave`) Sprung zu "Geschafft".
 3. **Geschafft** (`renderTutorialDone`): "Weiter" (zu den Erinnerungen) oder "Noch ein Feld
@@ -217,7 +237,7 @@ Hintergrund.
 
 Technik siehe [verschluesselung.md](verschluesselung.md). Seite `renderRecoveryKeyDisplay`:
 Satz oben ("Falls du dein Passwort einmal vergisst, kommst du nur mit diesem Schlüssel wieder
-an deine Einträge"), Technik im "Warum?", der Schlüssel groß in Fünfergruppen
+an deine Einträge"), Technik im "Warum?", "Was, wenn ich beides verliere?" immer zugeklappt (Ausnahmefall), der Schlüssel groß in Fünfergruppen
 (`formatRecoveryKey`), "Wie möchtest du ihn aufbewahren?" mit vier gleich großen Wegen:
 Aufschreiben, Foto vom Bildschirm (mit Tastenkombi fürs Gerät), Als Datei speichern (danach:
 wo sie meist liegt), Kopieren (bei Schritt für Schritt mit Erklärung zum Einfügen).

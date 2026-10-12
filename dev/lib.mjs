@@ -29,6 +29,9 @@ export const DEVICES = {
     ua: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36' },
   schmal: { width: 360, height: 740, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
     ua: 'Mozilla/5.0 (Linux; Android 13; SM-A136B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36' },
+  // Opera auf Android: für die Hinweise zu Browsern ohne eigenständige App (otherBrowserBox).
+  opera: { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+    ua: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36 OPR/85.0.0.0' },
   iphone: { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
     ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' },
   pc: { width: 1280, height: 900, deviceScaleFactor: 1, isMobile: false, hasTouch: false, ua: null },

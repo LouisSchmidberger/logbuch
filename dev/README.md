@@ -42,7 +42,7 @@ jeder Lauf leert seinen Ordner vorher.
 `dev/screenshots/vergleich/` und werden am Ende der Sitzung gelöscht (nicht schon nach der
 Entscheidung - man will oft nochmal zurückschauen; die Entscheidung steht in docs/). Mit `--keep` angelegte Browser-Profile (`dev/.profile-*`)
 nach dem Test löschen. Alles unter `dev/screenshots/` lässt sich jederzeit neu erzeugen.
-Geräte: `handy` (390 px), `schmal` (360 px), `iphone`, `pc`. Größen wie die Einstellung
+Geräte: `handy` (390 px), `schmal` (360 px), `opera` (wie `handy`, als Opera), `iphone`, `pc`. Größen wie die Einstellung
 Textgröße: `small`, `large`, `xlarge`.
 
 Eigene Abläufe ohne neues Skript: `node dev/shoot.mjs <Schritte>`, zum Beispiel
