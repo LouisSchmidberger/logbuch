@@ -551,29 +551,14 @@ function counterZeroApplies(h, dateKey) {
 }
 function isTextKind(h) { return h.kind === 'text'; }
 
-// --- Wiederholung (habit_definitions.schedule) ------------------------------
-// null = täglich, sonst {type:'weekly', days:[0..6]} (0 = Montag), {type:'monthly',
-// day:1..31|-1 (letzter Tag)}, {type:'yearly', month:1..12, day}, {type:'interval',
-// every, unit:'day'|'week', start:'YYYY-MM-DD'}. Gegenstück zur SQL-Funktion
-// public.habit_scheduled_on (Erinnerungen) - beide müssen dieselben Regeln umsetzen:
-// ein Tag, den es im Monat nicht gibt (31.4., 29.2. außerhalb von Schaltjahren), fällt
-// auf den Monatsletzten; unbekannte Pläne gelten als "dran".
-function lastDayOfMonth(year, monthIndex) { return new Date(year, monthIndex + 1, 0).getDate(); }
+// --- Feste Tage (habit_definitions.schedule) -------------------------------
+// null = täglich, sonst {type:'weekly', days:[0..6]} (0 = Montag) - seit 2026-10-12 die einzige
+// Form (monatlich/jährlich/Intervall entfielen, Zeitraum-Felder decken das ab). Gegenstück
+// zur SQL-Funktion public.habit_scheduled_on (Erinnerungen) - beide müssen dieselbe Regel
+// umsetzen; unbekannte Pläne gelten als "dran".
 function isScheduledOn(schedule, date) {
-  if (!schedule) return true;
-  const day = date.getDate(), month = date.getMonth(), year = date.getFullYear();
-  switch (schedule.type) {
-    case 'weekly': return Array.isArray(schedule.days) ? schedule.days.includes((date.getDay() + 6) % 7) : true;
-    case 'monthly': return day === Math.min(schedule.day === -1 ? 31 : schedule.day, lastDayOfMonth(year, month));
-    case 'yearly': return month + 1 === schedule.month && day === Math.min(schedule.day, lastDayOfMonth(year, month));
-    case 'interval': {
-      // Math.round statt Abrunden: über eine Zeitumstellung hinweg ist ein Tag 23/25h lang.
-      const diff = Math.round((startOfDay(date) - parseDateKey(schedule.start)) / 86400000);
-      const period = schedule.every * (schedule.unit === 'week' ? 7 : 1);
-      return diff >= 0 && diff % period === 0;
-    }
-    default: return true;
-  }
+  if (schedule?.type !== 'weekly' || !Array.isArray(schedule.days)) return true;
+  return schedule.days.includes((date.getDay() + 6) % 7);
 }
 // Ob ein Feld an einem Tag "dran" ist. Berechnete Felder haben keinen eigenen Plan: dran, sobald
 // eines ihrer aktiven Mitglieder dran ist.
@@ -584,19 +569,11 @@ function isPlannedOn(h, date) {
     return m && !m.archivedAt && isScheduledOn(m.schedule, date);
   });
 }
-// Kurzbeschreibung für die Verwaltungsliste ('' bei täglich).
+// Kurzbeschreibung für die Verwaltungsliste ('' bei täglich): die Wochentage.
 function scheduleSummary(schedule) {
-  if (!schedule) return '';
-  switch (schedule.type) {
-    case 'weekly': {
-      const names = mondayFirstWeekdayShortNames();
-      return schedule.days.map((d) => names[d]).join(', ');
-    }
-    case 'monthly': return schedule.day === -1 ? t('schedule.summary.monthlyLast') : t('schedule.summary.monthly', { day: schedule.day });
-    case 'yearly': return t('schedule.summary.yearly', { date: dtf({ day: 'numeric', month: 'long' }).format(new Date(2024, schedule.month - 1, schedule.day)) });
-    case 'interval': return t(schedule.unit === 'week' ? 'schedule.summary.everyWeeks' : 'schedule.summary.everyDays', { n: schedule.every });
-    default: return '';
-  }
+  if (schedule?.type !== 'weekly') return '';
+  const names = mondayFirstWeekdayShortNames();
+  return schedule.days.map((d) => names[d]).join(', ');
 }
 
 // --- Datum-Helfer ----------------------------------------------------------
@@ -1585,11 +1562,6 @@ const STRINGS = {
     'todayIntro.days': '📅 <strong>Andere Tage:</strong> Wisch nach links oder rechts – oder tipp auf die Pfeile oben –, um einen anderen Tag einzutragen oder nachzutragen.',
     'todayIntro.menu': '⋮ <strong>Mehr:</strong> Über die drei Punkte vor einem Feld schreibst du eine Notiz dazu oder bearbeitest es. Unter <strong>☰ Menü</strong> oben rechts findest du deine Felder, die Einstellungen und Erklärungen zu allem.',
     'todayIntro.done': 'Verstanden',
-    'schedule.summary.monthly': 'monatlich am {day}.',
-    'schedule.summary.monthlyLast': 'monatlich am Monatsletzten',
-    'schedule.summary.yearly': 'jährlich am {date}',
-    'schedule.summary.everyDays': 'alle {n} Tage',
-    'schedule.summary.everyWeeks': 'alle {n} Wochen',
     'habitForm.textNote': 'Für Fragen wie „Wofür bin ich heute dankbar?“: in „Heute“ steht dafür ein Textfeld, das automatisch speichert. Fließt nicht in die Auswertung ein, erscheint dort aber als Liste zum Nachlesen.',
     'textReview.countOne': '1 Eintrag',
     'textReview.countMany': '{count} Einträge',
@@ -2360,11 +2332,6 @@ const STRINGS = {
     'todayIntro.days': '📅 <strong>Other days:</strong> swipe left or right – or tap the arrows at the top – to fill in another day.',
     'todayIntro.menu': '⋮ <strong>More:</strong> the three dots in front of a field let you add a note or edit it. Under <strong>☰ Menu</strong> at the top right you find your fields, the settings and explanations for everything.',
     'todayIntro.done': 'Got it',
-    'schedule.summary.monthly': 'monthly on day {day}',
-    'schedule.summary.monthlyLast': 'monthly on the last day',
-    'schedule.summary.yearly': 'yearly on {date}',
-    'schedule.summary.everyDays': 'every {n} days',
-    'schedule.summary.everyWeeks': 'every {n} weeks',
     'habitForm.textNote': 'For questions like “What am I grateful for today?”: “Today” shows a text box for it that saves automatically. Not part of the statistics, but shown there as a list to read back.',
     'textReview.countOne': '1 entry',
     'textReview.countMany': '{count} entries',

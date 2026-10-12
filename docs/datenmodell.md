@@ -167,17 +167,14 @@ Gedacht nur für Dinge an festen Tagen (montags wiegen). Was man mal macht und m
 pro Woche, egal an welchem Tag" ist ein Zeitraum-Feld (siehe oben), keine Wiederholung. Die
 Texte im Formular und in "Über Logbuch" sagen das so (Nutzer-Entscheidungen 2026-10-10/11).
 
-Format: `null` = täglich, sonst `{type:'weekly', days:[0..6]}` (0 = Montag),
-`{type:'monthly', day:1..31 | -1}` (-1 = letzter Tag), `{type:'yearly', month, day}` oder
-`{type:'interval', every: 1..365, unit:'day'|'week', start:'YYYY-MM-DD'}` (davor nie dran).
-Einen Tag, den es im Monat nicht gibt (31.4., 29.2. außerhalb von Schaltjahren), behandeln
-beide Seiten als Monatsletzten statt ihn ausfallen zu lassen; ungültige Pläne gelten als
-dran (die DB lässt sie per CHECK gar nicht erst zu). Alle 7 Wochentage bzw. "alle 1 Tage"
-werden als `null` gespeichert (eine einzige Darstellung von täglich).
+Format: `null` = täglich, sonst `{type:'weekly', days:[0..6]}` (0 = Montag) – die einzige
+Form; die DB lässt per CHECK (`habit_schedule_valid`) nichts anderes zu, ungültige Pläne
+gelten als dran. Alle 7 Wochentage werden als `null` gespeichert (eine einzige Darstellung
+von täglich).
 
-**Zwei Implementierungen derselben Regeln, die synchron bleiben müssen**:
+**Zwei Implementierungen derselben Regel, die synchron bleiben müssen**:
 `isScheduledOn`/`isPlannedOn` in `logbuch.js` und `public.habit_scheduled_on(schedule,
-date)` (plpgsql, aktuelle Fassung in Migration `20260929120000_harden_reminder_inputs`).
+date)` (plpgsql, aktuelle Fassung in Migration `20261012170557_schedule_weekdays_only`).
 
 Bewusst **nicht** unterstützt: Kalender-Regeln wie "jeder erste Montag im Monat" (Nutzer:
 unübersichtlich und eher irrelevant). Häufigkeiten ohne feste Tage ("3x pro Woche") regelt
