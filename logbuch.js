@@ -227,6 +227,7 @@ function habitFromParts(row, payload) {
     archivedAt: row.archived_at,
     period: row.period || 'day',          // 'day' | 'week' | 'month' | 'year' (Klartext, siehe periodStart)
     step: payload.step ?? 1,              // nur kind 'counter': um wie viel "+"/"−" ändern
+    summary: payload.summary === 'sum' ? 'sum' : 'avg', // Zahlen: in Woche/Monat/Jahr als Durchschnitt oder Summe
     target: payload.target ?? null,       // Zahl/Zähler: Zielwert; good 'high' = mindestens, 'low' = höchstens
     createdAt: row.created_at,            // Zähler: ab wann ein leerer Tag als 0 zählt
     counterSince: payload.counterSince ?? null, // umgewandelter Zähler: 0 erst ab diesem Tag (siehe convertHabitToCounter)
@@ -850,6 +851,7 @@ function numberFieldStats(habit, dateKeys) {
     min: Math.min(...values),
     max: Math.max(...values),
     avg: values.reduce((a, b) => a + b, 0) / values.length,
+    sum: values.reduce((a, b) => a + b, 0),
     last: series[series.length - 1].value,
   };
 }
@@ -1375,7 +1377,7 @@ const STRINGS = {
     'habitForm.computedType': 'Art der Mitglieder',
     'habitForm.computedType.scale': 'Skalen',
     'habitForm.computedType.number': 'Zahlenwerte',
-    'habitForm.aggregate': 'Berechnung',
+    'habitForm.aggregate': 'Pro Tag berechnen als',
     'habitForm.computedUnitNote': 'Zusammenrechnen lassen sich nur Felder mit derselben Einheit – sonst käme eine falsche Zahl heraus (z. B. km + m).',
     'habitForm.noNumberComputedCandidates': 'Noch keine Zahlenwert-Felder vorhanden, die sich zusammenrechnen lassen.',
     'habitForm.error.computedUnitMismatch': 'Die ausgewählten Felder haben unterschiedliche Einheiten.',
@@ -1428,6 +1430,11 @@ const STRINGS = {
     'stats.legend.common': 'Felder ohne Bewertung zeigen nur, ob etwas eingetragen ist. Das Streifenmuster (abschaltbar in den Einstellungen) zeigt dasselbe wie die Farbe – für alle, die Rot und Grün schlecht unterscheiden.',
     'global.title': 'Gesamt',
     'numberChart.meta': '{last} zuletzt · Ø {avg} · {count}×',
+    'numberChart.metaSum': 'Summe {sum} · Ø {avg} pro {per} · {count}×',
+    'numberChart.per.day': 'Tag',
+    'numberChart.per.week': 'Woche',
+    'numberChart.per.month': 'Monat',
+    'numberChart.per.year': 'Jahr',
     'numberChart.tooFewValues': 'Noch zu wenige Werte für einen Verlauf.',
     'numberChart.noValues': 'Noch keine Werte.',
     'numberChart.trend.up': 'steigend',
@@ -1467,11 +1474,11 @@ const STRINGS = {
     'habitForm.stepsExplain': 'In Fragebögen haben sich 5 bis 7 Stufen bewährt – mehr Abstufungen machen Antworten selten genauer. Deshalb gehen Buttons und eigene Bezeichnungen bis 7. Für ein feineres „ungefähr wie viel“ gibt es den Schieberegler ohne Bezeichnungen (bis 100).',
     'habitForm.sliderRangeExplain': 'Der Regler zeigt nie eine Min/Max-Beschriftung beim Eintragen (nur hier in der Verwaltung).',
     'habitForm.rangeLocked': 'Bereich {min}–{max} (durch vorhandene Einträge gesperrt).',
-    'habitForm.period': 'Wie oft trägst du das ein?',
-    'habitForm.period.day': 'Täglich',
-    'habitForm.period.week': 'Wöchentlich',
-    'habitForm.period.month': 'Monatlich',
-    'habitForm.period.year': 'Jährlich',
+    'habitForm.period': 'Wie oft trägst du das ein? Einmal pro …',
+    'habitForm.period.day': 'Tag',
+    'habitForm.period.week': 'Woche',
+    'habitForm.period.month': 'Monat',
+    'habitForm.period.year': 'Jahr',
     'habitForm.periodHint.week': 'Ein Wert pro Woche, an jedem Tag der Woche eintragbar – in „Heute“ unten unter „Diese Woche“.',
     'habitForm.periodHint.month': 'Ein Wert pro Monat, an jedem Tag des Monats eintragbar – in „Heute“ unten unter „Dieser Monat“.',
     'habitForm.periodHint.year': 'Ein Wert pro Jahr, an jedem Tag des Jahres eintragbar – in „Heute“ unten unter „Dieses Jahr“.',
@@ -1533,28 +1540,30 @@ const STRINGS = {
     'counter.less': 'Um {step} verringern',
     'counter.more': 'Um {step} erhöhen',
     'habitForm.kindComputed': 'Berechnet',
-    'habitForm.schedule': 'Wiederholung',
-    'habitForm.schedule.daily': 'Täglich',
-    'habitForm.schedule.weekly': 'An bestimmten Wochentagen',
-    'habitForm.schedule.monthly': 'Einmal im Monat',
-    'habitForm.schedule.yearly': 'Einmal im Jahr',
-    'habitForm.schedule.interval': 'Alle X Tage oder Wochen',
-    'habitForm.schedule.weekdaysLabel': 'Wochentage',
-    'habitForm.schedule.monthDayLabel': 'Am',
+    'habitForm.days': 'An welchen Tagen?',
+    'habitForm.days.hint': 'Nur für feste Tage, etwa montags wiegen. Was du mal machst und mal nicht (z. B. Sport), lass an allen Tagen – „Nein“ ist auch ein Eintrag.',
+    'habitForm.days.explain': 'An den übrigen Tagen erinnert Logbuch nicht an das Feld, und es steht in „Heute“ unten unter „Heute nicht geplant“. Eintragen kannst du dort trotzdem.',
     'habitForm.schedule.lastDay': 'Letzter Tag',
-    'habitForm.schedule.yearDateLabel': 'Am',
     'habitForm.schedule.dayAria': 'Tag',
     'habitForm.schedule.monthAria': 'Monat',
-    'habitForm.schedule.every': 'Alle',
-    'habitForm.schedule.unitAria': 'Einheit',
-    'habitForm.schedule.unitDays': 'Tage',
-    'habitForm.schedule.unitWeeks': 'Wochen',
-    'habitForm.schedule.start': 'ab',
-    'habitForm.schedule.shortMonthNote': 'Gibt es den Tag in einem Monat nicht (z.B. den 31.), ist das Feld am Monatsletzten dran.',
-    'habitForm.schedule.hint': 'Nur für Dinge an festen Tagen, etwa montags wiegen. Was du mal machst und mal nicht (z. B. Sport), lass besser täglich – „Nein“ ist auch ein Eintrag. Für „einmal pro Woche, egal an welchem Tag“ gibt es oben „Wöchentlich“.',
-    'habitForm.schedule.explain': 'An den übrigen Tagen erinnert Logbuch nicht an das Feld, und es steht in „Heute“ unten unter „Heute nicht geplant“. Eintragen kannst du dort trotzdem.',
     'habitForm.error.scheduleNoDays': 'Bitte mindestens einen Wochentag auswählen.',
-    'habitForm.error.scheduleInterval': 'Bitte eine Anzahl von 1 bis 365 und ein Startdatum angeben.',
+    'habitForm.part.what': 'Was?',
+    'habitForm.part.entry': 'Wie trägst du ein?',
+    'habitForm.part.when': 'Wann?',
+    'habitForm.part.stats': 'Auswertung',
+    'habitForm.part.group': 'Gruppe',
+    'habitForm.kindScaleNote': 'Wie sehr – z. B. Stimmung 1–5',
+    'habitForm.kindNumberNote': 'Messwert oder Anzahl – z. B. Gewicht, Gläser',
+    'habitForm.kindTextNote': 'Ein paar Worte',
+    'habitForm.kindComputedNote': 'Aus anderen Feldern errechnet',
+    'habitForm.summary': 'Für Woche, Monat und Jahr zusammenrechnen als',
+    'habitForm.summary.avg': 'Durchschnitt',
+    'habitForm.summary.sum': 'Summe',
+    'habitForm.summary.noteAvg': 'Passt zu Messwerten wie dem Gewicht: „Ø 68,2 kg“.',
+    'habitForm.summary.noteSum': 'Passt zu Mengen wie der Arbeitszeit: „Summe 38 h“, dazu der Schnitt pro Tag.',
+    'habitForm.entryPreviewNote': 'So sieht es in „Heute“ aus.',
+    'habitForm.entryPreviewAria.number': 'Vorschau: ein Eingabefeld, in das du die Zahl tippst',
+    'habitForm.entryPreviewAria.counter': 'Vorschau: die Zahl mit den Knöpfen „−“ und „+“',
     'today.unplanned': 'Heute nicht geplant ({count})',
     'today.nothingPlanned': 'Für heute ist kein Feld geplant.',
     'day.today': 'Heute',
@@ -1628,7 +1637,7 @@ const STRINGS = {
     'habitForm.showInStats': 'In der Auswertung anzeigen',
     'habitForm.showInStatsNote': 'Aus: erscheint nur in „Heute“, nicht in Woche, Monat, Jahr und Gesamt – z. B. wenn dir ein berechnetes Feld daraus reicht. Die Tagesfarbe rechnet es trotzdem mit ein.',
     'habitForm.more': 'Mehr Einstellungen',
-    'habitForm.moreSub': 'Wiederholung, Erinnerungszeit und mehr – kannst du auch später ändern',
+    'habitForm.moreSub': 'Tage, Erinnerungszeit, Auswertung – kannst du auch später ändern',
     'habitForm.moreSubPeriod': 'Ziel, Erinnerung und mehr – kannst du auch später ändern',
     'habitForm.computedExplain': 'Ein berechnetes Feld fasst mehrere Felder zu einem live berechneten Wert zusammen – Skalen als Durchschnitt, Zahlenwerte z. B. als Summe. Selbst ausfüllen kann man es nicht.',
     'common.finish': 'Fertig',
@@ -1895,8 +1904,8 @@ const STRINGS = {
     'about.tip.customReminder.body': 'Jedes Feld kann eine eigene Erinnerungszeit bekommen, statt sich an die Standardzeit zu halten — sinnvoll z. B. für etwas, das du morgens einträgst, statt abends. Auch eine Gruppe kann eine eigene Zeit haben: Ihre Felder werden dann gemeinsam zu dieser Zeit erinnert, mit einer Nachricht für die ganze Gruppe. Hat ein Feld darin selbst eine eigene Zeit, gilt seine.',
     'about.tip.sections.title': 'Gruppen',
     'about.tip.sections.body': 'Felder lassen sich in Gruppen ordnen – am besten nach Tageszeit, z. B. „Morgens“ und „Abends“: Dann trägst du jeden Block in einem Rutsch ein, und jede Gruppe kann zu ihrer eigenen Zeit erinnern. Ist in einer Gruppe alles eingetragen, ist sie beim nächsten Öffnen zugeklappt; das stellst du pro Gruppe ein. Gruppen ordnen nur; einen gemeinsamen Wert berechnet ein Feld vom Typ „Berechnet“.',
-    'about.tip.schedule.title': 'Feste Tage? Wiederholung',
-    'about.tip.schedule.body': 'Für Dinge an festen Tagen, etwa montags wiegen: Im Feld-Formular stellst du unter „Wiederholung“ ein, an welchen Wochentagen, an welchem Tag im Monat oder Jahr oder in welchem Abstand (z. B. alle 2 Wochen). An anderen Tagen steht das Feld in „Heute“ eingeklappt unter „Heute nicht geplant“ – eintragen kannst du dort trotzdem –, und es löst keine Erinnerung aus. In der Woche sind solche Tage schraffiert, damit „nicht dran“ nicht wie „vergessen“ aussieht.',
+    'about.tip.schedule.title': 'Feste Tage? Wochentage wählen',
+    'about.tip.schedule.body': 'Für Dinge an festen Tagen, etwa montags wiegen: Im Feld-Formular wählst du unter „An welchen Tagen?“ die Wochentage. An anderen Tagen steht das Feld in „Heute“ eingeklappt unter „Heute nicht geplant“ – eintragen kannst du dort trotzdem –, und es löst keine Erinnerung aus. In der Woche sind solche Tage schraffiert, damit „nicht dran“ nicht wie „vergessen“ aussieht.',
     'about.tip.archiveVsDelete.title': 'Archivieren statt löschen',
     'about.tip.archiveVsDelete.body': 'Archivierte Felder verschwinden aus der Tageseingabe und standardmäßig auch aus der Auswertung – ihre bisherigen Werte bleiben aber erhalten. Willst du sie weiter sehen (z. B. die Vorgeschichte eines Feldes, das du durch ein neues ersetzt hast), setz in „Felder verwalten“ beim archivierten Feld den Haken „In der Auswertung anzeigen“. Archivierte Felder lassen sich jederzeit reaktivieren; endgültiges Löschen entfernt dagegen auch die bisherigen Werte.',
     'about.tip.theme.title': 'Dark Mode',
@@ -2143,7 +2152,7 @@ const STRINGS = {
     'habitForm.computedType': 'Member type',
     'habitForm.computedType.scale': 'Scales',
     'habitForm.computedType.number': 'Number values',
-    'habitForm.aggregate': 'Calculation',
+    'habitForm.aggregate': 'Per day, calculate as',
     'habitForm.computedUnitNote': 'Only fields with the same unit can be combined – otherwise the result would be wrong (e.g. km + m).',
     'habitForm.noNumberComputedCandidates': 'No number fields available yet that can be combined.',
     'habitForm.error.computedUnitMismatch': 'The selected fields have different units.',
@@ -2196,6 +2205,11 @@ const STRINGS = {
     'stats.legend.common': 'Fields without a rating only show whether something was entered. The stripe pattern (can be turned off in the settings) shows the same as the color – for everyone who has trouble telling red and green apart.',
     'global.title': 'Overall',
     'numberChart.meta': 'last: {last} · avg. {avg} · {count}×',
+    'numberChart.metaSum': 'total {sum} · avg. {avg} per {per} · {count}×',
+    'numberChart.per.day': 'day',
+    'numberChart.per.week': 'week',
+    'numberChart.per.month': 'month',
+    'numberChart.per.year': 'year',
     'numberChart.tooFewValues': 'Not enough values yet for a chart.',
     'numberChart.noValues': 'No values yet.',
     'numberChart.trend.up': 'rising',
@@ -2235,11 +2249,11 @@ const STRINGS = {
     'habitForm.stepsExplain': 'In questionnaires, 5 to 7 steps have proven themselves – more gradations rarely make answers more accurate. That is why buttons and custom labels go up to 7. For a finer “roughly how much”, there is the slider without custom labels (up to 100).',
     'habitForm.sliderRangeExplain': 'The slider never shows a min/max label while entering a value (only here in management).',
     'habitForm.rangeLocked': 'Range {min}–{max} (locked due to existing entries).',
-    'habitForm.period': 'How often do you fill this in?',
-    'habitForm.period.day': 'Daily',
-    'habitForm.period.week': 'Weekly',
-    'habitForm.period.month': 'Monthly',
-    'habitForm.period.year': 'Yearly',
+    'habitForm.period': 'How often do you fill this in? Once a …',
+    'habitForm.period.day': 'Day',
+    'habitForm.period.week': 'Week',
+    'habitForm.period.month': 'Month',
+    'habitForm.period.year': 'Year',
     'habitForm.periodHint.week': 'One value per week, can be filled in on any day of the week – at the bottom of “Today” under “This week”.',
     'habitForm.periodHint.month': 'One value per month, can be filled in on any day of the month – at the bottom of “Today” under “This month”.',
     'habitForm.periodHint.year': 'One value per year, can be filled in on any day of the year – at the bottom of “Today” under “This year”.',
@@ -2301,28 +2315,30 @@ const STRINGS = {
     'counter.less': 'Decrease by {step}',
     'counter.more': 'Increase by {step}',
     'habitForm.kindComputed': 'Calculated',
-    'habitForm.schedule': 'Repeats',
-    'habitForm.schedule.daily': 'Daily',
-    'habitForm.schedule.weekly': 'On certain weekdays',
-    'habitForm.schedule.monthly': 'Once a month',
-    'habitForm.schedule.yearly': 'Once a year',
-    'habitForm.schedule.interval': 'Every X days or weeks',
-    'habitForm.schedule.weekdaysLabel': 'Weekdays',
-    'habitForm.schedule.monthDayLabel': 'On the',
+    'habitForm.days': 'On which days?',
+    'habitForm.days.hint': 'Only for fixed days, like weighing yourself on Mondays. For things you do on some days and not on others (e.g. sport), keep all days – “No” is an entry too.',
+    'habitForm.days.explain': 'On the other days Logbuch won’t remind you of it, and it sits at the bottom of “Today” under “Not planned today”. You can still fill it in there.',
     'habitForm.schedule.lastDay': 'Last day',
-    'habitForm.schedule.yearDateLabel': 'On',
     'habitForm.schedule.dayAria': 'Day',
     'habitForm.schedule.monthAria': 'Month',
-    'habitForm.schedule.every': 'Every',
-    'habitForm.schedule.unitAria': 'Unit',
-    'habitForm.schedule.unitDays': 'days',
-    'habitForm.schedule.unitWeeks': 'weeks',
-    'habitForm.schedule.start': 'starting',
-    'habitForm.schedule.shortMonthNote': 'If a month does not have that day (e.g. the 31st), the field is due on the last day of that month.',
-    'habitForm.schedule.hint': 'Only for things on fixed days, like weighing yourself on Mondays. For things you do on some days and not on others (e.g. sport), keep it daily – “No” is an entry too. For “once a week, no matter which day” there is “Weekly” above.',
-    'habitForm.schedule.explain': 'On the other days Logbuch won’t remind you of it, and it sits at the bottom of “Today” under “Not planned today”. You can still fill it in there.',
     'habitForm.error.scheduleNoDays': 'Please select at least one weekday.',
-    'habitForm.error.scheduleInterval': 'Please enter a number from 1 to 365 and a start date.',
+    'habitForm.part.what': 'What?',
+    'habitForm.part.entry': 'How do you enter it?',
+    'habitForm.part.when': 'When?',
+    'habitForm.part.stats': 'Statistics',
+    'habitForm.part.group': 'Group',
+    'habitForm.kindScaleNote': 'How much – e.g. mood 1–5',
+    'habitForm.kindNumberNote': 'Measurement or amount – e.g. weight, glasses',
+    'habitForm.kindTextNote': 'A few words',
+    'habitForm.kindComputedNote': 'Calculated from other fields',
+    'habitForm.summary': 'For week, month and year, add up as',
+    'habitForm.summary.avg': 'Average',
+    'habitForm.summary.sum': 'Total',
+    'habitForm.summary.noteAvg': 'Suits measurements like weight: “avg. 68.2 kg”.',
+    'habitForm.summary.noteSum': 'Suits amounts like working hours: “total 38 h”, plus the average per day.',
+    'habitForm.entryPreviewNote': 'This is how it looks in “Today”.',
+    'habitForm.entryPreviewAria.number': 'Preview: a box where you type the number',
+    'habitForm.entryPreviewAria.counter': 'Preview: the number with “−” and “+” buttons',
     'today.unplanned': 'Not planned today ({count})',
     'today.nothingPlanned': 'No fields are planned for today.',
     'day.today': 'Today',
@@ -2396,7 +2412,7 @@ const STRINGS = {
     'habitForm.showInStats': 'Show in statistics',
     'habitForm.showInStatsNote': 'Off: only appears in “Today”, not in the week, month, year, and overall views – e.g. if a calculated field made from it is enough for you. It still counts towards the day’s color.',
     'habitForm.more': 'More settings',
-    'habitForm.moreSub': 'Repetition, reminder time and more – you can also change these later',
+    'habitForm.moreSub': 'Days, reminder time, statistics – you can also change these later',
     'habitForm.moreSubPeriod': 'Goal, reminder and more – you can change these later',
     'habitForm.computedExplain': 'A calculated field combines multiple fields into one live-calculated value – scales as an average, number fields e.g. as a sum. You cannot fill it in yourself.',
     'common.finish': 'Done',
@@ -2663,8 +2679,8 @@ const STRINGS = {
     'about.tip.customReminder.body': 'Each field can get its own reminder time instead of using the default — useful e.g. for something you enter in the morning instead of the evening. A group can have its own time too: its fields are then reminded together at that time, with one notification for the whole group. If a field in it has its own time, that one applies.',
     'about.tip.sections.title': 'Groups',
     'about.tip.sections.body': 'You can arrange fields in groups – ideally by time of day, e.g. "Morning" and "Evening": then you fill in each block in one go, and each group can remind you at its own time. Once everything in a group is filled in, it is collapsed the next time you open it; you can set this per group. Groups only arrange; a combined value comes from a field of type "Calculated".',
-    'about.tip.schedule.title': 'Fixed days? Repeats',
-    'about.tip.schedule.body': 'For things on fixed days, like weighing yourself on Mondays: in the field form, under "Repeats", you set on which weekdays, on which day of the month or year, or at which interval (e.g. every 2 weeks). On other days the field sits collapsed under "Not planned today" in "Today" – you can still enter something there – and it triggers no reminder. In the week view such days are hatched, so that "not due" does not look like "forgotten".',
+    'about.tip.schedule.title': 'Fixed days? Pick weekdays',
+    'about.tip.schedule.body': 'For things on fixed days, like weighing yourself on Mondays: in the field form, under "On which days?", you pick the weekdays. On other days the field sits collapsed under "Not planned today" in "Today" – you can still enter something there – and it triggers no reminder. In the week view such days are hatched, so that "not due" does not look like "forgotten".',
     'about.tip.archiveVsDelete.title': 'Archiving instead of deleting',
     'about.tip.archiveVsDelete.body': 'Archived fields disappear from daily entry and, by default, from the statistics too – but their existing values are kept. If you still want to see them (e.g. the history of a field you replaced with a new one), tick “Show in statistics” for the archived field under “Manage fields”. Archived fields can be reactivated anytime; permanent deletion, on the other hand, also removes the existing values.',
     'about.tip.theme.title': 'Dark mode',
@@ -3868,7 +3884,7 @@ function numberGoalField(f) {
   return `
     <div class="auth-field">
       <label id="habit-form-numgoal-label">${t('habitForm.numberGoal')}</label>
-      <div class="pill-group" role="group" aria-labelledby="habit-form-numgoal-label">
+      <div class="pill-group seg" role="group" aria-labelledby="habit-form-numgoal-label">
         ${[['', 'habitForm.numberGoal.none'], ['high', 'habitForm.numberGoal.min'], ['low', 'habitForm.numberGoal.max']].map(([d, key]) => `<button type="button" class="pill-toggle${(f.numberGoalDir || '') === d ? ' pill-toggle--active' : ''}" data-action="habit-numgoal" data-dir="${d}" aria-pressed="${(f.numberGoalDir || '') === d}">${t(key)}</button>`).join('')}
       </div>
       ${f.numberGoalDir ? `
@@ -3949,59 +3965,25 @@ function defaultHabitForm() {
     period: 'day', periodReminderDay: null, // siehe periodReminderControl
     step: 1, // nur Zähler
     numberGoalDir: null, numberGoalValue: '', // Zahl/Zähler: Ziel 'high' = mindestens, 'low' = höchstens
+    summary: 'avg', // Zahlen: in Woche/Monat/Jahr als Durchschnitt oder Summe
   };
 }
 
-// Formular-Zustand der Wiederholung: hält die Werte ALLER Typen gleichzeitig, damit
-// beim Durchklicken der Typen nichts verloren geht - erst formToSchedule() macht daraus
-// den gespeicherten Plan. Vorbelegung: Wochentage Mo–Fr, Monats-/Jahrestag und Start
-// = heute.
+// Formular-Zustand "An welchen Tagen?": nur Wochentage, Vorbelegung alle sieben (seit
+// 2026-10-12; monatlich/jährlich/Intervall entfielen, das decken Zeitraum-Felder ab - kein
+// Feld nutzte sie). Alle 7 werden als null (= täglich) gespeichert.
 function scheduleToForm(schedule) {
-  const now = new Date();
-  const base = {
-    type: 'daily', days: [0, 1, 2, 3, 4], monthDay: now.getDate(),
-    yearMonth: now.getMonth() + 1, yearDay: now.getDate(),
-    every: 2, unit: 'week', start: formatKey(now),
-  };
-  switch (schedule?.type) {
-    case 'weekly': return { ...base, type: 'weekly', days: [...schedule.days] };
-    case 'monthly': return { ...base, type: 'monthly', monthDay: schedule.day };
-    case 'yearly': return { ...base, type: 'yearly', yearMonth: schedule.month, yearDay: schedule.day };
-    case 'interval': return { ...base, type: 'interval', every: schedule.every, unit: schedule.unit, start: schedule.start };
-    default: return base;
-  }
+  return { days: schedule?.type === 'weekly' ? [...schedule.days] : [0, 1, 2, 3, 4, 5, 6] };
 }
-// -> { schedule } oder { error: <i18n-Key> }. Alle 7 Wochentage bzw. "alle 1 Tage"
-// werden als null (= täglich) gespeichert, damit es nur EINE Darstellung von täglich gibt.
+// -> { schedule } oder { error: <i18n-Key> }.
 function formToSchedule(fs) {
-  switch (fs.type) {
-    case 'weekly': {
-      const days = [...new Set(fs.days)].sort((a, b) => a - b);
-      if (!days.length) return { error: 'habitForm.error.scheduleNoDays' };
-      return { schedule: days.length === 7 ? null : { type: 'weekly', days } };
-    }
-    case 'monthly': return { schedule: { type: 'monthly', day: fs.monthDay } };
-    case 'yearly': return { schedule: { type: 'yearly', month: fs.yearMonth, day: fs.yearDay } };
-    case 'interval': {
-      const every = Number(fs.every);
-      if (!Number.isInteger(every) || every < 1 || every > 365 || !/^\d{4}-\d{2}-\d{2}$/.test(fs.start) || isNaN(parseDateKey(fs.start))) {
-        return { error: 'habitForm.error.scheduleInterval' };
-      }
-      if (every === 1 && fs.unit === 'day') return { schedule: null };
-      return { schedule: { type: 'interval', every, unit: fs.unit === 'week' ? 'week' : 'day', start: fs.start } };
-    }
-    default: return { schedule: null };
-  }
+  const days = [...new Set(fs.days)].sort((a, b) => a - b);
+  if (!days.length) return { error: 'habitForm.error.scheduleNoDays' };
+  return { schedule: days.length === 7 ? null : { type: 'weekly', days } };
 }
-function readScheduleFromDom(f) {
-  const val = (id) => document.getElementById(id)?.value;
-  const sch = f.schedule;
-  if (val('habit-form-schedule-monthday') !== undefined) sch.monthDay = Number(val('habit-form-schedule-monthday'));
-  if (val('habit-form-schedule-yearmonth') !== undefined) sch.yearMonth = Number(val('habit-form-schedule-yearmonth'));
-  if (val('habit-form-schedule-yearday') !== undefined) sch.yearDay = Number(val('habit-form-schedule-yearday'));
-  if (val('habit-form-schedule-every') !== undefined) sch.every = val('habit-form-schedule-every');
-  if (val('habit-form-schedule-unit') !== undefined) sch.unit = val('habit-form-schedule-unit');
-  if (val('habit-form-schedule-start') !== undefined) sch.start = val('habit-form-schedule-start');
+// Zahlen-Felder (auch berechnete aus Zahlen): in Woche/Monat/Jahr als Durchschnitt oder Summe.
+function habitFormSummable(f) {
+  return f.kind === 'number' || f.kind === 'counter' || (f.kind === 'computed' && f.computedType === 'number');
 }
 
 function habitToForm(h) {
@@ -4039,6 +4021,7 @@ function habitToForm(h) {
     step: h.step ?? 1,
     numberGoalDir: isNumberKind(h) || isCounterKind(h) ? h.good || null : null,
     numberGoalValue: Number.isFinite(h.target) ? String(h.target) : '',
+    summary: h.summary,
   };
 }
 
@@ -4099,7 +4082,6 @@ function syncHabitFormFromDom() {
     const reminderTime = readTimeInput('habit-form-reminder-time');
     if (reminderTime !== null) f.reminderMinute = reminderTime;
   }
-  if (f.kind !== 'computed') readScheduleFromDom(f);
   readPeriodReminderFromDom(f);
   const showInStatsEl = document.getElementById('habit-form-show-in-stats');
   if (showInStatsEl) f.showInStats = showInStatsEl.checked;
@@ -4296,6 +4278,7 @@ async function handleHabitSaveInner() {
     hideInStats: !f.showInStats,
     step: f.kind === 'counter' ? f.step : undefined,
     target: fields.target ?? undefined,
+    summary: habitFormSummable(f) && f.summary === 'sum' ? 'sum' : undefined,
     archivedInStats: f.defId ? !!state.habits.find((h) => h.defId === f.defId)?.archivedInStats : false,
   };
   const sectionId = period === 'day' && state.sections.some((sec) => sec.id === f.sectionId) ? f.sectionId : null;
@@ -7463,7 +7446,9 @@ function renderNumberChart(habit, dateKeys, interactive) {
   const head = `
     <div class="number-chart-head">
       <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
-      ${stats ? `<span class="number-chart-meta">${t('numberChart.meta', { last: formatNumber(stats.last) + unitSuffix, avg: formatNumber(round1(stats.avg)) + unitSuffix, count: stats.count })}${hasNumberGoal(habit) ? ` · ${esc(numberGoalText(habit))}` : ''}</span>` : ''}
+      ${stats ? `<span class="number-chart-meta">${habit.summary === 'sum'
+        ? t('numberChart.metaSum', { sum: formatNumber(round1(stats.sum)) + unitSuffix, avg: formatNumber(round1(stats.avg)) + unitSuffix, per: t('numberChart.per.' + (habit.period || 'day')), count: stats.count })
+        : t('numberChart.meta', { last: formatNumber(stats.last) + unitSuffix, avg: formatNumber(round1(stats.avg)) + unitSuffix, count: stats.count })}${hasNumberGoal(habit) ? ` · ${esc(numberGoalText(habit))}` : ''}</span>` : ''}
     </div>
   `;
   if (!stats || stats.series.length < 2) {
@@ -7605,8 +7590,8 @@ function renderHabitForm({ titleInHeader = false } = {}) {
 
   const scaleBody = `
     <div class="auth-field">
-      <label>${t('habitForm.display')}${f.locked ? infoTip(t('habitForm.displayLockedExplain')) : ''}</label>
-      <div class="pill-group">
+      <label id="habit-form-display-label">${t('habitForm.display')}${f.locked ? infoTip(t('habitForm.displayLockedExplain')) : ''}</label>
+      <div class="pill-group seg" role="group" aria-labelledby="habit-form-display-label">
         <button type="button" class="pill-toggle${f.displayStyle === 'buttons' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="buttons" ${buttonsBlocked ? 'disabled' : ''}>${t('habitForm.buttons')}</button>
         <button type="button" class="pill-toggle${f.displayStyle === 'slider' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="slider">${t('habitForm.slider')}</button>
       </div>
@@ -7639,8 +7624,8 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     </div>
     ${!f.locked && !f.labelsEnabled ? `
       <div class="auth-field">
-        <label>${t('habitForm.numbers')}${infoTip(t('habitForm.numbersExplain'))}</label>
-        <div class="pill-group">
+        <label id="habit-form-numbers-label">${t('habitForm.numbers')}${infoTip(t('habitForm.numbersExplain'))}</label>
+        <div class="pill-group seg" role="group" aria-labelledby="habit-form-numbers-label">
           ${[1, 0].map((start) => `<button type="button" class="pill-toggle${(f.min === 0 ? 0 : 1) === start ? ' pill-toggle--active' : ''}" data-action="habit-start" data-start="${start}">${tPlain('habitForm.numbersRange', { min: start, max: start + stepCount - 1 })}</button>`).join('')}
         </div>
       </div>
@@ -7661,8 +7646,8 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       ${renderHabitFormPreview(f)}
     </div>
     <div class="auth-field">
-      <label>${t('habitForm.goalDirection')}${infoTip(t('habitForm.goalDirectionExplain'))}</label>
-      <div class="pill-group">
+      <label id="habit-form-good-label">${t('habitForm.goalDirection')}${infoTip(t('habitForm.goalDirectionExplain'))}</label>
+      <div class="pill-group seg seg--stack" role="group" aria-labelledby="habit-form-good-label">
         <button type="button" class="pill-toggle${f.good === 'high' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="high">${t('habitForm.highIsGood')}</button>
         <button type="button" class="pill-toggle${f.good === 'low' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="low">${t('habitForm.lowIsGood')}</button>
         <button type="button" class="pill-toggle${!f.good ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="">${t('habitForm.noValuation')}</button>
@@ -7681,14 +7666,27 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // "Wie trägst du ein?" - eintippen oder hochzählen; nicht im Tutorial (dort nur eintippen).
   const entryModeField = f.revealStage !== undefined ? '' : `
     <div class="auth-field">
-      <label id="habit-form-entry-label">${t('habitForm.entryMode')}</label>
-      <div class="pill-group" role="group" aria-labelledby="habit-form-entry-label">
+      <div class="pill-group seg" role="group" aria-labelledby="habit-form-part-entry">
         ${[['number', 'habitForm.entryMode.type'], ['counter', 'habitForm.entryMode.count']].map(([k, key]) => `<button type="button" class="pill-toggle${f.kind === k ? ' pill-toggle--active' : ''}" data-action="habit-entry-mode" data-kind="${k}" aria-pressed="${f.kind === k}" ${f.locked ? 'disabled' : ''}>${t(key)}</button>`).join('')}
+      </div>
+    </div>
+  `;
+  // Vorschau wie bei der Skala: wie das Feld in "Heute" aussieht (nur Bild, nicht bedienbar).
+  const entryPreview = `
+    <div class="auth-field">
+      <span class="settings-label" id="habit-form-entry-preview-label">${t('habitForm.preview')}</span>
+      <div class="field-preview entry-preview" role="img" aria-label="${esc(t(f.kind === 'counter' ? 'habitForm.entryPreviewAria.counter' : 'habitForm.entryPreviewAria.number'))}">
+        <span class="entry-preview-name" aria-hidden="true">${esc(f.name.trim() || t('habitForm.preview'))}</span>
+        ${f.kind === 'counter'
+          ? '<span class="counter-controls" aria-hidden="true"><span class="counter-btn">−</span><span class="counter-value">0</span><span class="counter-btn counter-btn--plus">+</span></span>'
+          : '<span class="number-input entry-preview-input" aria-hidden="true"></span>'}
+        <p class="habit-form-lock-note field-preview-note">${t('habitForm.entryPreviewNote')}</p>
       </div>
     </div>
   `;
   const counterBody = `
     ${entryModeField}
+    ${entryPreview}
     <p class="habit-form-lock-note">${t('habitForm.counterNote')}</p>
     ${numberBody}
     <div class="auth-field">
@@ -7717,7 +7715,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     <p class="habit-form-lock-note">${t('habitForm.computedExplain')}</p>
     <div class="auth-field">
       <label id="habit-form-computed-type-label">${t('habitForm.computedType')}</label>
-      <div class="pill-group" role="group" aria-labelledby="habit-form-computed-type-label">
+      <div class="pill-group seg" role="group" aria-labelledby="habit-form-computed-type-label">
         <button type="button" class="pill-toggle${!isNumberComputedForm ? ' pill-toggle--active' : ''}" data-action="computed-type" data-type="scale" aria-pressed="${!isNumberComputedForm}">${t('habitForm.computedType.scale')}</button>
         <button type="button" class="pill-toggle${isNumberComputedForm ? ' pill-toggle--active' : ''}" data-action="computed-type" data-type="number" aria-pressed="${isNumberComputedForm}">${t('habitForm.computedType.number')}</button>
       </div>
@@ -7762,70 +7760,19 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     </div>
   `;
 
-  // Wiederholung: an welchen Tagen das Feld dran ist (Details siehe isScheduledOn).
+  // "An welchen Tagen?": Wochentage, alle sieben vorbelegt (Details siehe isScheduledOn).
   const sch = f.schedule;
-  // Typ als Auswahlliste statt fünf Pills - die brachen auf dem Handy in eine zweite Zeile um.
-  const scheduleTypeOption = (type, key) => `<option value="${type}" ${sch.type === type ? 'selected' : ''}>${t(key)}</option>`;
-  const dayOptions = (selected) => Array.from({ length: 31 }, (_, i) => i + 1)
-    .map((d) => `<option value="${d}" ${d === selected ? 'selected' : ''}>${d}.</option>`).join('');
-  let scheduleDetail = '';
-  if (sch.type === 'weekly') {
-    const shortNames = mondayFirstWeekdayShortNames();
-    scheduleDetail = `
-      <div class="pill-group weekday-group" role="group" aria-label="${esc(t('habitForm.schedule.weekdaysLabel'))}">
+  const shortNames = mondayFirstWeekdayShortNames();
+  const scheduleBody = `
+    <div class="auth-field">
+      <label id="habit-form-days-label">${t('habitForm.days')}</label>
+      <div class="pill-group weekday-group" role="group" aria-labelledby="habit-form-days-label">
         ${shortNames.map((name, i) => {
           const on = sch.days.includes(i);
           return `<button type="button" class="pill-toggle weekday-toggle${on ? ' pill-toggle--active' : ''}" data-action="habit-schedule-day" data-day="${i}" aria-pressed="${on}" aria-label="${esc(weekdayLong(new Date(2024, 0, 1 + i)))}">${esc(name)}</button>`;
         }).join('')}
       </div>
-    `;
-  } else if (sch.type === 'monthly') {
-    scheduleDetail = `
-      <div class="schedule-inline">
-        <label for="habit-form-schedule-monthday">${t('habitForm.schedule.monthDayLabel')}</label>
-        <select id="habit-form-schedule-monthday">${dayOptions(sch.monthDay)}<option value="-1" ${sch.monthDay === -1 ? 'selected' : ''}>${t('habitForm.schedule.lastDay')}</option></select>
-      </div>
-      <p class="habit-form-lock-note">${t('habitForm.schedule.shortMonthNote')}</p>
-    `;
-  } else if (sch.type === 'yearly') {
-    scheduleDetail = `
-      <div class="schedule-inline">
-        <span>${t('habitForm.schedule.yearDateLabel')}</span>
-        <select id="habit-form-schedule-yearday" aria-label="${esc(t('habitForm.schedule.dayAria'))}">${dayOptions(sch.yearDay)}</select>
-        <select id="habit-form-schedule-yearmonth" aria-label="${esc(t('habitForm.schedule.monthAria'))}">
-          ${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${i + 1 === sch.yearMonth ? 'selected' : ''}>${esc(monthName(new Date(2024, i, 1)))}</option>`).join('')}
-        </select>
-      </div>
-      <p class="habit-form-lock-note">${t('habitForm.schedule.shortMonthNote')}</p>
-    `;
-  } else if (sch.type === 'interval') {
-    scheduleDetail = `
-      <div class="schedule-inline">
-        <label for="habit-form-schedule-every">${t('habitForm.schedule.every')}</label>
-        <input type="number" id="habit-form-schedule-every" min="1" max="365" step="1" inputmode="numeric" value="${esc(sch.every)}" />
-        <select id="habit-form-schedule-unit" aria-label="${esc(t('habitForm.schedule.unitAria'))}">
-          <option value="day" ${sch.unit === 'day' ? 'selected' : ''}>${t('habitForm.schedule.unitDays')}</option>
-          <option value="week" ${sch.unit === 'week' ? 'selected' : ''}>${t('habitForm.schedule.unitWeeks')}</option>
-        </select>
-      </div>
-      <div class="schedule-inline">
-        <label for="habit-form-schedule-start">${t('habitForm.schedule.start')}</label>
-        <input type="date" id="habit-form-schedule-start" value="${esc(sch.start)}" />
-      </div>
-    `;
-  }
-  const scheduleBody = `
-    <div class="auth-field">
-      <label for="habit-form-schedule-type">${t('habitForm.schedule')}</label>
-      <select id="habit-form-schedule-type">
-        ${scheduleTypeOption('daily', 'habitForm.schedule.daily')}
-        ${scheduleTypeOption('weekly', 'habitForm.schedule.weekly')}
-        ${scheduleTypeOption('monthly', 'habitForm.schedule.monthly')}
-        ${scheduleTypeOption('yearly', 'habitForm.schedule.yearly')}
-        ${scheduleTypeOption('interval', 'habitForm.schedule.interval')}
-      </select>
-      ${scheduleDetail}
-      <p class="habit-form-lock-note">${t(sch.type === 'daily' ? 'habitForm.schedule.hint' : 'habitForm.schedule.explain')}</p>
+      <p class="habit-form-lock-note">${t(sch.days.length === 7 ? 'habitForm.days.hint' : 'habitForm.days.explain')}</p>
     </div>
   `;
 
@@ -7849,7 +7796,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // dort schon etwas vom Standard abweicht, sonst zu; offen/zu übersteht Re-Renders
   // (f.moreOpen, gesetzt vom toggle-Listener).
   const showGoal = (f.kind === 'scale' && f.good) || (isComputed && f.computedType !== 'number');
-  const moreOpen = f.moreOpen ?? ((showGoal && f.goal < 1) || !!f.numberGoalDir || (!isComputed && (f.schedule.type !== 'daily' || f.reminderEnabled))
+  const moreOpen = f.moreOpen ?? ((showGoal && f.goal < 1) || !!f.numberGoalDir || f.summary === 'sum' || (!isComputed && (f.schedule.days.length < 7 || f.reminderEnabled))
     || (state.sections.length > 0 && !!f.sectionId) || !f.showInStats);
   // "Berechnet" nur anbieten, wenn es etwas zu berechnen gibt (mind. 2 passende Felder) -
   // beim allerersten Feld im Tutorial führte die Auswahl sonst nur zu "noch keine Felder".
@@ -7868,79 +7815,116 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const periodField = tutorialForm || isComputed ? '' : `
     <div class="auth-field">
       <label id="habit-form-period-label">${t('habitForm.period')}</label>
-      <div class="pill-group" role="group" aria-labelledby="habit-form-period-label">
+      <div class="pill-group seg" role="group" aria-labelledby="habit-form-period-label">
         ${['day', ...PERIODS].map((p) => `<button type="button" class="pill-toggle${f.period === p ? ' pill-toggle--active' : ''}" data-action="habit-period" data-period="${p}" aria-pressed="${f.period === p}" ${f.locked ? 'disabled' : ''}>${t('habitForm.period.' + p)}</button>`).join('')}
       </div>
       ${isPeriod ? `<p class="habit-form-lock-note">${t('habitForm.periodHint.' + f.period)}</p>` : ''}
+    </div>
+  `;
+  // Abschnitte nach Thema (Nutzer-Entscheidung 2026-10-12): Was? / Wie trägst du ein? /
+  // Wann? / Auswertung / Gruppe - vorher standen rund 15 Einstellungen gleichförmig
+  // untereinander, getrennt nur nach "wichtig" und "Mehr Einstellungen". Leere Abschnitte
+  // entfallen. Im Tutorial stehen Wann/Auswertung/Gruppe weiter zugeklappt unter "Mehr
+  // Einstellungen" (Formular sonst zu lang für das erste Feld).
+  const part = (key, body) => (body.trim() ? `
+    <section class="form-part" aria-labelledby="habit-form-part-${key}">
+      <h3 class="form-part-title" id="habit-form-part-${key}">${t('habitForm.part.' + key)}</h3>
+      ${body}
+    </section>
+  ` : '');
+  const summaryField = habitFormSummable(f) ? `
+    <div class="auth-field">
+      <label id="habit-form-summary-label">${t('habitForm.summary')}</label>
+      <div class="pill-group seg" role="group" aria-labelledby="habit-form-summary-label">
+        ${['avg', 'sum'].map((k) => `<button type="button" class="pill-toggle${f.summary === k ? ' pill-toggle--active' : ''}" data-action="habit-summary" data-summary="${k}" aria-pressed="${f.summary === k}">${t('habitForm.summary.' + k)}</button>`).join('')}
+      </div>
+      <p class="habit-form-lock-note">${t(f.summary === 'sum' ? 'habitForm.summary.noteSum' : 'habitForm.summary.noteAvg')}</p>
+    </div>
+  ` : '';
+  const entryBody = isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody
+    : f.kind === 'counter' ? counterBody : entryModeField + entryPreview + numberBody;
+  const whenBody = isComputed ? '' : `
+    ${periodField}
+    ${isPeriod ? (isCounter ? '' : periodReminderControl(f)) : scheduleBody}
+    ${isCounter ? '' : reminderBody}
+  `;
+  const statsBody = `
+    ${showGoal ? goalField : ''}
+    ${f.kind === 'number' || f.kind === 'counter' ? numberGoalField(f) : ''}
+    ${summaryField}
+    <div class="auth-field">
+      <label class="checkbox-field">
+        <input type="checkbox" id="habit-form-show-in-stats" aria-describedby="habit-form-show-in-stats-note" ${f.showInStats ? 'checked' : ''} />
+        ${t('habitForm.showInStats')}
+      </label>
+      <p class="habit-form-lock-note" id="habit-form-show-in-stats-note">${t('habitForm.showInStatsNote')}</p>
+    </div>
+  `;
+  const groupBody = state.sections.length && !isPeriod ? `
+    <div class="auth-field">
+      <select id="habit-form-section" aria-labelledby="habit-form-part-group">
+        <option value="">${t('habitForm.sectionNone')}</option>
+        ${[...state.sections].sort((a, b) => a.sortOrder - b.sortOrder).map((sec) => `<option value="${sec.id}" ${f.sectionId === sec.id ? 'selected' : ''}>${esc(sec.name)}</option>`).join('')}
+      </select>
+    </div>
+  ` : '';
+  const laterParts = part('when', whenBody) + part('stats', statsBody) + part('group', groupBody);
+  const kindCards = `
+    <div class="kind-cards" role="group" aria-labelledby="habit-form-kind-label">
+      ${kinds.map(([kind, key]) => {
+        const on = (f.kind === 'counter' ? 'number' : f.kind) === kind;
+        return `<button type="button" class="kind-card${on ? ' kind-card--active' : ''}" data-action="habit-kind" data-kind="${kind}" aria-pressed="${on}" ${f.locked ? 'disabled' : ''}><span class="kind-card-title">${t(key)}</span><span class="kind-card-note">${t(key + 'Note')}</span></button>`;
+      }).join('')}
     </div>
   `;
   return `
     <div class="habit-form" id="habit-form">
       ${titleInHeader ? '' : `<h2>${t(habitFormTitleKey(f))}</h2>`}
       ${f.locked ? `<p class="habit-form-lock-note">${t('habitForm.lockedNote')}</p>` : ''}
-      <div class="auth-field">
-        <label for="habit-form-name">${t('habitForm.name')}</label>
-        <input type="text" id="habit-form-name" value="${esc(f.name)}" maxlength="40" ${tutorialForm ? 'aria-describedby="habit-form-name-ideas"' : ''} />
-        ${tutorialForm ? `<p class="onb-hint auth-password-hint" id="habit-form-name-ideas">${t('tutorial.form.nameIdeas')}</p>` : ''}
-      </div>
-      ${stage < 2 ? `<button type="button" class="auth-submit" data-action="habit-reveal-next">${t('common.next')}</button>` : `
-      ${!tutorialForm ? '' : stage > 2
-        ? pastTipBox('tutorial.form.tipKindTitle', 'tutorial.form.tipKind', 'tutorial.form.tipKindMoreTitle', 'tutorial.form.tipKindMore')
-        : tipBox('tutorial.form.tipKind', 'tutorial.form.tipKindMoreTitle', 'tutorial.form.tipKindMore')}
-      <div class="auth-field" id="habit-form-kind-field">
-        <label id="habit-form-kind-label">${t('habitForm.fieldType')}</label>
-        <div class="pill-group" role="group" aria-labelledby="habit-form-kind-label">
-          ${kinds.map(([kind, key]) => `
-            <button type="button" class="pill-toggle${(f.kind === 'counter' ? 'number' : f.kind) === kind ? ' pill-toggle--active' : ''}" data-action="habit-kind" data-kind="${kind}" aria-pressed="${(f.kind === 'counter' ? 'number' : f.kind) === kind}" ${f.locked ? 'disabled' : ''}>${t(key)}</button>
-          `).join('')}
+      ${part('what', `
+        <div class="auth-field">
+          <label for="habit-form-name">${t('habitForm.name')}</label>
+          <input type="text" id="habit-form-name" value="${esc(f.name)}" maxlength="40" ${tutorialForm ? 'aria-describedby="habit-form-name-ideas"' : ''} />
+          ${tutorialForm ? `<p class="onb-hint auth-password-hint" id="habit-form-name-ideas">${t('tutorial.form.nameIdeas')}</p>` : ''}
         </div>
-      </div>
-      ${canConvertToCounter(f) ? `
-        <div class="auth-field convert-box">
-          ${f.convertConfirm ? `
-            <p class="habit-form-lock-note" role="status">${t(f.kind === 'scale' ? 'habitForm.convertConfirm.scale' : 'habitForm.convertConfirm.number')}</p>
-            <div class="manage-group-tip-actions">
-              <button type="button" class="manage-btn" data-action="habit-convert-cancel">${t('common.cancel')}</button>
-              <button type="button" class="manage-btn" data-action="habit-convert-confirm">${t('habitForm.convertCounterDo')}</button>
+        ${stage < 2 ? '' : `
+          ${!tutorialForm ? '' : stage > 2
+            ? pastTipBox('tutorial.form.tipKindTitle', 'tutorial.form.tipKind', 'tutorial.form.tipKindMoreTitle', 'tutorial.form.tipKindMore')
+            : tipBox('tutorial.form.tipKind', 'tutorial.form.tipKindMoreTitle', 'tutorial.form.tipKindMore')}
+          <div class="auth-field" id="habit-form-kind-field">
+            <label id="habit-form-kind-label">${t('habitForm.fieldType')}</label>
+            ${kindCards}
+          </div>
+          ${canConvertToCounter(f) ? `
+            <div class="auth-field convert-box">
+              ${f.convertConfirm ? `
+                <p class="habit-form-lock-note" role="status">${t(f.kind === 'scale' ? 'habitForm.convertConfirm.scale' : 'habitForm.convertConfirm.number')}</p>
+                <div class="manage-group-tip-actions">
+                  <button type="button" class="manage-btn" data-action="habit-convert-cancel">${t('common.cancel')}</button>
+                  <button type="button" class="manage-btn" data-action="habit-convert-confirm">${t('habitForm.convertCounterDo')}</button>
+                </div>
+              ` : `
+                <p class="habit-form-lock-note">${t(f.kind === 'scale' ? 'habitForm.convertHint.scale' : 'habitForm.convertHint.number')}</p>
+                <button type="button" class="manage-btn" data-action="habit-convert-counter">${t('habitForm.convertCounter')}</button>
+              `}
             </div>
-          ` : `
-            <p class="habit-form-lock-note">${t(f.kind === 'scale' ? 'habitForm.convertHint.scale' : 'habitForm.convertHint.number')}</p>
-            <button type="button" class="manage-btn" data-action="habit-convert-counter">${t('habitForm.convertCounter')}</button>
-          `}
-        </div>
-      ` : ''}
-      ${periodField}
+          ` : ''}
+        `}
+      `)}
       ${stage < 3 ? `<button type="button" class="auth-submit" data-action="habit-reveal-next">${t('common.next')}</button>` : `
       ${tutorialForm ? tipBox(`tutorial.form.tip.${f.kind}`, 'tutorial.form.tipScaleMoreTitle', f.kind === 'scale' ? 'tutorial.form.tipScaleMore' : null) : ''}
       <div id="habit-form-details"></div>
-      ${isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : f.kind === 'counter' ? counterBody : entryModeField + numberBody}
-      <details class="habit-form-more" ${moreOpen ? 'open' : ''}>
-        <summary><span class="habit-form-more-title">${t('habitForm.more')}</span><span class="habit-form-more-sub">${t(isPeriod ? 'habitForm.moreSubPeriod' : 'habitForm.moreSub')}</span></summary>
-      ${showGoal ? goalField : ''}
-      ${f.kind === 'number' || f.kind === 'counter' ? numberGoalField(f) : ''}
-      ${!isComputed ? (isPeriod ? (isCounter ? '' : periodReminderControl(f)) : scheduleBody) + (isCounter ? '' : reminderBody) : ''}
-      ${state.sections.length && !isPeriod ? `
-        <div class="auth-field">
-          <label for="habit-form-section">${t('habitForm.section')}</label>
-          <select id="habit-form-section">
-            <option value="">${t('habitForm.sectionNone')}</option>
-            ${[...state.sections].sort((a, b) => a.sortOrder - b.sortOrder).map((sec) => `<option value="${sec.id}" ${f.sectionId === sec.id ? 'selected' : ''}>${esc(sec.name)}</option>`).join('')}
-          </select>
-        </div>
-      ` : ''}
-      <div class="auth-field">
-        <label class="checkbox-field">
-          <input type="checkbox" id="habit-form-show-in-stats" aria-describedby="habit-form-show-in-stats-note" ${f.showInStats ? 'checked' : ''} />
-          ${t('habitForm.showInStats')}
-        </label>
-        <p class="habit-form-lock-note" id="habit-form-show-in-stats-note">${t('habitForm.showInStatsNote')}</p>
-      </div>
-      </details>
+      ${part('entry', entryBody)}
+      ${tutorialForm ? `
+        <details class="habit-form-more" ${moreOpen ? 'open' : ''}>
+          <summary><span class="habit-form-more-title">${t('habitForm.more')}</span><span class="habit-form-more-sub">${t(isPeriod ? 'habitForm.moreSubPeriod' : 'habitForm.moreSub')}</span></summary>
+          ${laterParts}
+        </details>
+      ` : laterParts}
       <div class="habit-form-actions">
         ${tutorialForm ? '' : `<button type="button" class="habit-form-cancel" data-action="habit-cancel" ${state.habitFormSaving ? 'disabled' : ''}>${t('common.cancel')}</button>`}
         <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t(tutorialForm ? 'tutorial.form.create' : 'common.save')}</button>
       </div>
-      `}
       `}
     </div>
   `;
@@ -8368,13 +8352,13 @@ function renderSettings() {
     ${settingsSectionStart('display', 'settings.display')}
       <div class="settings-row" data-menu-target="text-size">
         <span class="settings-label" id="menu-text-size-label">${t('textSize.label')}</span>
-        <div class="pill-group" role="group" aria-labelledby="menu-text-size-label">
+        <div class="pill-group seg" role="group" aria-labelledby="menu-text-size-label">
           ${TEXT_SIZES.map((size) => `<button type="button" class="pill-toggle${getTextSize() === size ? ' pill-toggle--active' : ''}" data-action="text-size-set" data-size="${size}" aria-pressed="${getTextSize() === size}">${t('textSize.' + (size || 'normal'))}</button>`).join('')}
         </div>
       </div>
       <div class="settings-row" data-menu-target="theme">
         <span class="settings-label" id="menu-theme-label">${t('theme.label')}</span>
-        <div class="pill-group" role="group" aria-labelledby="menu-theme-label">
+        <div class="pill-group seg" role="group" aria-labelledby="menu-theme-label">
           <button type="button" class="pill-toggle${!getThemeOverride() ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="" aria-pressed="${!getThemeOverride()}">${t('theme.system')}</button>
           <button type="button" class="pill-toggle${getThemeOverride() === 'light' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="light" aria-pressed="${getThemeOverride() === 'light'}">${t('theme.light')}</button>
           <button type="button" class="pill-toggle${getThemeOverride() === 'dark' ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="dark" aria-pressed="${getThemeOverride() === 'dark'}">${t('theme.dark')}</button>
@@ -9045,7 +9029,7 @@ app.addEventListener('click', async (e) => {
     // Zum neu aufgedeckten Teil scrollen und dort den Fokus setzen.
     const target = document.getElementById(f.revealStage === 2 ? 'habit-form-kind-field' : 'habit-form-details');
     target?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-    (f.revealStage === 2 ? target?.querySelector('[aria-pressed="true"]') : document.querySelector('#habit-form .form-tip ~ .auth-field button, #habit-form .form-tip ~ .auth-field input'))?.focus({ preventScroll: true });
+    (f.revealStage === 2 ? target?.querySelector('[aria-pressed="true"]') : document.querySelector('#habit-form .form-part[aria-labelledby="habit-form-part-entry"] :is(button, input)'))?.focus({ preventScroll: true });
   } else if (action === 'habit-convert-counter') {
     syncHabitFormFromDom();
     state.habitForm.convertConfirm = true;
@@ -9108,6 +9092,11 @@ app.addEventListener('click', async (e) => {
     syncHabitFormFromDom();
     state.habitForm.kind = el.dataset.kind;
     render();
+  } else if (action === 'habit-summary') {
+    syncHabitFormFromDom();
+    state.habitForm.summary = el.dataset.summary === 'sum' ? 'sum' : 'avg';
+    render();
+    document.querySelector(`[data-action="habit-summary"][data-summary="${state.habitForm.summary}"]`)?.focus();
   } else if (action === 'habit-numgoal') {
     syncHabitFormFromDom();
     state.habitForm.numberGoalDir = el.dataset.dir || null;
@@ -9285,12 +9274,6 @@ app.addEventListener('change', async (e) => {
       await updateHabitPayload(habit, { archivedInStats: archivedStatsToggle.checked });
       document.querySelector(`[data-action="archived-stats-toggle"][data-id="${id}"]`)?.focus(); // render() hat das DOM ersetzt
     }
-    return;
-  }
-  if (e.target.id === 'habit-form-schedule-type' && state.habitForm) {
-    syncHabitFormFromDom();
-    state.habitForm.schedule.type = e.target.value;
-    render(); // Fokus: siehe restoreFocus/focusReopensPicker
     return;
   }
   if (e.target.classList?.contains('text-field-input')) {

@@ -140,7 +140,7 @@ sie wieder her (`pendingScrollRestore`, am Ende von `render()` eingelöst).
 Zurück) direkt zum Tab zurückspringen – die Absicht ist "jetzt tracken", nicht "verwalten".
 
 **Verwaltungsliste** (`renderManage`): pro Feld nur der Name plus – falls abweichend –
-Wiederholung, eigene Erinnerungszeit und "in der Auswertung ausgeblendet"
+Wochentage, eigene Erinnerungszeit und "in der Auswertung ausgeblendet"
 (`manageFieldMeta`); Skala, Bezeichnungen, Richtung und Ziel-Quote bewusst nicht (der Nutzer
 kennt die Bedeutung seiner Felder, eine Zusammenfassung ist redundant). Berechnete Felder
 zeigen ihre Mitglieder ("Ø aus: …"/"Summe aus: …") mit "Berechnet"-Kennzeichen – die einzige

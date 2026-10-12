@@ -156,9 +156,11 @@ Details [erinnerungen.md](erinnerungen.md).
 
 ## Wiederholung (`habit_definitions.schedule`)
 
-Pro Feld einstellbar, an welchen Tagen es "dran" ist (Formular "Wiederholung": Typ als
-Auswahlliste, Wochentage als 7 runde Buttons; nicht für berechnete Felder – die sind dran,
-sobald eines ihrer aktiven Mitglieder dran ist).
+Pro Feld einstellbar, an welchen Tagen es "dran" ist (Formular "An welchen Tagen?": 7 runde
+Wochentags-Knöpfe, alle vorbelegt; nicht für berechnete Felder – die sind dran, sobald eines
+ihrer aktiven Mitglieder dran ist). Das Formular bietet seit 2026-10-12 nur noch Wochentage:
+monatlich/jährlich/Intervall deckten Zeitraum-Felder ab, und kein Feld nutzte sie (geprüft per
+Abfrage: alle Felder täglich).
 
 Gedacht nur für Dinge an festen Tagen (montags wiegen). Was man mal macht und mal nicht
 (Sport), bleibt täglich – "Nein" ist dann ein Eintrag, das Ziel regelt die Ziel-Quote; "einmal

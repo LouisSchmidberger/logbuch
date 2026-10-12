@@ -49,8 +49,8 @@ Der Weg vom ersten Öffnen bis zur eingerichteten App, für neue Konten.
   Feldern, beim allerersten Feld führte er sonst ins Leere (siehe [felder.md](felder.md)).
   **Keine Vorlagen/Beispiele zum Antippen** – Vorlagen sind erst sinnvoll, wenn man das
   Formular einmal selbst durchgegangen ist; nur Ideen als Text unter dem Namen.
-- **"Mehr Einstellungen"** auch im echten Formular (siehe [felder.md](felder.md)), weil das
-  Formular für Neulinge zu lang war und das Tutorial dasselbe Formular nutzt.
+- **"Mehr Einstellungen"** nur noch im Tutorial (Wann/Auswertung/Gruppe zugeklappt); das
+  echte Formular ist stattdessen in Abschnitte gegliedert (siehe [felder.md](felder.md)).
 - **Erinnerungen**: bei Schritt für Schritt vorher eine Skizze des Erlaubnis-Dialogs (wie bei
   der Installation: auch ungefähre Skizzen helfen mehr als gar keine); bei Blockieren ein
   freundlicher Ausweg statt Sackgasse (siehe [erinnerungen.md](erinnerungen.md) →

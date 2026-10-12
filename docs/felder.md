@@ -231,13 +231,23 @@ Gruppe steht").
   (`GROUP_TIP_MIN_FIELDS`, ausblendbar, `localStorage` `groupTipDismissed`), dazu
   `about.tip.sections`.
 
-## Feld-Formular: "Mehr Einstellungen" und Sichtbarkeit
+## Feld-Formular: Aufbau und Sichtbarkeit
 
-**"Mehr Einstellungen"** (`<details class="habit-form-more">`): Ziel-Quote, Wiederholung,
-eigene Erinnerungszeit, Gruppe und "In der Auswertung anzeigen" stehen eingeklappt unter
-"Mehr Einstellungen – kannst du auch später ändern" (Formular war für Neulinge zu lang; das
-Tutorial nutzt dasselbe Formular). Aufgeklappt, sobald dort etwas vom Standard abweicht;
-offen/zu übersteht Re-Renders über `f.moreOpen`.
+**Abschnitte nach Thema** (`part()` in `renderHabitForm`, Nutzer-Entscheidung 2026-10-12):
+**Was?** (Name, Feld-Typ) · **Wie trägst du ein?** (je Typ, mit Vorschau; Bewertung gehört
+hierher, weil sie auch die Farben in "Heute" bestimmt) · **Wann?** (Einmal pro Tag/Woche/
+Monat/Jahr, Wochentage, Erinnerungszeit) · **Auswertung** (Ziel, Durchschnitt/Summe, "In der
+Auswertung anzeigen") · **Gruppe**. Leere Abschnitte entfallen. Vorher standen rund 15
+Einstellungen gleichförmig untereinander, getrennt nur in wichtig / "Mehr Einstellungen" –
+unübersichtlich. Im Tutorial liegen Wann/Auswertung/Gruppe weiter zugeklappt unter "Mehr
+Einstellungen" (`habit-form-more`, offen, sobald dort etwas vom Standard abweicht, `f.moreOpen`).
+
+**Auswahlformen**: genau eine von 2–4 Optionen = Segment-Schalter (`.pill-group.seg`, bei
+langen Texten untereinander `.seg--stack`, auch in den Einstellungen); Mehrfachauswahl
+(Wochentage) bleibt runde Pillen – die Form zeigt so "eins" gegenüber "mehrere". Feld-Typ als
+Karten mit einem Satz Erklärung (`kind-cards`). Lange Listen (Gruppe) als Auswahlliste. Reiter
+(Tabs) verworfen: bedeuten auf dem Handy "andere Ansicht", nicht "Einstellung wählen".
+Eintippen/Hochzählen zeigt eine Vorschau der Zeile in "Heute" (nur Bild).
 
 **"In der Auswertung anzeigen"** (`hideInStats` in der payload, standardmäßig an):
 ausgeblendete Felder erscheinen nur in "Heute" (`inStats`). **Archivierte Felder** sind in
@@ -285,7 +295,7 @@ Nutzer kein eigener Typ**: im Formular "Zahl" mit "Wie trägst du ein? Eintippen
 Zähler nie als "fehlend" erinnern darf (verworfen: Zähler als eigener Typ in der Auswahl –
 der Nutzer fand die Trennung Zahl/Zähler nicht gelungen).
 
-**Ziel für Zahlen und Zähler** (optional, "Mehr Einstellungen"): keins / mindestens X /
+**Ziel für Zahlen und Zähler** (optional, Abschnitt Auswertung): keins / mindestens X /
 höchstens X (`good` 'high'/'low' + `target` in `enc`). Mit Ziel gelten sie als bewertet
 (`hasNumberGoal` in `isScoredKind`): Tagesscore `numberGoalScore` (mindestens: Wert/Ziel;
 höchstens: bis zum Ziel 1, darüber linear bis 0 beim Doppelten), damit eigene Zeile im
@@ -309,13 +319,20 @@ vergessen, nicht 0. Skalen verlieren die Bezeichnungen; ihre Bewertung wird zum 
 Werte gut + Ziel-Quote → "mindestens" der Wert, ab dem sie voll erreicht war). Kein
 Zurückwandeln.
 
+**Durchschnitt oder Summe** (`summary` in `enc`, `'avg'` Standard, Zahlen, Zähler und
+berechnete Felder aus Zahlen; Abschnitt Auswertung, bewusst nicht versteckt): die Verlaufszeile
+in Woche/Monat/Jahr/Gesamt zeigt "1 h zuletzt · Ø 2,3 h" bzw. "Summe 16 h · Ø 2,3 h pro Tag"
+(Summe immer mit Schnitt – "beides" ohne dritte Option; Nutzer-Entscheidung 2026-10-12).
+Standard überall Durchschnitt, auch beim Hochzählen. Die Ø-Spalte im Wochenraster (Felder mit
+Ziel) bleibt immer der Durchschnitt – das Ziel gilt pro Tag, sonst passten Zahl und Farbe
+nicht zusammen.
+
 ## Zeitraum-Felder (Woche/Monat/Jahr)
 
 Datenmodell und Erinnerung: [datenmodell.md](datenmodell.md) → Zeitraum-Felder. Im Formular
 "Wie oft trägst du das ein?" (Täglich/Wöchentlich/Monatlich/Jährlich) nach dem Feld-Typ –
-nicht im Tutorial, nicht bei "Berechnet", mit Daten gesperrt; bei Zeitraum-Feldern stehen in
-"Mehr Einstellungen" "Erinnerung am" (`periodReminderControl`) statt Wiederholung und keine
-Gruppe. Ziel bei zwei Stufen "in [n] von 4 Wochen / 12 Monaten / 5 Jahren". Alle Speicher-
+nicht im Tutorial, nicht bei "Berechnet", mit Daten gesperrt; bei Zeitraum-Feldern steht
+"Erinnerung am" (`periodReminderControl`) statt der Wochentage, und es gibt keine Gruppe. Ziel bei zwei Stufen "in [n] von 4 Wochen / 12 Monaten / 5 Jahren". Alle Speicher-
 und Notiz-Wege laufen über `entryKeyFor` (erster Tag des Zeitraums). In "Heute" unten je
 Zeitraum ein Bereich (`renderPeriodBlock`, Optik wie eine Gruppe, von Hand einklappbar,
 `sectionCollapsed:today:period-<p>`), nur wenn es solche Felder gibt; zählt nicht für "alles
