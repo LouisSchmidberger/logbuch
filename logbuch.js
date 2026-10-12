@@ -7175,6 +7175,19 @@ function renderPrivacySection() {
 // "Über Logbuch" zeigt alle.
 const CHANGELOG = [
   {
+    id: '2026-10-12',
+    de: [
+      'Das Formular für Felder ist übersichtlicher: in Abschnitte gegliedert, mit klareren Auswahlknöpfen und einer Vorschau auch für Zahlen.',
+      'Zahlen kannst du in Woche, Monat und Jahr jetzt auch als Summe sehen statt als Durchschnitt, etwa bei Arbeitszeit – einstellbar im Feld unter „Auswertung“.',
+      'Feste Tage stellst du jetzt einfach über die Wochentage ein, alle sind vorausgewählt.',
+    ],
+    en: [
+      'The field form is clearer: split into sections, with clearer choice buttons and a preview for numbers too.',
+      'Numbers can now show a total instead of an average in week, month and year, e.g. for working hours – set it in the field under “Statistics”.',
+      'Fixed days are now set simply via the weekdays, all of which are preselected.',
+    ],
+  },
+  {
     id: '2026-10-11',
     de: [
       'Felder können jetzt wöchentlich, monatlich oder jährlich sein, zum Beispiel „Diese Woche geputzt?“ – du findest sie in „Heute“ ganz unten.',
