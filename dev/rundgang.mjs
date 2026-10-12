@@ -46,8 +46,6 @@ async function onboarding(page, { guided }) {
   await signupAndConfirm(page, { guided });
   await shot(page, 'tutorial-1');
   await tapText(page, 'Los geht');
-  await shot(page, 'tutorial-erinnerungen');
-  await tapText(page, 'Lieber nicht');
   await shot(page, 'feld-1-name');
   await type(page, '#habit-form-name', 'Stimmung');
   await tapText(page, 'Weiter');
@@ -57,7 +55,9 @@ async function onboarding(page, { guided }) {
   await shot(page, 'feld-3-rest');
   await tapText(page, 'Feld anlegen');
   await shot(page, 'geschafft');
-  await tapText(page, 'Loslegen');
+  await tapText(page, 'Weiter');
+  await shot(page, 'erinnerungen');
+  await tapText(page, 'Lieber nicht');
   await settle(page, 800);
   await shot(page, 'ersatzschluessel');
   await tapText(page, 'Aufschreiben');

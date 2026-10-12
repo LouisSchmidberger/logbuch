@@ -899,7 +899,7 @@ const state = {
   regenKeyConfirm: false, // Rückfrage vor "Ersatzschlüssel neu erzeugen" offen
   logoutConfirm: false,   // Rückfrage vor "Abmelden" (aus dem Menü) offen
   habitDeleteConfirm: null, // defId eines archivierten Feldes mit Daten, dessen Löschen gerade bestätigt wird
-  tutorialStep: null, // 1-4 (TUTORIAL_STEPS) während das Onboarding-Tutorial für neue Accounts läuft, sonst null
+  tutorialStep: null, // TUTORIAL_STEP_* während Tutorial bzw. Erinnerungs-Schritt für neue Accounts laufen, sonst null
   tutorialSkipConfirm: false, // Bestätigungsdialog "Tutorial überspringen?" offen
   confirmLanding: false, // "E-Mail bestätigt - zurück zur App" statt Anmelden im Browser (renderConfirmLanding)
   encryptionSetupInProgress: false, // true während setupEncryption()/Migration läuft
@@ -1225,8 +1225,8 @@ const STRINGS = {
     'auth.email': 'E-Mail',
     'auth.password': 'Passwort',
     'auth.passwordHint': '<strong>Merk es dir gut oder schreib es auf</strong> und leg den Zettel an einen sicheren Ort – ohne dein Passwort kommst du nicht mehr an deine Einträge.',
-    'auth.passwordCount': '{count} von mindestens {min} Zeichen',
-    'auth.passwordCountOk': '{count} Zeichen',
+    'auth.passwordRule': 'Mindestens {min} Zeichen',
+    'auth.emailWhy': 'Damit hast du ein eigenes Konto: Wechselst du mal das Handy oder willst du Logbuch auf einem anderen Gerät nutzen, meldest du dich dort einfach an.',
     'auth.passwordWhyTitle': 'Warum so wichtig?',
     'auth.passwordWhy': 'Deine Einträge werden auf deinem Gerät verschlüsselt, bevor sie gespeichert werden – dein Passwort ist der Schlüssel dazu. Deshalb kann niemand sonst sie lesen, nicht mal ich. Wähle eines, das du sonst nirgends verwendest.',
     'auth.hide': 'Verbergen',
@@ -1241,6 +1241,7 @@ const STRINGS = {
     'auth.welcome.new': 'Ich bin neu hier',
     'auth.welcome.newNote': 'Konto erstellen und Logbuch einrichten – dauert etwa 5 bis 10 Minuten.',
     'auth.welcome.existing': 'Ich habe schon ein Konto',
+    'auth.welcome.existingNote': 'Mit deiner E-Mail-Adresse und deinem Passwort anmelden.',
     'onb.mode.title': 'Wie möchtest du starten?',
     'onb.mode.guided': 'Schritt für Schritt',
     'onb.mode.guidedNote': 'Mit genauen Erklärungen und Bildern.',
@@ -1249,7 +1250,8 @@ const STRINGS = {
     'onb.overview.title': 'So läuft’s ab',
     'onb.overview.install': 'Logbuch aufs Handy holen',
     'onb.overview.account': 'Konto erstellen und E-Mail bestätigen',
-    'onb.overview.setup': 'Logbuch einrichten: Erinnerungen und dein erstes Feld',
+    'onb.overview.setup': 'Logbuch kennenlernen und dein erstes Feld anlegen',
+    'onb.overview.reminders': 'Erinnerungen einstellen, wenn du magst',
     'onb.overview.key': 'Ersatzschlüssel sichern',
     'onb.overview.duration': 'Dauert etwa 5 bis 10 Minuten – du kannst dir aber auch gern mehr Zeit lassen.',
     'onb.overview.helper': 'Wenn du magst, hol dir jemanden dazu, der sich mit Handys auskennt – zu zweit geht’s oft leichter.',
@@ -1261,7 +1263,8 @@ const STRINGS = {
     'onb.progress.part': 'Teil {part} von {parts}',
     'onb.stage.install': 'Logbuch aufs Handy holen',
     'onb.stage.account': 'Konto erstellen',
-    'onb.stage.setup': 'Logbuch einrichten',
+    'onb.stage.setup': 'Logbuch kennenlernen',
+    'onb.stage.reminders': 'Erinnerungen',
     'onb.stage.key': 'Ersatzschlüssel sichern',
     'auth.backToLogin': 'Zurück zur Anmeldung',
     'auth.forgotPassword': 'Passwort vergessen?',
@@ -1275,7 +1278,7 @@ const STRINGS = {
     'auth.confirmHelp.wait': 'Bitte warte noch {seconds} Sekunden, dann kannst du es nochmal versuchen.',
     'auth.confirmHelp.failed': 'Das Senden hat nicht geklappt. Bitte versuch es gleich nochmal.',
     'auth.checkMail.title': 'Schau in dein Postfach',
-    'auth.checkMail.body': 'Ich hab dir eine Mail geschickt. Damit ist sicher, dass die Adresse dir gehört – und nur so kannst du später ein vergessenes Passwort zurücksetzen.',
+    'auth.checkMail.body': 'Ich hab dir eine Mail geschickt. Damit ist sicher, dass die Adresse dir gehört – wichtig, falls du einmal dein Passwort zurücksetzen musst.',
     'auth.checkMail.howTitle': 'So geht’s',
     'auth.checkMail.after': 'Danach meldest du dich an – hier über „Weiter zum Anmelden“ oder auf der Seite, die sich nach dem Bestätigen öffnet. Hast du Logbuch aufs Handy geholt, mach am besten in der App weiter.',
     'auth.checkMail.step1': 'Öffne deine E-Mail-App (z. B. Gmail, GMX oder Outlook).',
@@ -1648,6 +1651,7 @@ const STRINGS = {
     'tutorial.hello.start': 'Los geht’s',
     'tutorial.reminders.title': 'Soll ich dich erinnern?',
     'tutorial.reminders.body': '<strong>Ich melde mich nur, wenn an einem Tag noch etwas fehlt</strong> – und, falls du magst, einmal pro Woche und Monat mit deiner Übersicht. Nie Werbung, und die Uhrzeit bestimmst du.',
+    'tutorial.reminders.bodyField': '<strong>Ich melde mich nur, wenn an einem Tag noch etwas fehlt</strong>, zum Beispiel „{name}“ – und, falls du magst, einmal pro Woche und Monat mit deiner Übersicht. Nie Werbung, und die Uhrzeit bestimmst du.',
     'tutorial.reminders.whyTitle': 'Warum überhaupt?',
     'tutorial.reminders.whyBody': 'Logbuch wird aussagekräftiger, je regelmäßiger du einträgst. Und wer abends müde ist, vergisst es schnell.',
     'tutorial.reminders.permissionNote': 'Gleich fragt dein Gerät um Erlaubnis – tipp dort auf „Erlauben“.',
@@ -1676,8 +1680,8 @@ const STRINGS = {
     'tutorial.field.whyBody': 'Wenige Felder heißt: schnell eingetragen. Das hält länger durch als ein langer Fragebogen – ergänzen kannst du jederzeit.',
     'tutorial.done.title': 'Dein erstes Feld steht.',
     'tutorial.done.titleMore': 'Deine {count} Felder stehen.',
-    'tutorial.done.body': 'Du kannst noch ein, zwei weitere anlegen – oder direkt loslegen. <strong>Tipp: lieber klein anfangen und später erweitern.</strong>',
-    'tutorial.done.start': 'Loslegen',
+    'tutorial.done.body': 'Du kannst noch ein, zwei weitere anlegen oder es erst mal dabei lassen. <strong>Tipp: lieber klein anfangen und später erweitern.</strong>',
+    'tutorial.done.start': 'Weiter',
     'tutorial.done.addMore': 'Noch ein Feld anlegen',
     'installGate.title': 'Erst mal ein Zuhause für Logbuch',
     'installGate.body': 'Logbuch kommt nicht aus dem App-Store, sondern ist eine Webseite, die du <strong>wie eine App auf deinen Startbildschirm legst</strong>. Dann öffnest du es mit einem Tipp – ohne Browser drumherum.',
@@ -1977,8 +1981,8 @@ const STRINGS = {
     'auth.email': 'Email',
     'auth.password': 'Password',
     'auth.passwordHint': '<strong>Remember it well or write it down</strong> and keep the note in a safe place – without your password you cannot get to your entries anymore.',
-    'auth.passwordCount': '{count} of at least {min} characters',
-    'auth.passwordCountOk': '{count} characters',
+    'auth.passwordRule': 'At least {min} characters',
+    'auth.emailWhy': 'This gives you your own account: if you switch phones or want to use Logbuch on another device, you simply sign in there.',
     'auth.passwordWhyTitle': 'Why does it matter so much?',
     'auth.passwordWhy': 'Your entries are encrypted on your device before they are stored – your password is the key. That is why nobody else can read them, not even me. Choose one you do not use anywhere else.',
     'auth.hide': 'Hide',
@@ -1993,6 +1997,7 @@ const STRINGS = {
     'auth.welcome.new': 'I’m new here',
     'auth.welcome.newNote': 'Create an account and set up Logbuch – takes about 5 to 10 minutes.',
     'auth.welcome.existing': 'I already have an account',
+    'auth.welcome.existingNote': 'Sign in with your email address and password.',
     'onb.mode.title': 'How would you like to start?',
     'onb.mode.guided': 'Step by step',
     'onb.mode.guidedNote': 'With detailed explanations and pictures.',
@@ -2001,7 +2006,8 @@ const STRINGS = {
     'onb.overview.title': 'Here’s how it goes',
     'onb.overview.install': 'Get Logbuch onto your phone',
     'onb.overview.account': 'Create an account and confirm your email',
-    'onb.overview.setup': 'Set up Logbuch: reminders and your first field',
+    'onb.overview.setup': 'Get to know Logbuch and create your first field',
+    'onb.overview.reminders': 'Set up reminders, if you like',
     'onb.overview.key': 'Save your spare key',
     'onb.overview.duration': 'Takes about 5 to 10 minutes – but feel free to take more time.',
     'onb.overview.helper': 'If you like, ask someone who knows their way around phones to join you – it’s often easier together.',
@@ -2013,7 +2019,8 @@ const STRINGS = {
     'onb.progress.part': 'part {part} of {parts}',
     'onb.stage.install': 'Get Logbuch onto your phone',
     'onb.stage.account': 'Create account',
-    'onb.stage.setup': 'Set up Logbuch',
+    'onb.stage.setup': 'Get to know Logbuch',
+    'onb.stage.reminders': 'Reminders',
     'onb.stage.key': 'Save your spare key',
     'auth.backToLogin': 'Back to sign in',
     'auth.forgotPassword': 'Forgot password?',
@@ -2027,7 +2034,7 @@ const STRINGS = {
     'auth.confirmHelp.wait': 'Please wait another {seconds} seconds, then you can try again.',
     'auth.confirmHelp.failed': 'Sending did not work. Please try again in a moment.',
     'auth.checkMail.title': 'Check your inbox',
-    'auth.checkMail.body': 'I have sent you an email. That way we know the address is yours – and only then can you reset a forgotten password later.',
+    'auth.checkMail.body': 'I have sent you an email. That way we know the address is yours – important in case you ever need to reset your password.',
     'auth.checkMail.howTitle': 'How it works',
     'auth.checkMail.after': 'Then sign in – here via “Continue to sign in” or on the page that opens after confirming. If you put Logbuch on your phone, it is best to continue in the app.',
     'auth.checkMail.step1': 'Open your email app (e.g. Gmail, Outlook or Yahoo Mail).',
@@ -2400,6 +2407,7 @@ const STRINGS = {
     'tutorial.hello.start': 'Let’s go',
     'tutorial.reminders.title': 'Should I remind you?',
     'tutorial.reminders.body': '<strong>I only get in touch when something is still missing for a day</strong> – and, if you like, once a week and month with your overview. Never ads, and you pick the time.',
+    'tutorial.reminders.bodyField': '<strong>I only get in touch when something is still missing for a day</strong>, for example “{name}” – and, if you like, once a week and month with your overview. Never ads, and you pick the time.',
     'tutorial.reminders.whyTitle': 'Why at all?',
     'tutorial.reminders.whyBody': 'Logbuch becomes more meaningful the more regularly you enter things. And when you are tired in the evening, it is easy to forget.',
     'tutorial.reminders.permissionNote': 'Your device will ask for permission in a moment – tap “Allow” there.',
@@ -2428,8 +2436,8 @@ const STRINGS = {
     'tutorial.field.whyBody': 'Few fields means: quickly filled in. That lasts longer than a long questionnaire – you can add more anytime.',
     'tutorial.done.title': 'Your first field is set.',
     'tutorial.done.titleMore': 'Your {count} fields are set.',
-    'tutorial.done.body': 'You can add one or two more – or get started right away. <strong>Tip: better start small and expand later.</strong>',
-    'tutorial.done.start': 'Get started',
+    'tutorial.done.body': 'You can add one or two more or leave it at that for now. <strong>Tip: better start small and expand later.</strong>',
+    'tutorial.done.start': 'Continue',
     'tutorial.done.addMore': 'Add another field',
     'installGate.title': 'First, a home for Logbuch',
     'installGate.body': 'Logbuch does not come from an app store – it is a web page that you <strong>put on your home screen like an app</strong>. Then you open it with one tap – without a browser around it.',
@@ -4301,9 +4309,9 @@ async function handleHabitSaveInner() {
   saveFieldNamesForPush();
 
   closeHabitForm();
-  // Im Tutorial (Schritt 3, erstes Feld) gilt jedes erfolgreich angelegte Feld als
+  // Im Tutorial (Schritt 2, erstes Feld) gilt jedes erfolgreich angelegte Feld als
   // Abschluss des Schritts – automatischer Sprung zu "Geschafft", kein zusätzlicher Klick.
-  if (isInsert && state.tutorialStep === 3) state.tutorialStep = 4;
+  if (isInsert && state.tutorialStep === TUTORIAL_STEP_FIELD) state.tutorialStep = TUTORIAL_STEP_DONE;
 }
 
 // Beim Reaktivieren kommt das Feld ans Ende seines Bereichs (seiner Gruppe bzw. der
@@ -5458,7 +5466,7 @@ function rememberOnbIncludesInstall() {
   try { localStorage.setItem('onboardingWithInstall', String(v)); } catch { /* dann jedes Mal neu bestimmt */ }
 }
 function onbStages() {
-  return [...(onbIncludesInstall() ? ['install'] : []), 'account', 'setup', 'key'];
+  return [...(onbIncludesInstall() ? ['install'] : []), 'account', 'setup', 'reminders', 'key'];
 }
 // Fortschrittsleiste "Schritt X von N: …" (optional mit Unterschritt, z.B. im Tutorial).
 function onbProgress(stage, part = null) {
@@ -5496,10 +5504,22 @@ function renderAuthWelcome() {
     <div class="auth-box">
       <h1 tabindex="-1">Logbuch</h1>
       <p class="auth-welcome-lead">${t('auth.welcome.lead')}</p>
-      <button type="button" class="auth-submit auth-choice" data-action="auth-choose" data-mode="mode" aria-describedby="auth-new-note">${t('auth.welcome.new')}</button>
-      <p class="auth-choice-note" id="auth-new-note">${t('auth.welcome.newNote')}</p>
-      <button type="button" class="manage-new-btn manage-new-btn--secondary auth-choice" data-action="auth-choose" data-mode="signin">${t('auth.welcome.existing')}</button>
+      ${choiceCard({ action: 'auth-choose', mode: 'mode', title: t('auth.welcome.new'), note: t('auth.welcome.newNote') })}
+      ${choiceCard({ action: 'auth-choose', mode: 'signin', title: t('auth.welcome.existing'), note: t('auth.welcome.existingNote') })}
     </div>
+  `;
+}
+// Gleichwertige Antworten auf eine Frage (Startseite, Einstiegsfrage): gleich aussehende
+// Karten mit dem erklärenden Satz IM Knopf. Ein gefüllter Knopf neben einem umrandeten
+// wirkte wie eine Empfehlung, und der Satz darunter wurde überlesen - Testpersonen wählten
+// so oft das, was nicht zu ihnen passte. Gefüllt bleibt nur ein empfohlener Weg (z.B.
+// Installieren, Erinnerungen).
+function choiceCard({ action, mode, title, note }) {
+  return `
+    <button type="button" class="onb-choice" data-action="${action}" data-mode="${mode}">
+      <span class="onb-choice-title">${title}</span>
+      <span class="onb-choice-note">${note}</span>
+    </button>
   `;
 }
 
@@ -5536,10 +5556,8 @@ function authBackButton(target) {
 // ("kennst du dich aus?" schätzen viele falsch ein und kann herablassend wirken).
 function onbModeChoices() {
   return `
-    <button type="button" class="auth-submit auth-choice" data-action="onb-mode" data-mode="guided" aria-describedby="onb-guided-note">${t('onb.mode.guided')}</button>
-    <p class="auth-choice-note" id="onb-guided-note">${t('onb.mode.guidedNote')}</p>
-    <button type="button" class="manage-new-btn manage-new-btn--secondary auth-choice" data-action="onb-mode" data-mode="short" aria-describedby="onb-short-note">${t('onb.mode.short')}</button>
-    <p class="auth-choice-note" id="onb-short-note">${t('onb.mode.shortNote')}</p>
+    ${choiceCard({ action: 'onb-mode', mode: 'guided', title: t('onb.mode.guided'), note: t('onb.mode.guidedNote') })}
+    ${choiceCard({ action: 'onb-mode', mode: 'short', title: t('onb.mode.short'), note: t('onb.mode.shortNote') })}
   `;
 }
 function renderOnbMode() {
@@ -5552,7 +5570,7 @@ function renderOnbMode() {
   `;
 }
 function renderOnbOverview() {
-  const icons = { install: '📱', account: '✉️', setup: '✏️', key: '🔑' };
+  const icons = { install: '📱', account: '✉️', setup: '✏️', reminders: '🔔', key: '🔑' };
   app.innerHTML = `
     <div class="auth-box onb">
       ${authBackButton('mode')}
@@ -5584,12 +5602,11 @@ function renderOnbInstalled() {
 }
 
 let authSubmitBusy = false;
-// Aktuelle Passwort-Länge beim Registrieren - so sieht man vor dem Absenden, ob die
-// Mindestlänge erreicht ist (statt es erst durch eine Fehlermeldung zu erfahren).
-function passwordCountText(len) {
-  return len >= AUTH_MIN_PASSWORD_LENGTH
-    ? `✓ ${t('auth.passwordCountOk', { count: len })}`
-    : t('auth.passwordCount', { count: len, min: AUTH_MIN_PASSWORD_LENGTH });
+// Mindestlänge beim Registrieren als Bedingung, die sich beim Erreichen abhakt - so sieht
+// man vor dem Absenden, ob sie erfüllt ist. Ein laufender Zähler ("0 von mindestens 10
+// Zeichen") las sich verwirrend; der Haken zeigt es auch ohne Farbe.
+function passwordRuleText(len) {
+  return `${len >= AUTH_MIN_PASSWORD_LENGTH ? '✓ ' : ''}${t('auth.passwordRule', { min: AUTH_MIN_PASSWORD_LENGTH })}`;
 }
 function renderAuth() {
   if (state.authMode === 'welcome') { renderAuthWelcome(); return; }
@@ -5615,6 +5632,7 @@ function renderAuth() {
         <div class="auth-field">
           <label for="email">${t('auth.email')}</label>
           ${clearableInputHtml('email', 'email', state.authEmail, { autocomplete: 'email' })}
+          ${isSignup ? `<p class="onb-hint auth-email-hint">${t('auth.emailWhy')}</p>` : ''}
         </div>
         ${!isForgot ? `
           <div class="auth-field">
@@ -5629,7 +5647,7 @@ function renderAuth() {
               visible: state.authPasswordVisible,
             })}
             ${isSignup ? `
-              <p class="password-count" id="password-count" aria-live="polite">${passwordCountText(state.authPassword.length)}</p>
+              <p class="password-count${state.authPassword.length >= AUTH_MIN_PASSWORD_LENGTH ? ' password-count--ok' : ''}" id="password-count" aria-live="polite">${passwordRuleText(state.authPassword.length)}</p>
               <p class="onb-hint auth-password-hint">${t('auth.passwordHint')}</p>
               <details class="why-details" ${isGuided() ? 'open' : ''}><summary>${t('auth.passwordWhyTitle')}</summary><p>${t('auth.passwordWhy')}</p></details>
             ` : ''}
@@ -8012,17 +8030,19 @@ function renderManage() {
 // --- Onboarding-Tutorial für neue Accounts ----------------------------------
 // state.userSettings.onboardingCompleted kommt aus der DB (Default false bei neuen
 // Accounts, siehe supabase/migrations/) und steuert in render(), ob statt der normalen
-// App dieses Tutorial gezeigt wird. state.tutorialStep (1-4) lebt nur im Speicher,
+// App dieses Tutorial gezeigt wird - und danach der eigenständige Erinnerungs-Schritt
+// (gehört nicht zum Tutorial, kommt aber auch nach "Tutorial überspringen"; erst er setzt
+// onboardingCompleted). state.tutorialStep (TUTORIAL_STEP_*) lebt nur im Speicher,
 // kein Reload-Resume nötig — dafür verhindert die beforeunload-Warnung im offenen
-// Formular (Schritt 3) ein versehentliches Verlassen mitten im Feld-Anlegen.
+// Formular (Feld-Schritt) ein versehentliches Verlassen mitten im Feld-Anlegen.
 //
 async function saveOnboardingCompleted() {
   state.userSettings = { ...state.userSettings, onboardingCompleted: true, lastSeenChangelog: CHANGELOG[0].id };
   state.tutorialStep = null;
   state.tutorialSkipConfirm = false;
-  state.habitForm = null; // beim Überspringen aus Schritt 3 sonst unsichtbar weiter offen
+  state.habitForm = null;
   render();
-  maybeShowSpareKey(); // direkt nach dem Tutorial, auch wenn es übersprungen wurde
+  maybeShowSpareKey(); // direkt nach den Erinnerungen, auch wenn das Tutorial übersprungen wurde
   const { error } = await supabase.from('user_settings')
     .upsert({ user_id: state.session.user.id, onboarding_completed: true, last_seen_changelog: CHANGELOG[0].id }, { onConflict: 'user_id' });
   if (error) {
@@ -8050,10 +8070,19 @@ function renderTutorialSkipConfirm() {
 // Thema - Symbol, kurze Überschrift, der eine wichtige Satz fett, Begründungen im
 // wiedererkennbaren "Warum?"-Kasten (Leitlinie des Nutzers: nie nur sagen, dass etwas so
 // ist, sondern warum; locker statt förmlich, die App als Freund). Fortschritt über die
-// Leiste des ganzen Einrichtens (onbProgress), das Tutorial ist darin Etappe "einrichten".
-const TUTORIAL_STEPS = 4;
-// Im Tutorial: die Etappe "Logbuch einrichten" mit dem Tutorial-Schritt als Unterschritt.
-function tutorialProgress(step) { return onbProgress('setup', [step, TUTORIAL_STEPS]); }
+// Leiste des ganzen Einrichtens (onbProgress), das Tutorial ist darin Etappe "kennenlernen".
+// Die Erinnerungen kommen erst nach dem ersten Feld (Nutzer-Entscheidung 2026-10-12): dann
+// weiß man, woran erinnert wird, und die Frage kann das Feld nennen.
+const TUTORIAL_STEP_HELLO = 1;
+const TUTORIAL_STEP_FIELD = 2;
+const TUTORIAL_STEP_DONE = 3;
+const TUTORIAL_STEP_REMINDERS = 4; // eigene Etappe, nicht Teil des Tutorials
+const TUTORIAL_STEPS = 3; // Unterschritte der Etappe "kennenlernen"
+// Im Tutorial: die Etappe "Logbuch kennenlernen" mit dem Tutorial-Schritt als Unterschritt;
+// der Erinnerungs-Schritt als eigene Etappe ohne Unterschritte.
+function tutorialProgress(step) {
+  return step === TUTORIAL_STEP_REMINDERS ? onbProgress('reminders') : onbProgress('setup', [step, TUTORIAL_STEPS]);
+}
 // "Warum?"/"Genauer erklären": aufklappbar - bei "Schritt für Schritt" von Anfang an offen.
 function whyBox(titleKey, bodyKey) {
   return `<details class="why-box" ${isGuided() ? 'open' : ''}><summary class="why-box-title">${t(titleKey)}</summary><p>${t(bodyKey)}</p></details>`;
@@ -8087,12 +8116,11 @@ function renderTutorialHello() {
     <li><span class="onb-promise-icon" aria-hidden="true">${icon}</span><span><strong>${t(`tutorial.hello.${key}Title`)}</strong> ${t(`tutorial.hello.${key}Body`)}</span></li>
   `).join('');
   return tutorialScreen({
-    step: 1, icon: '👋', title: t('tutorial.hello.title'),
+    step: TUTORIAL_STEP_HELLO, icon: '👋', title: t('tutorial.hello.title'),
     body: `
       <p class="tutorial-text">${t('tutorial.hello.body')}</p>
       <ul class="onb-promises">${promises}</ul>
       <button type="button" class="auth-submit" data-action="tutorial-next">${t('tutorial.hello.start')}</button>
-      ${tutorialNav({ skip: true })}
     `,
   });
 }
@@ -8100,6 +8128,7 @@ function renderTutorialHello() {
 // Erinnerungen: erst die Frage mit Begründung, die Uhrzeit erst, wenn sie aktiv sind
 // (vorher stand sie ausgegraut daneben und wurde übersehen bzw. verwirrte).
 function renderTutorialReminders() {
+  const firstField = activeHabits()[0];
   let body;
   if (state.pushStatus === 'on') {
     body = `
@@ -8109,46 +8138,46 @@ function renderTutorialReminders() {
         ${reminderTimeInputHtml('tutorial-default-time', state.userSettings.defaultReminderMinute, 'menu-default-time', false, 'tutorial-time-note', 'tutorial-default-time-label')}
         <p class="habit-form-lock-note" id="tutorial-time-note">${t('tutorial.reminders.timeNote')}</p>
       </div>
-      <button type="button" class="auth-submit" data-action="tutorial-next">${t('common.next')}</button>
+      <button type="button" class="auth-submit" data-action="tutorial-finish">${t('common.next')}</button>
     `;
   } else if (state.pushStatus === 'blocked') {
     body = `
       <p class="tutorial-text">${t('tutorial.reminders.blocked')}</p>
       ${pushBlockedHelp()}
-      <button type="button" class="auth-submit" data-action="tutorial-next">${t('common.next')}</button>
+      <button type="button" class="auth-submit" data-action="tutorial-finish">${t('common.next')}</button>
     `;
   } else if (state.pushStatus === 'unsupported') {
     body = `
       <p class="tutorial-text">${isIOSDevice() ? t('tutorial.reminders.iosNeedsInstall') : t('push.unsupported')}</p>
       ${isIOSDevice() && !isStandaloneDisplay() ? `<details class="why-box" ${isGuided() ? 'open' : ''}><summary class="why-box-title">${t('tutorial.reminders.howInstall')}</summary>${installManualHtml()}</details>` : ''}
-      <button type="button" class="auth-submit" data-action="tutorial-next">${t('common.next')}</button>
+      <button type="button" class="auth-submit" data-action="tutorial-finish">${t('common.next')}</button>
     `;
   } else {
     const busy = state.pushStatus === 'busy' || state.pushStatus === 'unknown';
     body = `
-      <p class="tutorial-text">${t('tutorial.reminders.body')}</p>
+      <p class="tutorial-text">${firstField ? t('tutorial.reminders.bodyField', { name: firstField.name }) : t('tutorial.reminders.body')}</p>
       ${whyBox('tutorial.reminders.whyTitle', 'tutorial.reminders.whyBody')}
       <p class="onb-hint">${t('tutorial.reminders.permissionNote')}</p>
       ${isGuided() ? sketchHtml(isIOSDevice() ? 'permIos' : 'permAndroid') : ''}
       <button type="button" class="auth-submit" data-action="enable-push" ${busy ? 'disabled' : ''}>${busy ? t('push.checking') : t('tutorial.reminders.yes')}</button>
-      <button type="button" class="auth-toggle" data-action="tutorial-next">${t('tutorial.reminders.no')}</button>
+      <button type="button" class="auth-toggle" data-action="tutorial-finish">${t('tutorial.reminders.no')}</button>
       <p class="onb-hint onb-hint--after onb-center">${t('tutorial.reminders.laterNote')}</p>
     `;
   }
   return tutorialScreen({
-    step: 2, icon: '🔔', title: t('tutorial.reminders.title'),
-    body: `${body}${tutorialNav({ back: true, skip: true })}`,
+    step: TUTORIAL_STEP_REMINDERS, icon: '🔔', title: t('tutorial.reminders.title'),
+    body: `${body}${tutorialNav({ back: true })}`,
   });
 }
 
-// Schritt 3: direkt das echte Feld-Formular, Stück für Stück aufgedeckt (siehe
+// Feld-Schritt: direkt das echte Feld-Formular, Stück für Stück aufgedeckt (siehe
 // renderHabitForm, f.revealStage). Keine Vorlagen/Beispiele zum Antippen (Nutzer: Vorlagen
 // erst sinnvoll, wenn man das Formular einmal selbst durchgegangen ist) - nur Ideen als
 // Text unter dem Namen.
 function renderTutorialFieldForm() {
   if (!state.habitForm) state.habitForm = { ...defaultHabitForm(), revealStage: 1 };
   return tutorialScreen({
-    step: 3, icon: '✏️', title: t('tutorial.field.title'),
+    step: TUTORIAL_STEP_FIELD, icon: '✏️', title: t('tutorial.field.title'),
     body: `
       <p class="tutorial-text">${t('tutorial.field.intro')}</p>
       ${whyBox('tutorial.field.whyTitle', 'tutorial.field.whyBody')}
@@ -8161,10 +8190,10 @@ function renderTutorialFieldForm() {
 function renderTutorialDone() {
   const count = activeHabits().length;
   return tutorialScreen({
-    step: 4, icon: '🌱', title: count > 1 ? t('tutorial.done.titleMore', { count }) : t('tutorial.done.title'),
+    step: TUTORIAL_STEP_DONE, icon: '🌱', title: count > 1 ? t('tutorial.done.titleMore', { count }) : t('tutorial.done.title'),
     body: `
       <p class="tutorial-text">${t('tutorial.done.body')}</p>
-      <button type="button" class="auth-submit" data-action="tutorial-finish">${t('tutorial.done.start')}</button>
+      <button type="button" class="auth-submit" data-action="tutorial-next">${t('tutorial.done.start')}</button>
       <button type="button" class="auth-toggle" data-action="tutorial-add-more">${t('tutorial.done.addMore')}</button>
       ${tutorialNav({ back: true })}
     `,
@@ -8172,12 +8201,12 @@ function renderTutorialDone() {
 }
 
 function renderTutorial() {
-  if (!state.tutorialStep) state.tutorialStep = 1;
+  if (!state.tutorialStep) state.tutorialStep = TUTORIAL_STEP_HELLO;
   app.innerHTML =
-    state.tutorialStep === 1 ? renderTutorialHello() :
-    state.tutorialStep === 2 ? renderTutorialReminders() :
-    state.tutorialStep === 3 ? renderTutorialFieldForm() :
-    renderTutorialDone();
+    state.tutorialStep === TUTORIAL_STEP_HELLO ? renderTutorialHello() :
+    state.tutorialStep === TUTORIAL_STEP_FIELD ? renderTutorialFieldForm() :
+    state.tutorialStep === TUTORIAL_STEP_DONE ? renderTutorialDone() :
+    renderTutorialReminders();
   // Bei jedem Wechsel des Bildschirms die Überschrift fokussieren (Screenreader hören so,
   // wo sie sind) - nicht bei jedem render(), sonst spränge der Fokus z.B. nach dem
   // Aktivieren der Erinnerungen weg.
@@ -9095,7 +9124,7 @@ app.addEventListener('click', async (e) => {
     state.confirmLanding = false;
     render();
   } else if (action === 'tutorial-next') {
-    state.tutorialStep = Math.min(TUTORIAL_STEPS, state.tutorialStep + 1);
+    state.tutorialStep = Math.min(TUTORIAL_STEP_REMINDERS, state.tutorialStep + 1);
     render();
   } else if (action === 'tutorial-back') {
     // Gibt neuen Nutzern Vertrauen ("kann ich aus Versehen zu weit geklickt haben?"),
@@ -9103,11 +9132,15 @@ app.addEventListener('click', async (e) => {
     // Menü/Formular erneut ändern. state.habitForm wird mit geleert, damit beim Zurück
     // von "Geschafft" ein frisches Formular statt des schon gespeicherten erscheint.
     // Schritt 1 hat keinen Zurück-Knopf (davor liegt nichts mehr).
-    state.tutorialStep = Math.max(1, state.tutorialStep - 1);
+    // Nach "Tutorial überspringen" gibt es noch kein Feld - dann zurück zum Feld-Schritt
+    // statt zu "Dein erstes Feld steht".
+    state.tutorialStep = state.tutorialStep === TUTORIAL_STEP_REMINDERS && !activeHabits().length
+      ? TUTORIAL_STEP_FIELD
+      : Math.max(TUTORIAL_STEP_HELLO, state.tutorialStep - 1);
     state.habitForm = null;
     render();
   } else if (action === 'tutorial-add-more') {
-    state.tutorialStep = 3;
+    state.tutorialStep = TUTORIAL_STEP_FIELD;
     state.habitForm = { ...defaultHabitForm(), revealStage: 1 };
     render();
     document.getElementById('habit-form-name')?.focus();
@@ -9122,7 +9155,11 @@ app.addEventListener('click', async (e) => {
     render();
     restoreModalFocus();
   } else if (action === 'tutorial-skip-confirm') {
-    await saveOnboardingCompleted();
+    // Überspringt nur das Tutorial - die Erinnerungen sind ein eigener Schritt und kommen trotzdem.
+    state.tutorialSkipConfirm = false;
+    state.habitForm = null; // sonst bliebe das Feld-Formular unsichtbar weiter offen
+    state.tutorialStep = TUTORIAL_STEP_REMINDERS;
+    render();
   } else if (action === 'clear-input') {
     const id = el.dataset.target;
     if (id === 'email') state.authEmail = '';
@@ -9307,9 +9344,12 @@ app.addEventListener('input', (e) => {
   if (e.target.id === 'password' && !state.session) {
     state.authPassword = e.target.value;
     const count = document.getElementById('password-count');
-    if (count) {
-      count.textContent = passwordCountText(e.target.value.length);
-      count.classList.toggle('password-count--ok', e.target.value.length >= AUTH_MIN_PASSWORD_LENGTH);
+    // Nur beim Wechsel erfüllt/unerfüllt anfassen - sonst läse ein Screenreader (aria-live)
+    // bei jedem Tastendruck denselben Satz vor.
+    const ok = e.target.value.length >= AUTH_MIN_PASSWORD_LENGTH;
+    if (count && count.classList.contains('password-count--ok') !== ok) {
+      count.textContent = passwordRuleText(e.target.value.length);
+      count.classList.toggle('password-count--ok', ok);
     }
     return;
   }
@@ -9990,7 +10030,7 @@ function clearLoadedAccountState() {
 // Verhindert versehentliches Verlassen/Reload mitten im geführten Feld-Anlegen
 // (Tutorial Schritt 3 mit offenem Formular, siehe CLAUDE.md).
 window.addEventListener('beforeunload', (e) => {
-  if (state.tutorialStep === 3 && state.habitForm) { e.preventDefault(); e.returnValue = ''; }
+  if (state.tutorialStep === TUTORIAL_STEP_FIELD && state.habitForm) { e.preventDefault(); e.returnValue = ''; }
 });
 
 resetIOSZoomOnStandaloneStart();

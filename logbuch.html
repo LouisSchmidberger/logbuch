@@ -927,9 +927,16 @@
   /* Startseite vor dem Anmelden (renderAuthWelcome). */
   .auth-welcome-lead { text-align: center; font-size: 1.0625rem; margin: 8px 0 28px; }
   .auth-box .auth-choice { margin-top: 0; padding: 14px; font-size: 1.0625rem; } /* .auth-box: gegen .manage-new-btn weiter unten */
-  /* Mehr Abstand nach jeder Wahl-Gruppe (Knopf + Satz), damit die Alternativen klar
-     getrennt wirken. */
-  .auth-choice-note { font-size: 0.9375rem; line-height: 1.45; color: var(--ink); text-align: center; margin: 0.5rem 0 clamp(2.5rem, 9vh, 5rem); }
+  /* Gleichwertige Antworten (choiceCard): gleich aussehende Karten, Erklärung im Knopf.
+     Rahmen in --ink (weit über 3:1), damit beide klar als antippbar erkennbar sind. */
+  .onb-choice {
+    display: block; width: 100%; margin: 0 0 1rem; padding: 1rem; text-align: center;
+    background: var(--input-bg); color: var(--ink); border: 0.125rem solid var(--ink); border-radius: 0.25rem;
+    font-family: inherit; cursor: pointer;
+  }
+  .onb-choice-title { display: block; font-size: 1.0625rem; font-weight: 600; }
+  .onb-choice-note { display: block; margin-top: 0.375rem; font-size: 0.9375rem; line-height: 1.45; }
+  .auth-email-hint { margin: 0.375rem 0 0; }
   .auth-back { margin-bottom: 8px; }
   /* Nebenaktion unter einer Hauptaktion (Passwort vergessen, Lieber nicht, im Browser
      bleiben ...): umrandeter Knopf statt unterstrichenem Text - Links wurden von wenig
@@ -1246,6 +1253,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=0c35e143bf"></script>
+<script type="module" src="./logbuch.js?v=70e4569393"></script>
 </body>
 </html>

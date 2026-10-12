@@ -71,9 +71,9 @@ zu dem das angemeldete Konto keine Server-Zeile hat.
 
 **Blockierte Mitteilungen** (`pushStatus: 'blocked'`, `pushOffStatus`, `pushBlockedHelp`):
 wer im Erlaubnis-Dialog "Blockieren" tippt, wird vom Browser nie wieder gefragt – statt
-einer Fehlermeldung (Sackgasse) zeigen Einstellungen und Tutorial eine kurze Anleitung je
+einer Fehlermeldung (Sackgasse) zeigen Einstellungen und Einrichten eine kurze Anleitung je
 Gerät (iPhone, Android installiert/im Browser, sonst), wie man es wieder erlaubt, plus
-"Nochmal versuchen"; im Tutorial geht es mit [Weiter] ohne Erinnerungen weiter. Beim
+"Nochmal versuchen"; beim Einrichten geht es mit [Weiter] ohne Erinnerungen weiter. Beim
 Zurückkehren in die App wird die Erlaubnis neu geprüft.
 
 **iOS**: Web-Push geht nur in der zum Home-Bildschirm hinzugefügten App (seit iOS 16.4) –

@@ -13,11 +13,20 @@ Der Weg vom ersten Öffnen bis zur eingerichteten App, für neue Konten.
   du dich aus?" schätzen viele falsch ein und kann herablassend wirken.
 - **Reihenfolge**: Startseite → "Ich bin neu hier" → Einstiegsfrage → (Schritt für Schritt:
   "So läuft's ab") → Installations-Seite (nur Handy im Browser) → Registrieren → "Schau in
-  dein Postfach" → Tutorial → Ersatzschlüssel. Die Installations-Seite kommt vor dem
+  dein Postfach" → Tutorial → Erinnerungen → Ersatzschlüssel. Die Installations-Seite kommt vor dem
   Registrieren, damit man sich gleich in der installierten App registriert – kam der Hinweis
   erst nach dem Anmelden, war ein zweites Anmelden in der App nötig und er wurde oft
   weggeklickt. Wer schon ein Konto hat, bekommt sie auf einem neuen Handy trotzdem (vor dem
-  Anmelden).
+  Anmelden). Bestätigt beibehalten (2026-10-12), obwohl "erst das Warum, dann die Technik"
+  dagegen spräche.
+- **Erinnerungen nach dem ersten Feld, als eigene Etappe** (nicht Teil des Tutorials): dann
+  weiß man, woran erinnert wird – am Anfang wurde die Frage eher abgelehnt. "Tutorial
+  überspringen" überspringt nur das Tutorial, die Erinnerungen kommen trotzdem.
+- **Gleichwertige Auswahl = gleich aussehende Karten** (`choiceCard`, Startseite und
+  Einstiegsfrage), die Erklärung im Knopf statt darunter: gefüllt neben umrandet wirkte wie
+  eine Empfehlung, der Satz darunter wurde überlesen, Testpersonen wählten bei der
+  Einstiegsfrage oft das Unpassende. Gefüllter Knopf nur für einen empfohlenen Weg
+  (Installieren, "Ja, erinnere mich", Weiter nach dem ersten Feld).
 - **Installation mit gezeichneten Skizzen statt Screenshots**: vereinfachte Handy-Ansicht,
   der richtige Knopf grün eingekreist, Beschriftung aus der App, passt sich Hell/Dunkel an –
   Screenshots veralten je Sprache/Theme/OS-Version. Auch ungefähre Skizzen helfen mehr als
@@ -75,7 +84,7 @@ installierte App teilen keinen Speicher.
 
 ## Startseite und Einstiegsfrage
 
-**Startseite** (`renderAuthWelcome`, `authMode: 'welcome'`): zwei Knöpfe "Ich bin neu hier" /
+**Startseite** (`renderAuthWelcome`, `authMode: 'welcome'`): zwei Karten "Ich bin neu hier" /
 "Ich habe schon ein Konto" statt direkt "Anmelden" – das klang für Neulinge nach "ich bin neu,
 also melde ich mich an", und Registrieren war nur ein kleiner Link. Die Formulare haben ein ←
 zurück dorthin. Wer sich auf dem Gerät schon angemeldet hat, startet direkt beim Anmelden.
@@ -85,7 +94,8 @@ zurück dorthin. Wer sich auf dem Gerät schon angemeldet hat, startet direkt be
 dazu" als Angebot), bei Kurz und knapp direkt das Registrieren (bzw. davor die
 Installations-Seite).
 
-**Fortschrittsleiste** (`onbProgress(stage)`): Etappen install / account / setup / key,
+**Fortschrittsleiste** (`onbProgress(stage)`): Etappen install / account / setup
+("kennenlernen", das Tutorial) / reminders / key,
 "Schritt X von N: …". Die Etappe install zählt nur auf dem Handy und nur, wenn die App schon
 installiert ist oder die Installations-Seite hier nicht früher weggeklickt wurde. Die Zählung
 wird bei der Einstiegsfrage festgelegt und bleibt, auch wenn man die Seite mitten im
@@ -128,8 +138,12 @@ entfällt dort.
 
 Registrieren/Anmelden sperren und beschriften den Knopf sofort ("Konto wird erstellt …",
 `authSubmitBusy`) – sonst tippten viele während der Wartezeit nochmal und bekamen einen
-Fehler, obwohl es geklappt hatte. Passwort-Hinweis: "Merk es dir gut oder schreib es auf",
-die Verschlüsselung als Grund im "Warum?".
+Fehler, obwohl es geklappt hatte. Unter der E-Mail ein Satz, wozu sie dient (eigenes Konto,
+Handywechsel/anderes Gerät). Mindestlänge als Bedingung "Mindestens 10 Zeichen", die sich
+beim Erreichen mit ✓ abhakt (`passwordRuleText`) – ein laufender Zähler "0 von mindestens 10"
+las sich verwirrend; keine Stärke-Anzeige (meist ungenau, verunsichert eher).
+Passwort-Hinweis: "Merk es dir gut oder schreib es auf", die Verschlüsselung als Grund im
+"Warum?".
 
 **"Schau in dein Postfach"** (`renderCheckMail`, `authMode: 'checkMail'`): eigene Seite nach
 dem Registrieren, damit Meldung, Hilfe und Formular nicht untereinander stehen und alle drei
@@ -155,11 +169,12 @@ Weitermachen im Browser bleibt möglich.
 `renderTutorial`, gesteuert über `user_settings.onboarding_completed` (Default `false`, im
 Client `state.userSettings.onboardingCompleted`):
 solange `false`, ersetzt `render()` die App durch das Tutorial – geprüft erst nach dem
-DEK-Unlock (das Tutorial braucht entschlüsselte Daten). `state.tutorialStep` (1–
-`TUTORIAL_STEPS` = 4) lebt nur im Speicher, kein Reload-Resume nötig.
+DEK-Unlock (das Tutorial braucht entschlüsselte Daten). Danach, im selben Mechanismus, der
+Erinnerungs-Schritt; erst er setzt `onboarding_completed`. `state.tutorialStep`
+(`TUTORIAL_STEP_*`) lebt nur im Speicher, kein Reload-Resume nötig.
 
 Gemeinsame Bausteine (`tutorialScreen`): Fortschritt (`tutorialProgress` →
-`onbProgress('setup', [Teil, 4])`), Symbol, kurze Überschrift (bei jedem Bildschirmwechsel
+`onbProgress('setup', [Teil, 3])`, beim Erinnerungs-Schritt `onbProgress('reminders')`), Symbol, kurze Überschrift (bei jedem Bildschirmwechsel
 fokussiert, `lastTutorialScreen`), der eine Kernsatz fett, Begründungen im "Warum?"-Kasten
 (`whyBox`), kurze Hinweise in normaler Schriftfarbe (`.onb-hint`, nicht im blassen Sandton
 der Formular-Hinweise). Zurück/Überspringen in einer eigenen Fußleiste mit Trennlinie
@@ -169,16 +184,8 @@ Tab-Leiste/kein Menü; eine `beforeunload`-Warnung verhindert versehentliches Ve
 
 1. **Hallo** (`renderTutorialHello`): was Logbuch ist + drei Versprechen mit Symbol (privat ·
    ohne Druck · deins). Platz für einen persönlichen Satz des Nutzers ist vorgesehen, Inhalt
-   noch offen.
-2. **Erinnerungen** (`renderTutorialReminders`): Frage mit Begründung ("nur wenn an einem Tag
-   etwas fehlt", plus die abschaltbaren Übersichten – muss mit dem echten Verhalten
-   übereinstimmen), Hinweis auf die Erlaubnis-Abfrage, "Ja, erinnere mich" (`enable-push`)
-   oder "Lieber nicht". Die Uhrzeit erscheint erst, wenn Push aktiv ist. Bei Schritt für
-   Schritt eine Skizze der Erlaubnis-Frage mit hervorgehobenem "Erlauben"
-   (`sketchHtml('permIos'|'permAndroid')`); blockiert → Anleitung; iPhone im Browser →
-   aufklappbarer Kasten mit der Installations-Anleitung (`installManualHtml`, dieselbe wie
-   auf der Installations-Seite). Ohne Push-Unterstützung eine Erklärung statt der Frage.
-3. **Erstes Feld** (`renderTutorialFieldForm`): Satz, was ein Feld ist, aufklappbarer Kasten
+   noch offen. Noch kein "Überspringen" – das erscheint erst ab dem ersten Feld.
+2. **Erstes Feld** (`renderTutorialFieldForm`): Satz, was ein Feld ist, aufklappbarer Kasten
    "Warum erst mal nur eins?" (wenige Felder sind schnell eingetragen und halten länger durch
    als ein langer Fragebogen), dann das echte Feld-Formular, Stück für Stück aufgedeckt
    (`f.revealStage`: 1 Name mit Ideen als Text darunter → 2 + Feld-Typ → 3 + Einstellungen
@@ -186,14 +193,25 @@ Tab-Leiste/kein Menü; eine `beforeunload`-Warnung verhindert versehentliches Ve
    `habit-reveal-next`). Ausgefülltes bleibt stehen. Je neu aufgedecktem Teil ein Tipp-Kasten
    (`.form-tip`, "Genauer erklärt" bei Schritt für Schritt offen). Kein "Abbrechen"
    (Zurück/Überspringen in der Fußleiste). Nach erfolgreichem Anlegen (Insert-Zweig in
-   `handleHabitSave`) Sprung zu 4.
-4. **Geschafft** (`renderTutorialDone`): "Loslegen" (`saveOnboardingCompleted()`) oder "Noch
-   ein Feld anlegen" (wieder das aufgedeckte Formular ab dem Namen).
+   `handleHabitSave`) Sprung zu "Geschafft".
+3. **Geschafft** (`renderTutorialDone`): "Weiter" (zu den Erinnerungen) oder "Noch ein Feld
+   anlegen" (wieder das aufgedeckte Formular ab dem Namen).
 
-Überspringen (Schritte 1–3) fragt zweistufig nach (`.modal-overlay`/`.modal-box`, wie
-`renderDeleteConfirm`) und setzt bei Bestätigung sofort `onboarding_completed = true` –
-identisch zu "Loslegen". `saveOnboardingCompleted()` aktualisiert `state` sofort (App ohne
-Wartezeit) und speichert im Hintergrund.
+**Erinnerungen** (`renderTutorialReminders`, eigene Etappe): Frage mit Begründung ("nur wenn
+an einem Tag etwas fehlt", mit dem Namen des ersten Felds als Beispiel, plus die
+abschaltbaren Übersichten – muss mit dem echten Verhalten übereinstimmen), Hinweis auf die
+Erlaubnis-Abfrage, "Ja, erinnere mich" (`enable-push`, gefüllt: aus unserer Sicht empfohlen)
+oder "Lieber nicht". Die Uhrzeit erscheint erst, wenn Push aktiv ist. Bei Schritt für Schritt
+eine Skizze der Erlaubnis-Frage mit hervorgehobenem "Erlauben"
+(`sketchHtml('permIos'|'permAndroid')`); blockiert → Anleitung; iPhone im Browser →
+aufklappbarer Kasten mit der Installations-Anleitung (`installManualHtml`, dieselbe wie auf
+der Installations-Seite). Ohne Push-Unterstützung eine Erklärung statt der Frage. Jeder Weg
+hier endet mit `saveOnboardingCompleted()`.
+
+Überspringen (Erstes Feld) fragt zweistufig nach (`.modal-overlay`/`.modal-box`, wie
+`renderDeleteConfirm`) und führt bei Bestätigung zu den Erinnerungen.
+`saveOnboardingCompleted()` aktualisiert `state` sofort (App ohne Wartezeit) und speichert im
+Hintergrund.
 
 ## Ersatzschlüssel
 
