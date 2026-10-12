@@ -1654,7 +1654,7 @@ const STRINGS = {
     'tutorial.reminders.bodyField': '<strong>Ich melde mich nur, wenn an einem Tag noch etwas fehlt</strong>, zum Beispiel „{name}“ – und, falls du magst, einmal pro Woche und Monat mit deiner Übersicht. Nie Werbung, und die Uhrzeit bestimmst du.',
     'tutorial.reminders.whyTitle': 'Warum überhaupt?',
     'tutorial.reminders.whyBody': 'Logbuch wird aussagekräftiger, je regelmäßiger du einträgst. Und wer abends müde ist, vergisst es schnell.',
-    'tutorial.reminders.permissionNote': 'Gleich fragt dein Gerät um Erlaubnis – tipp dort auf „Erlauben“.',
+    'tutorial.reminders.permissionNote': 'Gleich fragt dein Gerät um Erlaubnis – tipp dort auf „Erlauben“ bzw. „Zulassen“.',
     'tutorial.reminders.yes': 'Ja, erinnere mich',
     'tutorial.reminders.no': 'Lieber nicht',
     'tutorial.reminders.laterNote': 'Kein Problem – du kannst Erinnerungen jederzeit in den Einstellungen einschalten.',
@@ -1746,8 +1746,9 @@ const STRINGS = {
     'installSketch.permIosLine2': 'Mitteilungen senden',
     'installSketch.permDeny': 'Nicht erlauben',
     'installSketch.permAllow': 'Erlauben',
-    'installSketch.permAndroidLine1': 'Logbuch erlauben,',
-    'installSketch.permAndroidLine2': 'Benachrichtigungen zu senden?',
+    'installSketch.permAndroidLine1': 'Logbuch erlauben, dir',
+    'installSketch.permAndroidLine2': 'Benachrichtigungen',
+    'installSketch.permAndroidLine3': 'zu senden?',
     'installSketch.permAllowAndroid': 'Zulassen',
     'installSketch.permDenyAndroid': 'Nicht zulassen',
     'installSketch.ariaPerm': 'Skizze: die Frage deines Handys, mit „Erlauben“ hervorgehoben',
@@ -2502,8 +2503,9 @@ const STRINGS = {
     'installSketch.permIosLine2': 'to send you notifications',
     'installSketch.permDeny': 'Don’t Allow',
     'installSketch.permAllow': 'Allow',
-    'installSketch.permAndroidLine1': 'Allow Logbuch to',
-    'installSketch.permAndroidLine2': 'send you notifications?',
+    'installSketch.permAndroidLine1': 'Allow Logbuch',
+    'installSketch.permAndroidLine2': 'to send you',
+    'installSketch.permAndroidLine3': 'notifications?',
     'installSketch.permAllowAndroid': 'Allow',
     'installSketch.permDenyAndroid': 'Don’t allow',
     'installSketch.ariaPerm': 'Sketch: your phone’s question, with “Allow” highlighted',
@@ -6067,10 +6069,11 @@ function sketchHtml(kind) {
         ${sketchText(65, 192, L('permDeny'), 'text-anchor="middle" font-size="9"')}${sketchText(135, 192, L('permAllow'), 'text-anchor="middle" font-weight="600"')}
         <rect x="104" y="174" width="62" height="28" rx="8" class="sk-hl"/>`, L('ariaPerm'));
     case 'permAndroid':
-      return sketchFrame(`${sketchPage()}<rect x="26" y="110" width="148" height="104" rx="14" class="sk-sheet"/>
-        ${sketchText(100, 136, L('permAndroidLine1'), 'text-anchor="middle" font-weight="600" font-size="10"')}${sketchText(100, 150, L('permAndroidLine2'), 'text-anchor="middle" font-weight="600" font-size="10"')}
-        ${sketchText(100, 180, L('permAllowAndroid'), 'text-anchor="middle" font-weight="600"')}${sketchText(100, 202, L('permDenyAndroid'), 'text-anchor="middle" font-size="10"')}
-        <rect x="46" y="166" width="108" height="22" rx="8" class="sk-hl"/>`, L('ariaPerm'));
+      // Drei kurze Zeilen: "Benachrichtigungen zu senden?" in einer Zeile ragte über den Dialog.
+      return sketchFrame(`${sketchPage()}<rect x="26" y="104" width="148" height="122" rx="14" class="sk-sheet"/>
+        ${['permAndroidLine1', 'permAndroidLine2', 'permAndroidLine3'].map((k, i) => sketchText(100, 128 + i * 14, L(k), 'text-anchor="middle" font-weight="600" font-size="10"')).join('')}
+        ${sketchText(100, 192, L('permAllowAndroid'), 'text-anchor="middle" font-weight="600"')}${sketchText(100, 214, L('permDenyAndroid'), 'text-anchor="middle" font-size="10"')}
+        <rect x="46" y="178" width="108" height="22" rx="8" class="sk-hl"/>`, L('ariaPerm'));
     default: return '';
   }
 }
