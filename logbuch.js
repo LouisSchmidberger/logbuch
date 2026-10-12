@@ -7263,11 +7263,11 @@ function renderAbout() {
     <p class="about-status">${t('about.status', { date: formatDMY(APP_STATUS_DATE) })} <button type="button" class="link-btn" data-action="open-feedback">${t('menu.feedback')}</button></p>
     <p class="about-status about-status--secondary">${t('about.monetizationNote')}</p>
     <p class="about-intro">${t('about.intro')}</p>
-    ${renderAboutNews()}
-    <div class="manage-section-divider"></div>
-    ${renderA11ySection()}
     ${renderMentalHealthSection()}
+    ${renderA11ySection()}
     ${renderPrivacySection()}
+    <div class="manage-section-divider"></div>
+    ${renderAboutNews()}
     <div class="manage-section-divider"></div>
     ${tipGroup('about.group.usage', [
       ['about.tip.swipe.title', 'about.tip.swipe.body'],
