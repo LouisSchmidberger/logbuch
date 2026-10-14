@@ -243,11 +243,11 @@ für "+ Neues Feld" (`.today-footer`, gehört nicht zum Tag). Alles linksbündig
 "+ Neues Feld" dort als reiner Text-Link (wirkte allein unter der Linie verloren).
 
 **Mikro-Animationen**: je ein Baustein pro Muster, kein Animieren einzelner Elemente. Menüs,
-Zeilenmenüs, Dialoge und Notiz-Editor blenden beim Erscheinen kurz ein (`.layer-in`). **Falle**:
+Zeilenmenüs und Notiz-Editor wachsen beim Erscheinen aus ihrem Auslöser, Dialoge aus der Mitte (`.layer-in`). **Falle**:
 `render()` baut `#app` neu, eine Animation am Element liefe bei jedem `render()` erneut (beim
 Notiz-Editor bei jedem Tastendruck) – deshalb vergibt `markNewLayers` die Klasse nur an Ebenen,
-die vorher nicht da waren; neue Ebenen-Arten in `LAYER_SELECTOR` aufnehmen. Knöpfe geben beim
-Antippen nach (`:active`, `scale`). Bewegung immer über `translate`/`scale` statt `transform`
+die vorher nicht da waren; neue Ebenen-Arten in `LAYER_SELECTOR` aufnehmen. Knöpfe drücken beim
+Antippen sofort ein und federn beim Loslassen zurück (`:active`, `scale`). Bewegung immer über `translate`/`scale` statt `transform`
 (vorhandene transforms bleiben). Bei "Bewegung reduzieren" nur Einblenden bzw. kurz blasser.
 
 **Haptik** (`haptic()`): kurzes Vibrieren beim Setzen/Entfernen eines Werts (Schieberegler
