@@ -450,22 +450,15 @@
   .habit-row:first-child, .number-box:first-child { border-top: 1px solid var(--line); }
   .habit-name { font-size: 0.9375rem; line-height: 1.35; flex: 1; min-width: 0; }
   /* Wert-Buttons: sichtbar 2rem, die unsichtbare Tippfläche (::after) reicht bis in die
-     halbe Lücke zum Nachbarn (~40px, ohne Überlappung). Das Polster gleicht die
-     überstehende Fläche aus - sonst schnitte overflow sie ab bzw. machte die Leiste
-     senkrecht scrollbar. */
-  .habit-options {
-    display: flex; gap: 0.5rem; padding: 0.25rem; margin: -0.25rem; flex-shrink: 1; min-width: 0; max-width: 60%;
-    overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .habit-options::-webkit-scrollbar { display: none; }
+     halbe Lücke zum Nachbarn (~40px, ohne Überlappung). Passen sie nicht in eine Zeile,
+     brechen sie um - jede Stufe muss sichtbar und antippbar bleiben (verworfen: seitlich
+     wischbar, das sah niemand - Stufe 3 und 4 langer Bezeichnungen waren einfach weg). */
+  .habit-options { display: flex; flex-wrap: wrap; gap: 0.5rem; min-width: 0; max-width: 60%; }
   /* Button-Zeilen in "Heute": Buttons neben dem Namen, solange Name (mind. 40 %) und
-     Buttons nebeneinander passen - sonst rutschen die Buttons rechtsbündig in eine eigene
-     Zeile darunter, statt teilweise unsichtbar seitlich zu scrollen (auf 360 px breiten
-     Handys passten vorher nur 5 nummerierte Buttons neben den Namen). Seitlich gescrollt
-     wird nur noch, was selbst in der vollen Breite nicht passt (lange Bezeichnungen). */
+     Buttons nebeneinander passen - sonst rutschen sie rechtsbündig in eine eigene Zeile
+     darunter (und brechen dort bei Bedarf weiter um). */
   .habit-row--buttons > .row-head { flex: 1 1 40%; }
-  .habit-row--buttons > .habit-options { flex: 0 0 auto; max-width: 100%; margin-left: auto; }
+  .habit-row--buttons > .habit-options { flex: 0 1 auto; max-width: 100%; margin-left: auto; justify-content: flex-end; }
 
   /* Zähler (renderCounterBox): "−" Zahl "+", Tippflächen 44px; "+" als Hauptaktion in Grün. */
   /* "Was ist neu" (renderWhatsNew) und Neuigkeiten in "Über Logbuch". */
@@ -1264,8 +1257,6 @@
   .goal-slider-value { flex-shrink: 0; min-width: 5.5rem; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
   .label-input-step { min-width: 1.5rem; text-align: right; font-size: 0.8125rem; color: var(--sand); font-variant-numeric: tabular-nums; }
   .field-preview { padding: 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--input-bg); }
-  /* Wie in "Heute" in einer Zeile (kein Umbruch) - sonst verdeckte die Vorschau genau den
-     Fall, dass die Buttons nicht passen (siehe syncPreviewFitHint). */
   .field-preview .habit-options { max-width: 100%; }
   .field-preview-note { margin: 8px 0 0; }
   .habit-form select {
@@ -1365,6 +1356,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=2ea6f54d45"></script>
+<script type="module" src="./logbuch.js?v=0dbb3a7a69"></script>
 </body>
 </html>

@@ -1196,7 +1196,6 @@ const STRINGS = {
     'habitForm.stepCapHint': 'Mehr als {cap} Stufen gehen nur als Schieberegler ohne eigene Bezeichnungen – bei so vielen lässt sich eine einzelne Stufe kaum noch gezielt wählen.',
     'habitForm.stepCapToSlider': 'Zum Schieberegler wechseln',
     'habitForm.stepCapLabelsOff': 'Eigene Bezeichnungen abschalten',
-    'habitForm.previewTooWide': 'Passt nicht in eine Zeile – in „Heute“ musst du dann seitlich wischen, um alle Stufen zu sehen. Kürzere Bezeichnungen oder der Schieberegler helfen.',
     'habitForm.error.fillAllLabels': 'Bitte alle Bezeichnungen ausfüllen.',
     'habitForm.error.nameRequired': 'Bitte einen Namen eingeben.',
     'ariaLabel.dismissHint': 'Hinweis schließen',
@@ -1974,7 +1973,6 @@ const STRINGS = {
     'habitForm.stepCapHint': 'More than {cap} steps only work as a slider without custom labels – with that many, a single step can hardly be picked deliberately.',
     'habitForm.stepCapToSlider': 'Switch to slider',
     'habitForm.stepCapLabelsOff': 'Turn off custom labels',
-    'habitForm.previewTooWide': 'Doesn’t fit on one line – in “Today” you would have to swipe sideways to see all steps. Shorter labels or the slider help.',
     'habitForm.error.fillAllLabels': 'Please fill in all labels.',
     'habitForm.error.nameRequired': 'Please enter a name.',
     'ariaLabel.dismissHint': 'Dismiss hint',
@@ -4770,10 +4768,6 @@ function onViewportResize() {
 }
 window.visualViewport?.addEventListener('resize', onViewportResize);
 window.addEventListener('resize', onViewportResize);
-// Passt-nicht-Hinweis der Formular-Vorschau neu messen: Drehen des Geräts ändert die
-// Breite, nachgeladene Schriften die Textbreite der Buttons.
-window.addEventListener('resize', syncPreviewFitHint);
-document.fonts?.ready.then(syncPreviewFitHint);
 // Beim Wechsel in eine andere App (oder Sperren des Handys) den Entwurf schon mal
 // sichern - der Browser kann die Seite im Hintergrund jederzeit verwerfen. Der Editor
 // bleibt dabei offen, man schreibt nach der Rückkehr einfach weiter.
@@ -6415,26 +6409,12 @@ function renderHabitFormPreview(f) {
   const widget = f.displayStyle === 'slider'
     ? renderHabitSlider(previewHabit, value, { preview: true })
     : `<div class="habit-options">${renderHabitOptions(previewHabit, value, { preview: true })}</div>`;
-  // Der Passt-nicht-Hinweis wird erst nach dem Einfügen per Messung eingeblendet
-  // (syncPreviewFitHint) - ob die Buttons in eine Zeile passen, hängt von Bildschirm-
-  // breite und Textlänge ab, das lässt sich nicht vorab ausrechnen.
   return `
     <div class="field-preview" role="group" aria-labelledby="habit-form-preview-label" aria-describedby="habit-form-preview-note">
       ${widget}
-      ${f.displayStyle === 'buttons' ? `<p class="habit-form-lock-note field-preview-note field-preview-fit" hidden>${t('habitForm.previewTooWide')}</p>` : ''}
       <p class="habit-form-lock-note field-preview-note" id="habit-form-preview-note">${t('habitForm.previewNote')}</p>
     </div>
   `;
-}
-// Die Vorschau zeigt die Buttons wie in "Heute" in einer Zeile (dort seitlich scrollbar,
-// falls sie selbst in einer eigenen Zeile unter dem Namen nicht passen, siehe
-// .habit-row--buttons) - hier dann ein Hinweis, statt das still hinzunehmen. Gemessen
-// auf dem Gerät, auf dem man das Feld gerade anlegt, also meist dem, auf dem man es
-// auch nutzt.
-function syncPreviewFitHint() {
-  const hint = document.querySelector('.field-preview-fit');
-  const options = document.querySelector('.field-preview .habit-options');
-  if (hint && options) hint.hidden = options.scrollWidth <= options.clientWidth + 1;
 }
 // Tauscht nur die Vorschau aus (kein render(): Fokus/Cursor im Formular bleiben).
 // Rückgabe: ob eine Vorschau da war.
@@ -6442,7 +6422,6 @@ function refreshHabitFormPreview() {
   const preview = document.querySelector('.field-preview');
   if (!preview || !state.habitForm) return false;
   preview.outerHTML = renderHabitFormPreview(state.habitForm);
-  syncPreviewFitHint();
   return true;
 }
 // Wert in der Vorschau setzen/entfernen: nur die Vorschau austauschen (kein render(), das
@@ -8886,7 +8865,6 @@ function render() {
   if (!app.querySelector('.view-body')) addOnbDisplayBar();
   syncCharCounters();
   markNewLayers(layersBefore);
-  syncPreviewFitHint();
   syncToast(state.passwordRecovery || !state.session); // Anmelde-Seiten: Meldung im Text
   focusModalIfOpen();
   restoreFocus(focusKey);

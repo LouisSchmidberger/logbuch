@@ -107,12 +107,11 @@ Die +/−-Knöpfe (`stepperInput`) zählen beim Gedrückthalten immer schneller 
 (`stepperHold`); gespeichert/neu gerendert wird erst beim Loslassen, der Klick danach wird
 verschluckt.
 
-**Vorschau** zeigt Buttons wie in "Heute" in einer Zeile und blendet einen Hinweis ein, wenn
-sie auf dem Gerät nicht hineinpassen (`syncPreviewFitHint`, gemessen nach jedem
-Rendern/Drehen/Laden der Schrift). **In "Heute"** rutschen die Buttons in eine eigene Zeile
-unter den Namen, sobald Name (mind. 40 %) und Buttons nicht nebeneinander passen
-(`.habit-row--buttons`, reines CSS über `flex-wrap`); seitlich gescrollt wird nur, was
-selbst in voller Breite nicht passt.
+**In "Heute"** rutschen die Buttons in eine eigene Zeile unter den Namen, sobald Name (mind.
+40 %) und Buttons nicht nebeneinander passen, und brechen dort bei Bedarf weiter um
+(`.habit-row--buttons`, reines CSS über `flex-wrap`); die Vorschau im Formular genauso.
+Verworfen: seitlich wischbar (sah niemand – bei langen Bezeichnungen waren Stufen einfach
+weg, Nutzer-Entscheidung 2026-10-14).
 
 ### Bearbeiten mit vorhandenen Daten (`f.locked`)
 
