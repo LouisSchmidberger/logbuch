@@ -1577,8 +1577,8 @@ const STRINGS = {
     'period.month.other': 'Monat',
     'period.year.current': 'Dieses Jahr',
     'period.year.other': 'Jahr',
-    'today.allDoneToday': 'Alles eingetragen für heute.',
-    'today.allDoneDay': 'Alles eingetragen für diesen Tag.',
+    'today.statusDone': 'Alles eingetragen',
+    'today.statusProgress': '{done} von {total} eingetragen',
     'todayIntro.label': 'Kurz erklärt',
     'todayIntro.enter': '👋 <strong>So trägst du ein:</strong> Tipp auf einen Wert – nochmal tippen nimmt ihn wieder weg. Der grüne Punkt hinter einem Namen zeigt, was heute noch offen ist.',
     'todayIntro.days': '📅 <strong>Andere Tage:</strong> Wisch nach links oder rechts – oder tipp auf die Pfeile oben –, um einen anderen Tag einzutragen oder nachzutragen.',
@@ -1804,6 +1804,8 @@ const STRINGS = {
     'pattern.enableLabel': 'Muster zusätzlich zur Farbe anzeigen',
     'haptics.enableLabel': 'Beim Eintragen vibrieren',
     'pattern.explain': 'Etwa 1 von 12 Männern und 1 von 200 Frauen hat eine Rot-Grün-Sehschwäche – oft unbemerkt, da sie selten diagnostiziert wird. Damit Bewertungen (rot bis grün) nicht ausschließlich über die Farbe erkennbar sind, zeigt Logbuch standardmäßig zusätzlich ein feines Streifenmuster: je dichter, desto besser der Wert. Rein optisch abschaltbar, falls du es nicht brauchst und nicht magst.',
+    'dayProgress.label': 'Stand des Tages zeigen (z. B. 3 von 7)',
+    'dayProgress.explain': 'Standardmäßig aus: Eine Zahl, die noch nicht voll ist, kann sich wie eine Pflicht anfühlen – Logbuch soll ohne Druck funktionieren. Zähler wie „Zigaretten“ zählen nicht mit, dort ist kein Eintrag ja auch ein Ergebnis.',
     'menu.groupAccount': 'Konto',
     'menu.manageFields': 'Felder verwalten',
     'menu.about': 'Über Logbuch',
@@ -2352,8 +2354,8 @@ const STRINGS = {
     'period.month.other': 'Month',
     'period.year.current': 'This year',
     'period.year.other': 'Year',
-    'today.allDoneToday': 'Everything filled in for today.',
-    'today.allDoneDay': 'Everything filled in for this day.',
+    'today.statusDone': 'All filled in',
+    'today.statusProgress': '{done} of {total} filled in',
     'todayIntro.label': 'Quick explanation',
     'todayIntro.enter': '👋 <strong>How to enter things:</strong> tap a value – tap it again to remove it. The green dot after a name shows what is still open today.',
     'todayIntro.days': '📅 <strong>Other days:</strong> swipe left or right – or tap the arrows at the top – to fill in another day.',
@@ -2579,6 +2581,8 @@ const STRINGS = {
     'pattern.enableLabel': 'Show pattern in addition to color',
     'haptics.enableLabel': 'Vibrate when entering values',
     'pattern.explain': 'About 1 in 12 men and 1 in 200 women has red-green color vision deficiency – often unnoticed, since it is rarely diagnosed. So that ratings (red to green) are not recognizable through color alone, Logbuch shows a subtle stripe pattern in addition by default: the denser it is, the better the value. Purely a visual choice, switch it off if you do not need or want it.',
+    'dayProgress.label': 'Show progress for the day (e.g. 3 of 7)',
+    'dayProgress.explain': 'Off by default: a number that is not yet full can feel like an obligation – Logbuch is meant to work without pressure. Counters like “cigarettes” are not included, since no entry is a result there too.',
     'menu.groupAccount': 'Account',
     'menu.manageFields': 'Manage fields',
     'menu.about': 'About Logbuch',
@@ -2848,6 +2852,17 @@ function setTextSize(size) {
 // sie betroffen sind, würden ein verstecktes "Barrierefreiheit"-Menü also gar nicht
 // erst aufsuchen. Wer das Muster rein optisch nicht möchte, kann es hier abschalten —
 // geräte-lokal wie der Theme-Override, keine inhaltliche Account-Einstellung.
+// "Stand des Tages zeigen" (3 von 7 eingetragen): standardmäßig aus - eine Zahl, die noch
+// nicht voll ist, kann sich wie eine Pflicht anfühlen. Geräte-lokal wie Muster und Theme.
+function isDayProgressShown() {
+  try { return localStorage.getItem('dayProgressShown') === 'true'; } catch { return false; }
+}
+function setDayProgressShown(shown) {
+  try {
+    if (shown) localStorage.setItem('dayProgressShown', 'true');
+    else localStorage.removeItem('dayProgressShown');
+  } catch { /* dann eben nur für diese Sitzung */ }
+}
 function isPatternDisabled() {
   try { return localStorage.getItem('scorePatternDisabled') === 'true'; } catch { return false; }
 }
@@ -6563,16 +6578,12 @@ function renderNote(dateKey, key, label) {
 // (nicht berechnet) ohne Wert - dieselbe Logik wie die Erinnerungen (filledFieldIds,
 // get_due_notifications), Notizen zählen also nicht. Markiert wird bewusst nur das
 // Offene (kleiner Punkt, wie "ungelesen" in Mail-Apps), eingetragene Zeilen bleiben wie
-// sie sind; kein Zähler "5 von 8" (Nutzer-Entscheidung: würde eher Druck machen, wie die
-// verworfene Mindestquote bei den Übersichten), stattdessen ein stiller Abschluss-Hinweis,
-// sobald alles eingetragen ist (renderToday).
+// sie sind. Unter dem Datum "✓ Alles eingetragen", sobald alles da ist; "3 von 7" nur als
+// Option (dayStatusHtml, Nutzer-Entscheidung 2026-10-14: standardmäßig aus, weil eine nicht
+// volle Zahl Druck machen kann).
 function isOpenToday(h, dayEntry) { return h.kind !== 'computed' && !isCounterKind(h) && dayEntry[h.id] === undefined; }
 function todayTrackedFields() {
   return activeHabits().filter((h) => h.kind !== 'computed' && !isCounterKind(h) && !isPeriodField(h) && isPlannedOn(h, state.currentDate));
-}
-function todayAllDone(dayEntry) {
-  const tracked = todayTrackedFields();
-  return tracked.length > 0 && !tracked.some((h) => isOpenToday(h, dayEntry));
 }
 // Punkt + Screenreader-Text; bleibt (versteckt) im DOM, damit syncTodayOpenMarkers ihn
 // beim Tippen in Text-Feldern ohne Re-Render umschalten kann.
@@ -6592,8 +6603,8 @@ function syncTodayOpenMarkers() {
     const ids = m.dataset.doneFields.split(' ').filter(Boolean);
     m.hidden = !ids.length || ids.some((id) => dayEntry[id] === undefined);
   });
-  const done = document.querySelector('.today-complete');
-  if (done) done.hidden = !todayAllDone(dayEntry);
+  const status = document.querySelector('.day-status');
+  if (status) status.innerHTML = dayStatusHtml(dayEntry);
 }
 
 function renderTextBox(h, dayEntry, marker = '') {
@@ -6799,14 +6810,44 @@ function renderPeriodBlock(period, fields) {
   `;
 }
 
-function renderToday() {
+// Tageskopf von "Heute" (Wochentag, Datum, Pfeile, Stand des Tages) - steht im angehefteten
+// Kopf (renderApp), damit man beim Scrollen immer sieht, welchen Tag man gerade ausfüllt
+// (nach Wischen/Sprung trug man sonst leicht unbemerkt in "gestern" ein).
+function renderTodayDayNav() {
   const dateKey = formatKey(state.currentDate);
-  const isToday = dateKey === formatKey(new Date());
   const dayEntry = state.entries[dateKey] || {};
   // "Heute"/"Gestern"/"Morgen" neben dem Datum - zwei Tage sehen in "Heute" oft fast gleich
   // aus, so sieht man auf einen Blick, welcher gerade gezeigt wird.
   const dayOffset = Math.round((startOfDay(state.currentDate) - startOfDay(new Date())) / 86400000);
   const relativeDay = { 0: t('day.today'), [-1]: t('day.yesterday'), 1: t('day.tomorrow') }[dayOffset] || '';
+  return `
+    <div class="day-nav">
+      <button type="button" class="nav-btn" data-action="nav-day" data-dir="-1" aria-label="${esc(t('ariaLabel.prevDay'))}">‹</button>
+      <div class="day-label">
+        <span class="day-weekday">${renderRowMenuButton(DAY_MENU_KEY, t('today.dayOptions'))}${weekdayLong(state.currentDate)}</span>
+        <span class="day-date">${relativeDay ? `<span class="day-relative">${relativeDay}</span> · ` : ''}${longDate(state.currentDate)}</span>
+        <span class="day-status">${dayStatusHtml(dayEntry)}</span>
+      </div>
+      <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" aria-label="${esc(t('ariaLabel.nextDay'))}">›</button>
+      ${renderDayMenuPanel()}
+    </div>
+  `;
+}
+// Stand des Tages unter dem Datum: "✓ Alles eingetragen", mit der Option dayProgress auch
+// vorher "3 von 7 eingetragen". Die Zeile ist immer da (leer, wenn nichts anzuzeigen ist),
+// damit der Kopf nicht springt, sobald das letzte Feld ausgefüllt wird.
+function dayStatusHtml(dayEntry) {
+  const tracked = todayTrackedFields();
+  if (!tracked.length) return '';
+  const done = tracked.filter((h) => !isOpenToday(h, dayEntry)).length;
+  if (done === tracked.length) return `<span class="day-status-done"><span aria-hidden="true">✓ </span>${t('today.statusDone')}</span>`;
+  return isDayProgressShown() ? esc(tPlain('today.statusProgress', { done, total: tracked.length })) : '';
+}
+
+function renderToday() {
+  const dateKey = formatKey(state.currentDate);
+  const isToday = dateKey === formatKey(new Date());
+  const dayEntry = state.entries[dateKey] || {};
   // Felder, die heute laut Wiederholung nicht dran sind, stehen eingeklappt unter
   // "Heute nicht geplant" - ausnahmsweise eintragen geht so trotzdem. Die Einteilung
   // richtet sich nur nach dem Plan, nicht nach vorhandenen Werten (sonst spränge ein
@@ -6822,22 +6863,12 @@ function renderToday() {
   const renderPlannedRow = (h) => renderTodayHabitRow(h, dateKey, dayEntry, { trackOpen: true });
 
   return `
-    <div class="day-nav">
-      <button type="button" class="nav-btn" data-action="nav-day" data-dir="-1" aria-label="${esc(t('ariaLabel.prevDay'))}">‹</button>
-      <div class="day-label">
-        <span class="day-weekday">${renderRowMenuButton(DAY_MENU_KEY, t('today.dayOptions'))}${weekdayLong(state.currentDate)}</span>
-        <span class="day-date">${relativeDay ? `<span class="day-relative">${relativeDay}</span> · ` : ''}${longDate(state.currentDate)}</span>
-      </div>
-      <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" aria-label="${esc(t('ariaLabel.nextDay'))}">›</button>
-      ${renderDayMenuPanel()}
-    </div>
     ${!isToday ? `<button type="button" class="today-jump" data-action="jump-today">${t('today.jumpToday')}</button>` : ''}
     ${renderTodayIntro()}
     <div class="habit-list">
       ${renderBySection(planned, 'today', (list) => list.map(renderPlannedRow).join(''))}
       ${!allActive.length ? `<p class="manage-meta">${t('today.noFields')}</p>` : habits.length && !planned.length ? `<p class="manage-meta">${t('today.nothingPlanned')}</p>` : ''}
     </div>
-    <p class="today-complete"${todayAllDone(dayEntry) ? '' : ' hidden'}><span aria-hidden="true">✓ </span>${t(isToday ? 'today.allDoneToday' : 'today.allDoneDay')}</p>
     ${unplanned.length ? `
       <details class="unplanned"${unplannedOpen ? ' open' : ''}>
         <summary>${t('today.unplanned', { count: unplanned.length })}</summary>
@@ -7241,6 +7272,7 @@ const CHANGELOG = [
       'Menüs und Fenster erscheinen sanfter, Knöpfe reagieren sichtbar, wenn du sie antippst.',
       'Hat eine Zahl ein Ziel, steht es in „Heute“ direkt daneben, zum Beispiel „1 / 2“ – und die Zahl wird grüner, je näher du dran bist.',
       'Nutzt du Logbuch im Browser, findest du die Anleitung, wie du es auf deinen Startbildschirm legst, jetzt jederzeit im Menü unter „Aufs Handy holen“.',
+      'Den Tag siehst du in „Heute“ jetzt beim Scrollen immer oben, darunter steht, wenn alles eingetragen ist. Wer mag, lässt dort auch den Stand anzeigen, z. B. „3 von 7“ – in den Einstellungen unter Anzeige.',
       'Schon beim Einrichten kannst du die Schrift größer stellen und zwischen hell und dunkel wählen.',
     ],
     en: [
@@ -7248,6 +7280,7 @@ const CHANGELOG = [
       'Menus and windows appear more smoothly, and buttons respond visibly when you tap them.',
       'If a number has a goal, “Today” shows it right next to it, e.g. “1 / 2” – and the number turns greener the closer you get.',
       'If you use Logbuch in the browser, the guide for putting it on your home screen is now always in the menu under “Get it on your phone”.',
+      'In “Today” the day now always stays at the top while you scroll, with a note once everything is filled in. If you like, it can also show your progress, e.g. “3 of 7” – in the settings under Display.',
       'You can now make the text bigger and choose light or dark right from the start, while setting up.',
     ],
   },
@@ -8469,6 +8502,13 @@ function renderSettings() {
         </label>
         <p class="settings-note" id="settings-pattern-note">${t('pattern.explain')}</p>
       </div>
+      <div class="settings-row" data-menu-target="day-progress">
+        <label class="checkbox-field">
+          <input type="checkbox" data-action="day-progress-toggle" aria-describedby="settings-day-progress-note" ${isDayProgressShown() ? 'checked' : ''} />
+          ${t('dayProgress.label')}
+        </label>
+        <p class="settings-note" id="settings-day-progress-note">${t('dayProgress.explain')}</p>
+      </div>
       ${hapticsSupported() ? `
         <div class="settings-row">
           <label class="checkbox-field">
@@ -8661,6 +8701,7 @@ function renderApp() {
             <button type="button" class="tab${state.view === 'year' ? ' tab--active' : ''}" data-action="set-view" data-view="year">${t('tabs.year')}</button>
             <button type="button" class="tab${state.view === 'global' ? ' tab--active' : ''}" data-action="set-view" data-view="global">${t('tabs.global')}</button>
           </div>
+          ${state.view === 'today' && !state.loading ? renderTodayDayNav() : ''}
         `}
     </div>
     ${renderInstallHint()}
@@ -9460,6 +9501,12 @@ app.addEventListener('change', async (e) => {
   if (reminderToggle && state.habitForm) {
     syncHabitFormFromDom();
     state.habitForm.reminderEnabled = reminderToggle.checked;
+    render();
+    return;
+  }
+  const dayProgressToggle = e.target.closest('[data-action="day-progress-toggle"]');
+  if (dayProgressToggle) {
+    setDayProgressShown(dayProgressToggle.checked);
     render();
     return;
   }

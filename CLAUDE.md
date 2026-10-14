@@ -61,7 +61,7 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
 - Alle UI-Texte über `STRINGS`/`t()`; Meldungen sind reiner Text (mit Parametern
   `tPlain()`); Fehler immer über `errorNotice(key, rawMessage)`, nie roher Fehler im Satz.
 - CSS-Größen immer in `rem`, nie in px (Textgröße-Einstellung skaliert über `<html>`).
-- Gerätespezifische Einstellungen (Theme, Textgröße, Streifenmuster, Vibration,
+- Gerätespezifische Einstellungen (Theme, Textgröße, Streifenmuster, Stand des Tages, Vibration,
   Onboarding-Zustand) in `localStorage`, kontoweite (Sprache, Erinnerungszeiten) in
   `user_settings`.
 - Button-Paare: **Abbrechen links, Aktion rechts**, auch in der Code-Reihenfolge

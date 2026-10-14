@@ -166,15 +166,18 @@ selbst (`updateDragAutoScroll`, schneller je näher am Rand).
 
 **Einmalige Erklär-Karte(n)**: siehe [onboarding.md](onboarding.md).
 
-**"Noch offen"** (`isOpenToday`/`openMarkerHtml`/`todayAllDone`): ein kleiner Punkt
+**"Noch offen"** (`isOpenToday`/`openMarkerHtml`/`dayStatusHtml`): ein kleiner Punkt
 (`.open-dot`, Moos, Form statt Farbe) hinter dem Namen jedes heute geplanten, direkt
 ausfüllbaren Felds ohne Wert – dieselbe Logik wie die Erinnerungen, Notizen zählen nicht; im
 Bereich "Heute nicht geplant" keiner. Bei eingeklappten Gruppen trägt die Überschrift den
-Punkt. Screenreader: "(noch offen)" als versteckter Text. Ist alles eingetragen, steht still
-"Alles eingetragen für heute/diesen Tag" (`.today-complete`). Text-Felder speichern ohne
-`render()`, deshalb zieht `syncTodayOpenMarkers` Punkt und Hinweis dort nach.
-Nutzer-Entscheidung: markiert wird nur das Offene; **bewusst kein Zähler** ("5 von 8" würde
-eher Druck machen, wie die verworfene Mindestquote bei den Übersichten). Verworfen:
+Punkt. Screenreader: "(noch offen)" als versteckter Text. Ist alles eingetragen, steht unter
+dem Datum "✓ Alles eingetragen" (`.day-status`); "3 von 7 eingetragen" nur mit der Option
+"Stand des Tages zeigen" (Einstellungen → Anzeige, `localStorage` `dayProgressShown`) –
+standardmäßig aus, weil eine nicht volle Zahl Druck machen kann (Nutzer-Entscheidung
+2026-10-14). Gezählt wird dieselbe Auswahl wie bei Punkt und Erinnerungen (ohne Zähler,
+berechnete und Zeitraum-Felder). Text-Felder speichern ohne `render()`, deshalb zieht
+`syncTodayOpenMarkers` Punkt und Stand dort nach. Verworfen für den Haken: rechts in der
+Tab-Leiste (gehört zur ganzen App, passt bei großer Schrift nicht). Verworfen:
 eingetragene Felder nach unten schieben/einklappen (Zeilen sprängen beim Antippen weg);
 eingetragene Namen blasser (zu wenig Kontrast für kleinen Text). Erklärt in "Über Logbuch"
 (`about.tip.openDot`).
@@ -237,8 +240,11 @@ klein). Screenreader: "mit Notiz" im Label der Tages-Zelle.
 (`renderResetConfirm`, `state.resetConfirm` = dateKey). Erreichbar über ein ⋮ vor dem
 Wochentag oben (`renderDayMenuPanel`, `DAY_MENU_KEY` im Zeilen-Menü-Mechanismus).
 
-**Ende von "Heute"**: drei erkennbare Teile – "Alles eingetragen" als Abschluss der Liste,
-darunter der Tag ("Heute nicht geplant", Tagesnotiz), zuletzt eine Fußleiste mit Trennlinie
+**Tageskopf angeheftet** (`renderTodayDayNav`, im `.sticky-top` unter der Tab-Leiste): man
+sieht beim Scrollen immer, welchen Tag man ausfüllt (nach Wischen/Sprung trug man sonst leicht
+in "gestern" ein). "Zu heute springen" bleibt im Inhalt.
+
+**Ende von "Heute"**: zwei erkennbare Teile – der Tag ("Heute nicht geplant", Tagesnotiz), zuletzt eine Fußleiste mit Trennlinie
 für "+ Neues Feld" (`.today-footer`, gehört nicht zum Tag). Alles linksbündig. Verworfen:
 "+ Neues Feld" dort als reiner Text-Link (wirkte allein unter der Linie verloren).
 
