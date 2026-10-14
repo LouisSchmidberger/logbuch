@@ -7151,10 +7151,10 @@ const CHANGELOG = [
   {
     id: '2026-10-14',
     de: [
-      'Die Übersichten sind besser lesbar.',
+      'Woche, Monat, Jahr und Gesamt sind jetzt besser lesbar.',
     ],
     en: [
-      'The overviews are easier to read.',
+      'Week, Month, Year and Overall are now easier to read.',
     ],
   },
   {

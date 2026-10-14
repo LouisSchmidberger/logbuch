@@ -119,9 +119,9 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   in identischer Key-Reihenfolge.
 - **`CHANGELOG`** in `logbuch.js` ("Was ist neu"): ein Eintrag pro Live-Gang für alles aus der
   Sitzung (de + en), Datum des Live-Gangs; den obersten erweitern, solange er nicht live ist.
-  **Kurz und simpel** (Nutzer-Wunsch 2026-10-14, längere wurden nicht verstanden/gelesen):
-  wenige Punkte, je ein kurzer Satz in Alltagssprache, was man davon hat – keine Details,
-  keine Fachbegriffe. Das Datum ist zugleich "Beta – Stand …" in "Über Logbuch". Reine
+  Nur Begriffe, die man in der App sieht oder aus dem Alltag kennt, und beschreiben, was man
+  tut ("wenn du ein Feld anlegst"), nicht interne Sammelnamen ("das Formular für Felder",
+  "die Übersichten"). Das Datum ist zugleich "Beta – Stand …" in "Über Logbuch". Reine
   Interna, Doku oder winzige Textkorrekturen nicht.
 - **Datenschutz-Text in "Über Logbuch"** (`renderPrivacySection`, `about.privacy.*`) sagt
   konkret, was der Betreiber sehen kann und was nicht. Jede Änderung, die daran etwas
