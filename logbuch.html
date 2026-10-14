@@ -399,6 +399,22 @@
   @media (prefers-reduced-motion: reduce) {
     .view-slide-next, .view-slide-prev { animation: view-fade 0.15s ease-out; }
   }
+  /* Menüs, Dialoge, Notiz-Editor erscheinen sanft (.layer-in setzt markNewLayers nur beim
+     ersten Auftauchen). Über `translate` statt `transform`, damit vorhandene transforms
+     (z.B. .row-menu.day-menu) bleiben; ohne fill-mode bleibt danach nichts hängen. */
+  @keyframes layer-in { from { opacity: 0; translate: 0 0.375rem; } }
+  @keyframes layer-fade { from { opacity: 0; } }
+  .layer-in:not(.modal-overlay), .modal-overlay.layer-in .modal-box { animation: layer-in 0.16s ease-out; }
+  .modal-overlay.layer-in { animation: layer-fade 0.16s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .layer-in:not(.modal-overlay), .modal-overlay.layer-in .modal-box { animation-name: layer-fade; }
+  }
+  /* Rückmeldung beim Antippen: Knöpfe geben kurz nach. `scale` statt `transform` aus
+     demselben Grund wie oben. Bei "Bewegung reduzieren" nur kurz blasser. */
+  :is(button, [role="button"], .crisis-action-button):not(:disabled):active { scale: 0.97; }
+  @media (prefers-reduced-motion: reduce) {
+    :is(button, [role="button"], .crisis-action-button):not(:disabled):active { scale: none; opacity: 0.7; }
+  }
   .day-date { font-size: 0.875rem; color: var(--sand); }
 
   .today-jump {
@@ -1302,6 +1318,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=6e7c1f48a0"></script>
+<script type="module" src="./logbuch.js?v=964921cf80"></script>
 </body>
 </html>

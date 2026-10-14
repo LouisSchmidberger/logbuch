@@ -242,6 +242,14 @@ darunter der Tag ("Heute nicht geplant", Tagesnotiz), zuletzt eine Fußleiste mi
 für "+ Neues Feld" (`.today-footer`, gehört nicht zum Tag). Alles linksbündig. Verworfen:
 "+ Neues Feld" dort als reiner Text-Link (wirkte allein unter der Linie verloren).
 
+**Mikro-Animationen**: je ein Baustein pro Muster, kein Animieren einzelner Elemente. Menüs,
+Zeilenmenüs, Dialoge und Notiz-Editor blenden beim Erscheinen kurz ein (`.layer-in`). **Falle**:
+`render()` baut `#app` neu, eine Animation am Element liefe bei jedem `render()` erneut (beim
+Notiz-Editor bei jedem Tastendruck) – deshalb vergibt `markNewLayers` die Klasse nur an Ebenen,
+die vorher nicht da waren; neue Ebenen-Arten in `LAYER_SELECTOR` aufnehmen. Knöpfe geben beim
+Antippen nach (`:active`, `scale`). Bewegung immer über `translate`/`scale` statt `transform`
+(vorhandene transforms bleiben). Bei "Bewegung reduzieren" nur Einblenden bzw. kurz blasser.
+
 **Haptik** (`haptic()`): kurzes Vibrieren beim Setzen/Entfernen eines Werts (Schieberegler
 erst beim Loslassen – bei 100 Stufen wären es sonst zu viele) und beim Long-Press-Menü, damit
 versehentliche Eingaben auffallen. Abschaltbar ("Beim Eintragen vibrieren", `localStorage`

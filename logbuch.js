@@ -7152,20 +7152,22 @@ const CHANGELOG = [
     id: '2026-10-14',
     de: [
       'Woche, Monat, Jahr und Gesamt sind jetzt besser lesbar.',
+      'Menüs und Fenster erscheinen sanfter, Knöpfe reagieren sichtbar, wenn du sie antippst.',
     ],
     en: [
       'Week, Month, Year and Overall are now easier to read.',
+      'Menus and windows appear more smoothly, and buttons respond visibly when you tap them.',
     ],
   },
   {
     id: '2026-10-12',
     de: [
-      'Das Formular für Felder ist übersichtlicher: in Abschnitte gegliedert, mit klareren Auswahlknöpfen und einer Vorschau auch für Zahlen.',
+      'Wenn du ein Feld anlegst oder änderst, ist alles übersichtlicher geordnet, mit einer Vorschau, wie es später aussieht.',
       'Zahlen kannst du in Woche, Monat und Jahr jetzt auch als Summe sehen statt als Durchschnitt, etwa bei Arbeitszeit – einstellbar im Feld unter „Auswertung“.',
       'Feste Tage stellst du jetzt einfach über die Wochentage ein, alle sind vorausgewählt.',
     ],
     en: [
-      'The field form is clearer: split into sections, with clearer choice buttons and a preview for numbers too.',
+      'When you create or change a field, everything is laid out more clearly, with a preview of how it will look.',
       'Numbers can now show a total instead of an average in week, month and year, e.g. for working hours – set it in the field under “Statistics”.',
       'Fixed days are now set simply via the weekdays, all of which are preselected.',
     ],
@@ -8680,8 +8682,24 @@ function focusReopensPicker(el) {
   return el.tagName === 'SELECT' && lastPointerType !== 'mouse';
 }
 
+// Sanftes Erscheinen von Menüs, Dialogen und Notiz-Editor (.layer-in, CSS). render() baut
+// #app jedes Mal neu - eine CSS-Animation am Element liefe deshalb bei jedem render()
+// erneut ab (beim Notiz-Editor bei jedem Tastendruck). Darum bekommt nur eine Ebene die
+// Klasse, die vor diesem render() noch nicht da war (Schlüssel aus Klasse + id/Titel).
+const LAYER_SELECTOR = '.menu-panel, .row-menu, .modal-overlay, .note-editor';
+function layerKey(el) {
+  return `${el.classList[0]}|${el.id || el.querySelector('[id]')?.id || ''}|${el.querySelector('[aria-label]')?.getAttribute('aria-label') || ''}`;
+}
+function openLayerKeys() {
+  return new Set([...app.querySelectorAll(LAYER_SELECTOR)].map(layerKey));
+}
+function markNewLayers(before) {
+  app.querySelectorAll(LAYER_SELECTOR).forEach((el) => { if (!before.has(layerKey(el))) el.classList.add('layer-in'); });
+}
+
 function render() {
   const focusKey = focusKeyOf(document.activeElement);
+  const layersBefore = openLayerKeys();
   // Ein Notiz-Editor, der durch einen Tag-/Tab-Wechsel o.ä. nicht mehr sichtbar ist,
   // wird hier zentral gespeichert und geschlossen, statt an jeder der vielen Stellen,
   // die Tag oder Ansicht ändern (Klicks, Wischen, Deep-Links, Kalenderzellen, ...).
@@ -8701,6 +8719,7 @@ function render() {
   else if (!currentDek) { renderUnlockPrompt(); }
   else if (!state.loading && !state.userSettings.onboardingCompleted) { renderTutorial(); }
   else { renderApp(); }
+  markNewLayers(layersBefore);
   syncPreviewFitHint();
   syncToast(state.passwordRecovery || !state.session); // Anmelde-Seiten: Meldung im Text
   focusModalIfOpen();
