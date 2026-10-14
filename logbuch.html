@@ -684,7 +684,9 @@
      Zeile (min-width: auto = der Name schrumpft nicht unter sein längstes Wort). */
   .number-chart-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 8px; margin-bottom: 6px; }
   .number-chart-head .habit-name { min-width: auto; }
-  .number-chart-meta { font-size: 0.8125rem; color: var(--sand); flex-shrink: 0; white-space: nowrap; }
+  /* Darf umbrechen: mit langem Namen und Einheit ("Ziel: mindestens 8 Gläser à 2") wurde
+     die Seite sonst breiter als der Bildschirm. */
+  .number-chart-meta { font-size: 0.8125rem; color: var(--sand); min-width: 0; }
   .number-chart-svg { display: block; width: 100%; height: 56px; }
   .number-chart-plot { position: relative; }
 
@@ -1251,7 +1253,10 @@
   }
   /* Wert der Stufe vor jeder Bezeichnung - gebraucht, um danach "Hohe/Niedrige Werte
      erstrebenswert" richtig zu wählen (die Bezeichnungen allein verraten die Richtung nicht). */
-  .label-input-row { display: flex; align-items: center; gap: 0.5rem; }
+  .label-input-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+  /* Zeichenzähler (syncCharCounter): erst kurz vor der Grenze, rechtsbündig unter dem Feld. */
+  .char-count { display: block; flex-basis: 100%; width: 100%; text-align: right; font-size: 0.8125rem; color: var(--sand); margin-top: 2px; }
+  .char-count--full { color: var(--ink); font-weight: 600; }
   /* Ziel stufenlos (goalControlHtml): Regler + live "ab Ø 4,3". */
   .goal-slider-row { display: flex; align-items: center; gap: 0.75rem; }
   .goal-slider { min-width: 0; height: 2.75rem; } /* Optik von .value-slider */
@@ -1360,6 +1365,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=c1bdb29d6b"></script>
+<script type="module" src="./logbuch.js?v=2ea6f54d45"></script>
 </body>
 </html>

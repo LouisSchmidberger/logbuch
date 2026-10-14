@@ -1538,6 +1538,7 @@ const STRINGS = {
     'counter.less': 'Um {step} verringern',
     'counter.more': 'Um {step} erhöhen',
     'today.goalOf': 'von {target}',
+    'charCount.sr': '{n} von {max} Zeichen',
     'habitForm.kindComputed': 'Berechnet',
     'habitForm.days': 'An welchen Tagen?',
     'habitForm.days.hint': 'Nur für feste Tage, etwa montags wiegen. Was du mal machst und mal nicht (z. B. Sport), lass an allen Tagen – „Nein“ ist auch ein Eintrag.',
@@ -2315,6 +2316,7 @@ const STRINGS = {
     'counter.less': 'Decrease by {step}',
     'counter.more': 'Increase by {step}',
     'today.goalOf': 'of {target}',
+    'charCount.sr': '{n} of {max} characters',
     'habitForm.kindComputed': 'Calculated',
     'habitForm.days': 'On which days?',
     'habitForm.days.hint': 'Only for fixed days, like weighing yourself on Mondays. For things you do on some days and not on others (e.g. sport), keep all days – “No” is an entry too.',
@@ -7273,6 +7275,7 @@ const CHANGELOG = [
       'Hat eine Zahl ein Ziel, steht es in „Heute“ direkt daneben, zum Beispiel „1 / 2“ – und die Zahl wird grüner, je näher du dran bist.',
       'Nutzt du Logbuch im Browser, findest du die Anleitung, wie du es auf deinen Startbildschirm legst, jetzt jederzeit im Menü unter „Aufs Handy holen“.',
       'Den Tag siehst du in „Heute“ jetzt beim Scrollen immer oben, darunter steht, wenn alles eingetragen ist. Wer mag, lässt dort auch den Stand anzeigen, z. B. „3 von 7“ – in den Einstellungen unter Anzeige.',
+      'Wird ein Name zu lang, siehst du jetzt rechtzeitig, wie viele Zeichen noch gehen.',
       'Schon beim Einrichten kannst du die Schrift größer stellen und zwischen hell und dunkel wählen.',
     ],
     en: [
@@ -7281,6 +7284,7 @@ const CHANGELOG = [
       'If a number has a goal, “Today” shows it right next to it, e.g. “1 / 2” – and the number turns greener the closer you get.',
       'If you use Logbuch in the browser, the guide for putting it on your home screen is now always in the menu under “Get it on your phone”.',
       'In “Today” the day now always stays at the top while you scroll, with a note once everything is filled in. If you like, it can also show your progress, e.g. “3 of 7” – in the settings under Display.',
+      'If a name is getting too long, you now see in time how many characters are left.',
       'You can now make the text bigger and choose light or dark right from the start, while setting up.',
     ],
   },
@@ -8832,6 +8836,31 @@ function markNewLayers(before) {
   app.querySelectorAll(LAYER_SELECTOR).forEach((el) => { if (!before.has(layerKey(el))) el.classList.add('layer-in'); });
 }
 
+// Zeichenzähler "35/40" unter Eingabefeldern mit maxlength - erst, wenn man sich der Grenze
+// nähert (sonst merkte man nicht, warum das Feld plötzlich nichts mehr annimmt bzw. beim
+// Einfügen abschneidet). Hängt am Feld selbst, gilt so für alle Felder mit maxlength.
+function syncCharCounter(el) {
+  const max = Number(el.getAttribute('maxlength'));
+  if (!max) return;
+  let counter = el.nextElementSibling?.classList.contains('char-count') ? el.nextElementSibling : null;
+  const len = el.value.length;
+  if (max - len > Math.max(3, Math.round(max * 0.15))) { counter?.remove(); return; }
+  if (!counter) {
+    counter = document.createElement('span');
+    counter.className = 'char-count';
+    counter.setAttribute('aria-live', 'polite');
+    el.after(counter);
+  }
+  counter.classList.toggle('char-count--full', len >= max);
+  counter.innerHTML = `<span aria-hidden="true">${len}/${max}</span><span class="visually-hidden">${esc(tPlain('charCount.sr', { n: len, max }))}</span>`;
+}
+function syncCharCounters() {
+  app.querySelectorAll('input[maxlength], textarea[maxlength]').forEach(syncCharCounter);
+}
+app.addEventListener('input', (e) => {
+  if (e.target.matches?.('input[maxlength], textarea[maxlength]')) syncCharCounter(e.target);
+});
+
 function render() {
   const focusKey = focusKeyOf(document.activeElement);
   const layersBefore = openLayerKeys();
@@ -8855,6 +8884,7 @@ function render() {
   else if (!state.loading && !state.userSettings.onboardingCompleted) { renderTutorial(); }
   else { renderApp(); }
   if (!app.querySelector('.view-body')) addOnbDisplayBar();
+  syncCharCounters();
   markNewLayers(layersBefore);
   syncPreviewFitHint();
   syncToast(state.passwordRecovery || !state.session); // Anmelde-Seiten: Meldung im Text
