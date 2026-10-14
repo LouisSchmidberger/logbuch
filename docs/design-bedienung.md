@@ -26,11 +26,18 @@ CSS-Variablen lesen können.
 
 **Kontrast, Projektwerte**: `--sand` (Nebentext) ist im hellen Modus `#665e4f` (5,2:1 auf
 `--paper`, 4,7:1 auf den getönten Flächen: Gruppen-Blöcke in "Heute" mit `--ink` 5 %,
-Erklär-Kästen mit `--moss` 9 % – neue getönte Flächen dagegen nachrechnen), im dunklen ~6,5:1. Knopf-Rahmen in `--sand`, nicht `--line` (zu blass). Text auf
-Score-Farben (gewählte Buttons, berechnete Felder in "Heute", Ø-Zellen) wählt
-`textOnScore()` je Farbe: reines Weiß oder Schwarz, je nachdem was mehr Kontrast hat – nur
-so erreicht jede Stufe der Skala 4,5:1 (fester heller Text lag auf hellen Stufen bei ~3:1).
-`scoreColor()` selbst bleibt theme-unabhängig.
+Erklär-Kästen mit `--moss` 9 % – neue getönte Flächen dagegen nachrechnen; auf doppelt
+getönten Flächen wie dem Krisen-Kasten reicht `--sand` nicht, dort `--ink`), im dunklen
+~6,5:1. Knopf-Rahmen in `--sand`, nicht `--line` (zu blass). Text auf
+Score-Farben (gewählte Buttons, berechnete Felder in "Heute", Ø-Zellen, Tageszahlen im
+Monat) wählt `textOnScore()` je Farbe: reines Weiß oder Schwarz, je nachdem was mehr Kontrast
+hat – nur so erreicht jede Stufe der Skala 4,5:1 (fester heller Text lag auf hellen Stufen
+bei ~3:1). Die Tageszahl im Monat liegt zusätzlich auf einem Schild in der Zellfarbe, sonst
+fiel sie auf einem dunklen Streifen des Musters auf 4:1. Score-Farbe **als Schriftfarbe**
+(Werte in Monat/Jahr/Gesamt) immer über `scoreTextColor()` (60 % Farbe + 40 % `--ink`): pur
+lagen die Mittelstufen bei ~2,6:1. Moos/Rost als Schrift auf ihrer eigenen Tönung ebenso zur
+Schrift hin mischen (`color-mix(… 85%, var(--ink))`). `scoreColor()` selbst bleibt
+theme-unabhängig.
 
 **Textgröße** (`getTextSize`/`setTextSize`/`applyTextSize`): alle Schriftgrößen im CSS in
 `rem` (Fließtext 15–16px, kaum etwas unter 13px, nur in den engen Kalender-Rastern 12px),
@@ -146,9 +153,11 @@ kennt die Bedeutung seiner Felder, eine Zusammenfassung ist redundant). Berechne
 zeigen ihre Mitglieder ("Ø aus: …"/"Summe aus: …") mit "Berechnet"-Kennzeichen – die einzige
 Stelle, an der das sichtbar wird. Alle Felder in EINER frei sortierbaren Liste, dazwischen
 Gruppen als Blöcke ([felder.md](felder.md) → Gruppen); "+ Neues Feld" (ausgefüllt) und "+
-Neue Gruppe" (umrandet) nebeneinander oben (`.manage-new-row`). "Archivieren" hat eine
-dezent rost-getönte Klasse (`.manage-btn--warn`, heller als `.manage-btn--danger` bei
-"Löschen") – reversibel, aber ein Entfernen aus der Tageseingabe, daher nicht neutral.
+Neue Gruppe" (umrandet) nebeneinander oben (`.manage-new-row`). "Archivieren" ist ein
+Mittelding (`.manage-btn--warn`: Rost-Rand mit leichter Tönung) zwischen neutral und
+"Löschen" (`.manage-btn--danger`: voller Rost-Rand, ohne Tönung) – reversibel, aber ein
+Entfernen aus der Tageseingabe, daher nicht neutral. Beide Ränder mind. 3:1 (vorher
+1,5–1,9:1).
 Umsortieren per Hoch/Runter-Buttons als Tastatur-Alternative (`commitLayoutOrder()`,
 gemeinsamer Pfad mit dem Pointer-Drag). Beim Ziehen scrollt die Liste am Bildschirmrand von
 selbst (`updateDragAutoScroll`, schneller je näher am Rand).

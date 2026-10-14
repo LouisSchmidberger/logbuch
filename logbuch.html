@@ -312,11 +312,13 @@
     border-radius: 3px; background: var(--input-bg); color: var(--ink); cursor: pointer; text-align: left;
   }
   .menu-item-btn:hover, .menu-item-btn:focus-visible { background: rgba(var(--moss-rgb), 0.14); border-color: var(--moss); }
-  .menu-item-btn--danger { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.4); }
+  /* Rost-Knöpfe: --danger (Löschen, Zurücksetzen) voller Rand, --warn (Archivieren,
+     reversibel) als Mittelding mit leichter Tönung. Ränder mind. 3:1, Text mind. 4,5:1 –
+     auf der Tönung reicht --rust pur hell nicht (4,2:1), daher etwas zur Schrift gemischt. */
+  .menu-item-btn--danger { color: var(--rust); border-color: var(--rust); }
   .menu-item-btn--danger:hover, .menu-item-btn--danger:focus-visible { background: rgba(var(--rust-rgb), 0.12); border-color: var(--rust); }
-  /* Wie .manage-btn--warn: reversibel (z.B. Archivieren), daher dezenter als --danger. */
-  .menu-item-btn--warn { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.25); }
-  .menu-item-btn--warn:hover, .menu-item-btn--warn:focus-visible { background: rgba(var(--rust-rgb), 0.08); border-color: rgba(var(--rust-rgb), 0.6); }
+  .menu-item-btn--warn { color: color-mix(in srgb, var(--rust) 85%, var(--ink)); border-color: rgba(var(--rust-rgb), 0.85); background: rgba(var(--rust-rgb), 0.06); }
+  .menu-item-btn--warn:hover, .menu-item-btn--warn:focus-visible { background: rgba(var(--rust-rgb), 0.12); border-color: var(--rust); }
 
   /* overflow-y + margin: auto: passt der Dialog, steht er mittig; ist er höher als der
      Bildschirm (Querformat mit Tastatur, starke Vergrößerung), lässt er sich scrollen,
@@ -746,15 +748,10 @@
   .month-weekday { font-size: 0.8125rem; color: var(--sand); text-align: center; padding-bottom: 4px; }
   .month-cell { aspect-ratio: 1; border-radius: 3px; border: 1px solid var(--line); display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px; cursor: pointer; }
   .month-cell--empty { border: none; cursor: default; }
-  /* mix-blend-mode:multiply setzt auf einen hellen Seitenhintergrund, damit die
-     Zahl unabhängig vom farbcodierten Zell-Hintergrund lesbar bleibt – funktioniert
-     im Dark Mode nicht mehr (verdunkelt statt abzuheben), dort auf reine Ink-Farbe
-     ohne Blend-Mode zurückfallen. */
-  .month-cell-num { font-size: 0.75rem; color: var(--ink); mix-blend-mode: multiply; }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .month-cell-num { mix-blend-mode: normal; }
-  }
-  :root[data-theme="dark"] .month-cell-num { mix-blend-mode: normal; }
+  /* Auf gefärbten Zellen setzt renderMonth Schrift (textOnScore, Weiß/Schwarz je Zellfarbe -
+     --ink lag dort bei nur 2,7-3,5:1) und ein Schild in der Zellfarbe: auf einem dunklen
+     Streifen des Musters fiel auch Schwarz auf 4:1. */
+  .month-cell-num { font-size: 0.75rem; color: var(--ink); padding: 0 0.125rem; border-radius: 2px; }
 
   .stats-empty {
     display: flex; align-items: flex-start; gap: 0.25rem; padding: 1rem; margin: 0.5rem 0 1.25rem;
@@ -768,7 +765,10 @@
   .stats-legend-bar { flex: 1; height: 0.75rem; border-radius: 2px; }
   .month-stats { border-top: 1px solid var(--line); padding-top: 8px; }
   .month-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 0.875rem; }
-  .month-stat-value { font-weight: 600; }
+  /* Langer Wert bricht rechtsbündig um, statt den Namen zu überdecken (.habit-name hat
+     sonst min-width: 0 und würde unter seine Textbreite schrumpfen). */
+  .month-stat-row .habit-name { min-width: auto; }
+  .month-stat-value { font-weight: 600; text-align: right; }
   .month-stat-count { font-weight: 400; color: var(--sand); }
 
   .year-grid { display: flex; flex-direction: column; gap: 3px; margin-bottom: 20px; }
@@ -781,7 +781,7 @@
     font-size: 0.875rem; padding: 8px 10px; border-radius: 3px; margin-bottom: 14px;
     background: rgba(var(--rust-rgb), 0.12); color: var(--rust); border: 1px solid rgba(var(--rust-rgb), 0.3);
   }
-  .notice--ok { background: rgba(var(--moss-rgb), 0.12); color: var(--moss); border-color: rgba(var(--moss-rgb), 0.3); }
+  .notice--ok { background: rgba(var(--moss-rgb), 0.12); color: color-mix(in srgb, var(--moss) 85%, var(--ink)); border-color: rgba(var(--moss-rgb), 0.3); } /* --moss pur: 4,15:1 auf der Tönung */
   /* Meldungen unten am Rand (syncToast). Ohne Pointer-Events im leeren Bereich, damit
      der darunterliegende Inhalt bedienbar bleibt; solange einer da ist, bekommt #app unten
      mehr Platz, damit er nichts dauerhaft verdeckt (z.B. "Speichern"). */
@@ -855,6 +855,7 @@
   .why-details { margin: 0.5rem 0 0; font-size: 0.875rem; line-height: 1.5; }
   .why-details summary { cursor: pointer; font-weight: 600; padding: 0.25rem 0; }
   .why-details p { margin: 0.25rem 0 0; color: var(--sand); }
+  .auth-box > .why-details { margin-bottom: 1rem; } /* Entsperren: sonst klebt "Passwort" am Text */
   .password-count { margin: 4px 0 0; font-size: 0.875rem; color: var(--ink); }
   .password-count--ok { color: var(--moss); font-weight: 600; }
   .auth-password-hint { margin: 4px 0 0; }
@@ -998,8 +999,9 @@
     position: relative; font-family: inherit; font-size: 0.8125rem; padding: 0.4375rem 0.75rem; border-radius: 999px;
     border: 1px solid var(--sand); background: transparent; color: var(--ink); cursor: pointer;
   }
-  .manage-btn--danger { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.4); }
-  .manage-btn--warn { color: var(--rust); border-color: rgba(var(--rust-rgb), 0.25); background: rgba(var(--rust-rgb), 0.06); }
+  /* Wie .menu-item-btn--danger/--warn (Begründung dort). */
+  .manage-btn--danger { color: var(--rust); border-color: var(--rust); }
+  .manage-btn--warn { color: color-mix(in srgb, var(--rust) 85%, var(--ink)); border-color: rgba(var(--rust-rgb), 0.85); background: rgba(var(--rust-rgb), 0.06); }
   .manage-new-btn {
     display: block; width: 100%; margin-top: 4px; padding: 11px; font-family: inherit; font-size: 1rem; font-weight: 600;
     border: none; border-radius: 4px; background: var(--moss); color: var(--paper); cursor: pointer;
@@ -1031,7 +1033,7 @@
      damit es als Status und nicht als Teil des Namens gelesen wird. */
   .section-done {
     margin-left: 0.5rem; font-family: 'IBM Plex Sans', sans-serif; font-style: normal;
-    font-size: 0.8125rem; font-weight: 600; color: var(--moss);
+    font-size: 0.8125rem; font-weight: 600; color: color-mix(in srgb, var(--moss) 85%, var(--ink)); /* --moss pur: 4,4:1 auf der Gruppen-Fläche */
   }
   /* "Heute": ⋮-Button links neben der Überschrift, die Linie trägt dann der Kopf. */
   .section-head { display: flex; align-items: center; border-bottom: 1px solid var(--line); padding-top: 6px; }
@@ -1103,7 +1105,7 @@
   .tip-body { font-size: 0.9375rem; line-height: 1.5; color: var(--sand); margin: 0; }
   .a11y-highlight {
     background: rgba(var(--moss-rgb), 0.08); border: 1px solid rgba(var(--moss-rgb), 0.3);
-    border-radius: 6px; padding: 16px;
+    border-radius: 6px; padding: 16px; margin-top: 16px;
   }
   .a11y-highlight summary.manage-section-title,
   .mental-health-highlight summary.manage-section-title { cursor: pointer; }
@@ -1132,6 +1134,7 @@
   .privacy-feedback { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(var(--moss-rgb), 0.3); font-style: italic; }
   .mental-health-crisis { background: rgba(var(--rust-rgb), 0.08); border: 1px solid rgba(var(--rust-rgb), 0.3); border-radius: 4px; padding: 10px 12px; margin-bottom: 14px; }
   .mental-health-crisis .tip-body + .tip-body { margin-top: 6px; }
+  .mental-health-crisis .tip-body { color: var(--ink); } /* --sand auf zweifach getönter Fläche nur 4,3:1 */
   .mental-health-crisis .tip-body a { color: var(--moss); text-decoration: underline; }
   .crisis-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   .crisis-action-button {
@@ -1299,6 +1302,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=5e8704a97d"></script>
+<script type="module" src="./logbuch.js?v=06eb888258"></script>
 </body>
 </html>

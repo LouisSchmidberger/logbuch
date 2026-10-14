@@ -741,6 +741,13 @@ function textOnScore(rgb) {
   // Leuchtdichte von Weiß = 1, von Schwarz = 0
   return contrast(lum, 1) >= contrast(lum, 0) ? ON_SCORE_LIGHT : ON_SCORE_DARK;
 }
+// Score-Farbe als Schriftfarbe auf --paper (Werte in Monat/Jahr/Gesamt): pur erreichen die
+// Mittelstufen nur ~2,6:1 (hell) bzw. ~2,9:1 (dunkel). 60 % Score-Farbe + 40 % --ink hält
+// den Farbton und kommt über alle Stufen auf mind. 4,8:1 (hell) bzw. 5,9:1 (dunkel) –
+// --ink ist im Dark Mode hell, die Mischung hellt dort also auf.
+function scoreTextColor(color) {
+  return `color-mix(in srgb, ${color} 60%, var(--ink))`;
+}
 
 // Zusätzlich zur Farbe (scoreColor) ein Streifenmuster, dessen Dichte/Deckkraft mit
 // dem Score steigt — macht die Bewertung auch für Rot-Grün-Farbenblinde ohne Farbe
@@ -6812,7 +6819,7 @@ function renderPeriodValueRows(fields, anchor) {
   return `<div class="month-stats">${fields.map((h) => {
     const v = state.entries[anchor]?.[h.id];
     const score = h.kind === 'scale' && h.good ? habitScore(h, anchor) : null;
-    const color = v === undefined ? 'var(--sand)' : score !== null ? habitColor(h, applyGoal(h, score)) : 'var(--ink)';
+    const color = v === undefined ? 'var(--sand)' : score !== null ? scoreTextColor(habitColor(h, applyGoal(h, score))) : 'var(--ink)';
     const name = `<span class="habit-name">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>`;
     return isTextKind(h) && v !== undefined
       ? `<div class="month-stat-row month-stat-row--text">${name}<p class="period-text-value">${esc(periodValueText(h, v))}</p></div>`
@@ -6931,7 +6938,7 @@ function renderMonth() {
         if (!d) return `<div class="month-cell month-cell--empty"></div>`;
         const s = dayOverallScore(d);
         const hasNote = dayHasNote(formatKey(d));
-        return `<div class="month-cell${hasNote ? ' has-note' : ''}" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(s)};${scorePatternStyle(s)}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(d, s) + (hasNote ? t('ariaLabel.withNote') : ''))}"><span class="month-cell-num">${d.getDate()}</span></div>`;
+        return `<div class="month-cell${hasNote ? ' has-note' : ''}" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(s)};${scorePatternStyle(s)}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(d, s) + (hasNote ? t('ariaLabel.withNote') : ''))}"><span class="month-cell-num"${s !== null && s !== undefined ? ` style="color:${textOnScore(scoreColor(s))};background-color:${scoreColor(s)}"` : ''}>${d.getDate()}</span></div>`;
       }).join('')}
     </div>
     <div class="month-stats">${renderBySection(monthStats.map((st) => st.habit), 'stats', (list) => renderStatsRows(monthStats.filter((st) => list.includes(st.habit))))}</div>
@@ -7385,7 +7392,7 @@ function renderStatsRows(stats) {
       <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
       ${isNeutralScale(habit)
         ? `<span class="month-stat-value"><span class="month-stat-count">${count}×</span></span>`
-        : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : habitColor(habit, applyGoal(habit, avg))}">${avg !== null && isMultiStepScale(habit) ? avgMiniScale(habit, avg, ' avg-scale--inline') : ''}${avg !== null ? esc(habitAvgLong(habit, avg, count, hits, numAvg)) : '–'}${avg !== null && !isYesNoScale(habit) && !hasNumberGoal(habit) ? ` <span class="month-stat-count">(${count}×)</span>` : ''}</span>`}
+        : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : scoreTextColor(habitColor(habit, applyGoal(habit, avg)))}">${avg !== null && isMultiStepScale(habit) ? avgMiniScale(habit, avg, ' avg-scale--inline') : ''}${avg !== null ? esc(habitAvgLong(habit, avg, count, hits, numAvg)) : '–'}${avg !== null && !isYesNoScale(habit) && !hasNumberGoal(habit) ? ` <span class="month-stat-count">(${count}×)</span>` : ''}</span>`}
     </div>
   `).join('');
 }
