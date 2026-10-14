@@ -6557,8 +6557,36 @@ function focusTodayField(habitId, { editInput = false } = {}) {
   row.scrollIntoView({ block: 'center' });
   const input = editInput && row.querySelector(`#number-input-${habitId}, #text-input-${habitId}`);
   (input || trigger).focus({ preventScroll: true });
+  if (input) showKeyboardFor(input.id);
   row.classList.add('field-highlight');
   row.addEventListener('animationend', () => row.classList.remove('field-highlight'), { once: true });
+}
+
+// Handy-Browser öffnen die Tastatur nur bei einem Fokus aus einem Antippen in der Seite -
+// beim Sprung aus einer Erinnerung (Fokus per Skript) nicht. Chrome (Android) kann sie über
+// die VirtualKeyboard-API trotzdem öffnen, sofern auf der Seite schon einmal getippt wurde
+// (z.B. beim Entsperren, oder die App war schon offen); Safari kennt das nicht, dort bleibt
+// ein Tipp ins Feld nötig. "manual" nur vorübergehend: solange es gesetzt ist, öffnet auch
+// ein Tipp ins schon fokussierte Feld keine Tastatur - deshalb öffnet der erste Tipp sie
+// selbst, und beim Verlassen kommt das normale Verhalten zurück. Mit kurzer Verzögerung, weil
+// direkt nach dem Sprung noch ein render() folgt, das das Eingabefeld austauscht.
+function showKeyboardFor(inputId) {
+  if (!('virtualKeyboard' in navigator)) return;
+  setTimeout(() => {
+    const input = document.getElementById(inputId);
+    if (input && document.activeElement === input) openKeyboardOn(input);
+  }, 250);
+}
+function openKeyboardOn(input) {
+  input.virtualKeyboardPolicy = 'manual';
+  const restore = () => {
+    input.virtualKeyboardPolicy = '';
+    input.removeEventListener('pointerdown', onTap);
+  };
+  const onTap = () => { navigator.virtualKeyboard.show(); restore(); };
+  input.addEventListener('pointerdown', onTap);
+  input.addEventListener('blur', restore, { once: true });
+  navigator.virtualKeyboard.show();
 }
 
 function renderNumberBox(h, dateKey, dayEntry, marker = '') {
