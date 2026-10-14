@@ -748,6 +748,18 @@ function textOnScore(rgb) {
 function scoreTextColor(color) {
   return `color-mix(in srgb, ${color} 60%, var(--ink))`;
 }
+// Zahlen/Zähler mit Ziel in "Heute": der Wert gefärbt nach Zielnähe (auch 0 - Nutzer-
+// Entscheidung 2026-10-14: neutral bis zum ersten Eintrag hilft nicht, nach einem von acht
+// Gläsern wäre es trotzdem rot), dahinter "/ Ziel". Bewusst ohne "max"/Haken: ob mindestens
+// oder höchstens, weiß man bei den eigenen Feldern selbst (Nutzer-Entscheidung, störte optisch).
+function goalValueStyle(h, value) {
+  if (!hasNumberGoal(h)) return '';
+  const v = Number(value);
+  return Number.isFinite(v) ? ` style="color:${scoreTextColor(scoreColor(numberGoalScore(h, v)))}"` : '';
+}
+function goalSuffixHtml(h) {
+  return `<span class="goal-suffix"><span aria-hidden="true">/ ${esc(formatNumber(h.target))}</span><span class="visually-hidden">${esc(tPlain('today.goalOf', { target: formatNumber(h.target) }))}</span></span>`;
+}
 
 // Zusätzlich zur Farbe (scoreColor) ein Streifenmuster, dessen Dichte/Deckkraft mit
 // dem Score steigt — macht die Bewertung auch für Rot-Grün-Farbenblinde ohne Farbe
@@ -1523,6 +1535,7 @@ const STRINGS = {
     'habitForm.error.counterStep': 'Der Schritt muss eine Zahl größer als 0 sein.',
     'counter.less': 'Um {step} verringern',
     'counter.more': 'Um {step} erhöhen',
+    'today.goalOf': 'von {target}',
     'habitForm.kindComputed': 'Berechnet',
     'habitForm.days': 'An welchen Tagen?',
     'habitForm.days.hint': 'Nur für feste Tage, etwa montags wiegen. Was du mal machst und mal nicht (z. B. Sport), lass an allen Tagen – „Nein“ ist auch ein Eintrag.',
@@ -2293,6 +2306,7 @@ const STRINGS = {
     'habitForm.error.counterStep': 'The step must be a number greater than 0.',
     'counter.less': 'Decrease by {step}',
     'counter.more': 'Increase by {step}',
+    'today.goalOf': 'of {target}',
     'habitForm.kindComputed': 'Calculated',
     'habitForm.days': 'On which days?',
     'habitForm.days.hint': 'Only for fixed days, like weighing yourself on Mondays. For things you do on some days and not on others (e.g. sport), keep all days – “No” is an entry too.',
@@ -6576,7 +6590,7 @@ function renderNumberBox(h, dateKey, dayEntry, marker = '') {
   return `
     <div class="number-box">
       ${renderRowHead(h, nameWithUnit + marker, lastNote ? `<span class="number-last">${lastNote}</span>` : '')}
-      <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-action="number-input" data-habit="${h.id}" value="${esc(currentValue)}" aria-label="${nameWithUnit}" />
+      <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-action="number-input" data-habit="${h.id}" value="${esc(currentValue)}" aria-label="${nameWithUnit}"${currentValue === '' ? '' : goalValueStyle(h, currentValue)} />${hasNumberGoal(h) ? goalSuffixHtml(h) : ''}
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
     </div>
@@ -6592,12 +6606,13 @@ function renderCounterBox(h, dateKey, dayEntry) {
   const value = dayEntry[h.id] ?? 0;
   const nameWithUnit = `${esc(h.name)}${h.unit ? ` (${esc(h.unit)})` : ''}`;
   const step = formatNumber(h.step);
+  const goal = hasNumberGoal(h);
   return `
     <div class="habit-row habit-row--counter">
       ${renderRowHead(h, nameWithUnit)}
       <div class="counter-controls" role="group" aria-label="${esc(h.name)}">
         <button type="button" class="counter-btn" data-action="counter-step" data-habit="${h.id}" data-dir="-1" ${value <= 0 ? 'disabled' : ''} aria-label="${esc(tPlain('counter.less', { step }))}">−</button>
-        <span class="counter-value" aria-live="polite">${esc(formatNumber(value))}</span>
+        <span class="counter-value${goal ? ' counter-value--goal' : ''}" aria-live="polite"><span${goalValueStyle(h, value)}>${esc(formatNumber(value))}</span>${goal ? goalSuffixHtml(h) : ''}</span>
         <button type="button" class="counter-btn counter-btn--plus" data-action="counter-step" data-habit="${h.id}" data-dir="1" aria-label="${esc(tPlain('counter.more', { step }))}">+</button>
       </div>
       ${renderNote(dateKey, h.id, noteLabel(h))}
@@ -7153,10 +7168,12 @@ const CHANGELOG = [
     de: [
       'Woche, Monat, Jahr und Gesamt sind jetzt besser lesbar.',
       'Menüs und Fenster erscheinen sanfter, Knöpfe reagieren sichtbar, wenn du sie antippst.',
+      'Hat eine Zahl ein Ziel, steht es in „Heute“ direkt daneben, zum Beispiel „1 / 2“ – und die Zahl wird grüner, je näher du dran bist.',
     ],
     en: [
       'Week, Month, Year and Overall are now easier to read.',
       'Menus and windows appear more smoothly, and buttons respond visibly when you tap them.',
+      'If a number has a goal, “Today” shows it right next to it, e.g. “1 / 2” – and the number turns greener the closer you get.',
     ],
   },
   {

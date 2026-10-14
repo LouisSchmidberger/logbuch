@@ -301,7 +301,8 @@ höchstens X (`good` 'high'/'low' + `target` in `enc`). Mit Ziel gelten sie als 
 höchstens: bis zum Ziel 1, darüber linear bis 0 beim Doppelten), damit eigene Zeile im
 Wochenraster, Ø-Spalte = **Durchschnitt** ("6,2", gefärbt nach Zielnähe; verworfen: "4/7" –
 sah wie ein Wert aus), Langform "Ø 6,2 · Ziel an 4 von 7 Tagen erreicht", Tagesfarbe,
-gestrichelte Ziellinie im Verlauf. Ohne Ziel neutraler Verlauf wie
+gestrichelte Ziellinie im Verlauf. In "Heute" steht das Ziel als "/ 8" hinter dem Wert, der Wert gefärbt nach
+Zielnähe (`goalValueStyle`, auch schon bei 0; ohne "max"/Haken – Nutzer-Entscheidung 2026-10-14). Ohne Ziel neutraler Verlauf wie
 bisher – nicht jede Zahl braucht eins. **Ohne Antippen = 0** – in "Heute" sichtbar
 als 0, nie "offen", zählt nicht für "alles eingetragen"; in der Auswertung zählt ein leerer
 Tag ab dem Anlegen (`created_at`) bis **gestern** als 0 – der laufende Tag erst, wenn getippt

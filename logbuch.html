@@ -470,6 +470,10 @@
   .counter-btn:disabled { opacity: 0.4; cursor: default; }
   .counter-btn--plus { border-color: var(--moss); color: var(--moss); font-weight: 600; }
   .counter-value { min-width: 2.5rem; text-align: center; font-size: 1.25rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  /* Ziel hinter dem Wert ("1 / 2", goalSuffixHtml): klein und in Nebentext-Farbe, damit der
+     gefärbte Wert die Hauptsache bleibt. */
+  .counter-value--goal { min-width: 3.75rem; white-space: nowrap; }
+  .goal-suffix { font-size: 0.875rem; font-weight: 400; color: var(--sand); margin-left: 0.25rem; white-space: nowrap; }
   .opt-btn {
     position: relative; font-family: inherit; font-size: 0.875rem; width: 2rem; height: 2rem; border-radius: 50%; flex-shrink: 0;
     border: 1px solid var(--sand); background: transparent; color: var(--ink); cursor: pointer;
@@ -515,6 +519,8 @@
     width: 72px; font-family: inherit; font-size: 1rem; padding: 6px 8px; border: 1px solid var(--line);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
+  .number-input[style*="color"] { font-weight: 600; } /* Wert mit Ziel: gefärbt wie beim Zähler */
+  .number-box .goal-suffix { margin-left: -0.25rem; }
 
   .habit-row--slider { flex-direction: column; align-items: stretch; gap: 6px; }
   .slider-row { display: flex; align-items: center; gap: 10px; width: 100%; }
@@ -1328,6 +1334,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=964921cf80"></script>
+<script type="module" src="./logbuch.js?v=751557eed4"></script>
 </body>
 </html>
