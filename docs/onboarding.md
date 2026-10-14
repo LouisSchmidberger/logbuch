@@ -111,6 +111,14 @@ Einrichten überspringt – sonst spränge "Schritt 2 von 4" auf "Schritt 1 von 
 Unterschritt (Tutorial) steht als kleine Punkte-Zeile darunter, nicht in derselben
 Überschrift.
 
+## Textgröße und Hell/Dunkel in der Einführung
+
+Startseite: offener Kasten unter den Karten; alle weiteren Seiten: "Aa Anzeige" oben rechts
+(neben dem Zurück-Pfeil), klappt die Auswahl auf und beim Seitenwechsel wieder zu. Eingefügt
+zentral aus `render()` (`addOnbDisplayBar`, an jede `.auth-box` außer der Startseite). Grund:
+die Einstellungen sind erst nach der Einführung erreichbar, und auf dem iPhone hat die
+installierte App einen eigenen Speicher (eine im Browser gewählte Größe ist dort wieder weg).
+
 ## Installations-Seite (nur Handy im Browser)
 
 `renderInstallGate`, "Erst mal ein Zuhause für Logbuch": Begründung im "Warum?"-Kasten

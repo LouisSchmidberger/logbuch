@@ -981,6 +981,20 @@
   .onb-choice-note { display: block; margin-top: 0.375rem; font-size: 0.9375rem; line-height: 1.45; }
   .auth-email-hint { margin: 0.375rem 0 0; }
   .auth-back { margin-bottom: 8px; }
+  /* Einführung: Zurück links, "Aa Anzeige" rechts in einer Zeile (addOnbDisplayBar). */
+  .onb-topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  .onb-topbar .auth-back { margin-bottom: 0; }
+  .onb-display-btn {
+    position: relative; display: inline-flex; align-items: center; gap: 0.375rem; background: none; border: 1px solid var(--sand);
+    border-radius: 999px; color: var(--ink); font-family: inherit; font-size: 0.875rem; cursor: pointer; padding: 0.375rem 0.875rem;
+  }
+  .onb-display-btn[aria-expanded="true"] { border-color: var(--ink); }
+  .onb-display-btn-icon { font-family: 'Fraunces', serif; font-weight: 600; font-size: 0.9375rem; }
+  .onb-display-btn-icon span { font-size: 1.2em; }
+  .onb-display { display: flex; flex-direction: column; gap: 6px; margin: 0 0 18px; }
+  .onb-display--welcome { margin: 24px 0 0; padding-top: 16px; border-top: 1px solid var(--line); }
+  .onb-display-title { font-size: 0.9375rem; font-weight: 600; margin: 0 0 4px; }
+  .onb-display-label { font-size: 0.875rem; color: var(--sand); margin-top: 4px; }
   /* Nebenaktion unter einer Hauptaktion (Passwort vergessen, Lieber nicht, im Browser
      bleiben ...): umrandeter Knopf statt unterstrichenem Text - Links wurden von wenig
      erfahrenen Menschen nicht als antippbar erkannt. Unterstrichen bleibt nur, was mitten
@@ -1339,6 +1353,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=79dc1cac0e"></script>
+<script type="module" src="./logbuch.js?v=7f3a53c4e5"></script>
 </body>
 </html>

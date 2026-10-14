@@ -854,6 +854,7 @@ function numberFieldStats(habit, dateKeys) {
 
 // --- App-State ---------------------------------------------------------
 const state = {
+  onbDisplayOpen: false, // Einführung: Auswahl "Aa Anzeige" aufgeklappt (addOnbDisplayBar)
   session: null,
   entries: {},       // { 'YYYY-MM-DD': { habitId: value, ... } }
   loading: true,
@@ -1794,6 +1795,8 @@ const STRINGS = {
     'theme.light': 'Hell',
     'theme.dark': 'Dunkel',
     'textSize.label': 'Textgröße',
+    'onbDisplay.welcomeTitle': 'Schrift zu klein? Lieber hell oder dunkel?',
+    'onbDisplay.button': 'Anzeige',
     'textSize.small': 'Klein',
     'textSize.normal': 'Normal',
     'textSize.large': 'Groß',
@@ -2567,6 +2570,8 @@ const STRINGS = {
     'theme.light': 'Light',
     'theme.dark': 'Dark',
     'textSize.label': 'Text size',
+    'onbDisplay.welcomeTitle': 'Text too small? Prefer light or dark?',
+    'onbDisplay.button': 'Display',
     'textSize.small': 'Small',
     'textSize.normal': 'Normal',
     'textSize.large': 'Large',
@@ -5502,13 +5507,52 @@ function rememberSignedInHere() {
 // Anmelden (signedInHereBefore).
 function renderAuthWelcome() {
   app.innerHTML = `
-    <div class="auth-box">
+    <div class="auth-box auth-box--welcome">
       <h1 tabindex="-1">Logbuch</h1>
       <p class="auth-welcome-lead">${t('auth.welcome.lead')}</p>
       ${choiceCard({ action: 'auth-choose', mode: 'mode', title: t('auth.welcome.new'), note: t('auth.welcome.newNote') })}
       ${choiceCard({ action: 'auth-choose', mode: 'signin', title: t('auth.welcome.existing'), note: t('auth.welcome.existingNote') })}
+      <div class="onb-display onb-display--welcome">
+        <p class="onb-display-title">${t('onbDisplay.welcomeTitle')}</p>
+        ${onbDisplayChoicesHtml()}
+      </div>
     </div>
   `;
+}
+
+// Textgröße und Hell/Dunkel schon vor dem Konto: sonst muss, wer schlecht sieht, die ganze
+// Einführung in normaler Schrift schaffen (die Einstellungen kommen erst danach). Startseite:
+// offen unter den Karten; alle weiteren Seiten der Einführung: Knopf "Aa Anzeige" oben rechts
+// (addOnbDisplayBar) - auch, weil auf dem iPhone die installierte App einen eigenen Speicher
+// hat und eine im Browser gewählte Größe dort wieder weg ist.
+function onbDisplayChoicesHtml() {
+  const seg = (labelId, label, buttons) => `
+    <span class="onb-display-label" id="${labelId}">${label}</span>
+    <div class="pill-group seg" role="group" aria-labelledby="${labelId}">${buttons}</div>`;
+  const theme = getThemeOverride() || '';
+  return `
+    ${seg('onb-text-size-label', t('textSize.label'), TEXT_SIZES.map((size) => `<button type="button" class="pill-toggle${getTextSize() === size ? ' pill-toggle--active' : ''}" data-action="text-size-set" data-size="${size}" aria-pressed="${getTextSize() === size}">${t('textSize.' + (size || 'normal'))}</button>`).join(''))}
+    ${seg('onb-theme-label', t('theme.label'), [['', 'theme.system'], ['light', 'theme.light'], ['dark', 'theme.dark']].map(([v, key]) => `<button type="button" class="pill-toggle${theme === v ? ' pill-toggle--active' : ''}" data-action="theme-set" data-theme="${v}" aria-pressed="${theme === v}">${t(key)}</button>`).join(''))}
+  `;
+}
+// Zentral aus render() statt in jeder der vielen Seiten der Einführung: Zeile mit Zurück-Pfeil
+// (falls die Seite einen hat) links und "Aa Anzeige" rechts, darunter aufgeklappt die Auswahl.
+// Auf der nächsten Seite wieder zu (sonst schöbe die offene Auswahl jeden Inhalt nach unten).
+let onbDisplayPage = null;
+function addOnbDisplayBar() {
+  const box = app.querySelector('.auth-box');
+  if (!box || box.classList.contains('auth-box--welcome')) return;
+  const page = box.querySelector('h1')?.textContent ?? '';
+  if (page !== onbDisplayPage) { onbDisplayPage = page; state.onbDisplayOpen = false; }
+  const back = box.firstElementChild?.classList.contains('auth-back') ? box.firstElementChild : null;
+  box.insertAdjacentHTML('afterbegin', `
+    <div class="onb-topbar">
+      <span class="onb-topbar-back"></span>
+      <button type="button" class="onb-display-btn" data-action="onb-display-toggle" aria-expanded="${state.onbDisplayOpen}"${state.onbDisplayOpen ? ' aria-controls="onb-display-panel"' : ''}><span class="onb-display-btn-icon" aria-hidden="true">A<span>a</span></span>${t('onbDisplay.button')}</button>
+    </div>
+    ${state.onbDisplayOpen ? `<div class="onb-display" id="onb-display-panel">${onbDisplayChoicesHtml()}</div>` : ''}
+  `);
+  if (back) box.querySelector('.onb-topbar-back').replaceWith(back);
 }
 // Gleichwertige Antworten auf eine Frage (Startseite, Einstiegsfrage): gleich aussehende
 // Karten mit dem erklärenden Satz IM Knopf. Ein gefüllter Knopf neben einem umrandeten
@@ -7194,12 +7238,14 @@ const CHANGELOG = [
       'Menüs und Fenster erscheinen sanfter, Knöpfe reagieren sichtbar, wenn du sie antippst.',
       'Hat eine Zahl ein Ziel, steht es in „Heute“ direkt daneben, zum Beispiel „1 / 2“ – und die Zahl wird grüner, je näher du dran bist.',
       'Nutzt du Logbuch im Browser, findest du die Anleitung, wie du es auf deinen Startbildschirm legst, jetzt jederzeit im Menü unter „Aufs Handy holen“.',
+      'Schon beim Einrichten kannst du die Schrift größer stellen und zwischen hell und dunkel wählen.',
     ],
     en: [
       'Week, Month, Year and Overall are now easier to read.',
       'Menus and windows appear more smoothly, and buttons respond visibly when you tap them.',
       'If a number has a goal, “Today” shows it right next to it, e.g. “1 / 2” – and the number turns greener the closer you get.',
       'If you use Logbuch in the browser, the guide for putting it on your home screen is now always in the menu under “Get it on your phone”.',
+      'You can now make the text bigger and choose light or dark right from the start, while setting up.',
     ],
   },
   {
@@ -8764,6 +8810,7 @@ function render() {
   else if (!currentDek) { renderUnlockPrompt(); }
   else if (!state.loading && !state.userSettings.onboardingCompleted) { renderTutorial(); }
   else { renderApp(); }
+  if (!app.querySelector('.view-body')) addOnbDisplayBar();
   markNewLayers(layersBefore);
   syncPreviewFitHint();
   syncToast(state.passwordRecovery || !state.session); // Anmelde-Seiten: Meldung im Text
@@ -8931,6 +8978,9 @@ app.addEventListener('click', async (e) => {
     render();
   } else if (action === 'toggle-menu') {
     state.menuOpen = !state.menuOpen;
+    render();
+  } else if (action === 'onb-display-toggle') {
+    state.onbDisplayOpen = !state.onbDisplayOpen;
     render();
   } else if (action === 'text-size-set') {
     setTextSize(el.dataset.size);
