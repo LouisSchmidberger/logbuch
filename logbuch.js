@@ -1708,8 +1708,8 @@ const STRINGS = {
     'installGate.installButtonNote': 'Danach fragt dein Handy noch einmal – tipp dort auf „Installieren“.',
     'installGate.showPictures': 'Mit Bildern zeigen',
     'installGate.afterwards': 'Danach schließt sich der Browser oft von selbst, und du siehst das neue Logbuch-Symbol auf deinem Startbildschirm. Tipp darauf – dort geht’s weiter.',
-    'installGate.step.iosSafari1': 'Tippe auf das Teilen-Symbol (Quadrat mit Pfeil nach oben). Meist ist es unten in der Leiste; manchmal steckt es hinter ••• .',
-    'installGate.step.iosOther1': 'Tippe auf das Teilen-Symbol (Quadrat mit Pfeil nach oben) – meist oben in der Adressleiste.',
+    'installGate.step.iosSafari1': 'Tippe auf das Teilen-Symbol [share]. Meist ist es unten in der Leiste; manchmal steckt es hinter ••• .',
+    'installGate.step.iosOther1': 'Tippe auf das Teilen-Symbol [share] – meist oben in der Adressleiste.',
     'installGate.step.ios2': 'Such in der Liste nach „Zum Home-Bildschirm“ – eventuell musst du dafür etwas nach unten scrollen.',
     'installGate.step.ios3': 'Bestätige mit „Hinzufügen“.',
     'installGate.step.chrome1': 'Öffne das Menü des Browsers – meist drei Punkte ⋮ oben rechts.',
@@ -2483,8 +2483,8 @@ const STRINGS = {
     'installGate.installButtonNote': 'Your phone then asks once more – tap “Install” there.',
     'installGate.showPictures': 'Show with pictures',
     'installGate.afterwards': 'Afterwards the browser often closes by itself and you see the new Logbuch icon on your home screen. Tap it – that is where it continues.',
-    'installGate.step.iosSafari1': 'Tap the share icon (a square with an arrow pointing up). It is usually in the bar at the bottom; sometimes it is behind ••• .',
-    'installGate.step.iosOther1': 'Tap the share icon (a square with an arrow pointing up) – usually at the top in the address bar.',
+    'installGate.step.iosSafari1': 'Tap the share icon [share]. It is usually in the bar at the bottom; sometimes it is behind ••• .',
+    'installGate.step.iosOther1': 'Tap the share icon [share] – usually at the top in the address bar.',
     'installGate.step.ios2': 'Look for “Add to Home Screen” in the list – you may need to scroll down a little.',
     'installGate.step.ios3': 'Confirm with “Add”.',
     'installGate.step.chrome1': 'Open the browser menu – usually three dots ⋮ at the top right.',
@@ -6154,6 +6154,9 @@ function installSteps() {
 }
 // Faustregel: bei "Schritt für Schritt" die Skizzen direkt im Ablauf, sonst die kurze
 // Text-Fassung mit den Skizzen zum Aufklappen.
+// Teilen-Symbol von iOS klein im Text statt einer Beschreibung ("Quadrat mit Pfeil nach oben") -
+// das Wort "Teilen-Symbol" bleibt davor stehen, für Screenreader ist das Bild ausgeblendet.
+const SHARE_ICON_SVG = '<svg class="inline-icon" width="0.9em" height="1.1em" viewBox="0 0 16 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 7.5H2.5v11h11v-11h-3"/><path d="M8 1.5v11"/><path d="M4.75 4.5L8 1.5l3.25 3"/></svg>';
 // forceSketches: Skizzen direkt im Ablauf (wie bei "Schritt für Schritt") - auf der Seite
 // "Logbuch aufs Handy holen" in der App ist man gezielt wegen der Anleitung da.
 function installManualHtml(forceSketches = false) {
@@ -6161,7 +6164,7 @@ function installManualHtml(forceSketches = false) {
   const list = (withSketches) => `
     <p class="onb-hint">${t('installGate.vary')}</p>
     <ol class="onb-steps install-steps">
-      ${steps.map(([key, sketch]) => `<li><span>${t(`installGate.step.${key}`)}</span>${withSketches && sketch ? sketchHtml(sketch) : ''}</li>`).join('')}
+      ${steps.map(([key, sketch]) => `<li><span>${t(`installGate.step.${key}`).replace('[share]', SHARE_ICON_SVG)}</span>${withSketches && sketch ? sketchHtml(sketch) : ''}</li>`).join('')}
     </ol>
   `;
   return isGuided() || forceSketches
