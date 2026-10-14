@@ -354,6 +354,11 @@
     padding: 8px 10px; margin-bottom: 16px;
   }
   .install-hint span { flex: 1; }
+  /* "Zeig mir, wie" unter dem Hinweistext: umrandeter Knopf wie die übrigen Nebenaktionen. */
+  .install-hint-show {
+    display: block; margin-top: 8px; background: none; border: 1px solid var(--sand); border-radius: 999px;
+    color: var(--ink); font-family: inherit; font-size: 0.875rem; cursor: pointer; padding: 0.375rem 0.875rem;
+  }
   .install-hint-close {
     position: relative; background: none; border: none; color: var(--sand); font-size: 1.25rem; line-height: 1; cursor: pointer;
     padding: 0 2px; flex-shrink: 0;
@@ -1334,6 +1339,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=751557eed4"></script>
+<script type="module" src="./logbuch.js?v=79dc1cac0e"></script>
 </body>
 </html>

@@ -972,7 +972,7 @@ function closeModals() {
 // von "Verwalten") - deshalb ein Layer-Zähler statt einer reinen Boolean-Prüfung, mit
 // je einem History-Eintrag pro Layer, damit zwei Zurück-Drücke auch zwei Ebenen
 // nacheinander schließen.
-function isSubpageView(view) { return view === 'manage' || view === 'about' || view === 'feedback' || view === 'settings'; }
+function isSubpageView(view) { return ['manage', 'about', 'feedback', 'settings', 'install'].includes(view); }
 // Merkt sich den Tab, von dem aus eine Unterseite betreten wurde (nicht überschreiben,
 // wenn man z.B. innerhalb von "Verwalten" übers Menü direkt zu "Über Logbuch"
 // wechselt - sonst würde "Zurück" dann fälschlich zu "Verwalten" statt zum
@@ -1201,6 +1201,7 @@ const STRINGS = {
     'ariaLabel.dismissHint': 'Hinweis schließen',
     'installHint.ios': 'Damit Erinnerungen ankommen: Tippe auf das Teilen-Symbol (Quadrat mit Pfeil nach oben – je nach Einstellung oben in der Adressleiste oder unten in der Leiste) und dann „Zum Home-Bildschirm“. Auf dem iPhone funktionieren Benachrichtigungen sonst leider gar nicht.',
     'installHint.other': 'Für die beste Erfahrung (u.a. zuverlässigere Erinnerungen): füge Logbuch über das Browser-Menü zum Home-Bildschirm hinzu.',
+    'installHint.show': 'Zeig mir, wie',
     'notice.pushPermissionDenied': 'Ohne deine Erlaubnis kann Logbuch keine Erinnerungen schicken. Du kannst es jederzeit nochmal versuchen.',
     'notice.pushEnabled': 'Erinnerungen sind aktiv.',
     'notice.enableFailed': 'Erinnerungen ließen sich nicht einschalten.',
@@ -1805,6 +1806,7 @@ const STRINGS = {
     'menu.about': 'Über Logbuch',
     'about.title': 'Über Logbuch',
     'menu.feedback': 'Feedback geben',
+    'menu.install': 'Aufs Handy holen',
     'menu.settings': 'Einstellungen',
     'settings.reminders': 'Erinnerungen',
     'settings.display': 'Anzeige',
@@ -1972,6 +1974,7 @@ const STRINGS = {
     'ariaLabel.dismissHint': 'Dismiss hint',
     'installHint.ios': 'So reminders can reach you: tap the share icon (a square with an arrow pointing up – depending on your settings, either at the top in the address bar or at the bottom in the toolbar) and then "Add to Home Screen". Notifications unfortunately do not work at all on iPhone otherwise.',
     'installHint.other': 'For the best experience (incl. more reliable reminders): add Logbuch to your home screen via the browser menu.',
+    'installHint.show': 'Show me how',
     'notice.pushPermissionDenied': 'Without your permission Logbuch cannot send reminders. You can try again anytime.',
     'notice.pushEnabled': 'Reminders are active.',
     'notice.enableFailed': 'Reminders could not be turned on.',
@@ -2576,6 +2579,7 @@ const STRINGS = {
     'menu.about': 'About Logbuch',
     'about.title': 'About Logbuch',
     'menu.feedback': 'Send feedback',
+    'menu.install': 'Get it on your phone',
     'menu.settings': 'Settings',
     'settings.reminders': 'Reminders',
     'settings.display': 'Display',
@@ -5101,11 +5105,13 @@ function isMobileDevice() {
 // Fenster), das würde der bisherige Text aber fälschlich als Zuverlässigkeits-Vorteil
 // verkaufen. Statt den Text zu verwässern, blendet der Hinweis auf Desktop komplett
 // aus (genau wie die Installations-Seite vor dem Anmelden, renderInstallGate).
+// Handy im Browser (nicht als App geöffnet): nur dann gibt es Hinweis und Menüpunkt.
+function canInstallFromHere() { return isMobileDevice() && !isStandaloneDisplay(); }
 function renderInstallHint() {
-  if (isStandaloneDisplay() || isInstallHintDismissed() || !isMobileDevice()) return '';
+  if (!canInstallFromHere() || isInstallHintDismissed() || state.view === 'install') return '';
   return `
     <div class="install-hint">
-      <span>${esc(installHintText())}</span>
+      <span>${esc(installHintText())}<button type="button" class="install-hint-show" data-action="open-install">${t('installHint.show')}</button></span>
       <button type="button" class="install-hint-close" data-action="dismiss-install-hint" aria-label="${esc(t('ariaLabel.dismissHint'))}">×</button>
     </div>
   `;
@@ -6104,7 +6110,9 @@ function installSteps() {
 }
 // Faustregel: bei "Schritt für Schritt" die Skizzen direkt im Ablauf, sonst die kurze
 // Text-Fassung mit den Skizzen zum Aufklappen.
-function installManualHtml() {
+// forceSketches: Skizzen direkt im Ablauf (wie bei "Schritt für Schritt") - auf der Seite
+// "Logbuch aufs Handy holen" in der App ist man gezielt wegen der Anleitung da.
+function installManualHtml(forceSketches = false) {
   const steps = installSteps();
   const list = (withSketches) => `
     <p class="onb-hint">${t('installGate.vary')}</p>
@@ -6112,14 +6120,15 @@ function installManualHtml() {
       ${steps.map(([key, sketch]) => `<li><span>${t(`installGate.step.${key}`)}</span>${withSketches && sketch ? sketchHtml(sketch) : ''}</li>`).join('')}
     </ol>
   `;
-  return isGuided()
+  return isGuided() || forceSketches
     ? list(true)
     : `${list(false)}<details class="why-box"><summary class="why-box-title">${t('installGate.showPictures')}</summary>${list(true)}</details>`;
 }
-function renderInstallGate() {
-  const ios = isIOSDevice();
-  const manual = installManualHtml();
-  const how = appJustInstalled
+// Installieren-Knopf (falls der Browser einen anbietet) bzw. Anleitung von Hand - gemeinsam
+// für die Installations-Seite der Einführung und die Seite "Logbuch aufs Handy holen".
+function installHowHtml({ forceSketches = false } = {}) {
+  const manual = installManualHtml(forceSketches);
+  return appJustInstalled
     ? `<p class="tutorial-text"><strong>${t('installGate.installed')}</strong></p>`
     : `
       ${otherBrowserBox()}
@@ -6130,6 +6139,21 @@ function renderInstallGate() {
       ` : manual}
       <p class="onb-hint">${t('installGate.afterwards')}</p>
     `;
+}
+// Seite "Logbuch aufs Handy holen" (Menü bzw. "Zeig mir, wie" im Hinweis): dieselbe Anleitung
+// wie in der Einführung, für alle, die dort "Ich bleib erst mal im Browser" gewählt haben.
+function renderInstallGuide() {
+  return `
+    <div class="onb install-guide">
+      <p class="tutorial-text">${t('installGate.body')}</p>
+      ${whyBox('installGate.whyTitle', isIOSDevice() ? 'installGate.whyIos' : 'installGate.whyAndroid')}
+      ${installHowHtml({ forceSketches: true })}
+    </div>
+  `;
+}
+function renderInstallGate() {
+  const ios = isIOSDevice();
+  const how = installHowHtml();
   app.innerHTML = `
     <div class="auth-box onb">
       ${authBackButton(state.authMode === 'signup' ? (isGuided() ? 'overview' : 'intro') : 'welcome')}
@@ -7169,11 +7193,13 @@ const CHANGELOG = [
       'Woche, Monat, Jahr und Gesamt sind jetzt besser lesbar.',
       'Menüs und Fenster erscheinen sanfter, Knöpfe reagieren sichtbar, wenn du sie antippst.',
       'Hat eine Zahl ein Ziel, steht es in „Heute“ direkt daneben, zum Beispiel „1 / 2“ – und die Zahl wird grüner, je näher du dran bist.',
+      'Nutzt du Logbuch im Browser, findest du die Anleitung, wie du es auf deinen Startbildschirm legst, jetzt jederzeit im Menü unter „Aufs Handy holen“.',
     ],
     en: [
       'Week, Month, Year and Overall are now easier to read.',
       'Menus and windows appear more smoothly, and buttons respond visibly when you tap them.',
       'If a number has a goal, “Today” shows it right next to it, e.g. “1 / 2” – and the number turns greener the closer you get.',
+      'If you use Logbuch in the browser, the guide for putting it on your home screen is now always in the menu under “Get it on your phone”.',
     ],
   },
   {
@@ -8324,7 +8350,7 @@ const ICONS = {
   newField: '✏️', newGroup: '📁',
   reminders: '🔔', display: '🎨', account: '👤',
   a11y: '♿', mentalHealth: '💚', privacy: '🔒',
-  usage: '👆', fields: '✏️', appearance: '🎨', news: '✨',
+  usage: '👆', fields: '✏️', appearance: '🎨', news: '✨', install: '📱',
 };
 function icon(name) {
   return `<span class="item-icon" aria-hidden="true">${ICONS[name]}</span>`;
@@ -8337,7 +8363,8 @@ function icon(name) {
 function renderMenu() {
   return `
     <div class="menu-panel">
-      ${[['open-manage', 'manage', 'menu.manageFields'], ['open-settings', 'settings', 'menu.settings'], ['open-about', 'about', 'menu.about'], ['open-feedback', 'feedback', 'menu.feedback']]
+      ${[['open-manage', 'manage', 'menu.manageFields'], ['open-settings', 'settings', 'menu.settings'], ['open-about', 'about', 'menu.about'], ['open-feedback', 'feedback', 'menu.feedback'],
+        ...(canInstallFromHere() ? [['open-install', 'install', 'menu.install']] : [])]
         .map(([action, iconName, key]) => `<button type="button" class="menu-item-btn" data-action="${action}">${icon(iconName)}${t(key)}</button>`).join('')}
     </div>
   `;
@@ -8562,7 +8589,8 @@ function renderApp() {
     state.view === 'global' ? renderGlobal() :
     state.view === 'about' ? renderAbout() :
     state.view === 'feedback' ? renderFeedback() :
-    state.view === 'settings' ? renderSettings() : renderManage();
+    state.view === 'settings' ? renderSettings() :
+    state.view === 'install' ? renderInstallGuide() : renderManage();
 
   app.innerHTML = `
     <div class="sticky-top">
@@ -8571,7 +8599,7 @@ function renderApp() {
           ? habitFormTitleKey(state.habitForm)
           : state.view === 'manage' && state.sectionForm
             ? (state.sectionForm.id ? 'habitForm.title.editGroup' : 'habitForm.title.newGroup')
-            : { manage: 'menu.manageFields', about: 'about.title', feedback: 'feedback.title', settings: 'menu.settings' }[state.view], state.view === 'manage' ? (state.sectionForm ? 'newGroup' : 'manage') : state.view)
+            : { manage: 'menu.manageFields', about: 'about.title', feedback: 'feedback.title', settings: 'menu.settings', install: 'menu.install' }[state.view], state.view === 'manage' ? (state.sectionForm ? 'newGroup' : 'manage') : state.view)
         : `
           <div class="header">
             <h1>Logbuch</h1>
@@ -8934,6 +8962,9 @@ app.addEventListener('click', async (e) => {
     render();
   } else if (action === 'open-feedback') {
     enterSubpage('feedback');
+    render();
+  } else if (action === 'open-install') {
+    enterSubpage('install');
     render();
   } else if (action === 'feedback-submit') {
     await handleFeedbackSubmit();

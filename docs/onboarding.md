@@ -146,6 +146,11 @@ standalone` bzw. `navigator.standalone`) und nicht weggeklickt wurde
 (`installHintDismissed`). Auf dem Desktop gar nicht: Push funktioniert dort im normalen Tab
 genauso zuverlässig, "installieren" brächte nur Kosmetik.
 
+**Seite "Aufs Handy holen"** (`state.view = 'install'`, `renderInstallGuide`): dieselbe
+Anleitung wie die Installations-Seite (`installHowHtml`), Skizzen immer im Ablauf. Erreichbar über
+"Zeig mir, wie" im Hinweis und einen Menüpunkt – beides nur auf dem Handy im Browser
+(`canInstallFromHere`); der Menüpunkt bleibt, auch wenn der Hinweis weggeklickt ist.
+
 **Frisch installierte App** (`authMode: 'installed'`, standalone ohne frühere Anmeldung,
 `renderOnbInstalled`): "Geschafft! Logbuch ist jetzt auf deinem Handy. Weiter geht's mit
 deinem Konto." Ist die Einstiegsfrage auf diesem Speicher schon beantwortet (Android teilt
