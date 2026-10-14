@@ -117,11 +117,12 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   PC muss funktionieren, gibt aber nicht die Richtung vor.
 - **Texte in beiden Sprachen**: neue Strings immer über `STRINGS`/`t()` in `de` UND `en`,
   in identischer Key-Reihenfolge.
-- **`CHANGELOG`** in `logbuch.js` ("Was ist neu"): jede für Nutzer sichtbare Änderung
-  mindestens mittlerer Größe bekommt vor dem Live-Gang einen Eintrag (de + en, kurz, ohne
-  Fachbegriffe, nur was Nutzer weiterbringt) – spätestens am Sitzungsende; neuer Eintrag mit
-  dem Datum des Live-Gangs, den obersten nur erweitern, solange er noch nicht live ist. Das Datum ist zugleich
-  "Beta – Stand …" in "Über Logbuch". Reine Interna, Doku oder winzige Textkorrekturen nicht.
+- **`CHANGELOG`** in `logbuch.js` ("Was ist neu"): ein Eintrag pro Live-Gang für alles aus der
+  Sitzung (de + en), Datum des Live-Gangs; den obersten erweitern, solange er nicht live ist.
+  **Kurz und simpel** (Nutzer-Wunsch 2026-10-14, längere wurden nicht verstanden/gelesen):
+  wenige Punkte, je ein kurzer Satz in Alltagssprache, was man davon hat – keine Details,
+  keine Fachbegriffe. Das Datum ist zugleich "Beta – Stand …" in "Über Logbuch". Reine
+  Interna, Doku oder winzige Textkorrekturen nicht.
 - **Datenschutz-Text in "Über Logbuch"** (`renderPrivacySection`, `about.privacy.*`) sagt
   konkret, was der Betreiber sehen kann und was nicht. Jede Änderung, die daran etwas
   verschiebt (neue unverschlüsselte Spalte, zusätzliches Log, serverseitige Auswertung,
@@ -136,8 +137,9 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
 
 **Erst Beta, dann live** (Nutzer-Entscheidung 2026-10-11): Commits zuerst `git push beta main`
 → https://louisschmidberger.github.io/logbuch-beta/ (Repo `logbuch-beta`, gleicher Code); der
-Nutzer nutzt die Beta täglich mit seinem echten Konto und testet dort. Erst auf sein Okay
-`git push origin main` (live) – dann mit fertigem `CHANGELOG`-Eintrag. **Datenbank und Edge
+Nutzer nutzt die Beta täglich mit seinem echten Konto und testet dort. Live
+(`git push origin main`) nur **gesammelt am Sitzungsende** und auf sein Okay, mit einem
+`CHANGELOG`-Eintrag für die ganze Sitzung (Nutzer-Entscheidung 2026-10-14). **Datenbank und Edge
 Functions sind für beide dieselben**: Migrationen/Deploys wirken sofort auch live, deshalb so
 bauen, dass die alte Live-Version damit weiterläuft.
 

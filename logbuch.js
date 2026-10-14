@@ -7149,6 +7149,15 @@ function renderPrivacySection() {
 // "Über Logbuch" zeigt alle.
 const CHANGELOG = [
   {
+    id: '2026-10-14',
+    de: [
+      'Die Übersichten sind besser lesbar.',
+    ],
+    en: [
+      'The overviews are easier to read.',
+    ],
+  },
+  {
     id: '2026-10-12',
     de: [
       'Das Formular für Felder ist übersichtlicher: in Abschnitte gegliedert, mit klareren Auswahlknöpfen und einer Vorschau auch für Zahlen.',
