@@ -93,8 +93,6 @@ hervor (`pendingFieldFocus`, eingelöst am Ende von `render()`, sobald "Heute" m
 Feldern angezeigt wird – beim Kaltstart kann davor Entsperren/Laden liegen). Hat das Feld
 ein Eingabefeld (Zahl, Text), bekommt das den Fokus, sonst die Menü-Punkte der Zeile; beim
 Sprung aus Woche/Monat immer die Menü-Punkte (keine aufspringende Tastatur beim Nachsehen).
-Tastatur: Handy-Browser öffnen sie bei Fokus per Skript nicht; Chrome (Android) über die
-VirtualKeyboard-API (`showKeyboardFor`, braucht ein früheres Tippen auf der Seite), Safari gar nicht.
 
 ## Zeitzone pro Nutzer
 
