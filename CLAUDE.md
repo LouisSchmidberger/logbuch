@@ -122,7 +122,9 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   Nur Begriffe, die man in der App sieht oder aus dem Alltag kennt, und beschreiben, was man
   tut ("wenn du ein Feld anlegst"), nicht interne Sammelnamen ("das Formular für Felder",
   "die Übersichten"). Das Datum ist zugleich "Beta – Stand …" in "Über Logbuch". Reine
-  Interna, Doku oder winzige Textkorrekturen nicht.
+  Interna, Doku, Textkorrekturen und
+  Komfort-Verbesserungen (Zeichenzähler, Anleitung leichter erreichbar, Anzeige-Wahl früher) nicht – nur
+  Neues, das Nutzer kennen sollten, um es zu nutzen.
 - **Datenschutz-Text in "Über Logbuch"** (`renderPrivacySection`, `about.privacy.*`) sagt
   konkret, was der Betreiber sehen kann und was nicht. Jede Änderung, die daran etwas
   verschiebt (neue unverschlüsselte Spalte, zusätzliches Log, serverseitige Auswertung,
