@@ -1123,7 +1123,7 @@ function closeTopLayer() {
   } else if (state.rowMenu) {
     state.rowMenu = null;
   } else if (isNoteEditorOpen()) {
-    discardNoteDraft(); // wie "Abbrechen"
+    commitPendingNoteDraft(); // wie Tag-/Tab-Wechsel: Zurück speichert, nur "Abbrechen" verwirft
   } else if (state.sectionForm || state.habitForm) {
     // Bleibt das Formular wegen der Rückfrage offen, legt das folgende render() den eben
     // verbrauchten History-Eintrag wieder an (syncLayerHistory).
@@ -4760,7 +4760,7 @@ function persistNoteDraft() {
 // Speichern und schließen. Außer über den Speichern-Button auch immer dann, wenn der
 // Editor nicht mehr sichtbar ist (Tag-/Tab-Wechsel, anderer Editor geöffnet, siehe
 // render()) - Getipptes soll nie still verloren gehen oder unbemerkt ungespeichert
-// herumliegen. Nur "Abbrechen" bzw. Android-Zurück verwerfen bewusst.
+// herumliegen. Auch Android-Zurück speichert (closeTopLayer); nur "Abbrechen" verwirft bewusst.
 function commitPendingNoteDraft() {
   persistNoteDraft();
   state.noteEditor = null;

@@ -227,7 +227,8 @@ nur an seinem Tag als Overlay (`isNoteEditorOpen`, prüft auch, ob das Feld noch
 steht). **Getipptes geht nie still verloren**: wird der Editor unsichtbar (Tag-/Tab-Wechsel,
 anderer Editor), speichert und schließt ihn `render()` zentral (`commitPendingNoteDraft`);
 beim Wechsel in eine andere App sichert `persistNoteDraft` den Entwurf (Editor bleibt
-offen). Nur "Abbrechen" und Zurück verwerfen bewusst (`discardNoteDraft`, stellt `original`
+offen). Android-Zurück speichert ebenfalls (Nutzer-Entscheidung, statt Rückfrage: Notizen
+tippt man nebenbei). Nur "Abbrechen" verwirft bewusst (`discardNoteDraft`, stellt `original`
 wieder her). Beim Abmelden wird ein offener Editor verworfen (sonst sähe ihn das nächste
 Konto). Ein Re-Render beim Tippen behält Fokus/Cursor. `ensureNoteEditorVisible` hält den
 Editor über der Bildschirmtastatur: Android verkleinert dank
