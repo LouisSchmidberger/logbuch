@@ -141,6 +141,14 @@ führen zur Liste (`subpageBack`) bzw. zum Tab bei `returnToTab`. Geöffnet imme
 Namensfeld – beim Bearbeiten will man meist etwas anderes ändern), `closeHabitForm` stellt
 sie wieder her (`pendingScrollRestore`, am Ende von `render()` eingelöst).
 
+**"Änderungen verwerfen?"** (Feld- und Gruppen-Formular, `leaveFormGuarded`): ←, Wischen,
+Android-Zurück und Menü-Wechsel fragen nach, wenn sich etwas geändert hat; "Abbrechen"
+verwirft bewusst ohne Rückfrage (Nutzer-Entscheidung). Verglichen wird mit `form.baseline`
+(nach dem ersten `render()` aus dem DOM gelesen, nur gespeicherte Werte). **Neue Felder im
+Formular-Zustand, die gespeichert werden, gehören in `defaultHabitForm`** (bzw.
+`sectionFormSnapshot`), sonst fragt das Verlassen bei deren Änderung nicht nach. Formulare
+ohne `baseline` (Tutorial) fragen nie.
+
 **"+ Neues Feld" in "Heute"**: umrandeter Button in der Fußleiste (bewusst nicht ausgefüllt
 – "Heute" ist die Eintrags-Ansicht, nicht die Verwaltung). Öffnet die Verwaltung mit offenem
 "Neues Feld"-Formular; `returnToTab: true` lässt `closeHabitForm()` (Speichern, Abbrechen,

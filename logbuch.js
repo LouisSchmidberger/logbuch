@@ -897,6 +897,7 @@ const state = {
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
   regenKeyConfirm: false, // Rückfrage vor "Ersatzschlüssel neu erzeugen" offen
   logoutConfirm: false,   // Rückfrage vor "Abmelden" (aus dem Menü) offen
+  leaveFormConfirm: false, // Rückfrage "Änderungen verwerfen?" beim Verlassen eines geänderten Formulars (siehe leaveFormGuarded)
   habitDeleteConfirm: null, // defId eines archivierten Feldes mit Daten, dessen Löschen gerade bestätigt wird
   tutorialStep: null, // TUTORIAL_STEP_* während Tutorial bzw. Erinnerungs-Schritt für neue Accounts laufen, sonst null
   tutorialSkipConfirm: false, // Bestätigungsdialog "Tutorial überspringen?" offen
@@ -956,6 +957,8 @@ function closeModals() {
   state.resetConfirm = null;
   state.regenKeyConfirm = false;
   state.logoutConfirm = false;
+  state.leaveFormConfirm = false;
+  pendingFormLeave = null;
 }
 
 // --- Android-Zurück-Taste schließt offene Overlays/Unterseiten statt die App zu
@@ -1001,7 +1004,7 @@ function leaveSubpage() {
   state.view = state.previousTabView || 'today';
 }
 function isOverlayOpen() {
-  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.regenKeyConfirm || !!state.logoutConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm || !!state.whatsNew;
+  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.regenKeyConfirm || !!state.logoutConfirm || state.leaveFormConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm || !!state.whatsNew;
 }
 // Der Notiz-Editor gehört zu einem bestimmten Tag in "Heute" und ist nur offen, solange
 // er dort auch sichtbar ist - wechselt man Tag/Tab, speichert render() den Entwurf und
@@ -1035,6 +1038,7 @@ function openHabitForm(form) {
   habitFormReturnScrollY = window.scrollY;
   state.habitForm = form;
   render();
+  markFormBaseline();
   window.scrollTo(0, 0);
   // Nur beim Neuanlegen direkt den Namen fokussieren (öffnet auf dem Handy gleich die
   // Tastatur, funktioniert nur zuverlässig synchron aus einem Klick-Handler) - ohne
@@ -1052,9 +1056,57 @@ function closeHabitForm() {
 // ←-Button und Wischen auf einer Unterseite: bei offenem Feld-Formular zurück zur
 // Liste (bzw. zum Tab, siehe returnToTab), sonst die Unterseite verlassen.
 function subpageBack() {
-  if (state.view === 'manage' && state.habitForm) closeHabitForm();
-  else if (state.view === 'manage' && state.sectionForm) closeSectionForm();
+  if (state.view === 'manage' && state.habitForm) leaveFormGuarded(closeHabitForm);
+  else if (state.view === 'manage' && state.sectionForm) leaveFormGuarded(closeSectionForm);
   else leaveSubpage();
+}
+
+// --- Rückfrage beim Verlassen eines geänderten Formulars ----------------------
+// Feld- und Gruppen-Formular: wer sie mit Änderungen anders als über "Abbrechen" verlässt
+// (←, Wischen, Android-Zurück, Menü), wird gefragt, statt still alles zu verlieren.
+// "Abbrechen" verwirft bewusst ohne Rückfrage. Verglichen wird mit dem Stand direkt nach
+// dem Öffnen (form.baseline, gesetzt von markFormBaseline) - nur die gespeicherten
+// Werte, keine reinen Anzeige-Zustände (Fehler, aufgeklappte Teile). Formulare ohne
+// baseline (Tutorial) fragen nie: dort gibt es eigene Wege (Überspringen-Rückfrage).
+function habitFormSnapshot(f) {
+  const snap = {};
+  for (const k of Object.keys(defaultHabitForm())) snap[k] = f[k];
+  snap.labels = f.labelsEnabled ? f.labels.slice(0, f.max - f.min + 1) : null;
+  snap.members = [...f.members].sort();
+  snap.schedule = [...f.schedule.days].sort();
+  if (!f.reminderEnabled) snap.reminderMinute = null;
+  return JSON.stringify(snap);
+}
+function sectionFormSnapshot(sf) {
+  return JSON.stringify({
+    name: sf.name, collapse: sf.collapse, members: [...sf.members].sort(),
+    reminderMinute: sf.reminderEnabled ? sf.reminderMinute : null,
+  });
+}
+// Nach dem ersten render() des Formulars aufrufen: liest es einmal aus dem DOM zurück,
+// damit Normalisierungen beim Einlesen (Uhrzeit, Bezeichnungen) nicht als Änderung zählen.
+function markFormBaseline() {
+  if (state.habitForm) { syncHabitFormFromDom(); state.habitForm.baseline = habitFormSnapshot(state.habitForm); }
+  else if (state.sectionForm) { readSectionFormFromDom(); state.sectionForm.baseline = sectionFormSnapshot(state.sectionForm); }
+}
+function openFormHasChanges() {
+  const f = state.habitForm;
+  if (f?.baseline) { syncHabitFormFromDom(); return habitFormSnapshot(f) !== f.baseline; }
+  const sf = state.sectionForm;
+  if (sf?.baseline) { readSectionFormFromDom(); return sectionFormSnapshot(sf) !== sf.baseline; }
+  return false;
+}
+// Führt proceed (rendert NICHT selbst, wie closeHabitForm) sofort aus - oder öffnet bei
+// Änderungen die Rückfrage und führt es erst bei "Verwerfen" aus. Der Aufrufer rendert
+// in beiden Fällen wie gewohnt danach.
+let pendingFormLeave = null;
+function leaveFormGuarded(proceed) {
+  if (state.leaveFormConfirm) return; // Rückfrage schon offen (z.B. zweiter Wisch)
+  if (!openFormHasChanges()) { proceed(); return; }
+  pendingFormLeave = proceed;
+  state.leaveFormConfirm = true;
+  state.menuOpen = false;
+  modalTriggerSelector = '.subpage-header .back-btn';
 }
 // Schließt jeweils nur die "oberste" Ebene (analog zur bestehenden Escape-Logik) -
 // Overlays vor der Unterseite, da sie darüber liegen. In der Praxis nie mehrere
@@ -1063,8 +1115,8 @@ function subpageBack() {
 function closeTopLayer() {
   if (state.whatsNew) {
     closeWhatsNew();
-  } else if (state.deleteConfirm || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm) {
-    closeModals();
+  } else if (state.deleteConfirm || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm || state.leaveFormConfirm) {
+    closeModals(); // bei "Änderungen verwerfen?" = Weiter bearbeiten
     restoreModalFocus();
   } else if (state.menuOpen) {
     state.menuOpen = false;
@@ -1072,10 +1124,10 @@ function closeTopLayer() {
     state.rowMenu = null;
   } else if (isNoteEditorOpen()) {
     discardNoteDraft(); // wie "Abbrechen"
-  } else if (state.sectionForm) {
-    closeSectionForm();
-  } else if (state.habitForm) {
-    closeHabitForm();
+  } else if (state.sectionForm || state.habitForm) {
+    // Bleibt das Formular wegen der Rückfrage offen, legt das folgende render() den eben
+    // verbrauchten History-Eintrag wieder an (syncLayerHistory).
+    leaveFormGuarded(state.sectionForm ? closeSectionForm : closeHabitForm);
   } else if (state.habitDeleteConfirm) {
     state.habitDeleteConfirm = null;
   } else if (isSubpageView(state.view)) {
@@ -1401,6 +1453,11 @@ const STRINGS = {
     'regenKeyConfirm.confirm': 'Neuen erzeugen',
     'logoutConfirm.title': 'Abmelden?',
     'logoutConfirm.body': 'Auf diesem Gerät kommen dann keine Erinnerungen mehr. Zum erneuten Anmelden brauchst du dein Passwort. Deine Einträge bleiben erhalten.',
+    'leaveForm.title': 'Änderungen verwerfen?',
+    'leaveForm.bodyField': 'Deine Änderungen an diesem Feld sind noch nicht gespeichert. Wenn du jetzt gehst, gehen sie verloren.',
+    'leaveForm.bodyGroup': 'Deine Änderungen an dieser Gruppe sind noch nicht gespeichert. Wenn du jetzt gehst, gehen sie verloren.',
+    'leaveForm.stay': 'Weiter bearbeiten',
+    'leaveForm.discard': 'Verwerfen',
     'notice.fieldArchived': 'Feld archiviert. Unter „Felder verwalten“ kannst du es jederzeit wieder aktivieren.',
     'common.archived': 'archiviert',
     'global.rangeNote': 'Seit {since} · {count} Tage mit Eintrag',
@@ -2178,6 +2235,11 @@ const STRINGS = {
     'regenKeyConfirm.confirm': 'Create new key',
     'logoutConfirm.title': 'Sign out?',
     'logoutConfirm.body': 'This device will then stop receiving reminders. To sign in again you’ll need your password. Your entries are kept.',
+    'leaveForm.title': 'Discard changes?',
+    'leaveForm.bodyField': 'Your changes to this field aren’t saved yet. If you leave now, they’ll be lost.',
+    'leaveForm.bodyGroup': 'Your changes to this group aren’t saved yet. If you leave now, they’ll be lost.',
+    'leaveForm.stay': 'Keep editing',
+    'leaveForm.discard': 'Discard',
     'notice.fieldArchived': 'Field archived. You can reactivate it anytime under “Manage fields”.',
     'common.archived': 'archived',
     'global.rangeNote': 'Since {since} · {count} days with entry',
@@ -4446,6 +4508,7 @@ function openSectionForm(id, { returnToTab = false } = {}) {
   };
   state.sectionDeleteConfirm = null;
   render();
+  markFormBaseline();
   window.scrollTo(0, 0);
   if (!sec) requestAnimationFrame(() => document.getElementById('section-form-name')?.focus());
 }
@@ -8570,6 +8633,22 @@ function renderLogoutConfirm() {
   `;
 }
 
+// Siehe leaveFormGuarded. "Weiter bearbeiten" links als sichere Wahl (Anfangsfokus).
+function renderLeaveFormConfirm() {
+  return `
+    <div class="modal-overlay">
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="leave-form-title" aria-describedby="leave-form-body">
+        <h2 id="leave-form-title">${t('leaveForm.title')}</h2>
+        <p id="leave-form-body">${t(state.sectionForm ? 'leaveForm.bodyGroup' : 'leaveForm.bodyField')}</p>
+        <div class="habit-form-actions">
+          <button type="button" class="habit-form-cancel" data-action="leave-form-stay">${t('leaveForm.stay')}</button>
+          <button type="button" class="manage-btn manage-btn--danger" data-action="leave-form-discard">${t('leaveForm.discard')}</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderDeleteConfirm() {
   const busy = state.deleteConfirm.busy;
   return `
@@ -8687,7 +8766,8 @@ function renderApp() {
     ${state.resetConfirm ? renderResetConfirm() : ''}
     ${state.regenKeyConfirm ? renderRegenKeyConfirm() : ''}
     ${state.logoutConfirm ? renderLogoutConfirm() : ''}
-    ${state.whatsNew && !state.deleteConfirm && !state.resetConfirm && !state.regenKeyConfirm && !state.logoutConfirm ? renderWhatsNew() : ''}
+    ${state.leaveFormConfirm ? renderLeaveFormConfirm() : ''}
+    ${state.whatsNew && !state.deleteConfirm && !state.resetConfirm && !state.regenKeyConfirm && !state.logoutConfirm && !state.leaveFormConfirm ? renderWhatsNew() : ''}
   `;
   // preventScroll: der Header ist ohnehin (sticky) sichtbar - der native
   // Scroll-in-View-Effekt beim Fokussieren kennt "position: sticky" nicht und hat
@@ -9037,8 +9117,20 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'open-manage') {
     enterSubpage('manage');
     render();
-  } else if (action === 'open-settings') {
-    enterSubpage('settings');
+  } else if (action === 'leave-form-stay') {
+    closeModals();
+    render();
+    restoreModalFocus();
+  } else if (action === 'leave-form-discard') {
+    const proceed = pendingFormLeave;
+    closeModals();
+    modalTriggerSelector = null; // die Ebene darunter ist gleich weg, render() fokussiert neu
+    proceed?.();
+    render();
+  } else if (action === 'open-settings' || action === 'open-about' || action === 'open-feedback' || action === 'open-install') {
+    // Aus einem geänderten Feld-/Gruppen-Formular heraus erst nachfragen (enterSubpage schließt es).
+    const view = action.slice('open-'.length);
+    leaveFormGuarded(() => enterSubpage(view));
     render();
   } else if (action === 'open-settings-at') {
     enterSubpage('settings');
@@ -9053,15 +9145,6 @@ app.addEventListener('click', async (e) => {
     openAboutSections.add('aboutNewsCollapsed');
     render();
     requestAnimationFrame(() => document.getElementById('about-news')?.scrollIntoView({ block: 'start' }));
-  } else if (action === 'open-about') {
-    enterSubpage('about');
-    render();
-  } else if (action === 'open-feedback') {
-    enterSubpage('feedback');
-    render();
-  } else if (action === 'open-install') {
-    enterSubpage('install');
-    render();
   } else if (action === 'feedback-submit') {
     await handleFeedbackSubmit();
   } else if (action === 'subpage-back') {
