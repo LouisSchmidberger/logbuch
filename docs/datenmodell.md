@@ -171,7 +171,7 @@ Abstand und erstem Tag; nicht für berechnete Felder – die sind dran, sobald e
 aktiven Mitglieder dran ist). Monatlich/jährlich decken Zeitraum-Felder ab.
 
 "Alle N Tage" (Nutzer-Entscheidung 2026-10-28) ist für Dinge mit festem Abstand, der nicht zur
-Woche passt (alle 3 Tage Pflaster wechseln, alle 14 Tage eine Spritze). Bewusst ohne
+Woche passt (alle 3 Tage Pflanzen gießen, alle 14 Tage eine Spritze). Bewusst ohne
 Warnhinweis zur Zuverlässigkeit der Erinnerungen in "Über Logbuch" (Nutzer-Entscheidung
 2026-10-28).
 
