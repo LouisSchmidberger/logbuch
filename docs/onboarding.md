@@ -23,7 +23,8 @@ Der Weg vom ersten Öffnen bis zur eingerichteten App, für neue Konten.
   weiß man, woran erinnert wird – am Anfang wurde die Frage eher abgelehnt. "Tutorial
   überspringen" überspringt nur das Tutorial, die Erinnerungen kommen trotzdem.
 - **"Kurz vorweg"** (`renderOnbIntro`, bei beiden Varianten): persönliche Nachricht des
-  Machers – es gibt ein paar Dinge, die man verstehen muss, um Logbuch richtig zu nutzen;
+  Machers mit seinem Grund (Menschen im Alltag unterstützen, Wortlaut von Louis 2026-10-28) –
+  es gibt ein paar Dinge, die man verstehen muss, um Logbuch richtig zu nutzen;
   bitte in Ruhe lesen. Grund: Testpersonen lasen die Erklärungen oft nicht.
 - **Kürzere Seiten statt festem Hauptknopf**: offen ist immer nur die Erklärung, um die es
   gerade geht (Anleitung von Hand zugeklappt, wenn es den Installieren-Knopf gibt; Tipps zu
