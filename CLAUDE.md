@@ -102,10 +102,6 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   Schraffur zurück).
 - **`authFlowInFlight`** muss VOR dem Supabase-Auth-Aufruf gesetzt werden (Race mit
   `onAuthStateChange`).
-- **Bestätigungsmail kommt nicht an**: zuerst prüfen, ob "Enable custom SMTP" im Dashboard
-  noch an ist (schaltet sich gelegentlich von selbst aus).
-- **Neue Domain/Hosting-URL**: als Redirect-URL in Supabase → Authentication → URL
-  Configuration erlauben, sonst greifen Bestätigungs-/Reset-Links nicht.
 
 ## Pflichten bei Änderungen
 
@@ -132,8 +128,6 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   Nicht hinein: Selbstverständlichkeiten (dass der Betreiber Feedback lesen kann) und
   Details ohne Aussagekraft (ob/seit wann ein Feld archiviert ist).
 - **Tipps in "Über Logbuch"** mit Ortsangabe bekommen einen Link dorthin (`renderTip`).
-- **Bestätigungsmail-Vorlage**: `supabase/templates/confirmation.html` und das Template im
-  Dashboard gleich halten.
 
 ## Deployment
 
@@ -146,11 +140,14 @@ Functions sind für beide dieselben**: Migrationen/Deploys wirken sofort auch li
 bauen, dass die alte Live-Version damit weiterläuft.
 
 1. `logbuch.html`, `logbuch.js`, `sw.js`, `vendor/`, `fonts/` → GitHub Pages (Root).
-2. `supabase functions deploy <name>` für `send-notifications`, `delete-account`,
-   `submit-feedback` (Code unter `supabase/functions/<name>/index.ts`).
+2. `supabase functions deploy <name>` (Code unter `supabase/functions/<name>/index.ts`).
 3. Schema-Änderungen nur über Migrationen (`supabase/migrations/`):
    `supabase migration new <name>`, dann `supabase db push` gegen das Live-Projekt
    (lokal braucht das Docker Desktop für die Schatten-Datenbank). Nach Dashboard-Änderungen am Schema (Ausnahme) `supabase db pull`.
    Vault-Secrets sind nicht Teil der Migrationen (siehe docs/datenschutz-sicherheit.md).
 4. `supabase/config.toml` spiegelt Auth-/API-/DB-Einstellungen rein dokumentarisch (kein
    `config push`); nach Dashboard-Änderungen `supabase config pull --force`.
+
+## Hub
+
+Hub-Projekt: habit (Projektdatei hub/projekt-habit-tracker.md, Handoff hub/handoff/habit-tracker.md)
