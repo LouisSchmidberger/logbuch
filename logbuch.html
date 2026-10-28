@@ -299,6 +299,9 @@
   }
   .time-input-sep { font-weight: 600; }
   .auth-field .time-input select, .settings-row .time-input select { width: auto; }
+  /* Mehrere Erinnerungszeiten eines Felds: je Zeile Uhrzeit + "Entfernen", darunter "+ Weitere Zeit". */
+  .reminder-time-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+  .reminder-time-add { align-self: flex-start; margin: 0.25rem 0 0.5rem; }
   .settings-row select {
     font-family: inherit; font-size: 1rem; padding: 0.5rem 0.625rem; border: 1px solid var(--sand);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
@@ -1382,6 +1385,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=cbe0457bfd"></script>
+<script type="module" src="./logbuch.js?v=8454150482"></script>
 </body>
 </html>

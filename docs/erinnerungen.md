@@ -2,7 +2,7 @@
 
 Eine Edge Function `send-notifications` läuft **alle 15 Minuten** (pg_cron). Wer was
 bekommt, entscheidet komplett die SQL-Funktion `public.get_due_notifications(p_now,
-p_after, p_limit)` (aktuelle Fassung in Migration `20261011120000_add_habit_period`,
+p_after, p_limit)` (aktuelle Fassung in Migration `20261028144355_add_multiple_reminders`,
 Eingaben seit `20260929120000_harden_reminder_inputs` von der DB geprüft, siehe
 [datenmodell.md](datenmodell.md) → Robustheit). Die Function übersetzt deren Zeilen nur in
 Nachrichten (`PUSH_TEXTS`) und verschickt sie. `sw.js` macht nur Push-Empfang/-Klick (kein
@@ -23,8 +23,10 @@ Offline-Caching). Alle Zeiten/Daten gelten in der **Ortszeit des Nutzers**
   Bewusst **keine Mindestquote** (z.B. "≥ 3 Tage"): würde in schwierigen Phasen eher Druck
   machen, passt nicht zum Psyche-Fokus der App. Keine Jahresübersicht-Benachrichtigung (in
   die Jahresansicht schaut man laufend, nicht nur zum Jahresende).
-- **Eigene Zeit je Feld** (`reminder_minute`, Checkbox "Eigene Erinnerungszeit",
-  standardmäßig aus): z.B. ein Feld, das man morgens einträgt. Nennt das konkrete Feld
+- **Eigene Zeiten je Feld** (`reminder_minute`, bei mehreren `reminder_minutes`; Checkbox
+  "Eigene Erinnerungszeit", standardmäßig aus): z.B. ein Feld, das man morgens einträgt.
+  Tagesfelder bis zu 4 Zeiten ("+ Weitere Zeit", Nutzer-Entscheidung 2026-10-28), Zeitraum-Felder
+  eine. Zu jeder Zeit nur, solange das Feld leer ist. Nennt das konkrete Feld
   (`Erinnerung: <Namen> noch nicht eingetragen.`), da gezielt einzelne Felder hervorgehoben
   werden sollen.
 - **Eigene Zeit je Gruppe** (`habit_sections.reminder_minute`, Klartext, DB-Check auf
@@ -40,7 +42,15 @@ Offline-Caching). Alle Zeiten/Daten gelten in der **Ortszeit des Nutzers**
   Gruppe die Zeit regelt (`habitFormReminderNote`, wechselt beim Ändern der Gruppe mit).
   `get_due_notifications` liefert dafür `section_missing` (`[{id, fields}]`).
 - **Zähler** (`kind = 'counter'`) gelten nie als fehlend – ohne Antippen steht 0, und 0 ist ein
-  gültiges Ergebnis (Migration `20261011140000_add_counter_kind`, wie `computed` ausgenommen).
+  gültiges Ergebnis; aus Standard- und Gruppen-Erinnerung bleiben sie heraus. Mit eigenen Zeiten
+  (nur Tagesfelder) erinnern sie über `counter_due` mit eigenem Text (`Erinnerung: <Namen>`,
+  Payload `counterIds` statt `fieldIds`, damit ein älterer Service Worker nicht "noch nicht
+  eingetragen" einsetzt): mit Ziel "mindestens" zur i-ten Zeit nur, solange weniger als i
+  Zwischenziele erreicht sind (Ziel G auf n Zeiten verteilt, Stufe i ab ⌈G·i/n⌉, aus
+  `habit_entries.reminder_progress`); ohne ein solches Ziel zu jeder Zeit. Der Server sieht
+  so nur die erreichte Stufe (Nutzer-Entscheidung 2026-10-28: Feldnamen sind verschlüsselt, die
+  Stufe verrät nicht, worum es geht). Ändern sich Ziel oder Zeiten, schreibt das Speichern des
+  Felds den heutigen Stand neu.
 - **Zeitraum-Felder** (Woche/Monat/Jahr, siehe [datenmodell.md](datenmodell.md)): eine
   Erinnerung pro Zeitraum, am Erinnerungstag (`period_reminder_day`, Standard Sonntag /
   Monatsletzter / 31.12., `habit_period_reminder_due`) zur eigenen Zeit des Felds oder zur

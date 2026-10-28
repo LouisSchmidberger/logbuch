@@ -14,7 +14,7 @@ anlegen, umbenennen, archivieren, reaktivieren.
 
 **Größtenteils verschlüsselt**: die Eigenschaften stehen nicht in Klartext-Spalten, sondern
 verschlüsselt in `enc` (Details siehe [verschluesselung.md](verschluesselung.md) →
-Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `schedule`, `period`,
+Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `reminder_minutes`, `schedule`, `period`,
 `period_reminder_day`, `archived_at`, `sort_order`, `section_id`. Im Client heißen die Eigenschaften wie unten.
 
 - `slug` (Key in `habit_entries.data`; verschlüsselt als `key`, bei neuen Feldern ein
@@ -29,6 +29,10 @@ Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `schedule
   `computed`: Schlüssel anderer `scale`- bzw. `number`-Felder dieses Nutzers),
   `reminder_minute` (Minuten seit Mitternacht, 0–1439, 15-Minuten-Raster, `null` =
   Standardzeit; bei `computed` immer `null`, ein berechnetes Feld kann nie "fehlen"),
+  `reminder_minutes` (bis zu 4 Zeiten aufsteigend, nur Tagesfelder, `null` bei keiner oder einer
+  Zeit; CHECK `habit_reminder_minutes_valid`; Trigger `habit_definitions_sync_reminder_minutes`
+  hält `reminder_minute` auf der ersten Zeit und verwirft die Liste, wenn eine ältere
+  App-Version nur `reminder_minute` ändert),
   `schedule` (Wiederholung, `null` = täglich, bei `computed` immer `null`, siehe unten),
   `sort_order`, `archived_at`.
 - **Archivieren** (`archived_at`, Soft-Delete): archivierte Felder verschwinden aus der
@@ -70,6 +74,10 @@ Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `schedule
   `habit_entries_normalize_filled_slugs` übersetzt noch auftauchende slugs (alte
   App-Version) in Feld-IDs, solange die Definition unverschlüsselt ist; nicht Zuordenbares
   fällt weg.
+- `reminder_progress` – unverschlüsselt, `{ <Feld-ID>: 0–4 }`: je Zähler mit eigenen Zeiten
+  und Ziel "mindestens", wie viele Zwischenziele an dem Tag erreicht sind (`reminderProgress`,
+  in `saveDay` mitgeschrieben). Nur die Stufe, nie Zählerstand oder Ziel (Nutzer-Entscheidung
+  2026-10-28). CHECK `habit_reminder_progress_valid`.
 - **Speichern eines Tages** (`saveDay`): ein Tag ist ein einziges verschlüsseltes Objekt –
   ein zweites Gerät mit veraltetem Stand würde sonst anderswo eingetragene Werte
   überschreiben. Deshalb holt jede Speicherung zuerst die aktuelle Zeile; hat sie sich seit
@@ -145,7 +153,8 @@ Die Abfrage läuft über alle Nutzer in einem Rutsch – ein einziger Wert, an d
 scheitert, ließe den ganzen Lauf abbrechen. Deshalb prüft die DB die Form aller dort
 gelesenen, vom Nutzer schreibbaren Spalten selbst: `schedule` über `habit_schedule_valid`
 (CHECK, spiegelt `formToSchedule`), `filled_slugs` muss ein Array sein, `timezone` per
-Trigger, Erinnerungsminuten per Bereich. **Neue solche Spalten brauchen dieselbe Prüfung.**
+Trigger, Erinnerungsminuten per Bereich, `reminder_minutes` und `reminder_progress` per
+CHECK-Funktion. **Neue solche Spalten brauchen dieselbe Prüfung.**
 
 Die Funktion fragt live die aktiven `habit_definitions` je Nutzer ab (keine hartkodierte
 Liste). `kind='computed'` ist ausgeschlossen (nie direkt befüllbar, sonst dauerhaft

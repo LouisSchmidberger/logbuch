@@ -13,7 +13,8 @@ self.addEventListener('activate', (event) => {
 // saveFieldNamesForPush in logbuch.js); damit wird der Name hier lokal eingesetzt.
 // Fehlt die Liste oder eine ID (neues Gerät, gelöschte Browserdaten, gerade erst
 // angelegtes Feld), bleibt es beim allgemeinen Text. Genauso bei Erinnerungen an eine
-// Gruppe (payload.sectionId, Liste sectionNames + sectionTemplate im selben Eintrag).
+// Gruppe (payload.sectionId, Liste sectionNames + sectionTemplate im selben Eintrag) und
+// bei Zählern (payload.counterIds, gleiche Namensliste mit counterTemplate).
 function openPushDb() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open('logbuch-push', 1);
@@ -40,15 +41,16 @@ async function personalizedSectionBody(sectionId, fallback) {
     return fallback;
   }
 }
-async function personalizedBody(fieldIds, fallback) {
+async function personalizedBody(fieldIds, fallback, templateKey = 'template') {
   try {
     const stored = await loadStoredNames();
-    if (!stored || !stored.template || !stored.names) return fallback;
+    const template = stored && stored[templateKey];
+    if (!template || !stored.names) return fallback;
     const names = fieldIds.map((id) => stored.names[id]);
     if (names.some((n) => !n)) return fallback;
     // Funktion statt String als Ersatz: sonst würden Zeichenfolgen wie "$&" in einem
     // Feldnamen als Ersetzungsmuster interpretiert.
-    return stored.template.replace('{names}', () => names.join(', '));
+    return template.replace('{names}', () => names.join(', '));
   } catch {
     return fallback;
   }
@@ -67,7 +69,9 @@ self.addEventListener('push', (event) => {
       ? await personalizedSectionBody(payload.sectionId, payload.body || '')
       : Array.isArray(payload.fieldIds) && payload.fieldIds.length
         ? await personalizedBody(payload.fieldIds, payload.body || '')
-        : payload.body || '';
+        : Array.isArray(payload.counterIds) && payload.counterIds.length
+          ? await personalizedBody(payload.counterIds, payload.body || '', 'counterTemplate')
+          : payload.body || '';
     await self.registration.showNotification(title, {
       body,
       data: { url: payload.url || './logbuch.html' },

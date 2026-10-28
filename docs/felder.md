@@ -308,7 +308,8 @@ Tag ab dem Anlegen (`created_at`) bis **gestern** als 0 – der laufende Tag ers
 wurde (sonst wäre "mindestens 8" morgens rot) (`habitNumericValue`/`counterZeroApplies`),
 Verläufe lückenlos über alle Tage (`counterDayKeys` – Jahr/Gesamt übergeben sonst nur Tage mit
 Eintrag). "−" daneben zum Korrigieren statt Rückgängig-Meldung; Schritt pro Tippen einstellbar
-(`step` in `enc`, Standard 1); keine Erinnerungs-Einstellungen; nicht im Tutorial. Auf 0
+(`step` in `enc`, Standard 1); Erinnerungen nur als Tagesfeld (siehe
+[erinnerungen.md](erinnerungen.md) → Zähler); nicht im Tutorial. Auf 0
 heruntergezählt wird der Schlüssel entfernt (gilt ohnehin als 0).
 
 **Umwandeln in einen Zähler** (nur auf Wunsch, mit Rückfrage, in "Feld bearbeiten" unter dem

@@ -14,6 +14,10 @@
 //    Zeit) - eine Nachricht pro Gruppe. Gruppennamen sind ebenfalls verschlüsselt:
 //    allgemeiner Text plus sectionId, sw.js setzt den Namen ein.
 // 4. Sonntags "Wochenübersicht ist da", am Monatsletzten "Monatsübersicht ist da".
+// 5. Erinnerung für Zähler mit eigenen Zeiten, deren Zwischenziel zu dieser Zeit noch
+//    offen ist: eigener Text (kein "noch nicht eingetragen" - ein Zähler steht nie leer),
+//    Namen setzt sw.js aus counterIds ein (eigenes Feld statt fieldIds, damit ein älterer
+//    Service Worker nicht den unpassenden Text für fehlende Felder einsetzt).
 //
 // habit_entries.data ist clientseitig verschlüsselt – die Vollständigkeits-Prüfung
 // läuft deshalb (in der SQL-Funktion) über die unverschlüsselte Spalte
@@ -53,11 +57,12 @@ webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 interface PushMessage {
-  kind: 'default' | 'custom' | 'section' | 'week' | 'month'; // nur fürs Protokoll, nicht verschickt
+  kind: 'default' | 'custom' | 'section' | 'week' | 'month' | 'counter'; // nur fürs Protokoll, nicht verschickt
   title: string;
   body: string;
   url: string;
   fieldIds?: string[];
+  counterIds?: string[];
   sectionId?: string;
 }
 
@@ -76,6 +81,7 @@ interface DueRow {
   section_missing: Array<{ id: string; fields: string[] }>;
   week_summary: boolean;
   month_summary: boolean;
+  counter_due?: string[]; // IDs der Zähler, deren Zwischenziel zu dieser Zeit noch offen ist
 }
 
 // Ziel-URL einer Benachrichtigung: Ansicht + der Tag, auf den sie sich bezieht (nicht
@@ -98,6 +104,9 @@ const PUSH_TEXTS = {
       ? 'Erinnerung: Ein Feld wartet noch auf deinen Eintrag.'
       : `Erinnerung: ${count} Felder warten noch auf deinen Eintrag.`,
     sectionReminder: 'Erinnerung: In einer Gruppe fehlt noch etwas.',
+    counterReminder: (count: number) => count === 1
+      ? 'Erinnerung: Ein Zähler wartet auf dich.'
+      : `Erinnerung: ${count} Zähler warten auf dich.`,
     weekSummary: 'Deine Wochenübersicht ist da.',
     monthSummary: 'Deine Monatsübersicht ist da.',
   },
@@ -108,6 +117,9 @@ const PUSH_TEXTS = {
       ? 'Reminder: a field is still waiting for your entry.'
       : `Reminder: ${count} fields are still waiting for your entry.`,
     sectionReminder: 'Reminder: something in a group is still missing.',
+    counterReminder: (count: number) => count === 1
+      ? 'Reminder: a counter is waiting for you.'
+      : `Reminder: ${count} counters are waiting for you.`,
     weekSummary: 'Your weekly summary is ready.',
     monthSummary: 'Your monthly summary is ready.',
   },
@@ -137,6 +149,16 @@ function messagesFor(row: DueRow): PushMessage[] {
       body: texts.sectionReminder,
       url: deepLink('today', date, section.fields[0]),
       sectionId: section.id,
+    });
+  }
+  const counters = row.counter_due ?? [];
+  if (counters.length) {
+    messages.push({
+      kind: 'counter',
+      title: texts.title,
+      body: texts.counterReminder(counters.length),
+      url: deepLink('today', date, counters[0]),
+      counterIds: counters,
     });
   }
   if (row.week_summary) {
