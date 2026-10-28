@@ -1762,6 +1762,19 @@ const STRINGS = {
     'tutorial.reminders.howInstall': 'So holst du Logbuch auf den Home-Bildschirm',
     'tutorial.field.title': 'Was möchtest du festhalten?',
     'tutorial.field.intro': 'Ein <strong>Feld</strong> ist eine Sache, die du jeden Tag einträgst – zum Beispiel deine Stimmung oder ob du Sport gemacht hast. Leg jetzt dein erstes an; das Formular hier ist dasselbe, mit dem du später weitere Felder anlegst.',
+    'tutorial.examples.title': 'Beispiele ansehen',
+    'tutorial.examples.intro': 'So sehen Felder später in „Heute“ aus – nur zum Anschauen:',
+    'tutorial.examples.mood': 'Stimmung',
+    'tutorial.examples.moodNote': 'Stimmung: Skala von 1 bis 5, hohe Werte sind gut – je besser, desto grüner.',
+    'tutorial.examples.sport': 'Sport',
+    'tutorial.examples.sportNote': 'Sport: Ja oder Nein – eine Skala mit zwei Stufen.',
+    'tutorial.examples.water': 'Wasser',
+    'tutorial.examples.waterNote': 'Wasser: eine Zahl, die du hochzählst – bei jedem Glas einmal „+“.',
+    'tutorial.examples.grateful': 'Dankbar für',
+    'tutorial.examples.gratefulNote': 'Dankbar für: Text, eine freie Antwort in eigenen Worten.',
+    'tutorial.examples.gratefulValue': 'Kaffee in der Sonne',
+    'tutorial.examples.no': 'Nein',
+    'tutorial.examples.yes': 'Ja',
     'tutorial.form.nameIdeas': 'Kurze Namen passen am besten in die Übersicht. Zum Beispiel: <strong>Schlaf</strong> – wie gut habe ich geschlafen? · <strong>Stimmung</strong> – wie geht’s mir heute? · <strong>Sport</strong> – ja oder nein? · <strong>Gewicht</strong> – in kg',
     'tutorial.form.tipKindTitle': 'Tipp zum Feld-Typ',
     'tutorial.form.tipKind': 'Der Feld-Typ bestimmt, wie du einträgst: <strong>Skala</strong> für „wie sehr“ (z. B. Stimmung 1–5), <strong>Zahl</strong> für Messwerte (z. B. Schlafstunden oder Wassergläser), <strong>Text</strong> für ein paar Worte.',
@@ -2560,6 +2573,19 @@ const STRINGS = {
     'tutorial.reminders.howInstall': 'How to put Logbuch on your home screen',
     'tutorial.field.title': 'What would you like to track?',
     'tutorial.field.intro': 'A <strong>field</strong> is one thing you enter every day – for example your mood or whether you exercised. Create your first one now; this form is the same one you will use later for more fields.',
+    'tutorial.examples.title': 'See examples',
+    'tutorial.examples.intro': 'This is how fields will look in “Today” later – just to look at:',
+    'tutorial.examples.mood': 'Mood',
+    'tutorial.examples.moodNote': 'Mood: a scale from 1 to 5, high values are good – the better, the greener.',
+    'tutorial.examples.sport': 'Exercise',
+    'tutorial.examples.sportNote': 'Exercise: yes or no – a scale with two steps.',
+    'tutorial.examples.water': 'Water',
+    'tutorial.examples.waterNote': 'Water: a number you count up – tap “+” once for every glass.',
+    'tutorial.examples.grateful': 'Grateful for',
+    'tutorial.examples.gratefulNote': 'Grateful for: text, a free answer in your own words.',
+    'tutorial.examples.gratefulValue': 'Coffee in the sun',
+    'tutorial.examples.no': 'No',
+    'tutorial.examples.yes': 'Yes',
     'tutorial.form.nameIdeas': 'Short names fit best in the overview. For example: <strong>Sleep</strong> – how well did I sleep? · <strong>Mood</strong> – how am I today? · <strong>Exercise</strong> – yes or no? · <strong>Weight</strong> – in kg',
     'tutorial.form.tipKindTitle': 'Tip on the field type',
     'tutorial.form.tipKind': 'The field type decides how you enter things: <strong>Scale</strong> for “how much” (e.g. mood 1–5), <strong>Number</strong> for measurements (e.g. hours of sleep or glasses of water), <strong>Text</strong> for a few words.',
@@ -6593,6 +6619,44 @@ function effectivePreviewValue(f) {
     : f.previewValue;
   return Number.isInteger(v) && v >= f.min && v <= f.max ? v : undefined;
 }
+// Beispiele vor dem ersten Feld (Nutzer-Entscheidung 2026-10-28): wie Felder später in
+// "Heute" aussehen, nur zum Anschauen - bewusst keine Vorlagen zum Antippen (siehe
+// docs/onboarding.md). Nachgebaut aus denselben CSS-Bausteinen wie "Heute", aber als
+// reine Bilder (keine Knöpfe), die Beschreibung darunter ist der Text für Screenreader.
+function tutorialExamplesHtml() {
+  const scaleOpts = (labels, min, max, good, value) => {
+    const habit = { id: 'example', kind: 'scale', min, max, labels, good };
+    return Array.from({ length: max - min + 1 }, (_, i) => min + i).map((v, i) => {
+      const label = labels ? labels[i] : String(v);
+      const color = habitColor(habit, normalize(habit, v));
+      const style = v === value ? `background:${color};border-color:${color};color:${textOnScore(color)};` : '';
+      return `<span class="opt-btn${label.length > 1 ? ' opt-btn--text' : ''}${v === value ? ' opt-btn--selected' : ''}" style="${style}">${esc(label)}</span>`;
+    }).join('');
+  };
+  const examples = [
+    ['mood', `<span class="habit-options">${scaleOpts(null, 1, 5, 'high', 4)}</span>`],
+    ['sport', `<span class="habit-options">${scaleOpts([t('tutorial.examples.no'), t('tutorial.examples.yes')], 1, 2, 'high', 2)}</span>`],
+    ['water', '<span class="counter-controls"><span class="counter-btn">−</span><span class="counter-value">3</span><span class="counter-btn counter-btn--plus">+</span></span>'],
+    ['grateful', `<span class="example-text">${t('tutorial.examples.gratefulValue')}</span>`],
+  ];
+  return `
+    <details class="why-box field-examples">
+      <summary class="why-box-title">${t('tutorial.examples.title')}</summary>
+      <p>${t('tutorial.examples.intro')}</p>
+      <ul class="field-examples-list">
+        ${examples.map(([key, widget]) => `
+          <li class="field-example">
+            <div class="field-example-row" aria-hidden="true">
+              <span class="field-example-name">${t(`tutorial.examples.${key}`)}</span>
+              ${widget}
+            </div>
+            <p class="field-example-note">${t(`tutorial.examples.${key}Note`)}</p>
+          </li>
+        `).join('')}
+      </ul>
+    </details>
+  `;
+}
 function renderHabitFormPreview(f) {
   const previewHabit = previewHabitFromForm(f);
   const value = effectivePreviewValue(f);
@@ -8236,6 +8300,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
           <input type="text" id="habit-form-name" value="${esc(f.name)}" maxlength="40" ${tutorialForm ? 'aria-describedby="habit-form-name-ideas"' : ''} />
           ${tutorialForm ? `<p class="onb-hint auth-password-hint" id="habit-form-name-ideas">${t('tutorial.form.nameIdeas')}</p>` : ''}
         </div>
+        ${tutorialForm && stage === 1 ? tutorialExamplesHtml() : ''}
         ${stage < 2 ? '' : `
           ${!tutorialForm ? '' : stage > 2
             ? pastTipBox('tutorial.form.tipKindTitle', 'tutorial.form.tipKind', 'tutorial.form.tipKindMoreTitle', 'tutorial.form.tipKindMore')

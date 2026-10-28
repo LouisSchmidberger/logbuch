@@ -49,7 +49,9 @@ Der Weg vom ersten Öffnen bis zur eingerichteten App, für neue Konten.
   dokumentiert). Davon getrennt gilt überall: der Typ erscheint erst ab zwei passenden
   Feldern, beim allerersten Feld führte er sonst ins Leere (siehe [felder.md](felder.md)).
   **Keine Vorlagen/Beispiele zum Antippen** – Vorlagen sind erst sinnvoll, wenn man das
-  Formular einmal selbst durchgegangen ist; nur Ideen als Text unter dem Namen.
+  Formular einmal selbst durchgegangen ist; nur Ideen als Text unter dem Namen und, zugeklappt,
+  "Beispiele ansehen" (`tutorialExamplesHtml`, Nutzer-Entscheidung 2026-10-28): vier Felder,
+  wie sie in "Heute" aussehen (Skala, Ja/Nein, Zähler, Text), nur als Bild.
 - **"Mehr Einstellungen"** nur noch im Tutorial (Wann/Auswertung/Gruppe zugeklappt); das
   echte Formular ist stattdessen in Abschnitte gegliedert (siehe [felder.md](felder.md)).
 - **Erinnerungen**: bei Schritt für Schritt vorher eine Skizze des Erlaubnis-Dialogs (wie bei
