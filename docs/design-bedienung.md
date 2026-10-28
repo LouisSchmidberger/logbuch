@@ -22,7 +22,8 @@ geräte-lokal statt kontoweit gedacht (anders als die Sprache). `applyTheme()`/
 `--line`, `--moss`, `--rust`, `--sand`, `--surface`, `--input-bg`, `--shadow`, `--scrim`,
 `--rust-rgb`/`--moss-rgb` für `rgba()`-Tönungen, `--on-score`). `<meta
 name="theme-color">` wird per JS synchronisiert (`syncThemeColorMeta`), da Meta-Tags keine
-CSS-Variablen lesen können.
+CSS-Variablen lesen können; Wert = `--surface`, damit die Statusleiste mit dem angehefteten Kopf eine
+Fläche bildet (Android-Konvention). Die untere Navigationsleiste kann eine Web-App nicht färben.
 
 **Kontrast, Projektwerte**: `--sand` (Nebentext) ist im hellen Modus `#665e4f` (5,2:1 auf
 `--paper`, 4,7:1 auf den getönten Flächen: Gruppen-Blöcke in "Heute" mit `--ink` 5 %,

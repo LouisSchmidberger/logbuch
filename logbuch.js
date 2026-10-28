@@ -2864,7 +2864,8 @@ function detectLikelyCountry() {
 // data-theme auf <html> und wird NICHT über user_settings synchronisiert
 // (anders als die Sprache) — bewusst geräte-lokal in localStorage, analog zum
 // bestehenden installHintDismissed-Flag, kein DB-Roundtrip nötig.
-const THEME_COLOR_BY_MODE = { light: '#eae7df', dark: '#1e1c17' };
+// = --surface (Farbe des angehefteten Kopfs): Statusleiste und Kopf wirken wie eine Fläche.
+const THEME_COLOR_BY_MODE = { light: '#eae7df', dark: '#29261f' };
 
 function getThemeOverride() {
   try { return localStorage.getItem('themeOverride'); } catch { return null; } // 'light' | 'dark' | null (= System)
