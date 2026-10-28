@@ -61,7 +61,9 @@ Der Weg vom ersten Öffnen bis zur eingerichteten App, für neue Konten.
 - **Ersatzschlüssel** als eigener Schritt am Ende statt bei der Einrichtung (erster Eindruck
   wäre sonst eine Sicherheitswarnung). Vier gleich große Wege zum Aufbewahren: Kopieren und
   Datei allein reichen nicht – die Zwischenablage kennen viele nicht, eine Datei ist auf dem
-  Handy oft nicht wiederzufinden –, deshalb auch Aufschreiben und Abfotografieren; gleich
+  Handy oft nicht wiederzufinden –, deshalb auch Aufschreiben und Abfotografieren (verworfen
+  2026-10-28: ein erzeugtes Bild statt Bildschirmfoto – eine Web-App kann nicht ohne Dialog in
+  die Galerie speichern, und in "Downloads" finden es viele nicht wieder); gleich
   groß, weil kleine Pillen-Knöpfe zu unscheinbar waren. Abschluss-Knopf immer aktiv mit Rückfrage statt
   Häkchen + ausgegrautem "Fertig": ein deaktivierter Knopf ohne erkennbaren Grund war ein
   Stolperstein.
