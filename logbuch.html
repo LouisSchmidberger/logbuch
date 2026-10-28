@@ -443,6 +443,18 @@
     :is(button, [role="button"], .crisis-action-button):not(:disabled):active { scale: none; opacity: 0.7; }
   }
   .day-date { font-size: 0.875rem; color: var(--sand); }
+  /* Datum = Datumsauswahl (renderTodayDayNav): gepunktet unterstrichen als Hinweis, dass man
+     es antippen kann; das unsichtbare Datumsfeld deckt es ab und reicht nach unten etwas
+     über den Text hinaus (Tippfläche mind. 24px, nach oben nicht - dort sitzt das ⋮). */
+  .day-date-pick {
+    position: relative; cursor: pointer;
+    text-decoration: underline dotted; text-underline-offset: 0.2em; text-decoration-thickness: 1px;
+  }
+  .day-date-input {
+    position: absolute; top: 0; bottom: -0.5rem; left: 0; width: 100%; height: auto;
+    margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer;
+  }
+  .day-date-pick:has(.day-date-input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 2px; }
 
   .today-jump {
     display: block; margin: 12px auto 14px; background: none; border: 1px solid var(--sand); border-radius: 999px;
@@ -1363,6 +1375,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=2b83cbeb56"></script>
+<script type="module" src="./logbuch.js?v=171949f4b3"></script>
 </body>
 </html>

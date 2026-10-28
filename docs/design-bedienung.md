@@ -164,7 +164,8 @@ Gruppen als Blöcke ([felder.md](felder.md) → Gruppen); "+ Neues Feld" (ausgef
 Neue Gruppe" (umrandet) nebeneinander oben (`.manage-new-row`). "Archivieren" ist ein
 Mittelding (`.manage-btn--warn`: Rost-Rand mit leichter Tönung) zwischen neutral und
 "Löschen" (`.manage-btn--danger`: voller Rost-Rand, ohne Tönung) – reversibel, aber ein
-Entfernen aus der Tageseingabe, daher nicht neutral. Beide Ränder mind. 3:1 (vorher
+Entfernen aus der Tageseingabe, daher nicht neutral. Löschen gibt es nur bei archivierten Feldern; ein Satz unter
+der Liste sagt das (`manage.archiveNote`), sonst sucht man den Löschen-Knopf vergeblich. Beide Ränder mind. 3:1 (vorher
 1,5–1,9:1).
 Umsortieren per Hoch/Runter-Buttons als Tastatur-Alternative (`commitLayoutOrder()`,
 gemeinsamer Pfad mit dem Pointer-Drag). Beim Ziehen scrollt die Liste am Bildschirmrand von
@@ -252,6 +253,9 @@ Wochentag oben (`renderDayMenuPanel`, `DAY_MENU_KEY` im Zeilen-Menü-Mechanismus
 **Tageskopf angeheftet** (`renderTodayDayNav`, im `.sticky-top` unter der Tab-Leiste): man
 sieht beim Scrollen immer, welchen Tag man ausfüllt (nach Wischen/Sprung trug man sonst leicht
 in "gestern" ein). "Zu heute springen" bleibt im Inhalt.
+Das Datum darin ist die Datumsauswahl des Geräts (ein unsichtbares `<input type="date">`
+darüber, gepunktet unterstrichen): weite Sprünge ohne viele Pfeil-Tipps, ohne eigenen Kalender.
+Am PC öffnet ein Klick sie per `showPicker()`, sonst nur das kleine Symbol im Feld.
 
 **Ende von "Heute"**: zwei erkennbare Teile – der Tag ("Heute nicht geplant", Tagesnotiz), zuletzt eine Fußleiste mit Trennlinie
 für "+ Neues Feld" (`.today-footer`, gehört nicht zum Tag). Alles linksbündig. Verworfen:

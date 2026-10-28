@@ -1432,6 +1432,7 @@ const STRINGS = {
     'habitForm.error.computedUnitMismatch': 'Die ausgewählten Felder haben unterschiedliche Einheiten.',
     'numberBox.last': 'zuletzt: {value} ({date})',
     'today.jumpToday': 'Zu heute springen',
+    'today.pickDate': 'Datum wählen',
     'today.noFields': 'Noch keine Felder angelegt.',
     'today.resetDay': 'Tag zurücksetzen',
     'today.fieldOptions': 'Optionen für {name}',
@@ -1656,6 +1657,7 @@ const STRINGS = {
     'manage.archive': 'Archivieren',
     'manage.reactivate': 'Reaktivieren',
     'manage.archivedSectionLabel': 'Archiviert',
+    'manage.archiveNote': 'Archivieren blendet ein Feld aus: Seine Werte bleiben erhalten, und du kannst es jederzeit reaktivieren. Endgültig löschen kannst du es danach unten unter „Archiviert“.',
     'manage.computedTag': 'Berechnet',
     'manage.sectionTag': 'Gruppe',
     'sectionForm.explain': 'Eine Gruppe ordnet Felder unter einer Überschrift – in „Heute“ und in der Auswertung. Jedes Feld kann in höchstens einer Gruppe sein.',
@@ -2214,6 +2216,7 @@ const STRINGS = {
     'habitForm.error.computedUnitMismatch': 'The selected fields have different units.',
     'numberBox.last': 'last: {value} ({date})',
     'today.jumpToday': 'Jump to today',
+    'today.pickDate': 'Choose date',
     'today.noFields': 'No fields created yet.',
     'today.resetDay': 'Reset day',
     'today.fieldOptions': 'Options for {name}',
@@ -2438,6 +2441,7 @@ const STRINGS = {
     'manage.archive': 'Archive',
     'manage.reactivate': 'Reactivate',
     'manage.archivedSectionLabel': 'Archived',
+    'manage.archiveNote': 'Archiving hides a field: its values are kept and you can reactivate it anytime. To delete it for good, find it afterwards under “Archived” below.',
     'manage.computedTag': 'Calculated',
     'manage.sectionTag': 'Group',
     'sectionForm.explain': 'A group arranges fields under a heading – in “Today” and in the statistics. Each field can be in at most one group.',
@@ -6857,6 +6861,9 @@ function renderPeriodBlock(period, fields) {
 // Tageskopf von "Heute" (Wochentag, Datum, Pfeile, Stand des Tages) - steht im angehefteten
 // Kopf (renderApp), damit man beim Scrollen immer sieht, welchen Tag man gerade ausfüllt
 // (nach Wischen/Sprung trug man sonst leicht unbemerkt in "gestern" ein).
+// Das Datum ist zugleich die Datumsauswahl des Geräts: ein unsichtbares <input type="date">
+// liegt darüber, so öffnet ein Tipp darauf auf jedem Handy den eigenen Kalender, ohne
+// eigenen Nachbau. Am PC öffnet ein Klick ihn per showPicker() (sonst nur Tastatur-Eingabe).
 function renderTodayDayNav() {
   const dateKey = formatKey(state.currentDate);
   const dayEntry = state.entries[dateKey] || {};
@@ -6869,7 +6876,7 @@ function renderTodayDayNav() {
       <button type="button" class="nav-btn" data-action="nav-day" data-dir="-1" aria-label="${esc(t('ariaLabel.prevDay'))}">‹</button>
       <div class="day-label">
         <span class="day-weekday">${renderRowMenuButton(DAY_MENU_KEY, t('today.dayOptions'))}${weekdayLong(state.currentDate)}</span>
-        <span class="day-date">${relativeDay ? `<span class="day-relative">${relativeDay}</span> · ` : ''}${longDate(state.currentDate)}</span>
+        <span class="day-date day-date-pick">${relativeDay ? `<span class="day-relative">${relativeDay}</span> · ` : ''}${longDate(state.currentDate)}<input type="date" id="day-date-input" class="day-date-input" data-action="pick-date" value="${dateKey}" aria-label="${esc(t('today.pickDate'))}" /></span>
         <span class="day-status">${dayStatusHtml(dayEntry)}</span>
       </div>
       <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" aria-label="${esc(t('ariaLabel.nextDay'))}">›</button>
@@ -8243,6 +8250,7 @@ function renderManage() {
       </div>
     ` : ''}
     <div class="manage-list">${activeBlocks.map((b, i) => (b.type === 'habit' ? row(b.habit, i, activeBlocks) : sectionBlock(b, i, activeBlocks))).join('')}</div>
+    ${active.length ? `<p class="habit-form-lock-note">${t('manage.archiveNote')}</p>` : ''}
     ${archived.length ? `
       <p class="habit-form-lock-note">${t('manage.archivedSectionLabel')}</p>
       <div class="manage-list">${archived.map(row).join('')}</div>
@@ -8871,7 +8879,7 @@ function restoreFocus(key) {
 // ein render() auslöst, sah es aus, als müsse man zweimal wählen. Tastatur-Nutzer (letzte
 // Zeige-Eingabe Maus bzw. keine) behalten ihren Platz.
 function focusReopensPicker(el) {
-  return el.tagName === 'SELECT' && lastPointerType !== 'mouse';
+  return (el.tagName === 'SELECT' || el.type === 'date') && lastPointerType !== 'mouse';
 }
 
 // Sanftes Erscheinen von Menüs, Dialogen und Notiz-Editor (.layer-in, CSS). render() baut
@@ -8969,6 +8977,12 @@ app.addEventListener('click', async (e) => {
   // state.rowMenu.
   if (action !== 'row-menu') state.rowMenu = null;
 
+  if (action === 'pick-date') {
+    // Finger: das Gerät öffnet seinen Kalender selbst. Maus: Chrome/Edge täten es nur über
+    // das kleine Kalender-Symbol, das hier unsichtbar ist.
+    if (lastPointerType === 'mouse') { try { el.showPicker(); } catch { /* ältere Browser: Tastatur-Eingabe */ } }
+    return;
+  }
   if (action === 'onb-mode') {
     setOnbMode(el.dataset.mode);
     setOnbInProgress(true);
@@ -9499,6 +9513,17 @@ app.addEventListener('input', (e) => {
 });
 app.addEventListener('change', async (e) => {
   state.notice = null; // siehe Kommentar beim 'click'-Listener oben
+  if (e.target.id === 'day-date-input') {
+    if (!e.target.value) return; // "Löschen" in der Datumsauswahl: Tag bleibt
+    const picked = parseDateKey(e.target.value);
+    if (formatKey(picked) === formatKey(state.currentDate)) return;
+    pendingPeriodSlide = picked > state.currentDate ? 1 : -1;
+    state.currentDate = picked;
+    render();
+    const input = document.getElementById('day-date-input');
+    if (input && !focusReopensPicker(input)) input.focus({ preventScroll: true });
+    return;
+  }
   // Berechnetes Feld aus Zahlen: nach jeder Mitglieder-Änderung neu rendern, damit Felder mit anderer
   // Einheit gesperrt bzw. wieder freigegeben werden (siehe computedBody).
   const memberBox = e.target.closest?.('[data-member-key]');
