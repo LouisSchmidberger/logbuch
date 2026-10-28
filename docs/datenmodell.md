@@ -75,9 +75,9 @@ Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `reminder
   App-Version) in Feld-IDs, solange die Definition unverschlüsselt ist; nicht Zuordenbares
   fällt weg.
 - `reminder_progress` – unverschlüsselt, `{ <Feld-ID>: 0–4 }`: je Zähler mit eigenen Zeiten
-  und Ziel "mindestens", wie viele Zwischenziele an dem Tag erreicht sind (`reminderProgress`,
-  in `saveDay` mitgeschrieben). Nur die Stufe, nie Zählerstand oder Ziel (Nutzer-Entscheidung
-  2026-10-28). CHECK `habit_reminder_progress_valid`.
+  und Bedingungen ("falls weniger als"), wie viele davon an dem Tag erfüllt sind
+  (`reminderProgress`, in `saveDay` mitgeschrieben). Nur die Stufe, nie Zählerstand oder Zahlen
+  (Nutzer-Entscheidung 2026-10-28, siehe [erinnerungen.md](erinnerungen.md) → Zähler). CHECK `habit_reminder_progress_valid`.
 - **Speichern eines Tages** (`saveDay`): ein Tag ist ein einziges verschlüsseltes Objekt –
   ein zweites Gerät mit veraltetem Stand würde sonst anderswo eingetragene Werte
   überschreiben. Deshalb holt jede Speicherung zuerst die aktuelle Zeile; hat sie sich seit

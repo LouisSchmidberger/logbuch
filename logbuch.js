@@ -223,6 +223,7 @@ function habitFromParts(row, payload) {
     sectionId: row.section_id ?? null,    // Gruppe (intern "section", Klartext-Spalte, siehe layoutBlocks)
     reminderMinute: row.reminder_minute, // Minuten seit Mitternacht (0-1439) oder null (= Standardzeit); bei mehreren Zeiten die erste
     reminderTimes: reminderTimesOf(row),  // alle eigenen Zeiten, aufsteigend (leer = keine eigene Zeit)
+    reminderBelow: Array.isArray(payload.reminderBelow) ? payload.reminderBelow : null, // nur Zähler, siehe counterReminderThresholds
     goalThreshold: payload.goalThreshold, // nur bei kind === 'scale'/'computed', 0-1 oder null (= 1 = 100%)
     sortOrder: row.sort_order,
     archivedAt: row.archived_at,
@@ -242,6 +243,18 @@ const MAX_REMINDER_TIMES = 4;
 function reminderTimesOf(row) {
   if (Array.isArray(row.reminder_minutes) && row.reminder_minutes.length) return [...row.reminder_minutes];
   return row.reminder_minute !== null && row.reminder_minute !== undefined ? [row.reminder_minute] : [];
+}
+// Bedingung je Erinnerungszeit eines Zählers (Nutzer-Entscheidung 2026-10-28): "erinnere zur
+// i-ten Zeit, falls weniger als X" - X aus payload.reminderBelow (verschlüsselt), null = zu
+// jeder Zeit. Entweder alle Zeiten haben eine Zahl oder keine, aufsteigend (geprüft beim
+// Speichern) - nur so ergeben die erreichten Bedingungen eine Stufe, die der Server mit der
+// Position der Zeit vergleichen kann (siehe reminderProgress). Felder, die noch ohne
+// reminderBelow gespeichert sind, verteilen ein Ziel "mindestens G" gleichmäßig: ceil(G·i/n).
+function counterReminderThresholds(h) {
+  const n = h.reminderTimes.length;
+  if (Array.isArray(h.reminderBelow)) return h.reminderTimes.map((_, i) => (Number.isFinite(h.reminderBelow[i]) ? h.reminderBelow[i] : null));
+  if (h.good === 'high' && Number.isFinite(h.target)) return h.reminderTimes.map((_, i) => Math.ceil((h.target * (i + 1)) / n - 1e-9));
+  return h.reminderTimes.map(() => null);
 }
 // Noch nicht umgestellte Zeile (Klartext-Spalten) -> dieselbe payload-Form.
 function defPayloadFromPlainRow(row) {
@@ -1083,7 +1096,7 @@ function habitFormSnapshot(f) {
   snap.labels = f.labelsEnabled ? f.labels.slice(0, f.max - f.min + 1) : null;
   snap.members = [...f.members].sort();
   snap.schedule = [...f.schedule.days].sort();
-  if (!f.reminderEnabled) snap.reminderTimes = null;
+  if (!f.reminderEnabled) { snap.reminderTimes = null; snap.reminderBelow = null; }
   return JSON.stringify(snap);
 }
 function sectionFormSnapshot(sf) {
@@ -1567,8 +1580,11 @@ const STRINGS = {
     'habitForm.reminderAdd': '+ Weitere Zeit',
     'habitForm.reminderRemove': 'Entfernen',
     'habitForm.reminderTimesNote': 'Zu jeder Zeit wird nur erinnert, solange das Feld an dem Tag noch leer ist.',
-    'habitForm.counterReminderNote': 'Logbuch erinnert zu jeder dieser Zeiten, egal wie viel schon gezählt ist. Mit einem Ziel „Mindestens“ (unter „Auswertung“) erinnert es nur, wenn du zu der Zeit hinter dem Ziel liegst.',
-    'habitForm.counterReminderGoalNote': 'Erinnert wird nur, wenn du zu der Zeit hinter deinem Ziel liegst – es verteilt sich gleichmäßig auf die Zeiten. Bei Ziel 2 und zwei Zeiten: zur ersten, solange 0 steht, zur zweiten, solange es weniger als 2 sind.',
+    'habitForm.reminderBelow': 'falls weniger als',
+    'habitForm.counterReminderNote': 'Mit einer Zahl erinnert Logbuch nur, wenn der Zähler zu der Zeit darunter liegt, z. B. um 9 Uhr falls weniger als 1, um 21 Uhr falls weniger als 2. Ohne Zahl erinnert es zu jeder Zeit.',
+    'habitForm.error.reminderBelowNumber': 'Bitte gib bei „falls weniger als“ eine Zahl größer als 0 ein.',
+    'habitForm.error.reminderBelowAll': 'Bitte gib bei „falls weniger als“ für jede Erinnerungszeit eine Zahl ein – oder lass alle leer.',
+    'habitForm.error.reminderBelowOrder': 'Bei „falls weniger als“ darf die Zahl zu einer späteren Zeit nicht kleiner sein als zu einer früheren.',
     'habitForm.sectionReminderNote': 'Ohne eigene Zeit über die Gruppe „{name}“ geregelt: gemeinsame Erinnerung um {time}.',
     'habitForm.title.editGroup': 'Gruppe bearbeiten',
     'habitForm.title.newGroup': 'Neue Gruppe',
@@ -1945,7 +1961,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'Was ich nicht sehen kann',
     'about.privacy.cannotSee.body': 'Alles, was du einträgst, und worum es dabei geht: deine Werte, Notizen und Text-Antworten, die Namen deiner Felder und Gruppen und die Bezeichnungen ihrer Stufen. Das alles wird auf deinem Gerät verschlüsselt, bevor es überhaupt verschickt wird. Der Schlüssel dafür hängt an deinem Passwort und deinem Ersatzschlüssel, und beide kennst nur du. Selbst mit vollem Zugriff auf die Datenbank sehe ich davon nur unlesbaren Zeichensalat.',
     'about.privacy.canSee.title': 'Was ich sehen kann',
-    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>wie viele Felder und Gruppen du hast, von welcher Art die Felder sind (z. B. Skala oder Zahl), wie oft sie dran sind (z. B. täglich, an bestimmten Wochentagen oder einmal pro Woche) und welches Feld in welcher Gruppe steht – aber nicht, worum es geht oder wie Felder und Gruppen heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert – bei Zählern mit Erinnerungen und Ziel nur, wie viele der Erinnerungen an dem Tag schon erledigt sind (z. B. „1 von 2“), nicht die Zahl selbst</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokollieren die Anbieter, bei denen Logbuch läuft, für kurze Zeit technische Zugriffsdaten wie IP-Adressen. Und ein Mail-Dienst bekommt deine E-Mail-Adresse, um dir die Mails zum Bestätigen deines Kontos und zum Zurücksetzen des Passworts zu schicken.',
+    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>wie viele Felder und Gruppen du hast, von welcher Art die Felder sind (z. B. Skala oder Zahl), wie oft sie dran sind (z. B. täglich, an bestimmten Wochentagen oder einmal pro Woche) und welches Feld in welcher Gruppe steht – aber nicht, worum es geht oder wie Felder und Gruppen heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert – bei Zählern mit Erinnerungen und „falls weniger als“ nur, wie viele der Erinnerungen an dem Tag schon erledigt sind (z. B. „1 von 2“), nicht die Zahl selbst</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokollieren die Anbieter, bei denen Logbuch läuft, für kurze Zeit technische Zugriffsdaten wie IP-Adressen. Und ein Mail-Dienst bekommt deine E-Mail-Adresse, um dir die Mails zum Bestätigen deines Kontos und zum Zurücksetzen des Passworts zu schicken.',
     'about.privacy.recoveryKey.title': 'Die Kehrseite: dein Ersatzschlüssel',
     'about.privacy.recoveryKey.body': 'Weil ich keinen Zugriff habe, kann ich dir auch nicht helfen, wenn du Passwort <strong>und</strong> Ersatzschlüssel verlierst – dann sind deine Einträge unwiederbringlich weg. Bewahre ihn deshalb gut auf. Hast du ihn verlegt, kannst du dir in den Einstellungen jederzeit einen neuen erzeugen – der alte wird dabei ungültig, und du brauchst ihn dafür nicht.',
     'about.privacy.yourData.title': 'Deine Daten gehören dir',
@@ -2357,8 +2373,11 @@ const STRINGS = {
     'habitForm.reminderAdd': '+ Another time',
     'habitForm.reminderRemove': 'Remove',
     'habitForm.reminderTimesNote': 'At each time you’re only reminded while the field is still empty that day.',
-    'habitForm.counterReminderNote': 'Logbuch reminds you at each of these times, no matter how much you’ve counted. With an “At least” goal (under “Statistics”) it only reminds you if you’re behind the goal at that time.',
-    'habitForm.counterReminderGoalNote': 'You’re only reminded if you’re behind your goal at that time – the goal is spread evenly across the times. With a goal of 2 and two times: at the first while it’s still 0, at the second while it’s less than 2.',
+    'habitForm.reminderBelow': 'if less than',
+    'habitForm.counterReminderNote': 'With a number, Logbuch only reminds you if the counter is below it at that time, e.g. at 9 am if less than 1, at 9 pm if less than 2. Without a number it reminds you at every time.',
+    'habitForm.error.reminderBelowNumber': 'Please enter a number greater than 0 for “if less than”.',
+    'habitForm.error.reminderBelowAll': 'Please enter a number for “if less than” at every reminder time – or leave all of them empty.',
+    'habitForm.error.reminderBelowOrder': 'For “if less than”, a later time can’t have a smaller number than an earlier one.',
     'habitForm.sectionReminderNote': 'Without a custom time, handled by the group “{name}”: shared reminder at {time}.',
     'habitForm.title.editGroup': 'Edit group',
     'habitForm.title.newGroup': 'New group',
@@ -2735,7 +2754,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'What I cannot see',
     'about.privacy.cannotSee.body': 'Everything you enter, and what it is about: your values, notes, and text answers, the names of your fields and groups and the labels of their steps. All of this is encrypted on your device before it is even sent. The key for it is tied to your password and your spare key, and only you know them. Even with full access to the database, all I see is unreadable gibberish.',
     'about.privacy.canSee.title': 'What I can see',
-    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>how many fields and groups you have, what kind the fields are (e.g. scale or number), how often they are due (e.g. daily, on certain weekdays, or once a week), and which field is in which group – but not what they are about or what your fields and groups are called</li><li>on which days you filled in which of these fields (for reminders), without the value – for counters with reminders and a goal only how many of that day’s reminders are already taken care of (e.g. “1 of 2”), not the number itself</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the providers Logbuch runs on briefly log technical access data such as IP addresses. And an email service gets your email address to send you the emails for confirming your account and resetting your password.',
+    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>how many fields and groups you have, what kind the fields are (e.g. scale or number), how often they are due (e.g. daily, on certain weekdays, or once a week), and which field is in which group – but not what they are about or what your fields and groups are called</li><li>on which days you filled in which of these fields (for reminders), without the value – for counters with reminders and “if less than” only how many of that day’s reminders are already taken care of (e.g. “1 of 2”), not the number itself</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the providers Logbuch runs on briefly log technical access data such as IP addresses. And an email service gets your email address to send you the emails for confirming your account and resetting your password.',
     'about.privacy.recoveryKey.title': 'The flip side: your spare key',
     'about.privacy.recoveryKey.body': 'Because I have no access, I also cannot help you if you lose your password <strong>and</strong> your spare key – your entries are then gone for good. So keep it somewhere safe. If you have misplaced it, you can create a new one in the settings anytime – the old one becomes invalid, and you do not need it to do this.',
     'about.privacy.yourData.title': 'Your data belongs to you',
@@ -4061,6 +4080,7 @@ function defaultHabitForm() {
     sectionId: null,
     goal: 1, // Ziel-Quote als Bruchteil (siehe goalControlHtml); 1 = nur der beste Wert
     unit: '', reminderEnabled: false, reminderTimes: [state.userSettings.defaultReminderMinute],
+    reminderBelow: [''], // nur Zähler: je Zeit "falls weniger als" (Text aus dem Eingabefeld, '' = immer)
     schedule: scheduleToForm(null),
     period: 'day', periodReminderDay: null, // siehe periodReminderControl
     step: 1, // nur Zähler
@@ -4115,6 +4135,9 @@ function habitToForm(h) {
     unit: h.unit || '',
     reminderEnabled: h.reminderTimes.length > 0,
     reminderTimes: h.reminderTimes.length ? [...h.reminderTimes] : [state.userSettings.defaultReminderMinute],
+    reminderBelow: h.reminderTimes.length && isCounterKind(h)
+      ? counterReminderThresholds(h).map((x) => (x === null ? '' : String(x)))
+      : [''],
     schedule: scheduleToForm(h.schedule),
     period: h.period || 'day',
     periodReminderDay: h.periodReminderDay ?? null,
@@ -4132,6 +4155,7 @@ function readReminderTimesFromDom(f) {
   const enabledEl = document.getElementById('habit-form-reminder-enabled');
   if (enabledEl) f.reminderEnabled = enabledEl.checked;
   f.reminderTimes = f.reminderTimes.map((m, i) => readTimeInput(`habit-form-reminder-time-${i}`) ?? m);
+  f.reminderBelow = f.reminderTimes.map((_, i) => document.getElementById(`habit-form-reminder-below-${i}`)?.value ?? f.reminderBelow[i] ?? '');
 }
 function syncHabitFormFromDom() {
   const f = state.habitForm;
@@ -4233,9 +4257,26 @@ async function handleHabitSaveInner() {
   // Mehrere Zeiten nur bei Tagesfeldern; Zähler-Zeitraumfelder erinnern gar nicht (siehe
   // habitFormReminderShown). Doppelte Zeiten fallen still weg, sortiert wird erst hier (beim
   // Umsortieren während der Eingabe spränge die gerade bearbeitete Zeile weg).
-  const reminderTimes = f.reminderEnabled && habitFormReminderShown(f)
-    ? [...new Set(f.reminderTimes)].sort((a, b) => a - b).slice(0, f.period === 'day' ? MAX_REMINDER_TIMES : 1)
-    : [];
+  const reminderPairs = !f.reminderEnabled || !habitFormReminderShown(f) ? []
+    : f.reminderTimes.map((m, i) => ({ m, below: String(f.reminderBelow[i] ?? '').trim().replace(',', '.') }))
+      .filter((p, i, all) => all.findIndex((q) => q.m === p.m) === i)
+      .sort((a, b) => a.m - b.m)
+      .slice(0, f.period === 'day' ? MAX_REMINDER_TIMES : 1);
+  const reminderTimes = reminderPairs.map((p) => p.m);
+  // Zähler: "falls weniger als" - alle leer (= immer erinnern) oder alle Zahlen > 0, zur
+  // späteren Zeit nicht kleiner (siehe counterReminderThresholds).
+  let reminderBelow;
+  if (f.kind === 'counter' && reminderPairs.length) {
+    reminderBelow = reminderPairs.map((p) => (p.below === '' ? null : Number(p.below)));
+    const error = reminderBelow.some((x) => x !== null && (!Number.isFinite(x) || x <= 0)) ? 'habitForm.error.reminderBelowNumber'
+      : reminderBelow.some((x) => x === null) && reminderBelow.some((x) => x !== null) ? 'habitForm.error.reminderBelowAll'
+      : reminderBelow.some((x, i) => i > 0 && x < reminderBelow[i - 1]) ? 'habitForm.error.reminderBelowOrder'
+      : null;
+    if (error) {
+      state.notice = { type: 'error', text: t(error) };
+      return;
+    }
+  }
 
   readGoalFromDom(f);
   // Ziel-Quote ergibt bei "Keine Wertung" keinen Sinn (kein Gut/Schlecht zum Stauchen)
@@ -4379,6 +4420,8 @@ async function handleHabitSaveInner() {
     target: fields.target ?? undefined,
     summary: habitFormSummable(f) && f.summary === 'sum' ? 'sum' : undefined,
     archivedInStats: f.defId ? !!state.habits.find((h) => h.defId === f.defId)?.archivedInStats : false,
+    counterSince: f.kind === 'counter' && f.defId ? state.habits.find((h) => h.defId === f.defId)?.counterSince ?? undefined : undefined,
+    reminderBelow,
   };
   const sectionId = period === 'day' && state.sections.some((sec) => sec.id === f.sectionId) ? f.sectionId : null;
   const row = {
@@ -4891,20 +4934,19 @@ function filledFieldIds(dayData) {
 }
 
 // Für reminder_progress (Erinnerungen an Zähler, Nutzer-Entscheidung 2026-10-28): je Zähler
-// mit eigenen Zeiten und Ziel "mindestens", wie viele seiner Zwischenziele erreicht sind. Das
-// Ziel verteilt sich gleichmäßig auf die Zeiten - bei Ziel G und n Zeiten ist Stufe i ab
-// ceil(G·i/n) erreicht (Ziel 2, zwei Zeiten: ab 1, dann ab 2). Der Server sieht nur die
-// Stufe, nicht Zählerstand oder Ziel. Zähler ohne solches Ziel fehlen hier: die erinnern zu
-// jeder ihrer Zeiten (Stufe 0).
+// mit eigenen Zeiten und Bedingungen ("falls weniger als", counterReminderThresholds), wie
+// viele davon erfüllt sind - Stufe i ist erreicht, sobald der Zählerstand die i-te Zahl
+// erreicht. Der Server sieht nur die Stufe, nicht Zählerstand oder Zahlen. Zähler ohne
+// Bedingungen fehlen hier: die erinnern zu jeder ihrer Zeiten (Stufe 0).
 function reminderProgress(dayData) {
   const progress = {};
   for (const h of state.habits) {
     if (!isCounterKind(h) || isPeriodField(h) || h.archivedAt || !h.reminderTimes.length) continue;
-    if (h.good !== 'high' || !Number.isFinite(h.target)) continue;
-    const n = h.reminderTimes.length;
+    const thresholds = counterReminderThresholds(h);
+    if (thresholds.some((x) => x === null)) continue;
     const count = Number(dayData[h.id]) || 0;
     let reached = 0;
-    for (let i = 1; i <= n; i++) if (count >= Math.ceil((h.target * i) / n - 1e-9)) reached = i;
+    while (reached < thresholds.length && count >= thresholds[reached]) reached++;
     progress[h.defId] = reached;
   }
   return progress;
@@ -4922,6 +4964,10 @@ async function updateHabitPayload(habit, changes) {
     sliderShowValue: next.sliderShowValue ?? true, groupMembers: next.members ?? null,
     goalThreshold: next.goalThreshold ?? null, aggregate: next.aggregate ?? null,
     hideInStats: !!next.hideInStats, archivedInStats: !!next.archivedInStats,
+    // Ohne diese gingen Ziel/Schritt/Summe einer Zahl bzw. eines Zählers hier still verloren.
+    step: isCounterKind(next) ? next.step : undefined, target: next.target ?? undefined,
+    summary: next.summary === 'sum' ? 'sum' : undefined, counterSince: next.counterSince ?? undefined,
+    reminderBelow: next.reminderBelow ?? undefined,
   };
   const enc = await encryptData(currentDek, payload);
   const { error } = await supabase.from('habit_definitions').update({ enc, ...DEF_PLAINTEXT_CLEARED }).eq('id', habit.defId);
@@ -7390,12 +7436,12 @@ const CHANGELOG = [
   {
     id: '2026-10-28',
     de: [
-      'Ein Feld kann jetzt bis zu vier Erinnerungszeiten haben, z. B. morgens und abends. Auch Zähler erinnern dich jetzt – mit einem Ziel „Mindestens“ nur, wenn du zu der Zeit noch hinter dem Ziel liegst.',
+      'Ein Feld kann jetzt bis zu vier Erinnerungszeiten haben, z. B. morgens und abends. Auch Zähler erinnern dich jetzt – auf Wunsch nur, wenn sie zu der Zeit unter einer Zahl liegen, die du festlegst.',
       'Tippst du in „Heute“ auf das Datum, kannst du direkt einen Tag auswählen.',
       'In Woche, Monat, Jahr und Gesamt kannst du ein Feld bearbeiten, indem du auf seinen Namen tippst.',
     ],
     en: [
-      'A field can now have up to four reminder times, e.g. morning and evening. Counters can remind you now too – with an “At least” goal only if you’re still behind the goal at that time.',
+      'A field can now have up to four reminder times, e.g. morning and evening. Counters can remind you now too – if you like, only when they’re below a number you choose at that time.',
       'Tap the date in “Today” to pick a day directly.',
       'In Week, Month, Year and Overall you can edit a field by tapping its name.',
     ],
@@ -8014,8 +8060,14 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       </label>
       ${f.reminderEnabled ? `
         ${times.slice(0, maxTimes).map((m, i) => `
-          <div class="reminder-time-row">
+          <div class="reminder-time-row${f.kind === 'counter' && f.period === 'day' ? ' reminder-time-row--counter' : ''}">
             ${reminderTimeInputHtml(`habit-form-reminder-time-${i}`, m, 'habit-reminder-time-changed', false, timesNote ? 'habit-form-reminder-times-note' : null)}
+            ${f.kind === 'counter' && f.period === 'day' ? `
+              <label class="reminder-below">
+                ${t('habitForm.reminderBelow')}
+                <input type="number" id="habit-form-reminder-below-${i}" inputmode="decimal" step="any" min="0" value="${esc(f.reminderBelow[i] ?? '')}" aria-describedby="habit-form-reminder-times-note" />
+              </label>
+            ` : ''}
             ${times.length > 1 ? `<button type="button" class="manage-btn" data-action="habit-reminder-remove" data-index="${i}">${t('habitForm.reminderRemove')}<span class="visually-hidden"> ${minutesToTimeStr(m)}</span></button>` : ''}
           </div>
         `).join('')}
@@ -8204,9 +8256,7 @@ function habitFormReminderShown(f) {
 // Feld mit nur einer Zeit selbsterklärend (kein Hinweis), bei Zählern immer nötig - sie stehen
 // nie leer.
 function habitFormReminderTimesNote(f, count) {
-  if (f.kind === 'counter') {
-    return t(f.numberGoalDir === 'high' ? 'habitForm.counterReminderGoalNote' : 'habitForm.counterReminderNote');
-  }
+  if (f.kind === 'counter') return t('habitForm.counterReminderNote');
   return count > 1 ? t('habitForm.reminderTimesNote') : '';
 }
 // Hinweis unter "Eigene Erinnerungszeit" (ausgeschaltet): welche Zeit stattdessen gilt -
@@ -9450,6 +9500,8 @@ app.addEventListener('click', async (e) => {
     const next = last + 60 <= 1425 && !f.reminderTimes.includes(last + 60) ? last + 60
       : Array.from({ length: 24 }, (_, h) => h * 60).find((m) => !f.reminderTimes.includes(m));
     f.reminderTimes = [...f.reminderTimes, next];
+    // Bedingung der neuen Zeit: wie die letzte (alle oder keine brauchen eine Zahl).
+    f.reminderBelow = [...f.reminderBelow, f.reminderBelow[f.reminderBelow.length - 1] ?? ''];
     render();
     const i = f.reminderTimes.length - 1;
     document.getElementById(`habit-form-reminder-time-${i}-h`)?.focus();
@@ -9458,6 +9510,7 @@ app.addEventListener('click', async (e) => {
     const f = state.habitForm;
     const i = Number(el.dataset.index);
     f.reminderTimes = f.reminderTimes.filter((_, j) => j !== i);
+    f.reminderBelow = f.reminderBelow.filter((_, j) => j !== i);
     render();
     // Fokus nicht ins Leere: auf die Zeile, die jetzt an dieser Stelle steht (sonst die letzte).
     document.getElementById(`habit-form-reminder-time-${Math.min(i, f.reminderTimes.length - 1)}-h`)?.focus();

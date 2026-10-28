@@ -45,12 +45,15 @@ Offline-Caching). Alle Zeiten/Daten gelten in der **Ortszeit des Nutzers**
   gültiges Ergebnis; aus Standard- und Gruppen-Erinnerung bleiben sie heraus. Mit eigenen Zeiten
   (nur Tagesfelder) erinnern sie über `counter_due` mit eigenem Text (`Erinnerung: <Namen>`,
   Payload `counterIds` statt `fieldIds`, damit ein älterer Service Worker nicht "noch nicht
-  eingetragen" einsetzt): mit Ziel "mindestens" zur i-ten Zeit nur, solange weniger als i
-  Zwischenziele erreicht sind (Ziel G auf n Zeiten verteilt, Stufe i ab ⌈G·i/n⌉, aus
-  `habit_entries.reminder_progress`); ohne ein solches Ziel zu jeder Zeit. Der Server sieht
-  so nur die erreichte Stufe (Nutzer-Entscheidung 2026-10-28: Feldnamen sind verschlüsselt, die
-  Stufe verrät nicht, worum es geht). Ändern sich Ziel oder Zeiten, schreibt das Speichern des
-  Felds den heutigen Stand neu.
+  eingetragen" einsetzt). Je Zeit eine Bedingung "falls weniger als X" (Nutzer-Entscheidung
+  2026-10-28, `reminderBelow` verschlüsselt in `enc`, `counterReminderThresholds`): alle Zeiten
+  mit Zahl oder keine (leer = zu jeder Zeit), zur späteren Zeit nicht kleiner – nur so ergibt
+  "wie viele Bedingungen erfüllt" eine Stufe, die die SQL-Funktion mit der Position der Zeit
+  vergleicht (`habit_entries.reminder_progress`, fällig zur i-ten Zeit, solange Stufe < i).
+  Ältere Felder ohne `reminderBelow` verteilen ein Ziel "mindestens G" gleichmäßig (⌈G·i/n⌉),
+  das Formular füllt die Zahlen damit vor. Der Server sieht nur die Stufe (Nutzer-Entscheidung
+  2026-10-28: Feldnamen sind verschlüsselt, die Stufe verrät nicht, worum es geht). Ändern sich
+  Bedingungen oder Zeiten, schreibt das Speichern des Felds den heutigen Stand neu.
 - **Zeitraum-Felder** (Woche/Monat/Jahr, siehe [datenmodell.md](datenmodell.md)): eine
   Erinnerung pro Zeitraum, am Erinnerungstag (`period_reminder_day`, Standard Sonntag /
   Monatsletzter / 31.12., `habit_period_reminder_due`) zur eigenen Zeit des Felds oder zur
