@@ -6330,12 +6330,12 @@ function renderConfirmLanding() {
 function renderUnlockPrompt() {
   app.innerHTML = `
     <div class="auth-box">
+      ${isOnbInProgress() ? onbProgress('account') : ''}
       <h1>Logbuch</h1>
       <p class="sub">${t('unlock.title')}</p>
       ${state.session?.user?.email ? `<p class="unlock-account">${t('unlock.account', { email: state.session.user.email })}</p>` : ''}
       ${ARRIVED_VIA_SIGNUP_CONFIRM && !isStandaloneDisplay() ? `<div class="notice notice--ok">${t('unlock.afterConfirm')}</div>` : ''}
       <p class="onb-hint">${t('unlock.explain')}</p>
-      ${isOnbInProgress() ? onbProgress('account') : ''}
       <details class="why-details" ${isGuided() ? 'open' : ''}><summary>${t('unlock.whyTitle')}</summary><p>${t('unlock.why')}</p></details>
       ${state.unlockError ? `<div class="notice" role="alert">${esc(state.unlockError)}</div>` : ''}
       <form id="unlock-form">
