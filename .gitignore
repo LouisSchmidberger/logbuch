@@ -1,3 +1,4 @@
 .DS_Store
 node_modules/
 supabase/.temp/
+.claude/settings.local.json
