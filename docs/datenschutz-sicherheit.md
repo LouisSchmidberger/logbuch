@@ -123,7 +123,9 @@ die Spam-Rückfrage (siehe [onboarding.md](onboarding.md)) speichert
 Anbieter, den der Server aus der Konto-Adresse ableitet (nur große Anbieter, sonst `andere`:
 eine eigene Domain verriete die Person). Ohne Konto-Bezug; das Einmal-Limit läuft über das
 getrennte `signup_mail_feedback_given` (nur Konto, keine Antwort). Nur in der ersten Woche
-nach der Registrierung. Beide Tabellen wie `feedback`: RLS ohne Policies, GRANTs nur an
+nach der Registrierung. Bewusst nicht im Datenschutz-Text in "Über Logbuch": was gespeichert
+wird, steht direkt unter der Frage, und ohne Antwort wird nichts gespeichert
+(Nutzer-Entscheidung 2026-10-28). Beide Tabellen wie `feedback`: RLS ohne Policies, GRANTs nur an
 `service_role`. Auswerten: `select provider, in_spam, count(*) from signup_mail_feedback group
 by 1, 2`.
 

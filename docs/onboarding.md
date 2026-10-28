@@ -203,8 +203,9 @@ Weitermachen im Browser bleibt möglich.
 
 **Spam-Rückfrage** (`spamFeedbackHtml`, Nutzer-Entscheidung 2026-10-28): auf der Seite, die
 der Bestätigungslink öffnet ("Adresse bestätigt" bzw. "Passwort eingeben"), freiwillig "Lag
-die Mail im Spam-Ordner? [Ja, im Spam] [Nein]" – bei "Passwort eingeben" unter dem Formular,
-damit sie die eigentliche Aufgabe nicht unterbricht. Antwort ohne Neuzeichnen (ein schon
+die Mail im Spam-Ordner? [Ja, im Spam] [Nein]" – bei "Passwort eingeben" vor dem Formular:
+darunter sähe sie niemand, weil man vorher schon auf Weiter tippt (Nutzer-Entscheidung
+2026-10-28). Antwort ohne Neuzeichnen (ein schon
 getipptes Passwort bliebe sonst nicht stehen). Speicherung siehe
 [datenschutz-sicherheit.md](datenschutz-sicherheit.md) → E-Mail-Versand.
 
