@@ -165,25 +165,32 @@ Details [erinnerungen.md](erinnerungen.md).
 
 ## Wiederholung (`habit_definitions.schedule`)
 
-Pro Feld einstellbar, an welchen Tagen es "dran" ist (Formular "An welchen Tagen?": 7 runde
-Wochentags-Knöpfe, alle vorbelegt; nicht für berechnete Felder – die sind dran, sobald eines
-ihrer aktiven Mitglieder dran ist). Das Formular bietet seit 2026-10-12 nur noch Wochentage:
-monatlich/jährlich/Intervall deckten Zeitraum-Felder ab, und kein Feld nutzte sie (geprüft per
-Abfrage: alle Felder täglich).
+Pro Feld einstellbar, an welchen Tagen es "dran" ist (Formular "An welchen Tagen?": Umschalter
+"Wochentage" mit 7 runden Wochentags-Knöpfen, alle vorbelegt, oder "Alle paar Tage" mit
+Abstand und erstem Tag; nicht für berechnete Felder – die sind dran, sobald eines ihrer
+aktiven Mitglieder dran ist). Monatlich/jährlich decken Zeitraum-Felder ab.
+
+"Alle N Tage" (Nutzer-Entscheidung 2026-10-28) ist für Dinge mit festem Abstand, der nicht zur
+Woche passt (alle 3 Tage Pflaster wechseln, alle 14 Tage eine Spritze). Bewusst ohne
+Warnhinweis zur Zuverlässigkeit der Erinnerungen in "Über Logbuch" (Nutzer-Entscheidung
+2026-10-28).
 
 Gedacht nur für Dinge an festen Tagen (montags wiegen). Was man mal macht und mal nicht
 (Sport), bleibt täglich – "Nein" ist dann ein Eintrag, das Ziel regelt die Ziel-Quote; "einmal
 pro Woche, egal an welchem Tag" ist ein Zeitraum-Feld (siehe oben), keine Wiederholung. Die
 Texte im Formular und in "Über Logbuch" sagen das so (Nutzer-Entscheidungen 2026-10-10/11).
 
-Format: `null` = täglich, sonst `{type:'weekly', days:[0..6]}` (0 = Montag) – die einzige
-Form; die DB lässt per CHECK (`habit_schedule_valid`) nichts anderes zu, ungültige Pläne
-gelten als dran. Alle 7 Wochentage werden als `null` gespeichert (eine einzige Darstellung
+Format: `null` = täglich, `{type:'weekly', days:[0..6]}` (0 = Montag) oder
+`{type:'interval', every:2..365, unit:'day', start:'YYYY-MM-DD'}` (dran am Starttag und dann
+alle `every` Tage, davor nicht); die DB lässt per CHECK (`habit_schedule_valid`) nichts
+anderes zu, ungültige Pläne gelten als dran. Alle 7 Wochentage werden als `null` gespeichert (eine einzige Darstellung
 von täglich).
 
 **Zwei Implementierungen derselben Regel, die synchron bleiben müssen**:
 `isScheduledOn`/`isPlannedOn` in `logbuch.js` und `public.habit_scheduled_on(schedule,
-date)` (plpgsql, aktuelle Fassung in Migration `20261012170557_schedule_weekdays_only`).
+date)` (plpgsql, aktuelle Fassung in Migration `20261028160925_schedule_interval`). Der Tagesabstand in JS
+rechnet über lokale Mitternacht mit `Math.round(…/86400000)`, damit Sommer-/Winterzeit
+(23/25-Stunden-Tage) nicht um einen Tag verschiebt.
 
 Bewusst **nicht** unterstützt: Kalender-Regeln wie "jeder erste Montag im Monat" (Nutzer:
 unübersichtlich und eher irrelevant). Häufigkeiten ohne feste Tage ("3x pro Woche") regelt

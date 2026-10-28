@@ -574,11 +574,16 @@ function counterZeroApplies(h, dateKey) {
 function isTextKind(h) { return h.kind === 'text'; }
 
 // --- Feste Tage (habit_definitions.schedule) -------------------------------
-// null = täglich, sonst {type:'weekly', days:[0..6]} (0 = Montag) - seit 2026-10-12 die einzige
-// Form (monatlich/jährlich/Intervall entfielen, Zeitraum-Felder decken das ab). Gegenstück
-// zur SQL-Funktion public.habit_scheduled_on (Erinnerungen) - beide müssen dieselbe Regel
+// null = täglich, {type:'weekly', days:[0..6]} (0 = Montag) oder "Alle N Tage"
+// {type:'interval', every:2..365, unit:'day', start:'YYYY-MM-DD'} - dran ab dem Starttag in
+// festem Abstand, davor nicht (monatlich/jährlich decken Zeitraum-Felder ab). Gegenstück zur
+// SQL-Funktion public.habit_scheduled_on (Erinnerungen) - beide müssen dieselbe Regel
 // umsetzen; unbekannte Pläne gelten als "dran".
 function isScheduledOn(schedule, date) {
+  if (schedule?.type === 'interval' && Number.isInteger(schedule.every) && schedule.every >= 2 && /^\d{4}-\d{2}-\d{2}$/.test(schedule.start || '')) {
+    const diff = Math.round((startOfDay(date) - parseDateKey(schedule.start)) / 86400000);
+    return diff >= 0 && diff % schedule.every === 0;
+  }
   if (schedule?.type !== 'weekly' || !Array.isArray(schedule.days)) return true;
   return schedule.days.includes((date.getDay() + 6) % 7);
 }
@@ -591,8 +596,9 @@ function isPlannedOn(h, date) {
     return m && !m.archivedAt && isScheduledOn(m.schedule, date);
   });
 }
-// Kurzbeschreibung für die Verwaltungsliste ('' bei täglich): die Wochentage.
+// Kurzbeschreibung für die Verwaltungsliste ('' bei täglich): die Wochentage bzw. "alle N Tage".
 function scheduleSummary(schedule) {
+  if (schedule?.type === 'interval') return t('schedule.summary.everyDays', { n: schedule.every });
   if (schedule?.type !== 'weekly') return '';
   const names = mondayFirstWeekdayShortNames();
   return schedule.days.map((d) => names[d]).join(', ');
@@ -1095,7 +1101,9 @@ function habitFormSnapshot(f) {
   for (const k of Object.keys(defaultHabitForm())) snap[k] = f[k];
   snap.labels = f.labelsEnabled ? f.labels.slice(0, f.max - f.min + 1) : null;
   snap.members = [...f.members].sort();
-  snap.schedule = [...f.schedule.days].sort();
+  snap.schedule = f.schedule.mode === 'interval'
+    ? { every: f.schedule.every, start: f.schedule.start }
+    : [...f.schedule.days].sort();
   if (!f.reminderEnabled) { snap.reminderTimes = null; snap.reminderBelow = null; }
   return JSON.stringify(snap);
 }
@@ -1631,6 +1639,15 @@ const STRINGS = {
     'habitForm.days': 'An welchen Tagen?',
     'habitForm.days.hint': 'Nur für feste Tage, etwa montags wiegen. Was du mal machst und mal nicht (z. B. Sport), lass an allen Tagen – „Nein“ ist auch ein Eintrag.',
     'habitForm.days.explain': 'An den übrigen Tagen erinnert Logbuch nicht an das Feld, und es steht in „Heute“ unten unter „Heute nicht geplant“. Eintragen kannst du dort trotzdem.',
+    'schedule.summary.everyDays': 'alle {n} Tage',
+    'habitForm.days.modeWeekdays': 'Wochentage',
+    'habitForm.days.modeInterval': 'Alle paar Tage',
+    'habitForm.days.every': 'Alle',
+    'habitForm.days.everyUnit': 'Tage',
+    'habitForm.days.everyStart': 'Zum ersten Mal am',
+    'habitForm.days.intervalHint': 'Für Dinge mit festem Abstand, z. B. alle 3 Tage das Pflaster wechseln. An den Tagen dazwischen erinnert Logbuch nicht, und das Feld steht in „Heute“ unter „Heute nicht geplant“.',
+    'habitForm.error.scheduleEvery': 'Bitte gib bei „Alle … Tage“ eine ganze Zahl von 2 bis 365 ein.',
+    'habitForm.error.scheduleStart': 'Bitte wähle, wann es zum ersten Mal dran ist.',
     'habitForm.schedule.lastDay': 'Letzter Tag',
     'habitForm.schedule.dayAria': 'Tag',
     'habitForm.schedule.monthAria': 'Monat',
@@ -2012,7 +2029,7 @@ const STRINGS = {
     'about.tip.sections.title': 'Gruppen',
     'about.tip.sections.body': 'Felder lassen sich in Gruppen ordnen – am besten nach Tageszeit, z. B. „Morgens“ und „Abends“: Dann trägst du jeden Block in einem Rutsch ein, und jede Gruppe kann zu ihrer eigenen Zeit erinnern. Ist in einer Gruppe alles eingetragen, ist sie beim nächsten Öffnen zugeklappt; das stellst du pro Gruppe ein. Gruppen ordnen nur; einen gemeinsamen Wert berechnet ein Feld vom Typ „Berechnet“.',
     'about.tip.schedule.title': 'Feste Tage? Wochentage wählen',
-    'about.tip.schedule.body': 'Für Dinge an festen Tagen, etwa montags wiegen: Im Feld-Formular wählst du unter „An welchen Tagen?“ die Wochentage. An anderen Tagen steht das Feld in „Heute“ eingeklappt unter „Heute nicht geplant“ – eintragen kannst du dort trotzdem –, und es löst keine Erinnerung aus. In der Woche sind solche Tage schraffiert, damit „nicht dran“ nicht wie „vergessen“ aussieht.',
+    'about.tip.schedule.body': 'Für Dinge an festen Tagen, etwa montags wiegen: Im Feld-Formular wählst du unter „An welchen Tagen?“ die Wochentage – oder „Alle paar Tage“ für einen festen Abstand, etwa alle 3 Tage. An anderen Tagen steht das Feld in „Heute“ eingeklappt unter „Heute nicht geplant“ – eintragen kannst du dort trotzdem –, und es löst keine Erinnerung aus. In der Woche sind solche Tage schraffiert, damit „nicht dran“ nicht wie „vergessen“ aussieht.',
     'about.tip.archiveVsDelete.title': 'Archivieren statt löschen',
     'about.tip.archiveVsDelete.body': 'Archivierte Felder verschwinden aus der Tageseingabe und standardmäßig auch aus der Auswertung – ihre bisherigen Werte bleiben aber erhalten. Willst du sie weiter sehen (z. B. die Vorgeschichte eines Feldes, das du durch ein neues ersetzt hast), setz in „Felder verwalten“ beim archivierten Feld den Haken „In der Auswertung anzeigen“. Archivierte Felder lassen sich jederzeit reaktivieren; endgültiges Löschen entfernt dagegen auch die bisherigen Werte.',
     'about.tip.theme.title': 'Dark Mode',
@@ -2442,6 +2459,15 @@ const STRINGS = {
     'habitForm.days': 'On which days?',
     'habitForm.days.hint': 'Only for fixed days, like weighing yourself on Mondays. For things you do on some days and not on others (e.g. sport), keep all days – “No” is an entry too.',
     'habitForm.days.explain': 'On the other days Logbuch won’t remind you of it, and it sits at the bottom of “Today” under “Not planned today”. You can still fill it in there.',
+    'schedule.summary.everyDays': 'every {n} days',
+    'habitForm.days.modeWeekdays': 'Weekdays',
+    'habitForm.days.modeInterval': 'Every few days',
+    'habitForm.days.every': 'Every',
+    'habitForm.days.everyUnit': 'days',
+    'habitForm.days.everyStart': 'First time on',
+    'habitForm.days.intervalHint': 'For things at a fixed interval, e.g. changing a patch every 3 days. On the days in between Logbuch won’t remind you, and the field sits in “Today” under “Not planned today”.',
+    'habitForm.error.scheduleEvery': 'Please enter a whole number from 2 to 365 for “Every … days”.',
+    'habitForm.error.scheduleStart': 'Please choose when it’s due for the first time.',
     'habitForm.schedule.lastDay': 'Last day',
     'habitForm.schedule.dayAria': 'Day',
     'habitForm.schedule.monthAria': 'Month',
@@ -2823,7 +2849,7 @@ const STRINGS = {
     'about.tip.sections.title': 'Groups',
     'about.tip.sections.body': 'You can arrange fields in groups – ideally by time of day, e.g. "Morning" and "Evening": then you fill in each block in one go, and each group can remind you at its own time. Once everything in a group is filled in, it is collapsed the next time you open it; you can set this per group. Groups only arrange; a combined value comes from a field of type "Calculated".',
     'about.tip.schedule.title': 'Fixed days? Pick weekdays',
-    'about.tip.schedule.body': 'For things on fixed days, like weighing yourself on Mondays: in the field form, under "On which days?", you pick the weekdays. On other days the field sits collapsed under "Not planned today" in "Today" – you can still enter something there – and it triggers no reminder. In the week view such days are hatched, so that "not due" does not look like "forgotten".',
+    'about.tip.schedule.body': 'For things on fixed days, like weighing yourself on Mondays: in the field form, under "On which days?", you pick the weekdays – or "Every few days" for a fixed interval, such as every 3 days. On other days the field sits collapsed under "Not planned today" in "Today" – you can still enter something there – and it triggers no reminder. In the week view such days are hatched, so that "not due" does not look like "forgotten".',
     'about.tip.archiveVsDelete.title': 'Archiving instead of deleting',
     'about.tip.archiveVsDelete.body': 'Archived fields disappear from daily entry and, by default, from the statistics too – but their existing values are kept. If you still want to see them (e.g. the history of a field you replaced with a new one), tick “Show in statistics” for the archived field under “Manage fields”. Archived fields can be reactivated anytime; permanent deletion, on the other hand, also removes the existing values.',
     'about.tip.theme.title': 'Dark mode',
@@ -4128,11 +4154,24 @@ function defaultHabitForm() {
 // Formular-Zustand "An welchen Tagen?": nur Wochentage, Vorbelegung alle sieben (seit
 // 2026-10-12; monatlich/jährlich/Intervall entfielen, das decken Zeitraum-Felder ab - kein
 // Feld nutzte sie). Alle 7 werden als null (= täglich) gespeichert.
+// Dazu "Alle N Tage" (mode 'interval', every als Text aus dem Eingabefeld, start als Datum).
 function scheduleToForm(schedule) {
-  return { days: schedule?.type === 'weekly' ? [...schedule.days] : [0, 1, 2, 3, 4, 5, 6] };
+  const interval = schedule?.type === 'interval';
+  return {
+    mode: interval ? 'interval' : 'weekdays',
+    days: schedule?.type === 'weekly' ? [...schedule.days] : [0, 1, 2, 3, 4, 5, 6],
+    every: interval ? String(schedule.every) : '2',
+    start: interval ? schedule.start : formatKey(new Date()),
+  };
 }
 // -> { schedule } oder { error: <i18n-Key> }.
 function formToSchedule(fs) {
+  if (fs.mode === 'interval') {
+    const every = Number(fs.every);
+    if (!Number.isInteger(every) || every < 2 || every > 365) return { error: 'habitForm.error.scheduleEvery' };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fs.start || '') || formatKey(parseDateKey(fs.start)) !== fs.start) return { error: 'habitForm.error.scheduleStart' };
+    return { schedule: { type: 'interval', every, unit: 'day', start: fs.start } };
+  }
   const days = [...new Set(fs.days)].sort((a, b) => a - b);
   if (!days.length) return { error: 'habitForm.error.scheduleNoDays' };
   return { schedule: days.length === 7 ? null : { type: 'weekly', days } };
@@ -4241,6 +4280,10 @@ function syncHabitFormFromDom() {
   }
   readPeriodReminderFromDom(f);
   readReminderTimesFromDom(f);
+  const everyEl = document.getElementById('habit-form-every');
+  if (everyEl) f.schedule.every = everyEl.value;
+  const startEl = document.getElementById('habit-form-every-start');
+  if (startEl) f.schedule.start = startEl.value;
   const showInStatsEl = document.getElementById('habit-form-show-in-stats');
   if (showInStatsEl) f.showInStats = showInStatsEl.checked;
   const sectionEl = document.getElementById('habit-form-section');
@@ -7533,11 +7576,13 @@ const CHANGELOG = [
     id: '2026-10-28',
     de: [
       'Ein Feld kann jetzt bis zu vier Erinnerungszeiten haben, z. B. morgens und abends. Auch Zähler erinnern dich jetzt – auf Wunsch nur, wenn sie zu der Zeit unter einer Zahl liegen, die du festlegst.',
+      'Ein Feld kann jetzt auch alle paar Tage dran sein, z. B. alle 3 Tage – wenn du ein Feld anlegst, unter „An welchen Tagen?“.',
       'Tippst du in „Heute“ auf das Datum, kannst du direkt einen Tag auswählen.',
       'In Woche, Monat, Jahr und Gesamt kannst du ein Feld bearbeiten, indem du auf seinen Namen tippst.',
     ],
     en: [
       'A field can now have up to four reminder times, e.g. morning and evening. Counters can remind you now too – if you like, only when they’re below a number you choose at that time.',
+      'A field can now also be due every few days, e.g. every 3 days – when you create a field, under “On which days?”.',
       'Tap the date in “Today” to pick a day directly.',
       'In Week, Month, Year and Overall you can edit a field by tapping its name.',
     ],
@@ -8173,19 +8218,36 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     </div>
   `;
 
-  // "An welchen Tagen?": Wochentage, alle sieben vorbelegt (Details siehe isScheduledOn).
+  // "An welchen Tagen?": Wochentage (alle sieben vorbelegt) oder "Alle N Tage" ab einem
+  // Starttag (Details siehe isScheduledOn).
   const sch = f.schedule;
   const shortNames = mondayFirstWeekdayShortNames();
+  const isInterval = sch.mode === 'interval';
   const scheduleBody = `
     <div class="auth-field">
       <label id="habit-form-days-label">${t('habitForm.days')}</label>
-      <div class="pill-group weekday-group" role="group" aria-labelledby="habit-form-days-label">
-        ${shortNames.map((name, i) => {
-          const on = sch.days.includes(i);
-          return `<button type="button" class="pill-toggle weekday-toggle${on ? ' pill-toggle--active' : ''}" data-action="habit-schedule-day" data-day="${i}" aria-pressed="${on}" aria-label="${esc(weekdayLong(new Date(2024, 0, 1 + i)))}">${esc(name)}</button>`;
-        }).join('')}
+      <div class="pill-group seg" role="group" aria-labelledby="habit-form-days-label">
+        ${[['weekdays', 'habitForm.days.modeWeekdays'], ['interval', 'habitForm.days.modeInterval']].map(([m, key]) => `<button type="button" class="pill-toggle${sch.mode === m ? ' pill-toggle--active' : ''}" data-action="habit-schedule-mode" data-mode="${m}" aria-pressed="${sch.mode === m}">${t(key)}</button>`).join('')}
       </div>
-      <p class="habit-form-lock-note">${t(sch.days.length === 7 ? 'habitForm.days.hint' : 'habitForm.days.explain')}</p>
+      ${isInterval ? `
+        <div class="schedule-inline schedule-interval">
+          <label for="habit-form-every">${t('habitForm.days.every')}</label>
+          <input type="number" id="habit-form-every" class="schedule-every" inputmode="numeric" min="2" max="365" step="1" value="${esc(sch.every)}" aria-describedby="habit-form-days-note" />
+          <span>${t('habitForm.days.everyUnit')}</span>
+        </div>
+        <div class="schedule-inline schedule-interval">
+          <label for="habit-form-every-start">${t('habitForm.days.everyStart')}</label>
+          <input type="date" id="habit-form-every-start" class="schedule-start" value="${esc(sch.start)}" aria-describedby="habit-form-days-note" />
+        </div>
+      ` : `
+        <div class="pill-group weekday-group" role="group" aria-label="${esc(t('habitForm.days.modeWeekdays'))}">
+          ${shortNames.map((name, i) => {
+            const on = sch.days.includes(i);
+            return `<button type="button" class="pill-toggle weekday-toggle${on ? ' pill-toggle--active' : ''}" data-action="habit-schedule-day" data-day="${i}" aria-pressed="${on}" aria-label="${esc(weekdayLong(new Date(2024, 0, 1 + i)))}">${esc(name)}</button>`;
+          }).join('')}
+        </div>
+      `}
+      <p class="habit-form-lock-note" id="habit-form-days-note">${t(isInterval ? 'habitForm.days.intervalHint' : sch.days.length === 7 ? 'habitForm.days.hint' : 'habitForm.days.explain')}</p>
     </div>
   `;
 
@@ -8209,7 +8271,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // dort schon etwas vom Standard abweicht, sonst zu; offen/zu übersteht Re-Renders
   // (f.moreOpen, gesetzt vom toggle-Listener).
   const showGoal = (f.kind === 'scale' && f.good) || (isComputed && f.computedType !== 'number');
-  const moreOpen = f.moreOpen ?? ((showGoal && f.goal < 1) || !!f.numberGoalDir || f.summary === 'sum' || (!isComputed && (f.schedule.days.length < 7 || f.reminderEnabled))
+  const moreOpen = f.moreOpen ?? ((showGoal && f.goal < 1) || !!f.numberGoalDir || f.summary === 'sum' || (!isComputed && (f.schedule.mode === 'interval' || f.schedule.days.length < 7 || f.reminderEnabled))
     || (state.sections.length > 0 && !!f.sectionId) || !f.showInStats);
   // "Berechnet" nur anbieten, wenn es etwas zu berechnen gibt (mind. 2 passende Felder) -
   // beim allerersten Feld im Tutorial führte die Auswahl sonst nur zu "noch keine Felder".
@@ -9612,6 +9674,11 @@ app.addEventListener('click', async (e) => {
     render();
     // Fokus nicht ins Leere: auf die Zeile, die jetzt an dieser Stelle steht (sonst die letzte).
     document.getElementById(`habit-form-reminder-time-${Math.min(i, f.reminderTimes.length - 1)}-h`)?.focus();
+  } else if (action === 'habit-schedule-mode') {
+    syncHabitFormFromDom();
+    state.habitForm.schedule.mode = el.dataset.mode;
+    render();
+    document.querySelector(`[data-action="habit-schedule-mode"][data-mode="${el.dataset.mode}"]`)?.focus();
   } else if (action === 'habit-schedule-day') {
     syncHabitFormFromDom();
     const sch = state.habitForm.schedule;

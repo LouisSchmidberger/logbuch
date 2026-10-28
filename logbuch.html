@@ -753,6 +753,11 @@
   .auth-field .schedule-inline select, .auth-field .schedule-inline input:not([type="checkbox"]) { width: auto; }
   .auth-field .schedule-inline input[type="number"] { width: 72px; }
   .schedule-inline label, .schedule-inline span { font-size: 0.9375rem; color: var(--ink); }
+  /* Kalender-Symbol im Datumsfeld ("Alle paar Tage"): Chrome malt es immer schwarz - im
+     dunklen Schema hell machen (color-scheme bewusst nicht gesetzt, das änderte alle
+     nativen Bedienelemente). */
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .schedule-start::-webkit-calendar-picker-indicator { filter: invert(1); } }
+  :root[data-theme="dark"] .schedule-start::-webkit-calendar-picker-indicator { filter: invert(1); }
   /* Kurzes Aufleuchten des Feldes nach einem Sprung aus der Auswertung (focusTodayField). */
   /* Hervorhebung nach einem Sprung (Feld in "Heute", Eintrag im Menü): erst eine Weile
      voll sichtbar, dann ausblenden - sonst ging sie leicht unter. */
@@ -1410,6 +1415,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=3d326eac19"></script>
+<script type="module" src="./logbuch.js?v=a24810a053"></script>
 </body>
 </html>
