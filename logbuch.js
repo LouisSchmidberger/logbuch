@@ -9640,9 +9640,11 @@ app.addEventListener('click', async (e) => {
     // von "Geschafft" ein frisches Formular statt des schon gespeicherten erscheint.
     // Schritt 1 hat keinen Zurück-Knopf (davor liegt nichts mehr).
     // Nach "Tutorial überspringen" gibt es noch kein Feld - dann zurück zum Feld-Schritt
-    // statt zu "Dein erstes Feld steht".
-    state.tutorialStep = state.tutorialStep === TUTORIAL_STEP_REMINDERS && !activeHabits().length
-      ? TUTORIAL_STEP_FIELD
+    // statt zu "Dein erstes Feld steht". Umgekehrt beim zweiten Feld ("Noch ein Feld
+    // anlegen"): zurück zu "Geschafft", wo man herkam, nicht zum Anfang.
+    const hasField = activeHabits().length > 0;
+    state.tutorialStep = state.tutorialStep === TUTORIAL_STEP_REMINDERS && !hasField ? TUTORIAL_STEP_FIELD
+      : state.tutorialStep === TUTORIAL_STEP_FIELD && hasField ? TUTORIAL_STEP_DONE
       : Math.max(TUTORIAL_STEP_HELLO, state.tutorialStep - 1);
     state.habitForm = null;
     render();
