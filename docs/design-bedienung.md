@@ -215,6 +215,11 @@ verschluckt (`suppressNextClick`), sonst setzte er einen Wert bzw. klappte die G
 zu einem anderen Menü, kein versehentlich gesetzter Wert) – nur für Zeige-Geräte
 (`e.detail > 0`), Tastatur-Klicks laufen normal durch. Scrollen, Wischen und Deep-Links
 schließen es ebenfalls. Zählt als Overlay für die Zurück-Logik.
+In den **Übersichten** ist der Feldname selbst der Auslöser (`statsFieldName`, Button ohne
+eigene Optik, Schlüssel `stats:<ort>:<id>`), Menü nur mit "Bearbeiten" (Nutzer-Entscheidung
+2026-10-28: Menü statt direktem Sprung, Platz für "Verlauf ansehen"); kein ⋮, das Raster ist zu
+eng. `position: fixed` (`positionFloatingRowMenu`), weil `.grid-scroll` seitlich scrollt und ein
+absolut positioniertes Menü abschnitte. Archivierte Felder bleiben reiner Text.
 
 **Notizen** (Format siehe [datenmodell.md](datenmodell.md)): pro Feld (auch berechnete,
 nicht Text-Felder), pro Gruppe und für den ganzen Tag, bewusst **kein Teil der Auswertung**.

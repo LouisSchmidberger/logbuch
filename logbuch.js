@@ -6560,6 +6560,32 @@ function renderSectionMenuPanel(section) {
     </div>
   `;
 }
+// Feldname in den Übersichten: öffnet ein kleines Menü mit "Bearbeiten" (Nutzer-Entscheidung
+// 2026-10-28: Menü statt direktem Sprung, damit später z.B. "Verlauf ansehen" dazukommen kann).
+// ctx macht den Schlüssel eindeutig, weil ein Feld dort mehrfach steht (Raster, Verlauf,
+// Liste). Das Menü ist fixed positioniert (positionFloatingRowMenu), weil das seitlich
+// scrollbare Wochenraster ein absolut positioniertes abschneiden würde. Archivierte Felder
+// bleiben reiner Text - auch die Verwaltung bietet bei ihnen kein "Bearbeiten".
+function statsFieldName(h, ctx) {
+  const name = esc(h.name);
+  if (h.archivedAt) return `${name} <span class="manage-meta">(${t('common.archived')})</span>`;
+  const key = `stats:${ctx}:${h.id}`;
+  const open = state.rowMenu === key;
+  const label = t('today.fieldOptions', { name: h.name });
+  return `<button type="button" class="stats-name-btn row-menu-trigger" data-action="row-menu" data-menu="${key}" aria-expanded="${open}"${open ? ` aria-controls="row-menu-${key}"` : ''} aria-label="${label}">${name}</button>${open ? `
+    <div class="row-menu row-menu--floating" id="row-menu-${key}" role="group" aria-label="${label}">
+      <button type="button" class="menu-item-btn" data-action="row-menu-edit" data-id="${h.defId}">${t('common.edit')}</button>
+    </div>` : ''}`;
+}
+function positionFloatingRowMenu() {
+  const menu = app.querySelector('.row-menu--floating');
+  const trigger = menu && app.querySelector(`.row-menu-trigger[data-menu="${state.rowMenu}"]`);
+  if (!trigger) return;
+  const r = trigger.getBoundingClientRect();
+  const below = r.bottom + 4;
+  menu.style.top = `${below + menu.offsetHeight > window.innerHeight - 8 ? Math.max(8, r.top - 4 - menu.offsetHeight) : below}px`;
+  menu.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8))}px`;
+}
 // Absolut positioniert (an der Zeile verankert), seine Lage im DOM der Zeile ist egal.
 function renderRowMenuPanel(h) {
   if (state.rowMenu !== h.id) return '';
@@ -6989,7 +7015,7 @@ function renderPeriodValueRows(fields, anchor) {
     const v = state.entries[anchor]?.[h.id];
     const score = h.kind === 'scale' && h.good ? habitScore(h, anchor) : null;
     const color = v === undefined ? 'var(--sand)' : score !== null ? scoreTextColor(habitColor(h, applyGoal(h, score))) : 'var(--ink)';
-    const name = `<span class="habit-name">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>`;
+    const name = `<span class="habit-name">${statsFieldName(h, `period-${anchor}`)}</span>`;
     return isTextKind(h) && v !== undefined
       ? `<div class="month-stat-row month-stat-row--text">${name}<p class="period-text-value">${esc(periodValueText(h, v))}</p></div>`
       : `<div class="month-stat-row">${name}<span class="month-stat-value" style="color:${color}">${esc(periodValueText(h, v))}</span></div>`;
@@ -7044,7 +7070,7 @@ function renderWeek() {
         : `<button type="button" class="grid-cell grid-cell--avg" data-action="avg-info" data-text="${esc(avgLong)}" aria-label="${esc(avgLong)}" style="background:${habitColor(h, applyGoal(h, avg))};color:${textOnScore(habitColor(h, applyGoal(h, avg)))}">${habitAvgShort(h, avg, valid.length, hits, numAvg)}</button>`;
     return `
       <div class="grid-row">
-        <div class="grid-label">${esc(h.name)}${h.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</div>
+        <div class="grid-label">${statsFieldName(h, 'grid')}</div>
         ${scores.map((s, i) => `<div class="grid-cell${getNote(dayKeys[i], h.id) ? ' has-note' : ''}${s === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background-color:${habitColor(h, applyGoal(h, s))};${neutral ? '' : scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
         ${avgCell}
       </div>
@@ -7573,7 +7599,7 @@ function habitAvgLong(h, avg, count, hits = 0, numAvg = null) {
 function renderStatsRows(stats) {
   return stats.map(({ habit, avg, count, hits, numAvg }) => `
     <div class="month-stat-row">
-      <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
+      <span class="habit-name">${statsFieldName(habit, 'rows')}</span>
       ${isNeutralScale(habit)
         ? `<span class="month-stat-value"><span class="month-stat-count">${count}×</span></span>`
         : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : scoreTextColor(habitColor(habit, applyGoal(habit, avg)))}">${avg !== null && isMultiStepScale(habit) ? avgMiniScale(habit, avg, ' avg-scale--inline') : ''}${avg !== null ? esc(habitAvgLong(habit, avg, count, hits, numAvg)) : '–'}${avg !== null && !isYesNoScale(habit) && !hasNumberGoal(habit) ? ` <span class="month-stat-count">(${count}×)</span>` : ''}</span>`}
@@ -7616,7 +7642,7 @@ function renderNumberChart(habit, dateKeys, interactive) {
   const unitSuffix = unit ? ` ${unit}` : '';
   const head = `
     <div class="number-chart-head">
-      <span class="habit-name">${esc(habit.name)}${habit.archivedAt ? ` <span class="manage-meta">(${t('common.archived')})</span>` : ''}</span>
+      <span class="habit-name">${statsFieldName(habit, 'chart')}</span>
       ${stats ? `<span class="number-chart-meta">${habit.summary === 'sum'
         ? t('numberChart.metaSum', { sum: formatNumber(round1(stats.sum)) + unitSuffix, avg: formatNumber(round1(stats.avg)) + unitSuffix, per: t('numberChart.per.' + (habit.period || 'day')), count: stats.count })
         : t('numberChart.meta', { last: formatNumber(stats.last) + unitSuffix, avg: formatNumber(round1(stats.avg)) + unitSuffix, count: stats.count })}${hasNumberGoal(habit) ? ` · ${esc(numberGoalText(habit))}` : ''}</span>` : ''}
@@ -8948,6 +8974,7 @@ function render() {
   if (!app.querySelector('.view-body')) addOnbDisplayBar();
   syncCharCounters();
   markNewLayers(layersBefore);
+  positionFloatingRowMenu();
   syncToast(state.passwordRecovery || !state.session); // Anmelde-Seiten: Meldung im Text
   focusModalIfOpen();
   restoreFocus(focusKey);

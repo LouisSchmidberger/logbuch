@@ -643,6 +643,13 @@
     background: var(--popover-bg); border: 1px solid var(--ink); border-radius: 4px;
     box-shadow: 0 12px 32px var(--shadow);
   }
+  /* Übersichten (statsFieldName): Lage setzt positionFloatingRowMenu; über dem angehefteten Kopf. */
+  .row-menu.row-menu--floating { position: fixed; z-index: 7; font-size: 1rem; text-align: left; }
+  /* Feldname als Menü-Auslöser, sieht aus wie der Name selbst. */
+  .stats-name-btn {
+    background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit;
+    text-align: inherit; cursor: pointer; overflow-wrap: inherit; hyphens: inherit;
+  }
 
   /* Notizen (siehe renderNote). flex-wrap + width: 100% lassen Notiz/Editor in eine
      eigene Zeile unter Name und Eingabe umbrechen - Name (flex-basis 0) und Buttons
@@ -1375,6 +1382,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=411439ef55"></script>
+<script type="module" src="./logbuch.js?v=cbe0457bfd"></script>
 </body>
 </html>
