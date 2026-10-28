@@ -406,6 +406,14 @@ export function createClient() {
   client.auth = new MockAuth();
   client.from = (table) => new QueryBuilder(client, table);
   client.functions = new MockFunctions(client);
+  client.rpc = async (name) => {
+    await delay();
+    if (name === 'record_signup_mail_feedback') {
+      console.info('[Vorschau] Spam-Rückmeldung empfangen (nicht gespeichert)');
+      return { data: null, error: null };
+    }
+    return { data: null, error: { message: `RPC ${name} nicht nachgebaut` } };
+  };
   return client;
 }
 

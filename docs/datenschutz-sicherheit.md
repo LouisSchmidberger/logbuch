@@ -117,6 +117,16 @@ dort sowie beim Anmelden mit unbestätigter Adresse eine Hilfe (`renderConfirmEm
 "Mail nochmal senden" (`supabase.auth.resend`; Supabase erlaubt eine Mail pro Minute und
 Adresse – die Wartezeit wird angezeigt).
 
+**Spam-Rückmeldung** (Migration `20261028152727_add_signup_mail_feedback`): die Antwort auf
+die Spam-Rückfrage (siehe [onboarding.md](onboarding.md)) speichert
+`record_signup_mail_feedback()` in `signup_mail_feedback` – nur Ja/Nein, Monat und der
+Anbieter, den der Server aus der Konto-Adresse ableitet (nur große Anbieter, sonst `andere`:
+eine eigene Domain verriete die Person). Ohne Konto-Bezug; das Einmal-Limit läuft über das
+getrennte `signup_mail_feedback_given` (nur Konto, keine Antwort). Nur in der ersten Woche
+nach der Registrierung. Beide Tabellen wie `feedback`: RLS ohne Policies, GRANTs nur an
+`service_role`. Auswerten: `select provider, in_spam, count(*) from signup_mail_feedback group
+by 1, 2`.
+
 **Vorlage der Bestätigungsmail**: `supabase/templates/confirmation.html` (Kopf der Datei:
 Betreff + Hinweise), live im Dashboard unter Authentication → Emails → Templates → "Confirm
 signup" – **beide Stellen gleich halten**. Zweisprachig über `.Data.locale` (von `signUp` als

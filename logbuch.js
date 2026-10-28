@@ -1861,6 +1861,11 @@ const STRINGS = {
     'installGate.skipNoteIos': 'Geht auch – nur kommen dann keine Erinnerungen. Du kannst Logbuch jederzeit später noch hinzufügen.',
     'installGate.skipNote': 'Geht auch – du kannst Logbuch jederzeit später noch hinzufügen.',
     'confirmLanding.title': 'Adresse bestätigt!',
+    'spamFeedback.question': 'Kurze Frage: Lag die Mail von Logbuch im Spam-Ordner?',
+    'spamFeedback.yes': 'Ja, im Spam',
+    'spamFeedback.no': 'Nein',
+    'spamFeedback.why': 'Damit ich weiß, ob ich da etwas verbessern muss. Gespeichert wird nur deine Antwort mit deinem Mail-Anbieter (z. B. gmail.com), nicht deine Adresse oder dein Konto.',
+    'spamFeedback.thanks': 'Danke für die Rückmeldung!',
     'confirmLanding.body': 'Diese Seite brauchst du nicht mehr. <strong>Öffne Logbuch jetzt wieder über das Symbol auf deinem Startbildschirm</strong> und melde dich dort an.',
     'confirmLanding.continueHere': 'Oder hier im Browser weitermachen',
     'push.unsupported': 'Erinnerungen werden von diesem Browser nicht unterstützt.',
@@ -1961,7 +1966,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'Was ich nicht sehen kann',
     'about.privacy.cannotSee.body': 'Alles, was du einträgst, und worum es dabei geht: deine Werte, Notizen und Text-Antworten, die Namen deiner Felder und Gruppen und die Bezeichnungen ihrer Stufen. Das alles wird auf deinem Gerät verschlüsselt, bevor es überhaupt verschickt wird. Der Schlüssel dafür hängt an deinem Passwort und deinem Ersatzschlüssel, und beide kennst nur du. Selbst mit vollem Zugriff auf die Datenbank sehe ich davon nur unlesbaren Zeichensalat.',
     'about.privacy.canSee.title': 'Was ich sehen kann',
-    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>wie viele Felder und Gruppen du hast, von welcher Art die Felder sind (z. B. Skala oder Zahl), wie oft sie dran sind (z. B. täglich, an bestimmten Wochentagen oder einmal pro Woche) und welches Feld in welcher Gruppe steht – aber nicht, worum es geht oder wie Felder und Gruppen heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert – bei Zählern mit Erinnerungen und „falls weniger als“ nur, wie viele der Erinnerungen an dem Tag schon erledigt sind (z. B. „1 von 2“), nicht die Zahl selbst</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokollieren die Anbieter, bei denen Logbuch läuft, für kurze Zeit technische Zugriffsdaten wie IP-Adressen. Und ein Mail-Dienst bekommt deine E-Mail-Adresse, um dir die Mails zum Bestätigen deines Kontos und zum Zurücksetzen des Passworts zu schicken.',
+    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>wie viele Felder und Gruppen du hast, von welcher Art die Felder sind (z. B. Skala oder Zahl), wie oft sie dran sind (z. B. täglich, an bestimmten Wochentagen oder einmal pro Woche) und welches Feld in welcher Gruppe steht – aber nicht, worum es geht oder wie Felder und Gruppen heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert – bei Zählern mit Erinnerungen und „falls weniger als“ nur, wie viele der Erinnerungen an dem Tag schon erledigt sind (z. B. „1 von 2“), nicht die Zahl selbst</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li><li>falls du nach dem Registrieren angibst, ob die Bestätigungsmail im Spam lag: diese Antwort mit deinem Mail-Anbieter (z. B. gmail.com), aber nicht mit deinem Konto verknüpft</li></ul>Dazu protokollieren die Anbieter, bei denen Logbuch läuft, für kurze Zeit technische Zugriffsdaten wie IP-Adressen. Und ein Mail-Dienst bekommt deine E-Mail-Adresse, um dir die Mails zum Bestätigen deines Kontos und zum Zurücksetzen des Passworts zu schicken.',
     'about.privacy.recoveryKey.title': 'Die Kehrseite: dein Ersatzschlüssel',
     'about.privacy.recoveryKey.body': 'Weil ich keinen Zugriff habe, kann ich dir auch nicht helfen, wenn du Passwort <strong>und</strong> Ersatzschlüssel verlierst – dann sind deine Einträge unwiederbringlich weg. Bewahre ihn deshalb gut auf. Hast du ihn verlegt, kannst du dir in den Einstellungen jederzeit einen neuen erzeugen – der alte wird dabei ungültig, und du brauchst ihn dafür nicht.',
     'about.privacy.yourData.title': 'Deine Daten gehören dir',
@@ -2654,6 +2659,11 @@ const STRINGS = {
     'installGate.skipNoteIos': 'That works too – you just will not get reminders. You can add Logbuch to your home screen anytime later.',
     'installGate.skipNote': 'That works too – you can add Logbuch anytime later.',
     'confirmLanding.title': 'Address confirmed!',
+    'spamFeedback.question': 'Quick question: was the email from Logbuch in your spam folder?',
+    'spamFeedback.yes': 'Yes, in spam',
+    'spamFeedback.no': 'No',
+    'spamFeedback.why': 'So I know whether I need to improve something. Only your answer is stored, with your email provider (e.g. gmail.com) – not your address or your account.',
+    'spamFeedback.thanks': 'Thanks for letting me know!',
     'confirmLanding.body': 'You do not need this page anymore. <strong>Now open Logbuch again from its icon on your home screen</strong> and sign in there.',
     'confirmLanding.continueHere': 'Or continue here in the browser',
     'push.unsupported': 'Reminders are not supported by this browser.',
@@ -2754,7 +2764,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'What I cannot see',
     'about.privacy.cannotSee.body': 'Everything you enter, and what it is about: your values, notes, and text answers, the names of your fields and groups and the labels of their steps. All of this is encrypted on your device before it is even sent. The key for it is tied to your password and your spare key, and only you know them. Even with full access to the database, all I see is unreadable gibberish.',
     'about.privacy.canSee.title': 'What I can see',
-    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>how many fields and groups you have, what kind the fields are (e.g. scale or number), how often they are due (e.g. daily, on certain weekdays, or once a week), and which field is in which group – but not what they are about or what your fields and groups are called</li><li>on which days you filled in which of these fields (for reminders), without the value – for counters with reminders and “if less than” only how many of that day’s reminders are already taken care of (e.g. “1 of 2”), not the number itself</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the providers Logbuch runs on briefly log technical access data such as IP addresses. And an email service gets your email address to send you the emails for confirming your account and resetting your password.',
+    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>how many fields and groups you have, what kind the fields are (e.g. scale or number), how often they are due (e.g. daily, on certain weekdays, or once a week), and which field is in which group – but not what they are about or what your fields and groups are called</li><li>on which days you filled in which of these fields (for reminders), without the value – for counters with reminders and “if less than” only how many of that day’s reminders are already taken care of (e.g. “1 of 2”), not the number itself</li><li>your settings such as reminder time, language, and time zone</li><li>if you tell me after signing up whether the confirmation email was in spam: that answer with your email provider (e.g. gmail.com), but not linked to your account</li></ul>On top of that, the providers Logbuch runs on briefly log technical access data such as IP addresses. And an email service gets your email address to send you the emails for confirming your account and resetting your password.',
     'about.privacy.recoveryKey.title': 'The flip side: your spare key',
     'about.privacy.recoveryKey.body': 'Because I have no access, I also cannot help you if you lose your password <strong>and</strong> your spare key – your entries are then gone for good. So keep it somewhere safe. If you have misplaced it, you can create a new one in the settings anytime – the old one becomes invalid, and you do not need it to do this.',
     'about.privacy.yourData.title': 'Your data belongs to you',
@@ -4455,6 +4465,7 @@ async function handleHabitSaveInner() {
       return;
     }
     state.habits = [...state.habits, habitFromParts(data, payload)];
+    if (state.tutorialStep === TUTORIAL_STEP_FIELD) tutorialLastFieldDefId = data.id;
   }
   saveFieldNamesForPush();
   // Ziel oder Zeiten eines Zählers geändert: den Erinnerungs-Stand von heute neu schreiben.
@@ -4462,9 +4473,10 @@ async function handleHabitSaveInner() {
   if (fields.kind === 'counter' && state.entries[today]) saveDay(today);
 
   closeHabitForm();
-  // Im Tutorial (Schritt 2, erstes Feld) gilt jedes erfolgreich angelegte Feld als
-  // Abschluss des Schritts – automatischer Sprung zu "Geschafft", kein zusätzlicher Klick.
-  if (isInsert && state.tutorialStep === TUTORIAL_STEP_FIELD) state.tutorialStep = TUTORIAL_STEP_DONE;
+  // Im Tutorial (Schritt 2, erstes Feld) gilt jedes erfolgreich angelegte (oder über
+  // "Zurück" nochmal bearbeitete) Feld als Abschluss des Schritts – automatischer Sprung zu
+  // "Geschafft", kein zusätzlicher Klick.
+  if (state.tutorialStep === TUTORIAL_STEP_FIELD) state.tutorialStep = TUTORIAL_STEP_DONE;
 }
 
 // Beim Reaktivieren kommt das Feld ans Ende seines Bereichs (seiner Gruppe bzw. der
@@ -6417,7 +6429,26 @@ function renderConfirmLanding() {
       <div class="onb-icon" aria-hidden="true">✅</div>
       <h1 tabindex="-1">${t('confirmLanding.title')}</h1>
       <p class="tutorial-text">${t('confirmLanding.body')}</p>
+      ${spamFeedbackHtml()}
       <button type="button" class="auth-toggle" data-action="confirm-landing-continue">${t('confirmLanding.continueHere')}</button>
+    </div>
+  `;
+}
+
+// Freiwillige Frage auf der Seite, die der Bestätigungslink öffnet (Nutzer-Entscheidung
+// 2026-10-28): lag die Mail im Spam? Der Server speichert nur Antwort + großen Mail-Anbieter,
+// ohne Konto-Bezug (record_signup_mail_feedback). Nach der Antwort nur ein Dank, danach weg.
+let spamFeedbackAnswered = false;
+function spamFeedbackHtml() {
+  if (spamFeedbackAnswered) return '';
+  return `
+    <div class="spam-feedback" role="group" aria-labelledby="spam-feedback-q">
+      <p id="spam-feedback-q" class="spam-feedback-q">${t('spamFeedback.question')}</p>
+      <div class="spam-feedback-actions">
+        <button type="button" class="manage-btn" data-action="spam-feedback" data-in-spam="true">${t('spamFeedback.yes')}</button>
+        <button type="button" class="manage-btn" data-action="spam-feedback" data-in-spam="false">${t('spamFeedback.no')}</button>
+      </div>
+      <p class="habit-form-lock-note">${t('spamFeedback.why')}</p>
     </div>
   `;
 }
@@ -6441,6 +6472,7 @@ function renderUnlockPrompt() {
         <button type="submit" class="auth-submit" ${state.unlockBusy ? 'disabled' : ''}>${state.unlockBusy ? t('unlock.unlocking') : t('unlock.unlock')}</button>
       </form>
       <button type="button" class="auth-toggle" data-action="logout">${t('common.logout')}</button>
+      ${ARRIVED_VIA_SIGNUP_CONFIRM ? spamFeedbackHtml() : ''}
     </div>
   `;
 
@@ -8240,7 +8272,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       ` : laterParts}
       <div class="habit-form-actions">
         ${tutorialForm ? '' : `<button type="button" class="habit-form-cancel" data-action="habit-cancel" ${state.habitFormSaving ? 'disabled' : ''}>${t('common.cancel')}</button>`}
-        <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t(tutorialForm ? 'tutorial.form.create' : 'common.save')}</button>
+        <button type="button" class="auth-submit" data-action="habit-save" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t(tutorialForm && !f.defId ? 'tutorial.form.create' : 'common.save')}</button>
       </div>
       `}
     </div>
@@ -8608,6 +8640,7 @@ function renderTutorial() {
   }
 }
 let lastTutorialScreen = null;
+let tutorialLastFieldDefId = null; // zuletzt im Tutorial angelegtes Feld (Zurück von "Geschafft")
 
 // --- Rendering: Haupt-App --------------------------------------------------
 function renderPushRow() {
@@ -9627,6 +9660,14 @@ app.addEventListener('click', async (e) => {
     try { localStorage.setItem('installGateSkipped', 'true'); } catch { /* dann eben nur für diesen Besuch */ }
     installGateSkippedThisVisit = true;
     render();
+  } else if (action === 'spam-feedback') {
+    // Ohne render(): auf der Passwort-Seite ginge sonst ein schon getipptes Passwort verloren.
+    spamFeedbackAnswered = true;
+    const box = el.closest('.spam-feedback');
+    box.innerHTML = `<p class="spam-feedback-q" role="status" tabindex="-1">${t('spamFeedback.thanks')}</p>`;
+    box.querySelector('[role="status"]').focus();
+    supabase.rpc('record_signup_mail_feedback', { p_in_spam: el.dataset.inSpam === 'true' })
+      .then(() => {}, () => {}); // best effort - eine fehlende Rückmeldung ist kein Problem für den Nutzer
   } else if (action === 'confirm-landing-continue') {
     state.confirmLanding = false;
     render();
@@ -9642,11 +9683,15 @@ app.addEventListener('click', async (e) => {
     // Nach "Tutorial überspringen" gibt es noch kein Feld - dann zurück zum Feld-Schritt
     // statt zu "Dein erstes Feld steht". Umgekehrt beim zweiten Feld ("Noch ein Feld
     // anlegen"): zurück zu "Geschafft", wo man herkam, nicht zum Anfang.
+    // Von "Geschafft" aus öffnet Zurück das eben angelegte Feld zum Bearbeiten - ein leeres
+    // Formular verleitete dazu, das Feld zum "Korrigieren" ein zweites Mal anzulegen.
     const hasField = activeHabits().length > 0;
+    const justCreated = state.tutorialStep === TUTORIAL_STEP_DONE
+      ? activeHabits().find((h) => h.defId === tutorialLastFieldDefId) : null;
     state.tutorialStep = state.tutorialStep === TUTORIAL_STEP_REMINDERS && !hasField ? TUTORIAL_STEP_FIELD
       : state.tutorialStep === TUTORIAL_STEP_FIELD && hasField ? TUTORIAL_STEP_DONE
       : Math.max(TUTORIAL_STEP_HELLO, state.tutorialStep - 1);
-    state.habitForm = null;
+    state.habitForm = justCreated ? { ...habitToForm(justCreated), revealStage: 3 } : null;
     render();
   } else if (action === 'tutorial-add-more') {
     state.tutorialStep = TUTORIAL_STEP_FIELD;

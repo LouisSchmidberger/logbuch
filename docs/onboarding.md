@@ -197,6 +197,13 @@ Weitermachen im Browser bleibt möglich.
 **"Passwort eingeben"** (`renderUnlockPrompt`, früher "Entsperren"): einfacher Satz +
 "Warum?" (neues Gerät, gelöschte Browserdaten oder Ankunft über den Mail-Link).
 
+**Spam-Rückfrage** (`spamFeedbackHtml`, Nutzer-Entscheidung 2026-10-28): auf der Seite, die
+der Bestätigungslink öffnet ("Adresse bestätigt" bzw. "Passwort eingeben"), freiwillig "Lag
+die Mail im Spam-Ordner? [Ja, im Spam] [Nein]" – bei "Passwort eingeben" unter dem Formular,
+damit sie die eigentliche Aufgabe nicht unterbricht. Antwort ohne Neuzeichnen (ein schon
+getipptes Passwort bliebe sonst nicht stehen). Speicherung siehe
+[datenschutz-sicherheit.md](datenschutz-sicherheit.md) → E-Mail-Versand.
+
 ## Tutorial
 
 `renderTutorial`, gesteuert über `user_settings.onboarding_completed` (Default `false`, im
@@ -229,7 +236,10 @@ Tab-Leiste/kein Menü; eine `beforeunload`-Warnung verhindert versehentliches Ve
    (Zurück/Überspringen in der Fußleiste). Nach erfolgreichem Anlegen (Insert-Zweig in
    `handleHabitSave`) Sprung zu "Geschafft".
 3. **Geschafft** (`renderTutorialDone`): "Weiter" (zu den Erinnerungen) oder "Noch ein Feld
-   anlegen" (wieder das aufgedeckte Formular ab dem Namen).
+   anlegen" (wieder das aufgedeckte Formular ab dem Namen). "Zurück" öffnet das eben angelegte
+   Feld zum Bearbeiten (`tutorialLastFieldDefId`) – ein leeres Formular verleitete dazu, es zum
+   "Korrigieren" doppelt anzulegen; "Zurück" im Formular eines weiteren Felds führt zu
+   "Geschafft", nicht zum Anfang.
 
 **Erinnerungen** (`renderTutorialReminders`, eigene Etappe): Frage mit Begründung ("nur wenn
 an einem Tag etwas fehlt", mit dem Namen des ersten Felds als Beispiel, plus die
