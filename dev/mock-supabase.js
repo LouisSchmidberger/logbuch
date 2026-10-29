@@ -218,6 +218,10 @@ class MockAuth {
     await delay();
     const result = withDb((db) => {
       if (!db.session) return { data: { user: null }, error: authError('Auth session missing!', 401) };
+      // Zum Testen: previewAdmin.failNextUpdateUser() - wie ein Verbindungsabbruch, die
+      // Änderung kommt beim Server trotzdem an (der unklare Fall in changePassword).
+      const failAfterApply = db.failNextUpdateUser;
+      delete db.failNextUpdateUser;
       const u = db.users.find((x) => x.id === db.session.user.id);
       if (attrs.password !== undefined) {
         // Wie "Require current password when updating" (Dashboard): außer im Reset-Link.
@@ -238,6 +242,7 @@ class MockAuth {
       }
       if (attrs.data) u.metadata = { ...u.metadata, ...attrs.data };
       db.session = makeSession(u);
+      if (failAfterApply) return { data: { user: null }, error: { message: 'Failed to fetch', status: 0, name: 'AuthRetryableFetchError' } };
       return { data: { user: publicUser(u) }, error: null };
     });
     if (!result.error) this.emit('USER_UPDATED', loadDb().session);
@@ -442,4 +447,5 @@ export const previewAdmin = {
   mails() { return loadDb().mails; },
   lastMailLink(kind) { return loadDb().mails.filter((m) => !kind || m.kind === kind).at(-1)?.link ?? null; },
   dump() { return loadDb(); },
+  failNextUpdateUser() { withDb((db) => { db.failNextUpdateUser = true; }); },
 };

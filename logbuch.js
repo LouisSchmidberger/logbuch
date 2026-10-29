@@ -2140,6 +2140,7 @@ const STRINGS = {
     'passwordChange.error.wrongCurrent': 'Das aktuelle Passwort stimmt nicht.',
     'passwordChange.error.same': 'Das neue Passwort ist dasselbe wie das aktuelle.',
     'passwordChange.error.failed': 'Passwort nicht geändert.',
+    'passwordChange.error.incomplete': 'Die Änderung ist nicht ganz durchgelaufen, vermutlich war die Verbindung kurz weg. Tippe bitte gleich noch einmal auf „Passwort ändern“ – erst dann ist sie abgeschlossen.',
     'menu.changeEmail': 'E-Mail-Adresse ändern',
     'settings.emailCurrent': 'Angemeldet mit {email}',
     'settings.emailPending': 'Wechsel zu {email} wartet noch auf deine Bestätigung in der Mail dorthin.',
@@ -3074,6 +3075,7 @@ const STRINGS = {
     'passwordChange.error.wrongCurrent': 'The current password is incorrect.',
     'passwordChange.error.same': 'The new password is the same as the current one.',
     'passwordChange.error.failed': 'Password not changed.',
+    'passwordChange.error.incomplete': 'The change didn’t fully go through, probably because the connection dropped for a moment. Please tap “Change password” again right away – only then is it complete.',
     'menu.changeEmail': 'Change email address',
     'settings.emailCurrent': 'Signed in as {email}',
     'settings.emailPending': 'Switch to {email} is still waiting for your confirmation in the email sent there.',
@@ -4025,8 +4027,11 @@ async function upgradePasswordWrap(row, dek, password) {
 // einem Verbindungsabbruch ist offen, ob Supabase geändert hat - dann bleibt die neue
 // Verpackung stehen, und ein erneuter Versuch erkennt sie (das neue Passwort öffnet sie
 // schon) und schließt nur noch den Rest ab.
-// Wirft PASSWORD_CHANGE_WRONG_CURRENT oder den Supabase-Fehler.
+// Wirft PASSWORD_CHANGE_WRONG_CURRENT, PASSWORD_CHANGE_INCOMPLETE (die neue Verpackung steht,
+// das Passwort bei Supabase womöglich noch nicht - nur ein erneuter Versuch bringt beides
+// wieder zusammen, das muss die Meldung sagen) oder den Supabase-Fehler.
 const PASSWORD_CHANGE_WRONG_CURRENT = 'password-change-wrong-current';
+const PASSWORD_CHANGE_INCOMPLETE = 'password-change-incomplete';
 async function changePassword(current, next) {
   const userId = state.session.user.id;
   const row = await fetchEncryptionRow(userId);
@@ -4061,14 +4066,17 @@ async function changePassword(current, next) {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email: state.session.user.email, password: next });
       if (!signInError) return;
     }
+    let wrapIsNew = Boolean(newWrapped) || wrapDone;
     if (newWrapped && error.status >= 400 && error.status < 500) {
       const { error: rollbackError } = await supabase.from('user_encryption')
         .update({ salt: row.salt, kdf_iterations: row.kdf_iterations, wrap_iv: row.wrap_iv, wrapped_dek: row.wrapped_dek })
         .eq('user_id', userId)
         .eq('wrapped_dek', newWrapped);
       if (rollbackError) console.warn('[Logbuch] Alte Schlüssel-Verpackung nicht zurückgeschrieben:', rollbackError.message);
+      else wrapIsNew = false;
     }
     if (error.code === 'current_password_invalid' || error.code === 'current_password_required') throw new Error(PASSWORD_CHANGE_WRONG_CURRENT);
+    if (wrapIsNew) throw new Error(PASSWORD_CHANGE_INCOMPLETE);
     throw error;
   }
 }
@@ -4177,6 +4185,8 @@ async function handlePasswordChangeSubmit() {
       if (err?.message === PASSWORD_CHANGE_WRONG_CURRENT) {
         pc.error = t('passwordChange.error.wrongCurrent');
         focusId = 'password-change-current';
+      } else if (err?.message === PASSWORD_CHANGE_INCOMPLETE) {
+        pc.error = t('passwordChange.error.incomplete');
       } else if (err?.code === 'same_password') {
         pc.error = t('passwordChange.error.same');
         focusId = 'password-change-new';

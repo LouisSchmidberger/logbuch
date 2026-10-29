@@ -109,7 +109,8 @@ entschlüsselte Objekte, die übrige App arbeitet nur damit.
   Passwort wird zuerst lokal geprüft (entpackt es den DEK?), dann **erst die neue Verpackung
   speichern, danach `auth.updateUser`** mit `current_password`. Lehnt Supabase ab (4xx),
   wird die alte Verpackung zurückgeschrieben; bei Verbindungsabbruch nicht (offen, ob
-  Supabase geändert hat) – ein erneuter Versuch erkennt, dass das neue Passwort die
+  Supabase geändert hat) – die Meldung (`PASSWORD_CHANGE_INCOMPLETE`) fordert ausdrücklich
+  zum erneuten Versuch auf (Vorschau: `failNextUpdateUser`). Der erkennt, dass das neue Passwort die
   Verpackung schon öffnet, und schließt nur den Rest ab (meldet Supabase dann "aktuelles
   Passwort falsch", prüft eine Anmeldung mit dem neuen, ob es schon gilt). Grund für die
   Reihenfolge: Passwort und Verpackung dürfen nie dauerhaft auseinanderlaufen, sonst kommt
