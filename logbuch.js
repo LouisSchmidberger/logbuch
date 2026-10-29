@@ -8624,20 +8624,39 @@ function renderPrivacySection() {
 // sieht alle gestapelt (das Fenster scrollt). Siehe CLAUDE.md. Nach einem Update zeigt die App die noch nicht gesehenen Einträge einmal als
 // Fenster (renderWhatsNew), gesehen gilt pro Konto (user_settings.last_seen_changelog);
 // "Über Logbuch" zeigt alle.
+// Zwei Stufen (Nutzer-Entscheidung 2026-10-29): short = eine Zeile pro Neuerung fürs Fenster,
+// verständlich auch ohne die App gut zu kennen; de/en = ausführlicher für "Über Logbuch".
+// Ältere Einträge ohne short zeigen im Fenster die ausführliche Fassung.
 const CHANGELOG = [
   {
     id: '2026-10-29',
+    short: {
+      de: ['Felder, in die du schon etwas eingetragen hast, kannst du jetzt umbauen – z. B. einer Skala mehr Stufen geben.'],
+      en: ['You can now rework fields you’ve already filled in – e.g. give a scale more steps.'],
+    },
     de: [
-      'Du kannst jetzt die Anzahl Stufen einer Skala ändern, auch wenn du schon Einträge hast: Bearbeite das Feld und tippe auf „Stufen ändern“. Dort legst du fest, was aus deinen bisherigen Einträgen wird, und kannst es danach auch wieder rückgängig machen.',
-      'Genauso kannst du den Typ eines Felds mit Einträgen ändern – eine Skala zur Zahl, eine Zahl zur Skala oder beides zu Text: Bearbeite das Feld und tippe auf „Typ ändern“.',
+      'Felder, in die du schon etwas eingetragen hast, kannst du jetzt umbauen: einer Skala mehr oder weniger Stufen geben („Stufen ändern“) oder den Typ wechseln, z. B. von Skala zu Zahl („Typ ändern“). Beides findest du, wenn du das Feld bearbeitest. Du legst selbst fest, was aus deinen bisherigen Einträgen wird, und kannst es wieder rückgängig machen.',
     ],
     en: [
-      'You can now change the number of steps of a scale, even if it already has entries: edit the field and tap “Change steps”. There you decide what happens to your previous entries, and you can undo it afterwards.',
-      'In the same way you can change the type of a field with entries – a scale to a number, a number to a scale, or either to text: edit the field and tap “Change type”.',
+      'You can now rework fields you’ve already filled in: give a scale more or fewer steps (“Change steps”) or switch its type, e.g. from scale to number (“Change type”). You’ll find both when you edit the field. You decide what happens to your previous entries, and you can undo it.',
     ],
   },
   {
     id: '2026-10-28',
+    short: {
+      de: [
+        'Mehrere Erinnerungen pro Feld, auch für Zähler.',
+        'Felder können jetzt auch alle paar Tage dran sein.',
+        'Tipp in „Heute“ aufs Datum, um direkt einen Tag auszuwählen.',
+        'In Woche, Monat, Jahr und Gesamt: Tipp auf den Namen eines Felds, um es zu bearbeiten.',
+      ],
+      en: [
+        'Several reminders per field, counters included.',
+        'Fields can now also be due every few days.',
+        'Tap the date in “Today” to pick a day directly.',
+        'In Week, Month, Year and Overall: tap a field’s name to edit it.',
+      ],
+    },
     de: [
       'Ein Feld kann jetzt bis zu vier Erinnerungszeiten haben, z. B. morgens und abends. Auch Zähler erinnern dich jetzt – auf Wunsch nur, wenn sie zu der Zeit unter einer Zahl liegen, die du festlegst.',
       'Ein Feld kann jetzt auch alle paar Tage dran sein, z. B. alle 3 Tage – wenn du ein Feld anlegst, unter „An welchen Tagen?“.',
@@ -8699,6 +8718,7 @@ const CHANGELOG = [
 // zusätzlich pflegen musste).
 const APP_STATUS_DATE = CHANGELOG[0].id;
 function changelogItems(entry) { return entry[currentLocale] || entry.de; }
+function changelogShortItems(entry) { return entry.short ? (entry.short[currentLocale] || entry.short.de) : changelogItems(entry); }
 function unseenChangelog() {
   const last = state.userSettings.lastSeenChangelog;
   return CHANGELOG.filter((e) => !last || e.id > last);
@@ -8711,7 +8731,7 @@ function renderWhatsNew() {
         <h2 id="whats-new-title">${icon('news')}${t('whatsNew.title')}</h2>
         ${entries.map((e) => `
           ${entries.length > 1 ? `<h3 class="whats-new-date">${esc(formatDMY(e.id))}</h3>` : ''}
-          <ul class="whats-new-list">${changelogItems(e).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
+          <ul class="whats-new-list">${changelogShortItems(e).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
         `).join('')}
         <div class="habit-form-actions">
           <button type="button" class="habit-form-cancel" data-action="whats-new-all">${t('whatsNew.all')}</button>

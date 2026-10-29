@@ -116,7 +116,8 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   in identischer Key-Reihenfolge.
 - **`CHANGELOG`** in `logbuch.js` ("Was ist neu"): ein Eintrag pro Live-Gang für alles aus der
   Sitzung (de + en), Datum des Live-Gangs; den obersten erweitern, solange er nicht live ist.
-  Nur Begriffe, die man in der App sieht oder aus dem Alltag kennt, und beschreiben, was man
+  Zwei Stufen: `short` = eine einfache Zeile pro Neuerung fürs Fenster beim Start (für
+  jemanden, der die App kaum kennt), `de`/`en` = ausführlicher für "Über Logbuch". Nur Begriffe, die man in der App sieht oder aus dem Alltag kennt, und beschreiben, was man
   tut ("wenn du ein Feld anlegst"), nicht interne Sammelnamen ("das Formular für Felder",
   "die Übersichten"). Das Datum ist zugleich "Beta – Stand …" in "Über Logbuch". Reine
   Interna, Doku, Textkorrekturen und
