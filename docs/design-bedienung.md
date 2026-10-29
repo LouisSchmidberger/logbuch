@@ -9,8 +9,13 @@ generische Tailwind-/Card-Optik wechseln.
 
 **Symbole**: Menüpunkte, Seitenköpfe der Unterseiten, "+ Neues Feld"/"Neue Gruppe",
 Abschnitte in Einstellungen und "Über Logbuch" tragen ein Symbol – alle zentral in `ICONS` +
-`icon(name)` (dekorativ, `aria-hidden`). Vorerst Emojis; Nutzer tendiert zu eigenen,
-gezeichneten Symbolen (Gestaltungs-Durchgang) – dann nur `ICONS` austauschen. Bewusst ohne
+`icon(name)` bzw. `iconSvg(name)` (dekorativ, `aria-hidden`), auch die im Onboarding,
+Tutorial, in Tipps und bei Push. Eigene, gezeichnete SVG-Symbole statt Emojis
+(Nutzer-Entscheidung 2026-10-29, Stil "Feder + Moos-Fläche" aus drei Entwürfen): Linie in
+Textfarbe, Flächen (`class="f"`) in Moos, Größe in em (`.icon`) – sehen auf jedem Gerät
+gleich aus und folgen Dunkelmodus und Textgröße. Neue Symbole im selben Raster (24×24) in
+`ICONS` zeichnen, nie wieder Emojis direkt ins Markup. In Flex-Zeilen mit `space-between`
+(`.push-row`) Symbol und Text in ein gemeinsames Element. Bewusst ohne
 Symbol: Tabs, einzelne Felder, Wert-Knöpfe (wirkte überladen).
 
 **Dark Mode**: folgt standardmäßig `prefers-color-scheme`, in den Einstellungen

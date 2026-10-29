@@ -286,7 +286,12 @@
      Zeile mit Erklärung direkt darunter. */
   .settings-section { margin: 0; }
   /* Symbol vor Menüpunkten und Abschnitts-Überschriften (wie im Onboarding). */
-  .item-icon { display: inline-block; width: 1.6em; font-style: normal; }
+  .item-icon { display: inline-block; width: 1.6em; flex-shrink: 0; font-style: normal; }
+  /* Eigene Symbole (ICONS in logbuch.js): Linie in Textfarbe, Flächen leicht in Moos. In em,
+     damit sie mit der Schrift ihres Orts mitwachsen (Menü, große Onboarding-Symbole). */
+  .icon { width: 1.2em; height: 1.2em; vertical-align: -0.22em; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+  .icon .f { fill: rgba(var(--moss-rgb), 0.42); }
+  .onb-icon .icon, .onb-promise-icon .icon, .spare-key-method-icon .icon { width: 1em; height: 1em; vertical-align: top; }
   .settings-section .push-row { margin: 0.5rem 0 0; }
   .settings-row { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; padding: 0.875rem 0; border-bottom: 1px solid var(--line); font-size: 0.9375rem; }
   .settings-row > label:not(.checkbox-field), .settings-label { color: var(--ink); font-weight: 600; }
@@ -1432,6 +1437,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=f45de5be16"></script>
+<script type="module" src="./logbuch.js?v=859bda162f"></script>
 </body>
 </html>
