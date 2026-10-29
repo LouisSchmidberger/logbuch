@@ -123,7 +123,14 @@ bleiben änderbar (ändern nur die Beschriftung, nie Zahl/Position). Ausnahme:
 Bezeichnungen (`habitForm.labelsLockedWarn`) und eine geänderte Bewertung
 (`habitForm.goodChangedWarn`, färbt alle alten Einträge um).
 
-### Stufen ändern (`stepEditHtml`, `startStepChange`)
+### Stufen ändern (`renderStepDialog`, `startStepChange`)
+
+Eigener Dialog über dem Formular (Nutzer-Entscheidung 2026-10-29: ein eigener Mechanismus,
+der sich vom übrigen Formular abheben soll; ein Kasten im Formular ging darin unter), in
+drei Stufen: Einstellen → "Wirklich umstellen?" als eigener Bildschirm → Fortschritt, danach
+zu. Rückgängig ebenfalls als Dialog. Im Formular selbst (`stepEditHtml`) nur Stufenzahl und
+die Knöpfe. Escape/Android-Zurück = Abbrechen bzw. "Zurück"; mit Eingaben im Dialog erst
+"Änderungen verwerfen?" (`closeStepDialog`), während des Umstellens wirkungslos.
 
 Nutzer-Entscheidung 2026-10-29: die Verantwortung liegt beim Nutzer – er legt je alte Stufe
 fest, auf welche neue sie wandert oder ob ihre Einträge entfernt werden, mit klarer

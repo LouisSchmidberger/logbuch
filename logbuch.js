@@ -1151,6 +1151,8 @@ function closeTopLayer() {
   } else if (state.deleteConfirm || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm || state.leaveFormConfirm) {
     closeModals(); // bei "Änderungen verwerfen?" = Weiter bearbeiten
     restoreModalFocus();
+  } else if (stepDialogOpen()) {
+    closeStepDialog();
   } else if (state.menuOpen) {
     state.menuOpen = false;
   } else if (state.rowMenu) {
@@ -1632,7 +1634,9 @@ const STRINGS = {
     'stepEdit.summary.none': 'Alle bisherigen Einträge behalten ihre Zahl.',
     'stepEdit.safety': 'Die alten Werte bleiben als Sicherung gespeichert. Rückgängig machen kannst du das hier, bis du etwas Neues in dieses Feld einträgst.',
     'stepEdit.apply': 'Umstellen …',
-    'stepEdit.confirm': 'Wirklich umstellen? Danach gelten die neuen Stufen auch für alle bisherigen Einträge, so wie oben zugeordnet.',
+    'stepEdit.fieldNow': '„{name}“ hat bisher {steps} Stufen.',
+    'stepEdit.confirmTitle': 'Wirklich umstellen?',
+    'stepEdit.confirm': '„{name}“ bekommt {to} statt {from} Stufen, und alle bisherigen Einträge werden so umgerechnet, wie du sie zugeordnet hast.',
     'stepEdit.confirmDo': 'Jetzt umstellen',
     'stepEdit.progress': 'Wird umgestellt … {done} von {total} Tagen. Lass Logbuch so lange offen.',
     'stepEdit.done': '„{name}“ hat jetzt {steps} Stufen.',
@@ -1642,7 +1646,8 @@ const STRINGS = {
     'stepEdit.resumed': 'Die Umstellung von „{name}“ ist fertig.',
     'stepEdit.last': 'Am {date} von {from} auf {to} Stufen umgestellt.',
     'stepEdit.undo': 'Rückgängig machen …',
-    'stepEdit.undoConfirm': 'Zurück zu {from} Stufen? Alle Einträge bekommen wieder ihren Wert von vor der Umstellung.',
+    'stepEdit.undoTitle': 'Umstellung rückgängig machen?',
+    'stepEdit.undoConfirm': '„{name}“ bekommt wieder {from} Stufen, und alle Einträge bekommen ihren Wert von vor der Umstellung zurück.',
     'stepEdit.undoDo': 'Zurückholen',
     'stepEdit.undoDone': '„{name}“ hat wieder {steps} Stufen.',
     'stepEdit.error.nothing': 'Das ist dieselbe Skala wie bisher – es gibt nichts umzustellen.',
@@ -2490,7 +2495,9 @@ const STRINGS = {
     'stepEdit.summary.none': 'All previous entries keep their number.',
     'stepEdit.safety': 'The old values are kept as a backup. You can undo this here until you enter something new in this field.',
     'stepEdit.apply': 'Change …',
-    'stepEdit.confirm': 'Really change? Afterwards the new steps apply to all previous entries too, as assigned above.',
+    'stepEdit.fieldNow': '“{name}” currently has {steps} steps.',
+    'stepEdit.confirmTitle': 'Really change?',
+    'stepEdit.confirm': '“{name}” gets {to} instead of {from} steps, and all previous entries are converted the way you assigned them.',
     'stepEdit.confirmDo': 'Change now',
     'stepEdit.progress': 'Changing … {done} of {total} days. Keep Logbuch open until it is done.',
     'stepEdit.done': '“{name}” now has {steps} steps.',
@@ -2500,7 +2507,8 @@ const STRINGS = {
     'stepEdit.resumed': 'The change of “{name}” is finished.',
     'stepEdit.last': 'Changed from {from} to {to} steps on {date}.',
     'stepEdit.undo': 'Undo …',
-    'stepEdit.undoConfirm': 'Back to {from} steps? All entries get their value from before the change again.',
+    'stepEdit.undoTitle': 'Undo the change?',
+    'stepEdit.undoConfirm': '“{name}” gets {from} steps again, and all entries get back their value from before the change.',
     'stepEdit.undoDo': 'Restore',
     'stepEdit.undoDone': '“{name}” has {steps} steps again.',
     'stepEdit.error.nothing': 'This is the same scale as before – there is nothing to change.',
@@ -4888,43 +4896,90 @@ function stepEditNothingToDo(h, se) {
   return to.max === h.max && Object.entries(se.map).every(([k, v]) => v === Number(k))
     && JSON.stringify(to.labels) === JSON.stringify(h.labels ?? null);
 }
-// Teil "Anzahl Stufen" eines gesperrten Skala-Felds: Anzeige, Rückgängig, "Stufen ändern".
+// Teil "Anzahl Stufen" eines gesperrten Skala-Felds im Formular: Anzeige, Rückgängig,
+// "Stufen ändern". Das Ändern selbst läuft im eigenen Dialog (renderStepDialog) - ein eigener
+// Mechanismus mit Folgen für alle Einträge, der sich vom übrigen Formular abheben soll.
 function stepEditHtml(f) {
   const h = state.habits.find((x) => x.defId === f.defId);
   if (!h) return '';
   const steps = h.max - h.min + 1;
   const sc = h.stepChange;
   const current = `<p class="habit-form-lock-note">${t('habitForm.rangeLocked', { steps, min: h.min, max: h.max })}</p>`;
-  if (stepChangeRunning.has(h.defId) || stepChangeStarting.has(h.defId)) {
-    return current + `<p class="habit-form-lock-note step-edit-progress" id="step-change-progress" role="status">${t('stepEdit.progress', { done: 0, total: '…' })}</p>`;
-  }
-  if (sc && sc.state !== 'done') {
+  if (sc && sc.state !== 'done' && !stepChangeRunning.has(h.defId)) {
     return current + `
       <div class="step-box">
         <p class="habit-form-lock-note" role="status">${t('stepEdit.pending')}</p>
         <button type="button" class="manage-btn" data-action="step-edit-resume">${t('stepEdit.resume')}</button>
       </div>`;
   }
+  const undo = !stepChangeUndoable(h) ? '' : `
+    <div class="step-box">
+      <p class="habit-form-lock-note">${t('stepEdit.last', { date: formatDMY(sc.date), from: sc.from.max - sc.from.min + 1, to: steps })}</p>
+      <button type="button" class="manage-btn" data-action="step-undo">${t('stepEdit.undo')}</button>
+    </div>`;
+  return current + undo + `
+    <div class="step-box">
+      <p class="habit-form-lock-note">${t('stepEdit.hint')}</p>
+      <button type="button" class="manage-btn" data-action="step-edit-open">${t('stepEdit.open')}</button>
+    </div>`;
+}
+function stepDialogOpen() {
+  const f = state.habitForm;
+  return !!f && (!!f.stepEdit || !!f.stepUndoConfirm || stepChangeRunning.has(f.defId) || stepChangeStarting.has(f.defId));
+}
+// Escape, Android-Zurück: wie "Abbrechen" bzw. in der Rückfrage "Zurück". Ist im Dialog schon
+// etwas eingestellt, erst die übliche Rückfrage "Änderungen verwerfen?". Während des Umstellens
+// nichts (der Lauf soll zu Ende kommen).
+function closeStepDialog() {
+  const f = state.habitForm;
+  if (!f || stepChangeRunning.has(f.defId) || stepChangeStarting.has(f.defId)) return;
+  if (f.stepUndoConfirm) { f.stepUndoConfirm = false; return; }
   const se = f.stepEdit;
-  if (!se) {
-    const fromSteps = sc ? sc.from.max - sc.from.min + 1 : 0;
-    const undo = !stepChangeUndoable(h) ? '' : f.stepUndoConfirm ? `
-      <div class="step-box">
-        <p class="habit-form-lock-note" role="status">${t('stepEdit.undoConfirm', { from: fromSteps })}</p>
-        <div class="manage-group-tip-actions">
-          <button type="button" class="manage-btn" data-action="step-undo-cancel">${t('common.cancel')}</button>
-          <button type="button" class="manage-btn" data-action="step-undo-confirm">${t('stepEdit.undoDo')}</button>
-        </div>
-      </div>` : `
-      <div class="step-box">
-        <p class="habit-form-lock-note">${t('stepEdit.last', { date: formatDMY(sc.date), from: fromSteps, to: steps })}</p>
-        <button type="button" class="manage-btn" data-action="step-undo">${t('stepEdit.undo')}</button>
-      </div>`;
-    return current + undo + `
-      <div class="step-box">
-        <p class="habit-form-lock-note">${t('stepEdit.hint')}</p>
-        <button type="button" class="manage-btn" data-action="step-edit-open">${t('stepEdit.open')}</button>
-      </div>`;
+  if (!se) return;
+  if (se.confirm) { se.confirm = false; return; }
+  syncHabitFormFromDom();
+  if (stepEditKey(se) === se.initial) { f.stepEdit = null; return; }
+  pendingFormLeave = () => { if (state.habitForm) state.habitForm.stepEdit = null; };
+  state.leaveFormConfirm = true;
+  modalTriggerSelector = '#step-dialog-title'; // "Weiter bearbeiten" führt zurück in den Dialog
+}
+function renderStepDialog() {
+  const f = state.habitForm;
+  const h = state.habits.find((x) => x.defId === f.defId);
+  if (!h) return '';
+  const steps = h.max - h.min + 1;
+  const box = (title, body) => `
+    <div class="modal-overlay">
+      <div class="modal-box step-dialog" role="dialog" aria-modal="true" aria-labelledby="step-dialog-title">
+        <h2 id="step-dialog-title" tabindex="-1">${title}</h2>
+        ${body}
+      </div>
+    </div>`;
+  if (stepChangeRunning.has(h.defId) || stepChangeStarting.has(h.defId)) {
+    const undo = h.stepChange?.state === 'undo';
+    return box(t(undo ? 'stepEdit.undoTitle' : 'stepEdit.title'), `
+      <p id="step-change-progress" role="status">${t('stepEdit.progress', { done: 0, total: '…' })}</p>`);
+  }
+  if (f.stepUndoConfirm && h.stepChange) {
+    const sc = h.stepChange;
+    return box(t('stepEdit.undoTitle'), `
+      <p>${t('stepEdit.undoConfirm', { name: h.name, from: sc.from.max - sc.from.min + 1 })}</p>
+      <div class="habit-form-actions">
+        <button type="button" class="habit-form-cancel" data-action="step-undo-cancel">${t('common.cancel')}</button>
+        <button type="button" class="auth-submit" data-action="step-undo-confirm">${t('stepEdit.undoDo')}</button>
+      </div>`);
+  }
+  const se = f.stepEdit;
+  if (!se) return '';
+  if (se.confirm) {
+    return box(t('stepEdit.confirmTitle'), `
+      <p>${t('stepEdit.confirm', { name: h.name, from: steps, to: se.steps })}</p>
+      <p>${stepEditSummary(h, se)}</p>
+      <p>${t('stepEdit.safety')}</p>
+      <div class="habit-form-actions">
+        <button type="button" class="habit-form-cancel" data-action="step-edit-confirm-cancel">${t('common.back')}</button>
+        <button type="button" class="auth-submit" data-action="step-edit-confirm">${t('stepEdit.confirmDo')}</button>
+      </div>`);
   }
   const to = stepEditTo(h, se);
   const options = (selected) => Array.from({ length: se.steps }, (_, i) => to.min + i)
@@ -4935,41 +4990,36 @@ function stepEditHtml(f) {
       <span class="step-map-old">${stepValueText(h.labels, h.min, v)} <span class="step-map-count">${t('stepEdit.count', { count: n })}</span></span>
       <select data-step-map="${v}" aria-label="${esc(tPlain('stepEdit.mapAria', { value: h.labels?.[v - h.min] || v, count: n }))}">${options(se.map[String(v)])}</select>
     </div>`).join('');
-  return current + `
-    <div class="step-edit" role="group" aria-labelledby="step-edit-title">
-      <p class="step-edit-title" id="step-edit-title" tabindex="-1">${t('stepEdit.title')}</p>
-      <p class="habit-form-lock-note">${t('stepEdit.intro')}</p>
+  return box(t('stepEdit.title'), `
+    <p class="step-dialog-field">${t('stepEdit.fieldNow', { name: h.name, steps })}</p>
+    <p class="step-dialog-note">${t('stepEdit.intro')}</p>
+    <div class="auth-field">
       <label for="step-edit-steps">${t('stepEdit.newSteps')}</label>
-      ${stepperInput('step-edit-steps', se.steps, 2, stepEditCap(h), se.confirm, 'data-action="step-edit-count"')}
-      ${se.labels ? `
-        <p class="step-edit-sub">${t('stepEdit.newLabels')}</p>
-        <div class="label-inputs">
+      ${stepperInput('step-edit-steps', se.steps, 2, stepEditCap(h), false, 'data-action="step-edit-count"')}
+    </div>
+    ${se.labels ? `
+      <div class="auth-field">
+        <label id="step-edit-labels-label">${t('stepEdit.newLabels')}</label>
+        <div class="label-inputs" role="group" aria-labelledby="step-edit-labels-label">
           ${se.labels.map((l, i) => `
             <div class="label-input-row">
               <span class="label-input-step" aria-hidden="true">${to.min + i}</span>
-              <input type="text" data-step-label="${i}" value="${esc(l)}" maxlength="20" aria-label="${esc(t('habitForm.labelForStep', { step: to.min + i }))}" ${se.confirm ? 'disabled' : ''} />
+              <input type="text" data-step-label="${i}" value="${esc(l)}" maxlength="20" aria-label="${esc(t('habitForm.labelForStep', { step: to.min + i }))}" />
             </div>`).join('')}
-        </div>` : ''}
-      <label class="step-edit-sub" id="step-edit-map-label">${t('stepEdit.mapTitle')}${infoTip(t('stepEdit.presetExplain'))}</label>
+        </div>
+      </div>` : ''}
+    <div class="auth-field">
+      <label id="step-edit-map-label">${t('stepEdit.mapTitle')}${infoTip(t('stepEdit.presetExplain'))}</label>
       <div class="pill-group seg" role="group" aria-labelledby="step-edit-map-label">
-        ${['spread', 'same'].map((p) => `<button type="button" class="pill-toggle${se.preset === p ? ' pill-toggle--active' : ''}" data-action="step-edit-preset" data-preset="${p}" aria-pressed="${se.preset === p}" ${se.confirm ? 'disabled' : ''}>${t('stepEdit.preset.' + p)}</button>`).join('')}
+        ${['spread', 'same'].map((p) => `<button type="button" class="pill-toggle${se.preset === p ? ' pill-toggle--active' : ''}" data-action="step-edit-preset" data-preset="${p}" aria-pressed="${se.preset === p}">${t('stepEdit.preset.' + p)}</button>`).join('')}
       </div>
       <div class="step-map">${rows}</div>
-      <p class="habit-form-lock-note" id="step-edit-summary" aria-live="polite">${stepEditSummary(h, se)}</p>
-      <p class="habit-form-lock-note">${t('stepEdit.safety')}</p>
-      ${se.confirm ? `
-        <p class="habit-form-lock-note step-edit-confirm" role="status">${t('stepEdit.confirm')}</p>
-        <div class="manage-group-tip-actions">
-          <button type="button" class="manage-btn" data-action="step-edit-confirm-cancel">${t('common.cancel')}</button>
-          <button type="button" class="manage-btn" data-action="step-edit-confirm">${t('stepEdit.confirmDo')}</button>
-        </div>
-      ` : `
-        <div class="manage-group-tip-actions">
-          <button type="button" class="manage-btn" data-action="step-edit-cancel">${t('common.cancel')}</button>
-          <button type="button" class="manage-btn" data-action="step-edit-apply">${t('stepEdit.apply')}</button>
-        </div>
-      `}
-    </div>`;
+    </div>
+    <p class="step-dialog-note" id="step-edit-summary" aria-live="polite">${stepEditSummary(h, se)}</p>
+    <div class="habit-form-actions">
+      <button type="button" class="habit-form-cancel" data-action="step-edit-cancel">${t('common.cancel')}</button>
+      <button type="button" class="auth-submit" data-action="step-edit-apply">${t('stepEdit.apply')}</button>
+    </div>`);
 }
 // Nach Umstellen/Rückgängig: das offene Formular (und seinen Vergleichsstand für "Änderungen
 // verwerfen?") auf die neue Skala bringen, ohne andere, noch ungespeicherte Eingaben zu verlieren.
@@ -4989,8 +5039,8 @@ function finishStepChangeAction(f, ok, doneKey) {
     state.notice = { type: 'error', text: t('stepEdit.failed') };
   }
   render();
-  // Die Meldung steht oben (wie beim Speichern des Formulars, siehe handleHabitSave).
-  requestAnimationFrame(() => document.querySelector('.notice')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  // Der Dialog ist zu - zurück auf den Knopf, von dem aus er geöffnet wurde.
+  document.querySelector('[data-action="step-edit-open"], [data-action="step-edit-resume"]')?.focus({ preventScroll: true });
 }
 // Nach dem Laden: abgebrochene Umstellungen fertig machen (im Hintergrund).
 async function resumeStepChanges() {
@@ -9531,7 +9581,8 @@ function renderApp() {
     ${state.regenKeyConfirm ? renderRegenKeyConfirm() : ''}
     ${state.logoutConfirm ? renderLogoutConfirm() : ''}
     ${state.leaveFormConfirm ? renderLeaveFormConfirm() : ''}
-    ${state.whatsNew && !state.deleteConfirm && !state.resetConfirm && !state.regenKeyConfirm && !state.logoutConfirm && !state.leaveFormConfirm ? renderWhatsNew() : ''}
+    ${state.view === 'manage' && stepDialogOpen() && !state.leaveFormConfirm ? renderStepDialog() : ''}
+    ${state.whatsNew &&!state.deleteConfirm && !state.resetConfirm && !state.regenKeyConfirm && !state.logoutConfirm && !state.leaveFormConfirm ? renderWhatsNew() : ''}
   `;
   // preventScroll: der Header ist ohnehin (sticky) sichtbar - der native
   // Scroll-in-View-Effekt beim Fokussieren kennt "position: sticky" nicht und hat
@@ -10064,7 +10115,7 @@ app.addEventListener('click', async (e) => {
     f.stepEdit.initial = stepEditKey(f.stepEdit);
     render();
     // Auf die Überschrift, nicht ins Zahlenfeld - dort ginge auf dem Handy sofort die Tastatur auf.
-    document.getElementById('step-edit-title')?.focus();
+    document.getElementById('step-dialog-title')?.focus();
   } else if (action === 'step-edit-cancel') {
     syncHabitFormFromDom();
     state.habitForm.stepEdit = null;
@@ -10723,6 +10774,13 @@ app.addEventListener('keydown', (e) => {
   }
   const modalBox = document.querySelector('.modal-box');
   if (modalBox) {
+    if (e.key === 'Escape' && modalBox.classList.contains('step-dialog')) {
+      closeStepDialog();
+      render();
+      if (state.leaveFormConfirm) return; // focusModalIfOpen hat den Fokus schon in der Rückfrage
+      (document.getElementById('step-dialog-title') || document.querySelector('[data-action="step-edit-open"]'))?.focus();
+      return;
+    }
     if (e.key === 'Escape') {
       closeModals();
       render();

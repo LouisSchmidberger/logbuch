@@ -1305,12 +1305,16 @@
   .auth-field input.goal-slider { border: none; background: transparent; padding: 0; } /* nicht die Kasten-Optik der Eingabefelder */
   .goal-slider-value { flex-shrink: 0; min-width: 5.5rem; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
   .label-input-step { min-width: 1.5rem; text-align: right; font-size: 0.8125rem; color: var(--sand); font-variant-numeric: tabular-nums; }
-  /* Stufen ändern (stepEditHtml): eigener Kasten unter der Stufenzahl; je alte Stufe der alte
-     Wert und daneben die Auswahl, auf schmalen Bildschirmen bricht die Auswahl darunter um. */
-  .step-edit { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; padding: 0.75rem; border: 1px solid var(--line); border-radius: 0.25rem; }
-  .auth-field .step-edit .habit-form-lock-note { margin: 0; line-height: 1.45; }
-  .step-edit-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 600; margin: 0; }
-  .step-edit-sub { font-size: 0.9375rem; margin: 0.25rem 0 0; }
+  /* Stufen ändern: eigener Dialog (renderStepDialog), breiter als die kleinen Rückfragen;
+     je alte Stufe der alte Wert und daneben die Auswahl, schmal bricht die Auswahl darunter um. */
+  .modal-box.step-dialog { max-width: 28rem; }
+  .step-dialog-field { font-weight: 600; }
+  .modal-box p.step-dialog-note { font-size: 0.875rem; color: var(--sand); }
+  .step-dialog select {
+    font-family: inherit; font-size: 0.9375rem; padding: 0.4375rem 0.5625rem; border: 1px solid var(--line);
+    border-radius: 0.1875rem; background: var(--input-bg); color: var(--ink);
+  }
+  .step-dialog .pill-group { margin-bottom: 0.625rem; }
   .step-map { display: flex; flex-direction: column; gap: 0.375rem; }
   .step-map-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; }
   .step-map-old { flex: 1 1 8rem; min-width: 0; overflow-wrap: anywhere; }
@@ -1428,6 +1432,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=345d90ddb8"></script>
+<script type="module" src="./logbuch.js?v=10e20eac1a"></script>
 </body>
 </html>
