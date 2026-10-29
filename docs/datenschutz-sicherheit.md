@@ -70,6 +70,16 @@ der sonstigen GRANT-Regel), einziger Weg hinein ist die Function.
   (führte zu einer 404-Seite). **Bei einer neuen Domain/Hosting-URL** muss die URL unter
   Supabase Dashboard → Authentication → URL Configuration als Redirect-URL erlaubt sein
   (reine Dashboard-Konfiguration).
+- **E-Mail-Adresse ändern** (Einstellungen → Konto, `renderEmailChange`): `auth.updateUser({
+  email })` mit `emailRedirectTo` und `data.locale` (für die zweisprachige Vorlage).
+  `double_confirm_changes = true` ("Secure email change"): Mail an bisherige UND neue Adresse,
+  erst nach beiden Links gilt die neue – schützt davor, dass jemand mit einem entsperrten
+  Gerät das Konto auf seine Adresse umzieht (danach liefe "Passwort vergessen" über ihn).
+  Kein Passwort im Dialog nötig, die Bestätigung über die bisherige Adresse deckt das ab.
+  Rückkehr: nach dem ersten Link nur `#message=Confirmation link accepted…` (supabase-js
+  ignoriert das, die App zeigt eine Meldung und räumt die Adresse auf), nach dem zweiten
+  eine Anmeldung mit `type=email_change` (`EMAIL_CHANGE_LANDING`). Bis dahin steht die neue
+  Adresse in `user.new_email` (Hinweis in den Einstellungen).
 - **Signup-Schutz ohne sichtbares Captcha**: zwei dependency-freie Filter im
   Signup-Formular (`renderAuth`): ein unsichtbares Honeypot-Feld (`.honeypot-field`,
   off-screen statt `display:none`, da manche Bots das erkennen) und eine Mindest-Ausfüllzeit
@@ -133,7 +143,8 @@ by 1, 2`.
 
 **Vorlage der Bestätigungsmail**: `supabase/templates/confirmation.html` (Kopf der Datei:
 Betreff + Hinweise), live im Dashboard unter Authentication → Emails → Templates → "Confirm
-signup" – **beide Stellen gleich halten**. Zweisprachig über `.Data.locale` (von `signUp` als
+signup" – **beide Stellen gleich halten**. Genauso `email_change.html` → "Change email
+address" (geht an beide Adressen, Text passt für beide). Zweisprachig über `.Data.locale` (von `signUp` als
 Nutzer-Metadaten mitgeschickt), Deutsch nur bei `de`, sonst Englisch. Ton wie das
 Onboarding, echter Button statt Link.
 

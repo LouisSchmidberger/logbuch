@@ -31,6 +31,11 @@ async function fetchWithJwtFutureRetry(input, init) {
 // den Teil nach '#' gleich beim Start aus und entfernt ihn - deshalb vorher merken
 // (siehe renderConfirmLanding).
 const ARRIVED_VIA_SIGNUP_CONFIRM = /(^#|&)type=signup(&|$)/.test(location.hash);
+// Rückkehr aus den Mails von "E-Mail ändern" (Supabase verlangt beide Adressen, siehe
+// docs/datenschutz-sicherheit.md): nach dem ersten Link nur eine Meldung im '#'-Teil (die
+// supabase-js nicht anfasst), nach dem zweiten eine Anmeldung mit type=email_change.
+const EMAIL_CHANGE_LANDING = /(^#|&)type=email_change(&|$)/.test(location.hash) ? 'done'
+  : /(^#|&)message=Confirmation\+link\+accepted/.test(location.hash) ? 'first' : null;
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { fetch: fetchWithJwtFutureRetry } });
 
 function urlBase64ToUint8Array(base64String) {
@@ -926,6 +931,7 @@ const state = {
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
   passwordChange: null, // { current, next, visible, busy, error } während "Passwort ändern" offen ist
   spareKeyCheck: null, // { value, busy, result: 'ok'|'wrong'|'error'|null, errorText } während "Ersatzschlüssel prüfen" offen ist
+  emailChange: null, // { value, busy, error, sentTo } während "E-Mail-Adresse ändern" offen ist
   regenKeyConfirm: false, // Rückfrage vor "Ersatzschlüssel neu erzeugen" offen
   logoutConfirm: false,   // Rückfrage vor "Abmelden" (aus dem Menü) offen
   leaveFormConfirm: false, // Rückfrage "Änderungen verwerfen?" beim Verlassen eines geänderten Formulars (siehe leaveFormGuarded)
@@ -986,6 +992,7 @@ function closeModals() {
   state.deleteConfirm = null;
   if (!state.passwordChange?.busy) state.passwordChange = null;
   state.spareKeyCheck = null;
+  if (!state.emailChange?.busy) state.emailChange = null;
   state.tutorialSkipConfirm = false;
   state.resetConfirm = null;
   state.regenKeyConfirm = false;
@@ -1037,7 +1044,7 @@ function leaveSubpage() {
   state.view = state.previousTabView || 'today';
 }
 function isOverlayOpen() {
-  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.regenKeyConfirm || !!state.logoutConfirm || state.leaveFormConfirm || !!state.deleteConfirm || !!state.passwordChange || !!state.spareKeyCheck || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm || !!state.whatsNew;
+  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.regenKeyConfirm || !!state.logoutConfirm || state.leaveFormConfirm || !!state.deleteConfirm || !!state.passwordChange || !!state.spareKeyCheck || !!state.emailChange || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm || !!state.whatsNew;
 }
 // Der Notiz-Editor gehört zu einem bestimmten Tag in "Heute" und ist nur offen, solange
 // er dort auch sichtbar ist - wechselt man Tag/Tab, speichert render() den Entwurf und
@@ -1153,7 +1160,7 @@ function leaveFormGuarded(proceed) {
 function closeTopLayer() {
   if (state.whatsNew) {
     closeWhatsNew();
-  } else if (state.deleteConfirm || state.passwordChange || state.spareKeyCheck || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm || state.leaveFormConfirm) {
+  } else if (state.deleteConfirm || state.passwordChange || state.spareKeyCheck || state.emailChange || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm || state.leaveFormConfirm) {
     closeModals(); // bei "Änderungen verwerfen?" = Weiter bearbeiten
     restoreModalFocus();
   } else if (stepDialogOpen()) {
@@ -2136,6 +2143,25 @@ const STRINGS = {
     'passwordChange.error.wrongCurrent': 'Das aktuelle Passwort stimmt nicht.',
     'passwordChange.error.same': 'Das neue Passwort ist dasselbe wie das aktuelle.',
     'passwordChange.error.failed': 'Passwort nicht geändert.',
+    'menu.changeEmail': 'E-Mail-Adresse ändern',
+    'settings.emailCurrent': 'Angemeldet mit {email}',
+    'settings.emailPending': 'Wechsel zu {email} wartet noch auf deine Bestätigung in beiden Mails.',
+    'emailChange.title': 'E-Mail-Adresse ändern',
+    'emailChange.current': 'Bisher: <strong>{email}</strong>',
+    'emailChange.new': 'Neue E-Mail-Adresse',
+    'emailChange.note': 'Du bekommst je eine Mail an deine bisherige und an deine neue Adresse. Erst wenn du in beiden bestätigt hast, gilt die neue. Bis dahin meldest du dich mit der bisherigen an.',
+    'emailChange.submit': 'Mails senden',
+    'emailChange.sending': 'Wird gesendet …',
+    'emailChange.sentTitle': 'Schau in beide Postfächer',
+    'emailChange.sentBody': 'Ich habe dir je eine Mail an <strong>{old}</strong> und an <strong>{new}</strong> geschickt. Tippe in beiden auf den Knopf – danach gilt die neue Adresse.',
+    'emailChange.sentSpam': 'Keine Mail da? Schau auch im Spam-Ordner nach.',
+    'emailChange.landedFirst': 'Bestätigt. Tippe jetzt noch auf den Knopf in der Mail an deine andere Adresse.',
+    'emailChange.landedDone': 'Deine neue E-Mail-Adresse gilt jetzt.',
+    'emailChange.error.same': 'Das ist schon deine aktuelle Adresse.',
+    'emailChange.error.taken': 'Für diese Adresse gibt es schon ein Konto.',
+    'emailChange.error.invalid': 'Das sieht nicht nach einer gültigen E-Mail-Adresse aus.',
+    'emailChange.error.rateLimit': 'Gerade wurden zu viele Mails verschickt. Versuch es in ein paar Minuten noch einmal.',
+    'emailChange.error.failed': 'Mails nicht gesendet.',
     'menu.checkSpareKey': 'Ersatzschlüssel prüfen',
     'settings.checkSpareKeyNote': 'Prüft, ob dein aufgeschriebener oder gespeicherter Ersatzschlüssel noch passt. Dabei wird nichts verändert.',
     'spareKeyCheck.title': 'Ersatzschlüssel prüfen',
@@ -3050,6 +3076,25 @@ const STRINGS = {
     'passwordChange.error.wrongCurrent': 'The current password is incorrect.',
     'passwordChange.error.same': 'The new password is the same as the current one.',
     'passwordChange.error.failed': 'Password not changed.',
+    'menu.changeEmail': 'Change email address',
+    'settings.emailCurrent': 'Signed in as {email}',
+    'settings.emailPending': 'Switch to {email} is still waiting for your confirmation in both emails.',
+    'emailChange.title': 'Change email address',
+    'emailChange.current': 'Current: <strong>{email}</strong>',
+    'emailChange.new': 'New email address',
+    'emailChange.note': 'You’ll get one email at your current address and one at your new address. The new one only applies once you’ve confirmed in both. Until then, sign in with your current address.',
+    'emailChange.submit': 'Send emails',
+    'emailChange.sending': 'Sending …',
+    'emailChange.sentTitle': 'Check both inboxes',
+    'emailChange.sentBody': 'I sent one email to <strong>{old}</strong> and one to <strong>{new}</strong>. Tap the button in both – then the new address applies.',
+    'emailChange.sentSpam': 'No email? Check your spam folder too.',
+    'emailChange.landedFirst': 'Confirmed. Now tap the button in the email to your other address as well.',
+    'emailChange.landedDone': 'Your new email address now applies.',
+    'emailChange.error.same': 'That’s already your current address.',
+    'emailChange.error.taken': 'An account already exists for this address.',
+    'emailChange.error.invalid': 'That doesn’t look like a valid email address.',
+    'emailChange.error.rateLimit': 'Too many emails were sent just now. Please try again in a few minutes.',
+    'emailChange.error.failed': 'Emails not sent.',
     'menu.checkSpareKey': 'Check spare key',
     'settings.checkSpareKeyNote': 'Checks whether the spare key you wrote down or saved still works. Nothing is changed.',
     'spareKeyCheck.title': 'Check spare key',
@@ -4027,6 +4072,39 @@ async function changePassword(current, next) {
     if (error.code === 'current_password_invalid' || error.code === 'current_password_required') throw new Error(PASSWORD_CHANGE_WRONG_CURRENT);
     throw error;
   }
+}
+
+async function handleEmailChangeSubmit() {
+  const ec = state.emailChange;
+  if (!ec || ec.busy) return;
+  ec.value = document.getElementById('email-change-input').value.trim();
+  ec.error = null;
+  if (ec.value.toLowerCase() === (state.session?.user?.email ?? '').toLowerCase()) {
+    ec.error = t('emailChange.error.same');
+    render();
+    document.getElementById('email-change-input')?.select();
+    return;
+  }
+  ec.busy = true;
+  render();
+  // locale: die Bestätigungs-Mails sind zweisprachig über .Data.locale (wie bei der
+  // Registrierung) - ältere Konten haben es noch nicht.
+  const { error } = await supabase.auth.updateUser(
+    { email: ec.value, data: { locale: currentLocale } },
+    { emailRedirectTo: window.location.origin + window.location.pathname },
+  );
+  ec.busy = false;
+  if (error) {
+    ec.error = error.code === 'email_exists' ? t('emailChange.error.taken')
+      : error.code === 'email_address_invalid' || error.code === 'validation_failed' ? t('emailChange.error.invalid')
+      : error.code === 'over_email_send_rate_limit' ? t('emailChange.error.rateLimit')
+      : errorNotice('emailChange.error.failed', error.message).text;
+    render();
+    document.getElementById('email-change-input')?.focus();
+    return;
+  }
+  ec.sentTo = ec.value;
+  render();
 }
 
 async function handleSpareKeyCheckSubmit() {
@@ -8552,12 +8630,12 @@ const CHANGELOG = [
     de: [
       'Du kannst jetzt die Anzahl Stufen einer Skala ändern, auch wenn du schon Einträge hast: Bearbeite das Feld und tippe auf „Stufen ändern“. Dort legst du fest, was aus deinen bisherigen Einträgen wird, und kannst es danach auch wieder rückgängig machen.',
       'Genauso kannst du den Typ eines Felds mit Einträgen ändern – eine Skala zur Zahl, eine Zahl zur Skala oder beides zu Text: Bearbeite das Feld und tippe auf „Typ ändern“.',
-      'Du kannst dein Passwort jetzt ändern, während du angemeldet bist: in den Einstellungen unter „Konto“. Dort kannst du auch prüfen, ob dein aufgeschriebener Ersatzschlüssel noch passt.',
+      'Du kannst dein Passwort jetzt ändern, während du angemeldet bist: in den Einstellungen unter „Konto“. Dort kannst du auch deine E-Mail-Adresse ändern und prüfen, ob dein aufgeschriebener Ersatzschlüssel noch passt.',
     ],
     en: [
       'You can now change the number of steps of a scale, even if it already has entries: edit the field and tap “Change steps”. There you decide what happens to your previous entries, and you can undo it afterwards.',
       'In the same way you can change the type of a field with entries – a scale to a number, a number to a scale, or either to text: edit the field and tap “Change type”.',
-      'You can now change your password while signed in: in Settings under “Account”. There you can also check whether the spare key you wrote down still works.',
+      'You can now change your password while signed in: in Settings under “Account”. There you can also change your email address and check whether the spare key you wrote down still works.',
     ],
   },
   {
@@ -9914,6 +9992,12 @@ function renderSettings() {
       <div class="settings-row" data-menu-target="password">
         <button type="button" class="menu-item-btn" data-action="open-password-change">${t('menu.changePassword')}</button>
       </div>
+      <div class="settings-row" data-menu-target="email">
+        <button type="button" class="menu-item-btn" data-action="open-email-change">${t('menu.changeEmail')}</button>
+        <p class="settings-note">${state.session?.user?.new_email
+          ? t('settings.emailPending', { email: state.session.user.new_email })
+          : t('settings.emailCurrent', { email: state.session?.user?.email ?? '' })}</p>
+      </div>
       <div class="settings-row" data-menu-target="export">
         <button type="button" class="menu-item-btn" data-action="export-data">${t('menu.exportData')}</button>
         <p class="settings-note">${t('settings.exportNote')}</p>
@@ -10076,6 +10160,47 @@ function renderSpareKeyCheck() {
   `;
 }
 
+// Supabase ändert die Adresse erst, wenn in den Mails an die bisherige UND die neue Adresse
+// bestätigt wurde ("Secure email change") - bis dahin gilt die bisherige weiter.
+function renderEmailChange() {
+  const ec = state.emailChange;
+  const off = ec.busy ? 'disabled' : '';
+  if (ec.sentTo) {
+    return `
+      <div class="modal-overlay">
+        <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="email-change-title">
+          <h2 id="email-change-title">${t('emailChange.sentTitle')}</h2>
+          <p>${t('emailChange.sentBody', { old: state.session?.user?.email ?? '', new: ec.sentTo })}</p>
+          <p class="settings-note">${t('emailChange.sentSpam')}</p>
+          <div class="habit-form-actions">
+            <button type="button" class="auth-submit" data-action="email-change-close">${t('common.close')}</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="modal-overlay">
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="email-change-title">
+        <h2 id="email-change-title">${t('emailChange.title')}</h2>
+        <p>${t('emailChange.current', { email: state.session?.user?.email ?? '' })}</p>
+        ${ec.error ? `<div class="notice" role="alert">${esc(ec.error)}</div>` : ''}
+        <form id="email-change-form">
+          <div class="auth-field">
+            <label for="email-change-input">${t('emailChange.new')}</label>
+            <input type="email" id="email-change-input" value="${esc(ec.value)}" required autocomplete="email" data-autofocus ${off} />
+          </div>
+          <p class="settings-note">${t('emailChange.note')}</p>
+          <div class="habit-form-actions">
+            <button type="button" class="habit-form-cancel" data-action="email-change-close" ${off}>${t('common.cancel')}</button>
+            <button type="submit" class="auth-submit" ${off}>${ec.busy ? t('emailChange.sending') : t('emailChange.submit')}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
 function renderDeleteConfirm() {
   const busy = state.deleteConfirm.busy;
   return `
@@ -10192,12 +10317,13 @@ function renderApp() {
     ${state.deleteConfirm ? renderDeleteConfirm() : ''}
     ${state.passwordChange ? renderPasswordChange() : ''}
     ${state.spareKeyCheck ? renderSpareKeyCheck() : ''}
+    ${state.emailChange ? renderEmailChange() : ''}
     ${state.resetConfirm ? renderResetConfirm() : ''}
     ${state.regenKeyConfirm ? renderRegenKeyConfirm() : ''}
     ${state.logoutConfirm ? renderLogoutConfirm() : ''}
     ${state.leaveFormConfirm ? renderLeaveFormConfirm() : ''}
     ${state.view === 'manage' && stepDialogOpen() && !state.leaveFormConfirm ? renderStepDialog() : ''}
-    ${state.whatsNew && !state.deleteConfirm && !state.passwordChange && !state.spareKeyCheck && !state.resetConfirm && !state.regenKeyConfirm && !state.logoutConfirm && !state.leaveFormConfirm ? renderWhatsNew() : ''}
+    ${state.whatsNew && !state.deleteConfirm && !state.passwordChange && !state.spareKeyCheck && !state.emailChange && !state.resetConfirm && !state.regenKeyConfirm && !state.logoutConfirm && !state.leaveFormConfirm ? renderWhatsNew() : ''}
   `;
   // preventScroll: der Header ist ohnehin (sticky) sichtbar - der native
   // Scroll-in-View-Effekt beim Fokussieren kennt "position: sticky" nicht und hat
@@ -10603,6 +10729,15 @@ app.addEventListener('click', async (e) => {
     state.passwordChange.visible = !state.passwordChange.visible;
     render();
     document.querySelector('[data-action="password-change-visibility"]')?.focus();
+  } else if (action === 'open-email-change') {
+    modalTriggerSelector = '[data-action="open-email-change"]';
+    state.emailChange = { value: '', busy: false, error: null, sentTo: null };
+    state.menuOpen = false;
+    render();
+  } else if (action === 'email-change-close') {
+    state.emailChange = null;
+    render();
+    restoreModalFocus();
   } else if (action === 'open-spare-key-check') {
     modalTriggerSelector = '[data-action="open-spare-key-check"]';
     state.spareKeyCheck = { value: '', busy: false, result: null, errorText: '' };
@@ -11367,6 +11502,7 @@ function syncPasswordCount(id, len) {
 app.addEventListener('submit', (e) => {
   if (e.target.id === 'password-change-form') { e.preventDefault(); handlePasswordChangeSubmit(); }
   if (e.target.id === 'spare-key-check-form') { e.preventDefault(); handleSpareKeyCheckSubmit(); }
+  if (e.target.id === 'email-change-form') { e.preventDefault(); handleEmailChangeSubmit(); }
 });
 
 // Hält E-Mail/Passwort im Anmelde-Formular auch über einen Re-Render (z.B. nach
@@ -11378,6 +11514,7 @@ app.addEventListener('input', (e) => {
     syncPasswordCount('password-count', e.target.value.length);
     return;
   }
+  if (e.target.id === 'email-change-input' && state.emailChange) { state.emailChange.value = e.target.value; return; }
   if (e.target.id === 'spare-key-check-input' && state.spareKeyCheck) { state.spareKeyCheck.value = e.target.value; return; }
   if (e.target.id === 'password-change-current' && state.passwordChange) { state.passwordChange.current = e.target.value; return; }
   if (e.target.id === 'password-change-new' && state.passwordChange) {
@@ -11956,7 +12093,7 @@ if ('serviceWorker' in navigator) {
       state.habitForm = null;
       state.habitDeleteConfirm = null;
       state.sectionForm = null;
-      if (state.deleteConfirm || state.passwordChange || state.spareKeyCheck || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm) { closeModals(); modalTriggerSelector = null; }
+      if (state.deleteConfirm || state.passwordChange || state.spareKeyCheck || state.emailChange || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm) { closeModals(); modalTriggerSelector = null; }
     }
     window.scrollTo(0, 0); // vor render() - das scrollt ggf. danach zum Feld (consumePendingFieldFocus)
     render();
@@ -12066,6 +12203,7 @@ function clearLoadedAccountState() {
   state.deleteConfirm = null;
   state.passwordChange = null;
   state.spareKeyCheck = null;
+  state.emailChange = null;
   state.regenKeyConfirm = false;
   state.logoutConfirm = false;
   state.menuOpen = false;
@@ -12093,6 +12231,11 @@ resetIOSZoomOnStandaloneStart();
 state.confirmLanding = ARRIVED_VIA_SIGNUP_CONFIRM && isMobileDevice() && !isStandaloneDisplay() && !isInstallGateSkipped();
 applyLocale(detectInitialLocale());
 applyTheme(getThemeOverride());
+if (EMAIL_CHANGE_LANDING) {
+  state.notice = { type: 'ok', text: t(EMAIL_CHANGE_LANDING === 'done' ? 'emailChange.landedDone' : 'emailChange.landedFirst') };
+  // Die Meldung nach dem ersten Link bliebe sonst in der Adresse stehen (bei "done" räumt supabase-js auf).
+  if (EMAIL_CHANGE_LANDING === 'first') history.replaceState(history.state, '', location.pathname + location.search);
+}
 applyTextSize(getTextSize());
 try {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {

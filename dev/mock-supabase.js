@@ -83,6 +83,7 @@ function publicUser(u) {
   return {
     id: u.id, email: u.email, aud: 'authenticated', role: 'authenticated',
     email_confirmed_at: u.confirmedAt, created_at: u.createdAt, user_metadata: u.metadata || {},
+    ...(u.pendingEmail ? { new_email: u.pendingEmail } : {}),
   };
 }
 function makeSession(u) {
@@ -127,6 +128,7 @@ class MockAuth {
         const u = db.users.find((x) => x.id === userId);
         if (!u) return;
         if (type === 'signup' && !u.confirmedAt) u.confirmedAt = now();
+        if (type === 'email_change' && u.pendingEmail) { u.email = u.pendingEmail; delete u.pendingEmail; }
         db.session = makeSession(u);
         if (type === 'recovery') db.session.recovery = true; // wie Supabase: Reset ohne aktuelles Passwort
       });
@@ -208,7 +210,7 @@ class MockAuth {
     });
   }
 
-  async updateUser(attrs) {
+  async updateUser(attrs, options = {}) {
     await delay();
     const result = withDb((db) => {
       if (!db.session) return { data: { user: null }, error: authError('Auth session missing!', 401) };
@@ -223,8 +225,15 @@ class MockAuth {
         u.password = attrs.password;
       }
       if (attrs.email !== undefined && attrs.email !== u.email) {
+        if (db.users.some((x) => x !== u && x.email.toLowerCase() === attrs.email.toLowerCase())) {
+          return { data: { user: null }, error: authError('A user with this email address has already been registered', 422, 'email_exists') };
+        }
+        // Wie "Secure email change": Mail an beide Adressen. Vereinfacht: der Link an die
+        // bisherige liefert nur die Zwischenmeldung, der an die neue schließt ab.
         u.pendingEmail = attrs.email;
-        sendMail(db, attrs.email, 'email_change', linkFor(null, u.id, 'email_change'));
+        const base = options.emailRedirectTo || (location.origin + location.pathname);
+        sendMail(db, u.email, 'email_change', `${base}#message=Confirmation+link+accepted.+Please+proceed+to+confirm+link+sent+to+the+other+email&sb=`);
+        sendMail(db, attrs.email, 'email_change', linkFor(options.emailRedirectTo, u.id, 'email_change'));
       }
       if (attrs.data) u.metadata = { ...u.metadata, ...attrs.data };
       db.session = makeSession(u);

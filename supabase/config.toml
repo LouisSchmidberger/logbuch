@@ -255,6 +255,11 @@ sender_name = "Logbuch"
 subject = '{{ if and .Data.locale (eq .Data.locale "de") }}Bestätige deine Adresse für Logbuch{{ else }}Confirm your email for Logbuch{{ end }}'
 content_path = "./supabase/templates/confirmation.html"
 
+# E-Mail-Adresse ändern (live im Dashboard gepflegt, siehe Kopf der Vorlage).
+[auth.email.template.email_change]
+subject = '{{ if and .Data.locale (eq .Data.locale "de") }}Neue E-Mail-Adresse für Logbuch bestätigen{{ else }}Confirm your new email address for Logbuch{{ end }}'
+content_path = "./supabase/templates/email_change.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
