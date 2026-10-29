@@ -246,6 +246,7 @@ function habitFromParts(row, payload) {
     counterSince: payload.counterSince ?? null, // umgewandelter Zähler: 0 erst ab diesem Tag (siehe convertHabitToCounter)
     periodReminderDay: row.period_reminder_day ?? null, // Tag der Erinnerung im Zeitraum, null = Standard
     stepChange: payload.stepChange ?? null, // Stufen ändern: laufende bzw. letzte Umstellung (siehe runStepChange)
+    nightUntil: payload.nightUntil ?? 0,  // nur kind 'time': Uhrzeiten vor dieser Stunde zählen zum Vortag
   };
 }
 // Eigene Erinnerungszeiten einer Zeile: bis zu MAX_REMINDER_TIMES (reminder_minutes, nur
@@ -520,6 +521,9 @@ function inStats(h) { return !isPeriodField(h) && (h.archivedAt ? h.archivedInSt
 // Summe/Durchschnitt/Minimum/Maximum zusammen, ohne Bewertung - verhalten sich in der
 // Auswertung wie ein Zahlenwert-Feld). Unterschieden über aggregate: gesetzt = aus Zahlen.
 function isNumberComputed(h) { return h.kind === 'computed' && !!h.aggregate; }
+// Dauer zwischen zwei Uhrzeit-Feldern (aggregate 'duration', Mitglieder [von, bis]): verhält
+// sich wie ein berechnetes Zahlen-Feld in Stunden.
+function isDurationComputed(h) { return h.kind === 'computed' && h.aggregate === 'duration'; }
 // Felder mit Gut/Schlecht-Score (Farben, Heatmap, Prozent-Statistik).
 // Zahlen und Zähler mit Ziel ("mindestens/höchstens X", Nutzer-Entscheidung 2026-10-11) sind
 // ebenfalls bewertet - ohne Ziel bleiben sie ein neutraler Verlauf.
@@ -537,21 +541,22 @@ function numberGoalScore(h, v) {
   return Math.max(0, 1 - (v - h.target) / Math.max(h.target, 1));
 }
 // Felder mit Zahlen-Verlauf (Graph statt Farbe).
-function hasNumericSeries(h) { return isNumberKind(h) || isCounterKind(h) || isNumberComputed(h); }
+function hasNumericSeries(h) { return isNumberKind(h) || isCounterKind(h) || isNumberComputed(h) || isTimeKind(h); }
 // Nur Mitglieder vom passenden Typ: der Typ eines Mitglieds lässt sich ändern, solange es
 // noch keine Daten hat - ein Skala-Mittelwert über ein inzwischen zum Zahlenwert gewordenes
 // Feld ergäbe sonst NaN (und umgekehrt).
 function computedMemberHabits(h) {
-  const kind = h.aggregate ? 'number' : 'scale';
+  const kind = h.aggregate === 'duration' ? 'time' : h.aggregate ? 'number' : 'scale';
   return (h.members || []).map((key) => state.habits.find((x) => x.id === key)).filter((m) => m && m.kind === kind);
 }
 // Einheit eines berechneten Zahlen-Felds = die (gemeinsame, im Formular erzwungene) Einheit seiner Mitglieder.
-function computedUnit(h) { return computedMemberHabits(h)[0]?.unit || null; }
+function computedUnit(h) { return isDurationComputed(h) ? 'h' : computedMemberHabits(h)[0]?.unit || null; }
 // Tageswert eines berechneten Zahlen-Felds aus den an dem Tag eingetragenen Mitgliedern (bei der
 // Summe zählt ein nicht eingetragenes Mitglied also als 0). Ist gar keins eingetragen,
 // gibt es keinen Wert (null) statt 0 - sonst sähe ein vergessener Tag aus wie ein Tag
 // mit echtem Wert 0.
 function numberComputedDay(h, dateKey) {
+  if (isDurationComputed(h)) return durationComputedDay(h, dateKey);
   const members = computedMemberHabits(h);
   const day = state.entries[dateKey] || {};
   const values = members.map((m) => day[m.id]).filter((v) => typeof v === 'number');
@@ -565,6 +570,31 @@ function numberComputedDay(h, dateKey) {
     if (value !== null) value = Math.round(value * 100) / 100;
   }
   return { value, filled: values.length, total: members.length };
+}
+// Dauer an einem Tag = "bis" an diesem Tag minus das letzte "von" davor (bis zu
+// DURATION_LOOKBACK_DAYS zurück) - so geht es über Mitternacht und über mehr als 24 Stunden,
+// und ein "von" später am selben Tag (abends wieder ins Bett) zählt erst für den nächsten.
+const DURATION_LOOKBACK_DAYS = 7;
+function durationComputedDay(h, dateKey) {
+  const [fromKey, toKey] = h.members || [];
+  const from = state.habits.find((x) => x.id === fromKey && isTimeKind(x));
+  const to = state.habits.find((x) => x.id === toKey && isTimeKind(x));
+  const end = to ? state.entries[dateKey]?.[to.id] : undefined;
+  let start = null;
+  let endAt = null;
+  if (from && typeof end === 'number') {
+    endAt = dayIndex(dateKey) * MINUTES_PER_DAY + end;
+    const base = parseDateKey(dateKey);
+    for (let i = 0; i <= DURATION_LOOKBACK_DAYS; i++) {
+      const key = formatKey(addDays(base, -i));
+      const v = state.entries[key]?.[from.id];
+      if (typeof v !== 'number') continue;
+      const at = dayIndex(key) * MINUTES_PER_DAY + v;
+      if (at < endAt && (start === null || at > start)) start = at;
+    }
+  }
+  const value = start === null ? null : Math.round(((endAt - start) / 60) * 100) / 100;
+  return { value, filled: (typeof end === 'number' ? 1 : 0) + (start !== null ? 1 : 0), total: 2 };
 }
 // Zahlenwert eines Felds an einem Tag - Zahlenwert-Feld direkt, berechnetes Zahlen-Feld berechnet.
 function habitNumericValue(h, dateKey) {
@@ -584,6 +614,47 @@ function counterZeroApplies(h, dateKey) {
   return (!created || dateKey >= created) && dateKey < now;
 }
 function isTextKind(h) { return h.kind === 'text'; }
+
+// Uhrzeit-Felder (kind 'time', Nutzer-Entscheidung 2026-10-29): ein Zeitpunkt pro Tag, z.B.
+// "ins Bett" oder "aufgestanden". Wert = Minuten ab Mitternacht des Tages, unter dem er steht;
+// über 1440 heißt nach Mitternacht. nightUntil (volle Stunden, 0-8): Uhrzeiten davor gehören
+// noch zum Vortag - "ins Bett um 0:30" meint den Abend davor, sonst stünden an einem Tag zwei
+// Bettzeiten. Gerechnet wird mit Wanduhr-Zeit über Tagesnummern: eine Dauer über die Nacht der
+// Zeitumstellung liegt eine Stunde daneben (bewusst hingenommen).
+function isTimeKind(h) { return h.kind === 'time'; }
+const MINUTES_PER_DAY = 1440;
+const NIGHT_UNTIL_MAX = 8;
+function nightUntilMinutes(h) { return Number.isInteger(h.nightUntil) ? h.nightUntil * 60 : 0; }
+function dayIndex(dateKey) {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return Math.round(Date.UTC(y, m - 1, d) / 86400000);
+}
+// Uhrzeit (Minuten ab 0:00) aus der Eingabe -> Wert am Tag des Felds.
+function clockToTimeValue(h, clock) { return clock < nightUntilMinutes(h) ? clock + MINUTES_PER_DAY : clock; }
+// Zu welchem Tag ein Zeitpunkt gehört und mit welchem Wert ("Jetzt", "+20 min").
+function timeEntryFor(h, moment) {
+  const clock = moment.getHours() * 60 + moment.getMinutes();
+  const day = clock < nightUntilMinutes(h) ? addDays(startOfDay(moment), -1) : startOfDay(moment);
+  return { dateKey: formatKey(day), value: clockToTimeValue(h, clock) };
+}
+function formatClock(v) { return minutesToTimeStr(((Math.round(v) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY); }
+// Dauer in Stunden als "7:30" (Stunden:Minuten statt 7,5 - so liest man Schlaf).
+function formatDuration(hours) {
+  const total = Math.round(Math.abs(hours) * 60);
+  return `${hours < 0 ? '-' : ''}${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+// "+ 20 min": wie viel später, pro Feld auf dem Gerät gemerkt (zuletzt gewählte Spanne).
+const TIME_LATER_CHOICES = [5, 10, 15, 20, 30, 45, 60];
+const TIME_LATER_DEFAULT = 20;
+function timeLaterMinutes(h) {
+  try {
+    const v = Number(localStorage.getItem('timeLater:' + h.defId));
+    return TIME_LATER_CHOICES.includes(v) ? v : TIME_LATER_DEFAULT;
+  } catch { return TIME_LATER_DEFAULT; }
+}
+function setTimeLaterMinutes(h, minutes) {
+  try { localStorage.setItem('timeLater:' + h.defId, String(minutes)); } catch { /* dann eben der Standard */ }
+}
 
 // --- Feste Tage (habit_definitions.schedule) -------------------------------
 // null = täglich, {type:'weekly', days:[0..6]} (0 = Montag) oder "Alle N Tage"
@@ -715,6 +786,7 @@ function normalize(habit, value) {
 // jedem Aufruf live neu gerechnet wird — beabsichtigt, siehe CLAUDE.md.
 function habitScore(h, dateKey) {
   if (hasNumberGoal(h)) return numberGoalScore(h, habitNumericValue(h, dateKey));
+  if (isTimeKind(h)) return null; // eine Uhrzeit ist weder gut noch schlecht
   const day = state.entries[dateKey];
   if (!day) return null;
   if (isNumberComputed(h)) return null; // keine Bewertung, siehe isNumberComputed
@@ -876,10 +948,11 @@ function computeHabitStats(habits, dateKeys) {
 // Werte-Reihe + Kennzahlen eines Zahlenwert-Felds bzw. berechneten Zahlen-Felds über eine
 // Menge von Datums-Keys.
 function numberFieldStats(habit, dateKeys) {
-  const series = dateKeys
+  let series = dateKeys
     .map((k) => ({ key: k, value: habitNumericValue(habit, k) }))
     .filter((p) => p.value !== undefined && p.value !== null);
   if (!series.length) return null;
+  if (isTimeKind(habit)) series = unwrapClockSeries(series);
   const values = series.map((p) => p.value);
   return {
     series,
@@ -890,6 +963,25 @@ function numberFieldStats(habit, dateKeys) {
     sum: values.reduce((a, b) => a + b, 0),
     last: series[series.length - 1].value,
   };
+}
+
+// Uhrzeiten liegen auf einem Kreis: 23:30 und 0:30 sind eine Stunde auseinander, nicht 23.
+// Mittelpunkt = Kreis-Mittel, dann jeder Wert auf die Seite davon, auf der er näher liegt -
+// danach stimmen Durchschnitt, Minimum/Maximum und Verlauf (Anzeige über formatClock).
+function unwrapClockSeries(series) {
+  const angle = (v) => ((v % MINUTES_PER_DAY) / MINUTES_PER_DAY) * 2 * Math.PI;
+  const sin = series.reduce((a, p) => a + Math.sin(angle(p.value)), 0);
+  const cos = series.reduce((a, p) => a + Math.cos(angle(p.value)), 0);
+  const center = ((Math.atan2(sin, cos) / (2 * Math.PI)) * MINUTES_PER_DAY + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  const half = MINUTES_PER_DAY / 2;
+  return series.map((p) => ({ ...p, value: center + ((((p.value - center) % MINUTES_PER_DAY) + MINUTES_PER_DAY + half) % MINUTES_PER_DAY) - half }));
+}
+// Ein Wert eines Felds mit Verlauf, wie er angezeigt wird: Uhrzeit, Dauer oder Zahl + Einheit.
+function formatSeriesValue(h, v) {
+  if (isTimeKind(h)) return formatClock(v);
+  if (isDurationComputed(h)) return `${formatDuration(v)} h`;
+  const unit = isNumberComputed(h) ? computedUnit(h) : h.unit;
+  return formatNumber(v) + (unit ? ` ${unit}` : '');
 }
 
 // --- App-State ---------------------------------------------------------
@@ -1473,19 +1565,34 @@ const STRINGS = {
     'common.noData': 'keine Daten',
     'computedInfo.avgOf': 'Ø aus {names} ({filled}/{total} heute erfasst)',
     'computedInfo.aggOf': '{agg} aus {names} ({filled}/{total} heute erfasst)',
+    'computedInfo.durationOf': 'Dauer von „{from}“ bis „{to}“',
     'aggregate.sum': 'Summe',
     'aggregate.avg': 'Durchschnitt',
     'aggregate.min': 'Minimum',
     'aggregate.max': 'Maximum',
     'manage.computedAggregate': '{agg} aus: {names}',
+    'manage.computedDuration': 'Dauer von {from} bis {to}',
     'habitForm.computedType': 'Art der Mitglieder',
     'habitForm.computedType.scale': 'Skalen',
     'habitForm.computedType.number': 'Zahlenwerte',
+    'habitForm.computedType.duration': 'Dauer',
+    'habitForm.durationChoose': 'Bitte wählen',
+    'habitForm.durationFrom': 'Von (z. B. ins Bett)',
+    'habitForm.durationTo': 'Bis (z. B. aufgestanden)',
+    'habitForm.durationNote': 'Die Dauer steht an dem Tag mit der Bis-Uhrzeit und reicht zurück bis zur letzten Von-Uhrzeit davor – auch über Mitternacht.',
+    'habitForm.noDurationCandidates': 'Dafür braucht es zwei Uhrzeit-Felder, z. B. „ins Bett“ und „aufgestanden“.',
     'habitForm.aggregate': 'Pro Tag berechnen als',
     'habitForm.computedUnitNote': 'Zusammenrechnen lassen sich nur Felder mit derselben Einheit – sonst käme eine falsche Zahl heraus (z. B. km + m).',
     'habitForm.noNumberComputedCandidates': 'Noch keine Zahlenwert-Felder vorhanden, die sich zusammenrechnen lassen.',
     'habitForm.error.computedUnitMismatch': 'Die ausgewählten Felder haben unterschiedliche Einheiten.',
+    'habitForm.error.durationMembers': 'Bitte zwei verschiedene Uhrzeit-Felder für „Von“ und „Bis“ wählen.',
     'numberBox.last': 'zuletzt: {value} ({date})',
+    'timeBox.now': 'Jetzt',
+    'timeBox.laterGroup': 'Etwas später eintragen',
+    'timeBox.laterAria': 'In {n} Minuten eintragen',
+    'timeBox.laterChoose': 'Wie viel später',
+    'timeBox.laterOption': '{n} min',
+    'timeBox.savedOtherDay': '{time} für den {date} eingetragen.',
     'today.jumpToday': 'Zu heute springen',
     'today.pickDate': 'Datum wählen',
     'today.noFields': 'Noch keine Felder angelegt.',
@@ -1709,6 +1816,7 @@ const STRINGS = {
     'habitForm.kindNumber': 'Zahl',
     'habitForm.kindText': 'Text',
     'habitForm.kindCounter': 'Zähler',
+    'habitForm.kindTime': 'Uhrzeit',
     'habitForm.entryMode': 'Wie trägst du ein?',
     'habitForm.entryMode.type': 'Eintippen',
     'habitForm.entryMode.count': 'Hochzählen (+)',
@@ -1757,6 +1865,7 @@ const STRINGS = {
     'habitForm.kindScaleNote': 'Wie sehr – z. B. Stimmung 1–5',
     'habitForm.kindNumberNote': 'Messwert oder Anzahl – z. B. Gewicht, Gläser',
     'habitForm.kindTextNote': 'Ein paar Worte – z. B. Wofür bin ich heute dankbar?',
+    'habitForm.kindTimeNote': 'Ein Zeitpunkt – z. B. ins Bett, aufgestanden',
     'habitForm.kindComputedNote': 'Durchschnitt oder Summe anderer Felder – z. B. Wohlbefinden aus Stimmung und Energie',
     'habitForm.summary': 'Für Woche, Monat und Jahr zusammenrechnen als',
     'habitForm.summary.avg': 'Durchschnitt',
@@ -1766,6 +1875,7 @@ const STRINGS = {
     'habitForm.entryPreviewNote': 'So sieht es in „Heute“ aus.',
     'habitForm.entryPreviewAria.number': 'Vorschau: ein Eingabefeld, in das du die Zahl tippst',
     'habitForm.entryPreviewAria.counter': 'Vorschau: die Zahl mit den Knöpfen „−“ und „+“',
+    'habitForm.entryPreviewAria.time': 'Vorschau: Uhrzeit-Eingabe mit den Knöpfen „Jetzt“ und „+“',
     'today.unplanned': 'Heute nicht geplant ({count})',
     'today.nothingPlanned': 'Für heute ist kein Feld geplant.',
     'day.today': 'Heute',
@@ -1788,6 +1898,11 @@ const STRINGS = {
     'todayIntro.menu': '⋮ <strong>Mehr:</strong> Über die drei Punkte vor einem Feld schreibst du eine Notiz dazu oder bearbeitest es. Unter <strong>☰ Menü</strong> oben rechts findest du deine Felder, die Einstellungen und Erklärungen zu allem.',
     'todayIntro.done': 'Verstanden',
     'habitForm.textNote': 'Für Fragen wie „Wofür bin ich heute dankbar?“: in „Heute“ steht dafür ein Textfeld, das automatisch speichert. Fließt nicht in die Auswertung ein, erscheint dort aber als Liste zum Nachlesen.',
+    'habitForm.timeNote': 'In „Heute“ wählst du die Uhrzeit aus – oder tippst auf „Jetzt“ bzw. auf „+“ für etwas später, z. B. wenn du das Handy schon weglegst. Zwei Uhrzeiten ergeben mit einem berechneten Feld „Dauer“ z. B. deine Schlafdauer.',
+    'habitForm.nightUntil': 'Nachts noch zum Vortag bis',
+    'habitForm.nightUntilExplain': 'Für Dinge wie „ins Bett“: Gehst du um 0:30 schlafen, gehört das zum Abend davor. Uhrzeiten vor der gewählten Zeit zählen dann zum Vortag – auch wenn du sie erst nach Mitternacht einträgst.',
+    'habitForm.nightUntil.none': 'Nein, der Tag endet um Mitternacht',
+    'habitForm.nightUntil.hour': '{time} Uhr',
     'textReview.countOne': '1 Eintrag',
     'textReview.countMany': '{count} Einträge',
     'common.saving': 'Wird gespeichert …',
@@ -1837,7 +1952,7 @@ const STRINGS = {
     'habitForm.more': 'Mehr Einstellungen',
     'habitForm.moreSub': 'Tage, Erinnerungszeit, Auswertung – kannst du auch später ändern',
     'habitForm.moreSubPeriod': 'Ziel, Erinnerung und mehr – kannst du auch später ändern',
-    'habitForm.computedExplain': 'Ein berechnetes Feld fasst mehrere Felder zu einem live berechneten Wert zusammen – Skalen als Durchschnitt, Zahlenwerte z. B. als Summe. Selbst ausfüllen kann man es nicht.',
+    'habitForm.computedExplain': 'Ein berechnetes Feld fasst mehrere Felder zu einem live berechneten Wert zusammen – Skalen als Durchschnitt, Zahlenwerte z. B. als Summe, zwei Uhrzeiten als Dauer dazwischen. Selbst ausfüllen kann man es nicht.',
     'common.finish': 'Fertig',
     'common.close': 'Schließen',
     'menu.defaultReminderTime': 'Standard-Erinnerungszeit',
@@ -2410,19 +2525,34 @@ const STRINGS = {
     'common.noData': 'no data',
     'computedInfo.avgOf': 'avg. of {names} ({filled}/{total} entered today)',
     'computedInfo.aggOf': '{agg} of {names} ({filled}/{total} entered today)',
+    'computedInfo.durationOf': 'Duration from “{from}” to “{to}”',
     'aggregate.sum': 'Sum',
     'aggregate.avg': 'Average',
     'aggregate.min': 'Minimum',
     'aggregate.max': 'Maximum',
     'manage.computedAggregate': '{agg} of: {names}',
+    'manage.computedDuration': 'Duration from {from} to {to}',
     'habitForm.computedType': 'Member type',
     'habitForm.computedType.scale': 'Scales',
     'habitForm.computedType.number': 'Number values',
+    'habitForm.computedType.duration': 'Duration',
+    'habitForm.durationChoose': 'Please choose',
+    'habitForm.durationFrom': 'From (e.g. went to bed)',
+    'habitForm.durationTo': 'To (e.g. got up)',
+    'habitForm.durationNote': 'The duration appears on the day of the “to” time and reaches back to the last “from” time before it – across midnight, too.',
+    'habitForm.noDurationCandidates': 'This needs two time fields, e.g. “went to bed” and “got up”.',
     'habitForm.aggregate': 'Per day, calculate as',
     'habitForm.computedUnitNote': 'Only fields with the same unit can be combined – otherwise the result would be wrong (e.g. km + m).',
     'habitForm.noNumberComputedCandidates': 'No number fields available yet that can be combined.',
     'habitForm.error.computedUnitMismatch': 'The selected fields have different units.',
+    'habitForm.error.durationMembers': 'Please choose two different time fields for “From” and “To”.',
     'numberBox.last': 'last: {value} ({date})',
+    'timeBox.now': 'Now',
+    'timeBox.laterGroup': 'Enter a bit later',
+    'timeBox.laterAria': 'Enter in {n} minutes',
+    'timeBox.laterChoose': 'How much later',
+    'timeBox.laterOption': '{n} min',
+    'timeBox.savedOtherDay': '{time} entered for {date}.',
     'today.jumpToday': 'Jump to today',
     'today.pickDate': 'Choose date',
     'today.noFields': 'No fields created yet.',
@@ -2646,6 +2776,7 @@ const STRINGS = {
     'habitForm.kindNumber': 'Number',
     'habitForm.kindText': 'Text',
     'habitForm.kindCounter': 'Counter',
+    'habitForm.kindTime': 'Time',
     'habitForm.entryMode': 'How do you enter it?',
     'habitForm.entryMode.type': 'Type it in',
     'habitForm.entryMode.count': 'Count up (+)',
@@ -2694,6 +2825,7 @@ const STRINGS = {
     'habitForm.kindScaleNote': 'How much – e.g. mood 1–5',
     'habitForm.kindNumberNote': 'Measurement or amount – e.g. weight, glasses',
     'habitForm.kindTextNote': 'A few words – e.g. What am I grateful for today?',
+    'habitForm.kindTimeNote': 'A point in time – e.g. went to bed, got up',
     'habitForm.kindComputedNote': 'Average or total of other fields – e.g. wellbeing from mood and energy',
     'habitForm.summary': 'For week, month and year, add up as',
     'habitForm.summary.avg': 'Average',
@@ -2703,6 +2835,7 @@ const STRINGS = {
     'habitForm.entryPreviewNote': 'This is how it looks in “Today”.',
     'habitForm.entryPreviewAria.number': 'Preview: a box where you type the number',
     'habitForm.entryPreviewAria.counter': 'Preview: the number with “−” and “+” buttons',
+    'habitForm.entryPreviewAria.time': 'Preview: time entry with “Now” and “+” buttons',
     'today.unplanned': 'Not planned today ({count})',
     'today.nothingPlanned': 'No fields are planned for today.',
     'day.today': 'Today',
@@ -2725,6 +2858,11 @@ const STRINGS = {
     'todayIntro.menu': '⋮ <strong>More:</strong> the three dots in front of a field let you add a note or edit it. Under <strong>☰ Menu</strong> at the top right you find your fields, the settings and explanations for everything.',
     'todayIntro.done': 'Got it',
     'habitForm.textNote': 'For questions like “What am I grateful for today?”: “Today” shows a text box for it that saves automatically. Not part of the statistics, but shown there as a list to read back.',
+    'habitForm.timeNote': 'In “Today” you pick the time – or tap “Now”, or “+” for a bit later, e.g. when you’re putting your phone away already. Two times plus a calculated “Duration” field give you e.g. how long you slept.',
+    'habitForm.nightUntil': 'Still counts as the previous day until',
+    'habitForm.nightUntilExplain': 'For things like “went to bed”: if you go to sleep at 0:30, that belongs to the evening before. Times before the chosen hour then count for the previous day – even if you only enter them after midnight.',
+    'habitForm.nightUntil.none': 'No, the day ends at midnight',
+    'habitForm.nightUntil.hour': '{time}',
     'textReview.countOne': '1 entry',
     'textReview.countMany': '{count} entries',
     'common.saving': 'Saving…',
@@ -2774,7 +2912,7 @@ const STRINGS = {
     'habitForm.more': 'More settings',
     'habitForm.moreSub': 'Days, reminder time, statistics – you can also change these later',
     'habitForm.moreSubPeriod': 'Goal, reminder and more – you can change these later',
-    'habitForm.computedExplain': 'A calculated field combines multiple fields into one live-calculated value – scales as an average, number fields e.g. as a sum. You cannot fill it in yourself.',
+    'habitForm.computedExplain': 'A calculated field combines multiple fields into one live-calculated value – scales as an average, number fields e.g. as a sum, two times as the duration between them. You cannot fill it in yourself.',
     'common.finish': 'Done',
     'common.close': 'Close',
     'menu.defaultReminderTime': 'Default reminder time',
@@ -3713,8 +3851,8 @@ async function repadOldEntries() {
   }
 }
 
-const SUPPORTED_KINDS = ['scale', 'number', 'counter', 'computed', 'text'];
-const SUPPORTED_AGGREGATES = [null, 'sum', 'avg', 'min', 'max'];
+const SUPPORTED_KINDS = ['scale', 'number', 'counter', 'computed', 'text', 'time'];
+const SUPPORTED_AGGREGATES = [null, 'sum', 'avg', 'min', 'max', 'duration'];
 function isSupportedHabit(h) {
   return SUPPORTED_KINDS.includes(h.kind) && (h.kind !== 'computed' || SUPPORTED_AGGREGATES.includes(h.aggregate));
 }
@@ -4600,6 +4738,8 @@ function defaultHabitForm() {
     step: 1, // nur Zähler
     numberGoalDir: null, numberGoalValue: '', // Zahl/Zähler: Ziel 'high' = mindestens, 'low' = höchstens
     summary: 'avg', // Zahlen: in Woche/Monat/Jahr als Durchschnitt oder Summe
+    nightUntil: 0, // nur Uhrzeit: bis zu welcher Stunde nachts noch der Vortag gilt
+    durationFrom: null, durationTo: null, // nur berechnet "Dauer": Schlüssel der beiden Uhrzeit-Felder
   };
 }
 
@@ -4630,7 +4770,7 @@ function formToSchedule(fs) {
 }
 // Zahlen-Felder (auch berechnete aus Zahlen): in Woche/Monat/Jahr als Durchschnitt oder Summe.
 function habitFormSummable(f) {
-  return f.kind === 'number' || f.kind === 'counter' || (f.kind === 'computed' && f.computedType === 'number');
+  return f.kind === 'number' || f.kind === 'counter' || (f.kind === 'computed' && f.computedType !== 'scale');
 }
 
 function habitToForm(h) {
@@ -4654,8 +4794,11 @@ function habitToForm(h) {
     displayStyle,
     sliderShowValue: h.sliderShowValue ?? true,
     members: h.kind === 'computed' ? [...(h.members || [])] : [],
-    computedType: h.aggregate ? 'number' : 'scale',
-    aggregate: h.aggregate || 'sum',
+    computedType: h.aggregate === 'duration' ? 'duration' : h.aggregate ? 'number' : 'scale',
+    aggregate: h.aggregate && h.aggregate !== 'duration' ? h.aggregate : 'sum',
+    durationFrom: h.aggregate === 'duration' ? h.members?.[0] ?? null : null,
+    durationTo: h.aggregate === 'duration' ? h.members?.[1] ?? null : null,
+    nightUntil: h.nightUntil ?? 0,
     showInStats: !h.hideInStats,
     sectionId: h.sectionId,
     goal: h.goalThreshold ?? 1,
@@ -4724,9 +4867,16 @@ function syncHabitFormFromDom() {
       });
     }
     readGoalFromDom(f);
+  } else if (f.kind === 'time') {
+    const nightEl = document.getElementById('habit-form-night-until');
+    if (nightEl) f.nightUntil = Number(nightEl.value);
   } else if (f.kind === 'computed') {
     const aggregateEl = document.getElementById('habit-form-computed-aggregate');
     if (aggregateEl) f.aggregate = aggregateEl.value;
+    const fromEl = document.getElementById('habit-form-duration-from');
+    if (fromEl) f.durationFrom = fromEl.value || null;
+    const toEl = document.getElementById('habit-form-duration-to');
+    if (toEl) f.durationTo = toEl.value || null;
     document.querySelectorAll('[data-member-key]').forEach((el) => {
       const slug = el.dataset.memberKey;
       if (el.checked) { if (!f.members.includes(slug)) f.members.push(slug); }
@@ -4824,13 +4974,22 @@ async function handleHabitSaveInner() {
   // Ziel-Quote ergibt bei "Keine Wertung" keinen Sinn (kein Gut/Schlecht zum Stauchen)
   // - das Formularfeld ist dann versteckt (siehe scaleBody), aber f.goal könnte noch einen
   // alten Wert von vor dem Umschalten auf "Keine Wertung" tragen.
-  const goalThreshold = ((f.kind === 'scale' && f.good) || (f.kind === 'computed' && f.computedType !== 'number')) && Number.isFinite(f.goal) && f.goal > 0 && f.goal < 1
+  const goalThreshold = ((f.kind === 'scale' && f.good) || (f.kind === 'computed' && f.computedType === 'scale')) && Number.isFinite(f.goal) && f.goal > 0 && f.goal < 1
     ? f.goal
     : null;
 
   let fields; // { kind, min, max, labels, good, unit, display_style, slider_show_value, group_members, goal_threshold }
   if (f.kind === 'text') {
     fields = { kind: 'text', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
+  } else if (f.kind === 'time') {
+    fields = { kind: 'time', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
+  } else if (f.kind === 'computed' && f.computedType === 'duration') {
+    const isTimeField = (key) => state.habits.some((h) => h.id === key && isTimeKind(h));
+    if (!isTimeField(f.durationFrom) || !isTimeField(f.durationTo) || f.durationFrom === f.durationTo) {
+      state.notice = { type: 'error', text: t('habitForm.error.durationMembers') };
+      return;
+    }
+    fields = { kind: 'computed', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: [f.durationFrom, f.durationTo], goal_threshold: null, aggregate: 'duration' };
   } else if (f.kind === 'number' || f.kind === 'counter') {
     const unit = (document.getElementById('habit-form-unit')?.value || '').trim();
     if (f.kind === 'counter') {
@@ -4926,7 +5085,8 @@ async function handleHabitSaveInner() {
   // habit_definitions_period_combination_check). Der Erinnerungstag als null, wenn er dem
   // Standard entspricht (Sonntag / letzter Tag / 31.12.) - eine Darstellung für "Standard".
   readPeriodReminderFromDom(f);
-  const period = f.kind === 'computed' ? 'day' : f.period;
+  // Uhrzeiten nur als Tagesfeld - "ins Bett" einmal pro Woche ergibt keinen Sinn.
+  const period = f.kind === 'computed' || f.kind === 'time' ? 'day' : f.period;
   const periodReminderDay = period === 'day' || f.periodReminderDay === null || f.periodReminderDay === PERIOD_REMINDER_DEFAULT[period]
     ? null : f.periodReminderDay;
   if (f.kind === 'computed' || period !== 'day') {
@@ -4965,6 +5125,7 @@ async function handleHabitSaveInner() {
     counterSince: f.kind === 'counter' && f.defId ? state.habits.find((h) => h.defId === f.defId)?.counterSince ?? undefined : undefined,
     reminderBelow,
     stepChange: f.kind === 'scale' && f.defId ? state.habits.find((h) => h.defId === f.defId)?.stepChange ?? undefined : undefined,
+    nightUntil: f.kind === 'time' && f.nightUntil ? f.nightUntil : undefined,
   };
   const sectionId = period === 'day' && state.sections.some((sec) => sec.id === f.sectionId) ? f.sectionId : null;
   const row = {
@@ -5476,7 +5637,7 @@ function typeChangeBlocker(h) {
   return state.habits.find((x) => x.kind === 'computed' && (x.members || []).includes(h.id)) ?? null;
 }
 function kindLabel(kind) {
-  return tPlain({ scale: 'habitForm.kindScale', number: 'habitForm.kindNumber', text: 'habitForm.kindText', counter: 'habitForm.kindCounter' }[kind] ?? 'habitForm.kindText');
+  return tPlain({ scale: 'habitForm.kindScale', number: 'habitForm.kindNumber', text: 'habitForm.kindText', counter: 'habitForm.kindCounter', time: 'habitForm.kindTime' }[kind] ?? 'habitForm.kindText');
 }
 function usedValueRange(h) {
   const used = usedStepValues(h);
@@ -6647,6 +6808,7 @@ async function handleExportData() {
           good: p.good, display_style: p.displayStyle, slider_show_value: p.sliderShowValue,
           group_members: p.groupMembers, goal_threshold: p.goalThreshold, aggregate: p.aggregate ?? null,
           hide_in_stats: !!p.hideInStats, archived_in_stats: !!p.archivedInStats,
+          ...(row.kind === 'time' ? { night_until: p.nightUntil ?? 0 } : {}),
         };
       } catch {
         return { ...rest, decrypt_error: true };
@@ -7845,6 +8007,14 @@ function setPreviewValue(value, focusSelector) {
 // neutral (keine Bewertung).
 function renderComputedInfo(habit, dateKey) {
   const members = computedMemberHabits(habit);
+  if (isDurationComputed(habit)) {
+    const { value } = numberComputedDay(habit, dateKey);
+    const [from, to] = (habit.members || []).map((key) => state.habits.find((x) => x.id === key));
+    return `
+      <div class="computed-readout computed-readout--number">${value !== null ? esc(formatSeriesValue(habit, value)) : '–'}</div>
+      <span class="manage-meta">${t('computedInfo.durationOf', { from: from?.name || '–', to: to?.name || '–' })}</span>
+    `;
+  }
   if (isNumberComputed(habit)) {
     const { value, filled, total } = numberComputedDay(habit, dateKey);
     const unit = computedUnit(habit);
@@ -8062,7 +8232,7 @@ function focusTodayField(habitId, { editInput = false } = {}) {
   const row = trigger?.closest('.habit-row, .number-box');
   if (!row) return;
   row.scrollIntoView({ block: 'center' });
-  const input = editInput && row.querySelector(`#number-input-${habitId}, #text-input-${habitId}`);
+  const input = editInput && row.querySelector(`#number-input-${habitId}, #text-input-${habitId}, #time-input-${habitId}`);
   (input || trigger).focus({ preventScroll: true });
   row.classList.add('field-highlight');
   row.addEventListener('animationend', () => row.classList.remove('field-highlight'), { once: true });
@@ -8084,6 +8254,41 @@ function renderNumberBox(h, dateKey, dayEntry, marker = '') {
     <div class="number-box">
       ${renderRowHead(h, nameWithUnit + marker, lastNote ? `<span class="number-last">${lastNote}</span>` : '')}
       <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-action="number-input" data-habit="${h.id}" value="${esc(currentValue)}" aria-label="${nameWithUnit}"${currentValue === '' ? '' : goalValueStyle(h, currentValue)} />${hasNumberGoal(h) ? goalSuffixHtml(h) : ''}
+      ${renderNote(dateKey, h.id, noteLabel(h))}
+      ${renderRowMenuPanel(h)}
+    </div>
+  `;
+}
+
+// Uhrzeit (Nutzer-Entscheidung 2026-10-29): freie Eingabe über die Uhrzeit-Auswahl des Geräts,
+// dazu "Jetzt" und "+ 20 min" (für "Handy weglegen, gleich ins Bett"; die Spanne ist wählbar und
+// wird pro Feld gemerkt). Die beiden Knöpfe nur an dem Tag, zu dem "jetzt" gehört (bzw. heute):
+// an einem alten Tag ergäbe "jetzt" keinen Sinn. Gehört der Zeitpunkt zu einem anderen Tag als
+// dem angezeigten (nach Mitternacht, siehe nightUntilMinutes), landet er dort - mit Meldung.
+// Bewusst natives <input type="time"> (anders als bei den Erinnerungszeiten): hier zählt jede
+// Minute, und das Gerät bringt seine gewohnte Uhrzeit-Auswahl mit.
+function renderTimeBox(h, dateKey, dayEntry, marker = '') {
+  const value = dayEntry[h.id];
+  const has = typeof value === 'number';
+  const now = new Date();
+  const quick = dateKey === formatKey(now) || dateKey === timeEntryFor(h, now).dateKey;
+  const later = timeLaterMinutes(h);
+  return `
+    <div class="number-box habit-row--time">
+      ${renderRowHead(h, esc(h.name) + marker)}
+      <div class="time-controls">
+        <input type="time" id="time-input-${h.id}" class="number-input time-field-input" data-action="time-input" data-habit="${h.id}" value="${has ? formatClock(value) : ''}" aria-label="${esc(h.name)}" />
+        ${has ? `<button type="button" class="slider-clear" data-action="clear-value" data-habit="${h.id}" aria-label="${esc(t('ariaLabel.deleteEntry'))}">×</button>` : ''}
+        ${quick ? `
+          <button type="button" class="manage-btn" data-action="time-now" data-habit="${h.id}" data-offset="0">${t('timeBox.now')}</button>
+          <span class="time-later" role="group" aria-label="${esc(t('timeBox.laterGroup'))}">
+            <button type="button" class="manage-btn" data-action="time-now" data-habit="${h.id}" data-offset="${later}" aria-label="${esc(tPlain('timeBox.laterAria', { n: later }))}">+</button>
+            <select class="time-later-select" data-action="time-later" data-habit="${h.id}" aria-label="${esc(t('timeBox.laterChoose'))}">
+              ${TIME_LATER_CHOICES.map((n) => `<option value="${n}" ${n === later ? 'selected' : ''}>${tPlain('timeBox.laterOption', { n })}</option>`).join('')}
+            </select>
+          </span>
+        ` : ''}
+      </div>
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
     </div>
@@ -8119,6 +8324,7 @@ function renderTodayHabitRow(h, dateKey, dayEntry, { trackOpen = false } = {}) {
   if (isCounterKind(h)) return renderCounterBox(h, dateKey, dayEntry);
   if (isNumberKind(h)) return renderNumberBox(h, dateKey, dayEntry, marker);
   if (isTextKind(h)) return renderTextBox(h, dayEntry, marker);
+  if (isTimeKind(h)) return renderTimeBox(h, dateKey, dayEntry, marker);
   if (h.kind === 'computed') return `
     <div class="habit-row habit-row--computed">
       ${renderRowHead(h, esc(h.name))}
@@ -9020,14 +9226,14 @@ function counterDayKeys(dateKeys) {
 function renderNumberChart(habit, dateKeys, interactive) {
   if (isCounterKind(habit) && !isPeriodField(habit)) dateKeys = counterDayKeys(dateKeys);
   const stats = numberFieldStats(habit, dateKeys);
-  const unit = isNumberComputed(habit) ? computedUnit(habit) : habit.unit;
-  const unitSuffix = unit ? ` ${unit}` : '';
+  // Uhrzeiten und Dauern auf die Minute statt auf eine Nachkommastelle (7,53 h -> 7:32, nicht 7:30).
+  const fmt = (v, rounded) => formatSeriesValue(habit, rounded && !isTimeKind(habit) && !isDurationComputed(habit) ? round1(v) : v);
   const head = `
     <div class="number-chart-head">
       <span class="habit-name">${statsFieldName(habit, 'chart')}</span>
       ${stats ? `<span class="number-chart-meta">${habit.summary === 'sum'
-        ? t('numberChart.metaSum', { sum: formatNumber(round1(stats.sum)) + unitSuffix, avg: formatNumber(round1(stats.avg)) + unitSuffix, per: t('numberChart.per.' + (habit.period || 'day')), count: stats.count })
-        : t('numberChart.meta', { last: formatNumber(stats.last) + unitSuffix, avg: formatNumber(round1(stats.avg)) + unitSuffix, count: stats.count })}${hasNumberGoal(habit) ? ` · ${esc(numberGoalText(habit))}` : ''}</span>` : ''}
+        ? t('numberChart.metaSum', { sum: fmt(stats.sum, true), avg: fmt(stats.avg, true), per: t('numberChart.per.' + (habit.period || 'day')), count: stats.count })
+        : t('numberChart.meta', { last: fmt(stats.last), avg: fmt(stats.avg, true), count: stats.count })}${hasNumberGoal(habit) ? ` · ${esc(numberGoalText(habit))}` : ''}</span>` : ''}
     </div>
   `;
   if (!stats || stats.series.length < 2) {
@@ -9080,10 +9286,10 @@ function renderNumberChart(habit, dateKeys, interactive) {
   const summary = t('numberChart.summary', {
     name: habit.name,
     count: stats.count,
-    last: formatNumber(stats.last) + unitSuffix,
-    avg: formatNumber(round1(stats.avg)) + unitSuffix,
-    min: formatNumber(stats.min) + unitSuffix,
-    max: formatNumber(stats.max) + unitSuffix,
+    last: fmt(stats.last),
+    avg: fmt(stats.avg, true),
+    min: fmt(stats.min),
+    max: fmt(stats.max),
     trend: t(`numberChart.trend.${trend}`),
   });
   return `
@@ -9292,15 +9498,35 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const chosenUnit = isNumberComputedForm
     ? (() => { const first = memberCandidates.find((h) => f.members.includes(h.id)); return first ? (first.unit || '').trim() : null; })()
     : null;
+  // Dauer: genau zwei Uhrzeit-Felder, "von" und "bis" (Reihenfolge zählt, deshalb zwei
+  // Auswahllisten statt Häkchen). Archivierte nur, wenn schon gewählt.
+  const isDurationForm = f.computedType === 'duration';
+  const timeCandidates = state.habits.filter((h) => isTimeKind(h)
+    && (!h.archivedAt || h.id === f.durationFrom || h.id === f.durationTo));
+  const durationSelect = (id, labelKey, selected) => `
+    <div class="auth-field">
+      <label for="${id}">${t(labelKey)}</label>
+      <select id="${id}">
+        <option value="">${t('habitForm.durationChoose')}</option>
+        ${timeCandidates.map((h) => `<option value="${esc(h.id)}" ${h.id === selected ? 'selected' : ''}>${esc(h.name)}${h.archivedAt ? ` (${t('common.archived')})` : ''}</option>`).join('')}
+      </select>
+    </div>
+  `;
+  const durationBody = timeCandidates.length >= 2 ? `
+    ${durationSelect('habit-form-duration-from', 'habitForm.durationFrom', f.durationFrom)}
+    ${durationSelect('habit-form-duration-to', 'habitForm.durationTo', f.durationTo)}
+    <p class="habit-form-lock-note">${t('habitForm.durationNote')}</p>
+  ` : `<p class="habit-form-lock-note">${t('habitForm.noDurationCandidates')}</p>`;
+  const computedTypes = [['scale', 'habitForm.computedType.scale'], ['number', 'habitForm.computedType.number'], ['duration', 'habitForm.computedType.duration']];
   const computedBody = `
     <p class="habit-form-lock-note">${t('habitForm.computedExplain')}</p>
     <div class="auth-field">
       <label id="habit-form-computed-type-label">${t('habitForm.computedType')}</label>
       <div class="pill-group seg" role="group" aria-labelledby="habit-form-computed-type-label">
-        <button type="button" class="pill-toggle${!isNumberComputedForm ? ' pill-toggle--active' : ''}" data-action="computed-type" data-type="scale" aria-pressed="${!isNumberComputedForm}">${t('habitForm.computedType.scale')}</button>
-        <button type="button" class="pill-toggle${isNumberComputedForm ? ' pill-toggle--active' : ''}" data-action="computed-type" data-type="number" aria-pressed="${isNumberComputedForm}">${t('habitForm.computedType.number')}</button>
+        ${computedTypes.map(([type, key]) => `<button type="button" class="pill-toggle${f.computedType === type ? ' pill-toggle--active' : ''}" data-action="computed-type" data-type="${type}" aria-pressed="${f.computedType === type}">${t(key)}</button>`).join('')}
       </div>
     </div>
+    ${isDurationForm ? durationBody : `
     ${isNumberComputedForm ? `
       <div class="auth-field">
         <label for="habit-form-computed-aggregate">${t('habitForm.aggregate')}</label>
@@ -9326,6 +9552,31 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         </div>
         ${isNumberComputedForm ? `<p class="habit-form-lock-note">${t('habitForm.computedUnitNote')}</p>` : ''}
       ` : `<p class="habit-form-lock-note">${t(isNumberComputedForm ? 'habitForm.noNumberComputedCandidates' : 'habitForm.noComputedCandidates')}</p>`}
+    </div>
+    `}
+  `;
+
+  // Uhrzeit: wann der Tag des Felds nachts endet (siehe nightUntilMinutes) und die Vorschau.
+  const timeBody = `
+    <p class="habit-form-lock-note">${t('habitForm.timeNote')}</p>
+    <div class="auth-field">
+      <span class="settings-label" id="habit-form-time-preview-label">${t('habitForm.preview')}</span>
+      <div class="field-preview entry-preview" role="img" aria-label="${esc(t('habitForm.entryPreviewAria.time'))}">
+        <span class="entry-preview-name" aria-hidden="true">${esc(f.name.trim() || t('habitForm.preview'))}</span>
+        <span class="time-controls" aria-hidden="true">
+          <span class="number-input entry-preview-input time-preview-input">--:--</span>
+          <span class="manage-btn">${t('timeBox.now')}</span>
+          <span class="manage-btn">+</span>
+          <span class="time-later-select">${tPlain('timeBox.laterOption', { n: TIME_LATER_DEFAULT })} ▾</span>
+        </span>
+        <p class="habit-form-lock-note field-preview-note">${t('habitForm.entryPreviewNote')}</p>
+      </div>
+    </div>
+    <div class="auth-field">
+      <label for="habit-form-night-until">${t('habitForm.nightUntil')}${infoTip(t('habitForm.nightUntilExplain'))}</label>
+      <select id="habit-form-night-until">
+        ${Array.from({ length: NIGHT_UNTIL_MAX + 1 }, (_, hour) => `<option value="${hour}" ${(f.nightUntil || 0) === hour ? 'selected' : ''}>${hour === 0 ? t('habitForm.nightUntil.none') : tPlain('habitForm.nightUntil.hour', { time: minutesToTimeStr(hour * 60) })}</option>`).join('')}
+      </select>
     </div>
   `;
 
@@ -9410,7 +9661,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // war für Neulinge zu lang - und das Tutorial nutzt dasselbe Formular). Aufgeklappt, wenn
   // dort schon etwas vom Standard abweicht, sonst zu; offen/zu übersteht Re-Renders
   // (f.moreOpen, gesetzt vom toggle-Listener).
-  const showGoal = (f.kind === 'scale' && f.good) || (isComputed && f.computedType !== 'number');
+  const showGoal = (f.kind === 'scale' && f.good) || (isComputed && f.computedType === 'scale');
   const moreOpen = f.moreOpen ?? ((showGoal && f.goal < 1) || !!f.numberGoalDir || f.summary === 'sum' || (!isComputed && (f.schedule.mode === 'interval' || f.schedule.days.length < 7 || f.reminderEnabled))
     || (state.sections.length > 0 && !!f.sectionId) || !f.showInStats);
   // "Berechnet" nur anbieten, wenn es etwas zu berechnen gibt (mind. 2 passende Felder) -
@@ -9418,16 +9669,20 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const others = state.habits.filter((h) => !h.archivedAt && h.defId !== f.defId && !isPeriodField(h));
   const computedPossible = isComputed || (!tutorialForm && (false
     || others.filter((h) => h.kind === 'scale' && !isNeutralScale(h)).length >= 2
-    || others.filter((h) => h.kind === 'number').length >= 2));
+    || others.filter((h) => h.kind === 'number').length >= 2
+    || others.filter(isTimeKind).length >= 2));
   // Zähler ist für Nutzer eine Art, eine Zahl einzutragen ("hochzählen"), kein eigener Typ -
   // intern 'counter', weil der Server ihn für Erinnerungen unterscheiden muss.
-  const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber'], ['text', 'habitForm.kindText']]
+  const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber']]
+    .concat(tutorialForm ? [] : [['time', 'habitForm.kindTime']])
+    .concat([['text', 'habitForm.kindText']])
     .concat(computedPossible ? [['computed', 'habitForm.kindComputed']] : []);
   // Zeitraum (Tag/Woche/Monat/Jahr): nicht im Tutorial (das erste Feld ist ein Tagesfeld) und
   // nicht bei "Berechnet". Mit Daten gesperrt - die Werte stünden sonst am falschen Tag.
-  const isPeriod = !isComputed && f.period !== 'day';
+  const isTime = f.kind === 'time';
+  const isPeriod = !isComputed && !isTime && f.period !== 'day';
   const isCounter = f.kind === 'counter';
-  const periodField = tutorialForm || isComputed ? '' : `
+  const periodField = tutorialForm || isComputed || isTime ? '' : `
     <div class="auth-field">
       <label id="habit-form-period-label">${t('habitForm.period')}</label>
       <div class="pill-group seg" role="group" aria-labelledby="habit-form-period-label">
@@ -9456,7 +9711,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       <p class="habit-form-lock-note">${t(f.summary === 'sum' ? 'habitForm.summary.noteSum' : 'habitForm.summary.noteAvg')}</p>
     </div>
   ` : '';
-  const entryBody = isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody
+  const entryBody = isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : isTime ? timeBody
     : f.kind === 'counter' ? counterBody : entryModeField + entryPreview + numberBody;
   const whenBody = isComputed ? '' : `
     ${periodField}
@@ -9620,7 +9875,9 @@ function renderManage() {
           ${confirmingDelete
             ? `<span class="manage-delete-warning">${t('manage.deleteWarning')}</span>`
             : h.kind === 'computed'
-              ? `<span class="manage-meta"><span class="manage-tag">${t('manage.computedTag')}</span> ${isNumberComputed(h)
+              ? `<span class="manage-meta"><span class="manage-tag">${t('manage.computedTag')}</span> ${isDurationComputed(h)
+                  ? t('manage.computedDuration', { from: state.habits.find((x) => x.id === h.members?.[0])?.name || '–', to: state.habits.find((x) => x.id === h.members?.[1])?.name || '–' })
+                  : isNumberComputed(h)
                   ? t('manage.computedAggregate', { agg: t('aggregate.' + h.aggregate), names: computedMemberHabits(h).map((m) => m.name).join(', ') || '–' })
                   : t('manage.computedMembers', { names: computedMemberHabits(h).map((m) => m.name).join(', ') || '–' })}${h.hideInStats && !h.archivedAt ? ' · ' + t('manage.hiddenInStats') : ''}</span>`
               : manageFieldMeta(h)}
@@ -10879,6 +11136,17 @@ app.addEventListener('click', async (e) => {
     closeNoteEditor(false);
   } else if (action === 'counter-step') {
     handleCounterStep(formatKey(state.currentDate), el.dataset.habit, Number(el.dataset.dir));
+  } else if (action === 'time-now') {
+    const h = state.habits.find((x) => x.id === el.dataset.habit);
+    if (h) {
+      const { dateKey, value } = timeEntryFor(h, new Date(Date.now() + Number(el.dataset.offset) * 60000));
+      // Nach Mitternacht (bzw. +20 min darüber hinweg) gehört der Zeitpunkt evtl. zu einem
+      // anderen Tag als dem angezeigten - dann dort eintragen und es sagen.
+      if (dateKey !== formatKey(state.currentDate)) {
+        state.notice = { type: 'ok', text: tPlain('timeBox.savedOtherDay', { time: formatClock(value), date: formatDMY(dateKey) }) };
+      }
+      handleSetValue(dateKey, h.id, value);
+    }
   } else if (action === 'clear-value') {
     handleClearValue(formatKey(state.currentDate), el.dataset.habit);
   } else if (action === 'preview-select') {
@@ -11117,7 +11385,8 @@ app.addEventListener('click', async (e) => {
       // Mitglieder der anderen Art passen nicht mehr - raus damit.
       f.members = f.members.filter((key) => {
         const h = state.habits.find((x) => x.id === key);
-        return h && (f.computedType === 'number' ? h.kind === 'number' : h.kind === 'scale');
+        // "Dauer" wählt seine zwei Felder über eigene Auswahllisten (durationFrom/To).
+        return h && f.computedType !== 'duration' && (f.computedType === 'number' ? h.kind === 'number' : h.kind === 'scale');
       });
     }
     render();
@@ -11378,6 +11647,28 @@ app.addEventListener('change', async (e) => {
   }
   if (e.target.classList?.contains('text-field-input')) {
     flushDaySave(formatKey(state.currentDate)); // Feld verlassen: nicht erst auf den Timer warten
+    return;
+  }
+  // Uhrzeit: leere Eingabe (Ziffern halb gelöscht) nicht als Löschen werten - dafür gibt es das ×.
+  const timeInput = e.target.closest('[data-action="time-input"]');
+  if (timeInput) {
+    const h = state.habits.find((x) => x.id === timeInput.dataset.habit);
+    const m = /^(\d{2}):(\d{2})/.exec(timeInput.value);
+    if (h && m) handleSetValue(formatKey(state.currentDate), h.id, clockToTimeValue(h, Number(m[1]) * 60 + Number(m[2])));
+    return;
+  }
+  // "+ 20 min": gewählte Spanne merken und am Knopf nachziehen, ohne Neuzeichnen (das würde die
+  // Auswahlliste neu fokussieren, siehe focusReopensPicker).
+  const laterSelect = e.target.closest('[data-action="time-later"]');
+  if (laterSelect) {
+    const h = state.habits.find((x) => x.id === laterSelect.dataset.habit);
+    const n = Number(laterSelect.value);
+    if (h && TIME_LATER_CHOICES.includes(n)) {
+      setTimeLaterMinutes(h, n);
+      const btn = laterSelect.parentElement.querySelector('[data-action="time-now"]');
+      btn.dataset.offset = String(n);
+      btn.setAttribute('aria-label', tPlain('timeBox.laterAria', { n }));
+    }
     return;
   }
   const numberInput = e.target.closest('[data-action="number-input"]');
@@ -11717,7 +12008,7 @@ document.addEventListener('click', (e) => {
 });
 
 app.addEventListener('keydown', (e) => {
-  if (e.target && e.target.classList?.contains('number-input') && e.key === 'Enter') {
+  if (e.target?.dataset?.action === 'number-input' && e.key === 'Enter') {
     e.preventDefault();
     handleSaveNumber(formatKey(state.currentDate), e.target.dataset.habit, e.target.value);
     return;

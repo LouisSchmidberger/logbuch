@@ -16,6 +16,7 @@ in der verschlüsselten payload heißt die Mitgliederliste `groupMembers` (Klart
 - `kind='computed'` ("Berechnet"): nicht direkt befüllbar, zeigt einen live berechneten Wert
   seiner Mitglieder.
 - `kind='text'`: freie Text-Antwort.
+- `kind='time'` ("Uhrzeit"): ein Zeitpunkt pro Tag, siehe unten.
 
 **Neuer Typ oder neue Berechnungsart** → in `SUPPORTED_KINDS`/`SUPPORTED_AGGREGATES`
 aufnehmen. Eine App-Version, die ihn nicht kennt (live, während er auf der Beta mit derselben
@@ -53,6 +54,32 @@ Text (jeder Eintrag öffnet seinen Tag), überall gleich: eingeklappt (`<details
 Titel) und neueste zuerst – eine je nach Ansicht umgekehrte Reihenfolge war verwirrend.
 Felder ohne Antwort im Zeitraum erscheinen nicht. Erklärt in "Über Logbuch"
 (`about.tip.textFields`).
+
+### Uhrzeit-Felder (`kind='time'`)
+
+Nutzer-Entscheidung 2026-10-29, gedacht vor allem für Schlaf ("ins Bett", "aufgestanden"):
+ein eigener Typ statt einer Eingabeart "von–bis" bei Zahl, weil die Bettzeit **abends**
+eingetragen werden soll (am nächsten Morgen weiß man sie nicht mehr) – die zwei Uhrzeiten
+stehen also an zwei verschiedenen Tagen. Die Dauer ist ein berechnetes Feld (unten).
+
+- **Wert** = Minuten ab Mitternacht des Tages, unter dem er steht; ≥ 1440 = nach Mitternacht.
+  Nur Tagesfelder (kein "Wie oft"), nicht im Tutorial, kein "Typ ändern", keine Bewertung
+  (`habitScore` = null), Erinnerung wie ein normales Feld (leer = fehlt).
+- **"Nachts noch zum Vortag bis"** (`nightUntil` in `enc`, 0–8 Stunden, Standard 0): Uhrzeiten
+  davor gehören zum Vortag (`clockToTimeValue`, `timeEntryFor`) – sonst stünde an einem Tag mit
+  Bettzeit 0:30 abends die nächste schon belegt. Gilt auch für die freie Eingabe (0:40 am
+  Dienstag = Dienstagnacht, Wert 1480).
+- **In "Heute"** (`renderTimeBox`): natives `<input type="time">` (anders als bei den
+  Erinnerungszeiten: hier zählt jede Minute), × zum Löschen, dazu "Jetzt" und "+ [20 min]"
+  ("Handy schon weglegen"; Spanne wählbar, pro Feld auf dem Gerät gemerkt, `localStorage`
+  `timeLater:<defId>`). Die Knöpfe nur heute bzw. an dem Tag, zu dem "jetzt" gehört; fällt der
+  Zeitpunkt auf einen anderen als den angezeigten Tag, landet er dort, mit Meldung. Eine leere
+  Eingabe (halb gelöschte Ziffern) löscht nicht – dafür ist das ×.
+- **Auswertung**: Verlauf wie bei Zahlen (`hasNumericSeries`). Uhrzeiten liegen auf einem Kreis
+  – `unwrapClockSeries` legt jeden Wert auf die Seite des Kreis-Mittels, auf der er näher
+  liegt, damit Ø 23:30/0:30 = 0:00 ist und nicht 12:00.
+- Gerechnet wird mit Wanduhr-Zeit über Tagesnummern (`dayIndex`): eine Dauer über die Nacht der
+  Zeitumstellung liegt eine Stunde daneben (bewusst hingenommen).
 
 ## Darstellung von Skalen (`display_style`)
 
@@ -232,6 +259,15 @@ diese Einheit (`computedUnit`). Gerechnet wird mit den an dem Tag eingetragenen 
 0. Keine Bewertung (kein Score, keine Farbe, keine Ziel-Quote); in "Heute" eine neutrale
 Info-Zeile mit Wert + Einheit, in der Auswertung ein Verlaufsgraph. Werte auf 2
 Nachkommastellen gerundet (gegen Gleitkomma-Reste).
+
+**Dauer** (`aggregate: 'duration'`, Mitglieder genau `[von, bis]`, zwei Uhrzeit-Felder,
+Auswahl über zwei Listen statt Häkchen, weil die Reihenfolge zählt): verhält sich wie ein
+berechnetes Zahlen-Feld in Stunden (`isDurationComputed`, Einheit `h`, Anzeige "7:30 h" über
+`formatSeriesValue`). Wert am Tag des "bis" = "bis" minus das letzte "von" davor, bis zu
+`DURATION_LOOKBACK_DAYS` (7) zurück (`durationComputedDay`) – so über Mitternacht und über mehr
+als 24 Stunden; ein "von" später am selben Tag (abends wieder ins Bett) zählt erst für den
+nächsten. Gelegentliches (Mittagsschlaf) braucht nur dann Uhrzeiten, wenn man die Zeitpunkte
+selbst wissen will – sonst reicht ein Zahlenfeld mit der Dauer.
 
 ## Gruppen (`sections`)
 

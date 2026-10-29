@@ -19,7 +19,9 @@ Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `reminder
 
 - `slug` (Key in `habit_entries.data`; verschlüsselt als `key`, bei neuen Feldern ein
   zufälliger Schlüssel aus `newHabitKey` statt aus dem Namen abgeleitet), `name`, `kind`
-  (`'scale'`, `'number'`, `'counter'` ("Zähler"), `'computed'` ("Berechnet") oder `'text'`), `min`/`max` (nur
+  (`'scale'`, `'number'`, `'counter'` ("Zähler"), `'computed'` ("Berechnet"), `'text'` oder
+  `'time'` ("Uhrzeit", Wert = Minuten ab Mitternacht des Tages, ≥ 1440 = nach Mitternacht,
+  siehe [felder.md](felder.md)), `min`/`max` (nur
   `scale`; neue Felder immer `min=1`, `max=<Stufenzahl>`; ältere können eine andere Basis
   haben), `labels` (nur `scale`; `null` = nummerierte Stufen, sonst Array der Länge
   `max-min+1`), `good` (`'high'`/`'low'`/`null` = keine Wertung, nur `scale`), `unit` (nur

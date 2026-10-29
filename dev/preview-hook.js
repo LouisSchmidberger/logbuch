@@ -86,6 +86,10 @@ export function install(app) {
         { key: 'fputz', name: 'Zimmer geputzt', kind: 'scale', min: 1, max: 2, good: 'high', labels: ['Nein', 'Ja'], period: 'week' },
         { key: 'fmonat', name: 'Monatsrückblick', kind: 'text', period: 'month' },
         { key: 'fbuch', name: 'Gelesene Bücher', kind: 'number', period: 'month' },
+        // Uhrzeiten (Werte unten mit eigenem Zufall, damit die übrigen Beispielwerte gleich bleiben)
+        { key: 'fbett', name: 'Ins Bett', kind: 'time', section: 'abends', nightUntil: 4 },
+        { key: 'fauf', name: 'Aufgestanden', kind: 'time', section: 'morgens' },
+        { key: 'fschlafdauer', name: 'Schlafdauer', kind: 'computed', section: 'morgens', groupMembers: ['fbett', 'fauf'], aggregate: 'duration' },
       ];
       let topOrder = 1; // 1 = Gruppe "Morgens", 10 = "Abends"
       const inSection = { morgens: 0, abends: 0 };
@@ -144,6 +148,17 @@ export function install(app) {
         const first = new Date(today.getFullYear(), today.getMonth() - m, 1);
         app.state.entries = { ...app.state.entries, [dateKey(first)]: { ...(app.state.entries[dateKey(first)] || {}), fbuch: Math.floor(rnd() * 4) } };
         await app.saveDayNow(dateKey(first));
+      }
+      // Bettzeit 22:30-1:30 (nach Mitternacht als 1440+, gehört zum Vorabend), aufgestanden 6:00-8:30;
+      // heute noch keine Bettzeit - zeigt "Jetzt" und "+".
+      const rndTime = seededRandom(7);
+      for (let i = days; i >= 0; i--) {
+        const d = new Date(today); d.setDate(d.getDate() - i);
+        const day = { ...(app.state.entries[dateKey(d)] || {}) };
+        day.fauf = 360 + Math.round(rndTime() * 150);
+        if (i > 0) day.fbett = 1350 + Math.round(rndTime() * 180);
+        app.state.entries = { ...app.state.entries, [dateKey(d)]: day };
+        await app.saveDayNow(dateKey(d));
       }
       const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
       app.state.entries = { ...app.state.entries, [dateKey(prevMonth)]: { ...(app.state.entries[dateKey(prevMonth)] || {}), fmonat: 'Viel draußen gewesen, neuer Sport-Rhythmus.' } };

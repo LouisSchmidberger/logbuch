@@ -567,6 +567,19 @@
   }
   .number-input[style*="color"] { font-weight: 600; } /* Wert mit Ziel: gefärbt wie beim Zähler */
   .number-box .goal-suffix { margin-left: -0.25rem; }
+  /* Uhrzeit (renderTimeBox): Eingabe, ×, "Jetzt" und "+ [20 min]" in einer Reihe, bei wenig
+     Platz umgebrochen. */
+  .time-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+  /* Eigene Zeile unter dem Namen, rechtsbündig wie die Skala-Knöpfe - nebeneinander blieb für
+     den Namen kaum Platz. */
+  .habit-row--time .time-controls { flex-basis: 100%; justify-content: flex-end; }
+  .time-field-input { width: auto; min-width: 6.5rem; }
+  .time-later { display: inline-flex; align-items: center; gap: 0.25rem; }
+  .time-later-select {
+    font: inherit; font-size: 0.875rem; padding: 0.3125rem 0.25rem; border: 1px solid var(--line);
+    border-radius: 0.1875rem; background: var(--input-bg); color: var(--ink);
+  }
+  .time-preview-input { display: inline-flex; align-items: center; width: auto; color: var(--sand); }
 
   .habit-row--slider { flex-direction: column; align-items: stretch; gap: 6px; }
   .slider-row { display: flex; align-items: center; gap: 10px; width: 100%; }
@@ -1437,6 +1450,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=e54684a4b9"></script>
+<script type="module" src="./logbuch.js?v=8fb5477d03"></script>
 </body>
 </html>
