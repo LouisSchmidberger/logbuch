@@ -24,7 +24,7 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
 | UI, Navigation, Menü/Einstellungen, "Heute", Notizen, Meldungen, Fokus, Theme, Textgröße | [docs/design-bedienung.md](docs/design-bedienung.md) |
 | Startseite, Installation, Registrieren, Tutorial, Ersatzschlüssel-Seite, Erklär-Karten | [docs/onboarding.md](docs/onboarding.md) |
 | Texte/`STRINGS`/`t()`, Sprache, Datumsformate | [docs/i18n.md](docs/i18n.md) |
-| Konto löschen, Export, Feedback, Auth/Passwort, E-Mail-Versand, Secrets | [docs/datenschutz-sicherheit.md](docs/datenschutz-sicherheit.md) |
+| Konto löschen, Export, Feedback, Auth/Passwort, E-Mail-Versand, Secrets, Kennzahlen (`ops-stats`) | [docs/datenschutz-sicherheit.md](docs/datenschutz-sicherheit.md) |
 | Lokale Vorschau, Screenshots, `dev/` (nachgebautes Supabase) | [dev/README.md](dev/README.md) |
 
 ## Stack und Hosting
@@ -41,7 +41,7 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
 - **Service Worker** `sw.js`: nur Web-Push-Empfang/-Klick, kein Offline-Caching.
 - **Backend**: Supabase (Projekt-Ref `qdadoqcnqmrauhshvcts`, Region Europe) – Postgres,
   Auth (E-Mail/Passwort), Edge Functions `send-notifications`, `delete-account`,
-  `submit-feedback`; pg_cron für Erinnerungen und Aufräum-Jobs. Resend als SMTP und für
+  `submit-feedback`, `ops-stats` (Kennzahlen für den Hub); pg_cron für Erinnerungen und Aufräum-Jobs. Resend als SMTP und für
   Feedback-Mails.
 - **Hosting**: GitHub Pages, statisch. `logbuch.html`, `logbuch.js`, `sw.js`, `vendor/`,
   `fonts/` müssen im selben Wurzelverzeichnis des gehosteten Pfads liegen.

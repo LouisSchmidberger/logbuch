@@ -135,6 +135,19 @@ signup" – **beide Stellen gleich halten**. Zweisprachig über `.Data.locale` (
 Nutzer-Metadaten mitgeschickt), Deutsch nur bei `de`, sonst Englisch. Ton wie das
 Onboarding, echter Button statt Link.
 
+## Kennzahlen für den Betreiber (`ops-stats`)
+
+Nutzer-Entscheidung 2026-10-29: ein grober Überblick über Nutzer und ihr Verhalten, angezeigt
+im Hub. Regeln: nur Summen, nur aus Daten, die der Datenschutz-Text in "Über Logbuch" schon
+als sichtbar nennt, kein Mitzählen in der App (Funktions-Nutzung zu zählen wäre eine eigene
+Entscheidung samt Änderung des Datenschutz-Texts). Bewusst wenige Zahlen (`ops_stats`):
+Konten, neue in 7 Tagen, aktiv in 7/30 Tagen (über `entry_date` – die Speicher-Uhrzeit gibt es
+bewusst nicht), Felder je aktivem Konto, Konten mit Push-Abo. Verlauf: pg_cron schreibt jede
+Nacht den Vortag nach `ops_daily_stats` (nur `service_role`). Der Hub ruft die Edge Function
+`ops-stats` mit eigenem Token ab, nicht mit dem Service-Key (der öffnete die ganze Datenbank
+samt E-Mail-Adressen). Deploy ohne JWT-Prüfung: `supabase functions deploy ops-stats
+--no-verify-jwt`.
+
 ## Secrets
 
 - `VAPID_PUBLIC_KEY` steht im Klartext in `logbuch.js` – beabsichtigt, öffentliche
@@ -164,5 +177,8 @@ Onboarding, echter Button statt Link.
   ```
   `cron_secret` muss exakt dem Function Secret `CRON_SECRET` entsprechen (`supabase secrets
   set CRON_SECRET=<wert>`).
+
+- `OPS_STATS_TOKEN` (Function Secret, mind. 32 Zeichen): Zugang des Hubs zu `ops-stats`, liegt
+  dort als Worker-Secret. Neu setzen macht den alten sofort ungültig (dann auch im Hub ändern).
 
 Alle privaten Secrets: niemals im Repo.
