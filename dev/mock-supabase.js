@@ -128,7 +128,11 @@ class MockAuth {
         const u = db.users.find((x) => x.id === userId);
         if (!u) return;
         if (type === 'signup' && !u.confirmedAt) u.confirmedAt = now();
-        if (type === 'email_change' && u.pendingEmail) { u.email = u.pendingEmail; delete u.pendingEmail; }
+        if (type === 'email_change' && u.pendingEmail) {
+          sendMail(db, u.email, 'email_changed_notification', null); // Hinweis an die bisherige
+          u.email = u.pendingEmail;
+          delete u.pendingEmail;
+        }
         db.session = makeSession(u);
         if (type === 'recovery') db.session.recovery = true; // wie Supabase: Reset ohne aktuelles Passwort
       });
@@ -228,11 +232,8 @@ class MockAuth {
         if (db.users.some((x) => x !== u && x.email.toLowerCase() === attrs.email.toLowerCase())) {
           return { data: { user: null }, error: authError('A user with this email address has already been registered', 422, 'email_exists') };
         }
-        // Wie "Secure email change": Mail an beide Adressen. Vereinfacht: der Link an die
-        // bisherige liefert nur die Zwischenmeldung, der an die neue schließt ab.
+        // Nur die neue Adresse bestätigt (double_confirm_changes = false).
         u.pendingEmail = attrs.email;
-        const base = options.emailRedirectTo || (location.origin + location.pathname);
-        sendMail(db, u.email, 'email_change', `${base}#message=Confirmation+link+accepted.+Please+proceed+to+confirm+link+sent+to+the+other+email&sb=`);
         sendMail(db, attrs.email, 'email_change', linkFor(options.emailRedirectTo, u.id, 'email_change'));
       }
       if (attrs.data) u.metadata = { ...u.metadata, ...attrs.data };

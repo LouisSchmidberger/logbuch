@@ -223,7 +223,9 @@ web3 = 30
 enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
-double_confirm_changes = true
+# Aus (Nutzer-Entscheidung 2026-10-29): wer keinen Zugang zur alten Adresse mehr hat, käme
+# sonst nie weiter - siehe docs/datenschutz-sicherheit.md.
+double_confirm_changes = false
 # If enabled, users need to confirm their email address before signing in.
 enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
@@ -259,6 +261,12 @@ content_path = "./supabase/templates/confirmation.html"
 [auth.email.template.email_change]
 subject = '{{ if and .Data.locale (eq .Data.locale "de") }}Neue E-Mail-Adresse für Logbuch bestätigen{{ else }}Confirm your new email address for Logbuch{{ end }}'
 content_path = "./supabase/templates/email_change.html"
+
+# Hinweis an die bisherige Adresse nach einer Adress-Änderung.
+[auth.email.notification.email_changed]
+enabled = true
+subject = '{{ if and .Data.locale (eq .Data.locale "de") }}Die E-Mail-Adresse deines Logbuch-Kontos wurde geändert{{ else }}The email address of your Logbuch account was changed{{ end }}'
+content_path = "./supabase/templates/email_changed_notification.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

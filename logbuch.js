@@ -31,11 +31,8 @@ async function fetchWithJwtFutureRetry(input, init) {
 // den Teil nach '#' gleich beim Start aus und entfernt ihn - deshalb vorher merken
 // (siehe renderConfirmLanding).
 const ARRIVED_VIA_SIGNUP_CONFIRM = /(^#|&)type=signup(&|$)/.test(location.hash);
-// Rückkehr aus den Mails von "E-Mail ändern" (Supabase verlangt beide Adressen, siehe
-// docs/datenschutz-sicherheit.md): nach dem ersten Link nur eine Meldung im '#'-Teil (die
-// supabase-js nicht anfasst), nach dem zweiten eine Anmeldung mit type=email_change.
-const EMAIL_CHANGE_LANDING = /(^#|&)type=email_change(&|$)/.test(location.hash) ? 'done'
-  : /(^#|&)message=Confirmation\+link\+accepted/.test(location.hash) ? 'first' : null;
+// Rückkehr über den Link aus der Mail von "E-Mail ändern" (Anmeldung mit type=email_change).
+const ARRIVED_VIA_EMAIL_CHANGE = /(^#|&)type=email_change(&|$)/.test(location.hash);
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { fetch: fetchWithJwtFutureRetry } });
 
 function urlBase64ToUint8Array(base64String) {
@@ -931,7 +928,7 @@ const state = {
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
   passwordChange: null, // { current, next, visible, busy, error } während "Passwort ändern" offen ist
   spareKeyCheck: null, // { value, busy, result: 'ok'|'wrong'|'error'|null, errorText } während "Ersatzschlüssel prüfen" offen ist
-  emailChange: null, // { value, busy, error, sentTo } während "E-Mail-Adresse ändern" offen ist
+  emailChange: null, // { value, password, busy, error, sentTo } während "E-Mail-Adresse ändern" offen ist
   regenKeyConfirm: false, // Rückfrage vor "Ersatzschlüssel neu erzeugen" offen
   logoutConfirm: false,   // Rückfrage vor "Abmelden" (aus dem Menü) offen
   leaveFormConfirm: false, // Rückfrage "Änderungen verwerfen?" beim Verlassen eines geänderten Formulars (siehe leaveFormGuarded)
@@ -2145,23 +2142,24 @@ const STRINGS = {
     'passwordChange.error.failed': 'Passwort nicht geändert.',
     'menu.changeEmail': 'E-Mail-Adresse ändern',
     'settings.emailCurrent': 'Angemeldet mit {email}',
-    'settings.emailPending': 'Wechsel zu {email} wartet noch auf deine Bestätigung in beiden Mails.',
+    'settings.emailPending': 'Wechsel zu {email} wartet noch auf deine Bestätigung in der Mail dorthin.',
     'emailChange.title': 'E-Mail-Adresse ändern',
     'emailChange.current': 'Bisher: <strong>{email}</strong>',
     'emailChange.new': 'Neue E-Mail-Adresse',
-    'emailChange.note': 'Du bekommst je eine Mail an deine bisherige und an deine neue Adresse. Erst wenn du in beiden bestätigt hast, gilt die neue. Bis dahin meldest du dich mit der bisherigen an.',
-    'emailChange.submit': 'Mails senden',
+    'emailChange.password': 'Dein Passwort',
+    'emailChange.note': 'Du bekommst eine Mail an die neue Adresse. Erst wenn du dort bestätigt hast, gilt sie – bis dahin meldest du dich mit der bisherigen an. An die bisherige geht danach ein Hinweis, dass die Adresse geändert wurde.',
+    'emailChange.submit': 'Mail senden',
     'emailChange.sending': 'Wird gesendet …',
-    'emailChange.sentTitle': 'Schau in beide Postfächer',
-    'emailChange.sentBody': 'Ich habe dir je eine Mail an <strong>{old}</strong> und an <strong>{new}</strong> geschickt. Tippe in beiden auf den Knopf – danach gilt die neue Adresse.',
+    'emailChange.sentTitle': 'Schau in dein Postfach',
+    'emailChange.sentBody': 'Ich habe dir eine Mail an <strong>{email}</strong> geschickt. Tippe dort auf den Knopf – danach gilt die neue Adresse.',
     'emailChange.sentSpam': 'Keine Mail da? Schau auch im Spam-Ordner nach.',
-    'emailChange.landedFirst': 'Bestätigt. Tippe jetzt noch auf den Knopf in der Mail an deine andere Adresse.',
     'emailChange.landedDone': 'Deine neue E-Mail-Adresse gilt jetzt.',
     'emailChange.error.same': 'Das ist schon deine aktuelle Adresse.',
+    'emailChange.error.wrongPassword': 'Das Passwort stimmt nicht.',
     'emailChange.error.taken': 'Für diese Adresse gibt es schon ein Konto.',
     'emailChange.error.invalid': 'Das sieht nicht nach einer gültigen E-Mail-Adresse aus.',
     'emailChange.error.rateLimit': 'Gerade wurden zu viele Mails verschickt. Versuch es in ein paar Minuten noch einmal.',
-    'emailChange.error.failed': 'Mails nicht gesendet.',
+    'emailChange.error.failed': 'Mail nicht gesendet.',
     'menu.checkSpareKey': 'Ersatzschlüssel prüfen',
     'settings.checkSpareKeyNote': 'Prüft, ob dein aufgeschriebener oder gespeicherter Ersatzschlüssel noch passt. Dabei wird nichts verändert.',
     'spareKeyCheck.title': 'Ersatzschlüssel prüfen',
@@ -3078,23 +3076,24 @@ const STRINGS = {
     'passwordChange.error.failed': 'Password not changed.',
     'menu.changeEmail': 'Change email address',
     'settings.emailCurrent': 'Signed in as {email}',
-    'settings.emailPending': 'Switch to {email} is still waiting for your confirmation in both emails.',
+    'settings.emailPending': 'Switch to {email} is still waiting for your confirmation in the email sent there.',
     'emailChange.title': 'Change email address',
     'emailChange.current': 'Current: <strong>{email}</strong>',
     'emailChange.new': 'New email address',
-    'emailChange.note': 'You’ll get one email at your current address and one at your new address. The new one only applies once you’ve confirmed in both. Until then, sign in with your current address.',
-    'emailChange.submit': 'Send emails',
+    'emailChange.password': 'Your password',
+    'emailChange.note': 'You’ll get an email at the new address. It only applies once you’ve confirmed there – until then, sign in with your current address. Your current address then gets a notice that the address was changed.',
+    'emailChange.submit': 'Send email',
     'emailChange.sending': 'Sending …',
-    'emailChange.sentTitle': 'Check both inboxes',
-    'emailChange.sentBody': 'I sent one email to <strong>{old}</strong> and one to <strong>{new}</strong>. Tap the button in both – then the new address applies.',
+    'emailChange.sentTitle': 'Check your inbox',
+    'emailChange.sentBody': 'I sent an email to <strong>{email}</strong>. Tap the button there – then the new address applies.',
     'emailChange.sentSpam': 'No email? Check your spam folder too.',
-    'emailChange.landedFirst': 'Confirmed. Now tap the button in the email to your other address as well.',
     'emailChange.landedDone': 'Your new email address now applies.',
     'emailChange.error.same': 'That’s already your current address.',
+    'emailChange.error.wrongPassword': 'The password is incorrect.',
     'emailChange.error.taken': 'An account already exists for this address.',
     'emailChange.error.invalid': 'That doesn’t look like a valid email address.',
     'emailChange.error.rateLimit': 'Too many emails were sent just now. Please try again in a few minutes.',
-    'emailChange.error.failed': 'Emails not sent.',
+    'emailChange.error.failed': 'Email not sent.',
     'menu.checkSpareKey': 'Check spare key',
     'settings.checkSpareKeyNote': 'Checks whether the spare key you wrote down or saved still works. Nothing is changed.',
     'spareKeyCheck.title': 'Check spare key',
@@ -4078,6 +4077,7 @@ async function handleEmailChangeSubmit() {
   const ec = state.emailChange;
   if (!ec || ec.busy) return;
   ec.value = document.getElementById('email-change-input').value.trim();
+  ec.password = document.getElementById('email-change-password').value;
   ec.error = null;
   if (ec.value.toLowerCase() === (state.session?.user?.email ?? '').toLowerCase()) {
     ec.error = t('emailChange.error.same');
@@ -4087,6 +4087,24 @@ async function handleEmailChangeSubmit() {
   }
   ec.busy = true;
   render();
+  // Passwort nur hier auf dem Gerät prüfen (öffnet es den Schlüssel?) - Supabase selbst
+  // verlangt es für die Adresse nicht.
+  try {
+    const row = await fetchEncryptionRow(state.session.user.id);
+    if (!row) throw new Error(t('recovery.error.noConfig'));
+    try { await unwrapDekWithPassword(row, ec.password); } catch {
+      ec.busy = false;
+      ec.error = t('emailChange.error.wrongPassword');
+      render();
+      document.getElementById('email-change-password')?.select();
+      return;
+    }
+  } catch (err) {
+    ec.busy = false;
+    ec.error = errorNotice('emailChange.error.failed', err?.message || String(err)).text;
+    render();
+    return;
+  }
   // locale: die Bestätigungs-Mails sind zweisprachig über .Data.locale (wie bei der
   // Registrierung) - ältere Konten haben es noch nicht.
   const { error } = await supabase.auth.updateUser(
@@ -4104,6 +4122,7 @@ async function handleEmailChangeSubmit() {
     return;
   }
   ec.sentTo = ec.value;
+  ec.password = '';
   render();
 }
 
@@ -10178,8 +10197,9 @@ function renderSpareKeyCheck() {
   `;
 }
 
-// Supabase ändert die Adresse erst, wenn in den Mails an die bisherige UND die neue Adresse
-// bestätigt wurde ("Secure email change") - bis dahin gilt die bisherige weiter.
+// Supabase ändert die Adresse erst, wenn in der Mail an die neue bestätigt wurde - bis dahin
+// gilt die bisherige weiter. Die bisherige muss nicht zustimmen (man hat oft keinen Zugang
+// mehr), deshalb hier das Passwort (siehe docs/datenschutz-sicherheit.md).
 function renderEmailChange() {
   const ec = state.emailChange;
   const off = ec.busy ? 'disabled' : '';
@@ -10188,7 +10208,7 @@ function renderEmailChange() {
       <div class="modal-overlay">
         <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="email-change-title">
           <h2 id="email-change-title">${t('emailChange.sentTitle')}</h2>
-          <p>${t('emailChange.sentBody', { old: state.session?.user?.email ?? '', new: ec.sentTo })}</p>
+          <p>${t('emailChange.sentBody', { email: ec.sentTo })}</p>
           <p class="settings-note">${t('emailChange.sentSpam')}</p>
           <div class="habit-form-actions">
             <button type="button" class="auth-submit" data-action="email-change-close">${t('common.close')}</button>
@@ -10207,6 +10227,10 @@ function renderEmailChange() {
           <div class="auth-field">
             <label for="email-change-input">${t('emailChange.new')}</label>
             <input type="email" id="email-change-input" value="${esc(ec.value)}" required autocomplete="email" data-autofocus ${off} />
+          </div>
+          <div class="auth-field">
+            <label for="email-change-password">${t('emailChange.password')}</label>
+            <input type="password" id="email-change-password" value="${esc(ec.password)}" required autocomplete="current-password" ${off} />
           </div>
           <p class="settings-note">${t('emailChange.note')}</p>
           <div class="habit-form-actions">
@@ -10749,7 +10773,7 @@ app.addEventListener('click', async (e) => {
     document.querySelector('[data-action="password-change-visibility"]')?.focus();
   } else if (action === 'open-email-change') {
     modalTriggerSelector = '[data-action="open-email-change"]';
-    state.emailChange = { value: '', busy: false, error: null, sentTo: null };
+    state.emailChange = { value: '', password: '', busy: false, error: null, sentTo: null };
     state.menuOpen = false;
     render();
   } else if (action === 'email-change-close') {
@@ -11533,6 +11557,7 @@ app.addEventListener('input', (e) => {
     return;
   }
   if (e.target.id === 'email-change-input' && state.emailChange) { state.emailChange.value = e.target.value; return; }
+  if (e.target.id === 'email-change-password' && state.emailChange) { state.emailChange.password = e.target.value; return; }
   if (e.target.id === 'spare-key-check-input' && state.spareKeyCheck) { state.spareKeyCheck.value = e.target.value; return; }
   if (e.target.id === 'password-change-current' && state.passwordChange) { state.passwordChange.current = e.target.value; return; }
   if (e.target.id === 'password-change-new' && state.passwordChange) {
@@ -12249,11 +12274,7 @@ resetIOSZoomOnStandaloneStart();
 state.confirmLanding = ARRIVED_VIA_SIGNUP_CONFIRM && isMobileDevice() && !isStandaloneDisplay() && !isInstallGateSkipped();
 applyLocale(detectInitialLocale());
 applyTheme(getThemeOverride());
-if (EMAIL_CHANGE_LANDING) {
-  state.notice = { type: 'ok', text: t(EMAIL_CHANGE_LANDING === 'done' ? 'emailChange.landedDone' : 'emailChange.landedFirst') };
-  // Die Meldung nach dem ersten Link bliebe sonst in der Adresse stehen (bei "done" räumt supabase-js auf).
-  if (EMAIL_CHANGE_LANDING === 'first') history.replaceState(history.state, '', location.pathname + location.search);
-}
+if (ARRIVED_VIA_EMAIL_CHANGE) state.notice = { type: 'ok', text: t('emailChange.landedDone') };
 applyTextSize(getTextSize());
 try {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
