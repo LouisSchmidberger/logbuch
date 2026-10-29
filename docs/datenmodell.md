@@ -45,11 +45,12 @@ Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `reminder
   betroffenen Tages-Eintrag weg (über die entschlüsselten `state.entries`, gespeichert je
   Tag über `saveDay`), statt ihn verwaist im verschlüsselten JSON liegen zu lassen – passend
   zur Zero-Access-/Löschrecht-Ausrichtung: "Löschen" soll möglichst wenig übrig lassen.
-- **Feld-Typ und Stufenzahl sind nur änderbar, solange das Feld noch keine Daten hat**
+- **Feld-Typ und "Wie oft" sind nur änderbar, solange das Feld noch keine Daten hat**
   (`habitHasData`/`f.locked`) – sonst würden alte Werte plötzlich etwas anderes bedeuten.
-  Für eine neue Skala: archivieren, neu anlegen. Alles andere (Name, Einheit,
-  Bezeichnungen, Darstellung, Bewertung, Wiederholung, Erinnerungszeit) bleibt änderbar
-  (Details [felder.md](felder.md) → "Bearbeiten mit vorhandenen Daten"). Gilt nicht für
+  Für einen anderen Typ: archivieren, neu anlegen. Die Stufenzahl einer Skala ändert
+  "Stufen ändern" samt Umrechnung der Einträge (Sicherung `_prev`, siehe unten). Alles andere
+  (Name, Einheit, Bezeichnungen, Darstellung, Bewertung, Wiederholung, Erinnerungszeit)
+  bleibt änderbar (Details [felder.md](felder.md) → "Bearbeiten mit vorhandenen Daten"). Gilt nicht für
   `computed`: hält nie einen eigenen Eintrag, ist nie "locked"; eine geänderte
   Mitgliederliste wirkt rückwirkend auf die ganze Auswertung (Durchschnitt wird bei jedem
   Rendern live berechnet, nie gespeichert) – beabsichtigt.
@@ -60,12 +61,15 @@ Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `reminder
 
 - `entry_date`, `data` – **clientseitig verschlüsselt** (`{iv, ciphertext}`). Entschlüsselt
   enthält das Objekt die Werte des Tages, Keys = `slug`s des Nutzers.
-- **Notizen** liegen im selben Objekt unter dem einzigen reservierten Schlüssel `_notes`:
+- **Notizen** liegen im selben Objekt unter dem reservierten Schlüssel `_notes`:
   `{ mood: 3, _notes: { mood: "…", _day: "…" } }` – je Feld-Slug eine Notiz, `_day` für den
   ganzen Tag, `section:<id>` für Gruppen (`NOTES_KEY`/`DAY_NOTE_KEY`/`SECTION_NOTE_PREFIX`,
   `getNote`/`withNote`). Kollidiert nie mit einem Feld, da Feld-Schlüssel nur aus `a-z0-9`
   bestehen. **Konvention: Schlüssel mit `_` am Anfang sind nie Feldwerte.** Ohne
   verbleibende Notiz verschwindet `_notes` wieder.
+- **Sicherung von "Stufen ändern"** unter `_prev`: `{ <Feld>: { c: <Umstellungs-Id>, v: <alter
+  Wert> } }` (`PREV_KEY`/`withPrev`), je Feld nur die letzte Umstellung; endgültiges Löschen
+  des Felds räumt sie mit weg (`purgeKeyFromEntries`). Ablauf siehe [felder.md](felder.md).
 - `filled_slugs` – bewusst **unverschlüsselt**, nur die **IDs** (`habit_definitions.id`) der
   an dem Tag befüllten Felder, keine Werte/Namen (Spaltenname historisch). Nur für
   `get_due_notifications` (Server kann `data` nicht lesen). Notizen zählen nicht – eine

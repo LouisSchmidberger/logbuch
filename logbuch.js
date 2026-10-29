@@ -234,6 +234,7 @@ function habitFromParts(row, payload) {
     createdAt: row.created_at,            // Zähler: ab wann ein leerer Tag als 0 zählt
     counterSince: payload.counterSince ?? null, // umgewandelter Zähler: 0 erst ab diesem Tag (siehe convertHabitToCounter)
     periodReminderDay: row.period_reminder_day ?? null, // Tag der Erinnerung im Zeitraum, null = Standard
+    stepChange: payload.stepChange ?? null, // Stufen ändern: laufende bzw. letzte Umstellung (siehe runStepChange)
   };
 }
 // Eigene Erinnerungszeiten einer Zeile: bis zu MAX_REMINDER_TIMES (reminder_minutes, nur
@@ -1105,6 +1106,8 @@ function habitFormSnapshot(f) {
     ? { every: f.schedule.every, start: f.schedule.start }
     : [...f.schedule.days].sort();
   if (!f.reminderEnabled) { snap.reminderTimes = null; snap.reminderBelow = null; }
+  // "Stufen ändern" offen und schon etwas eingestellt (nur Öffnen zählt nicht).
+  snap.stepEdit = f.stepEdit && stepEditKey(f.stepEdit) !== f.stepEdit.initial ? 'changed' : null;
   return JSON.stringify(snap);
 }
 function sectionFormSnapshot(sf) {
@@ -1559,7 +1562,7 @@ const STRINGS = {
     'habitForm.numberOfSteps': 'Anzahl Stufen',
     'habitForm.stepsExplain': 'In Fragebögen haben sich 5 bis 7 Stufen bewährt – mehr Abstufungen machen Antworten selten genauer. Deshalb gehen Buttons und eigene Bezeichnungen bis 7. Für ein feineres „ungefähr wie viel“ gibt es den Schieberegler ohne Bezeichnungen (bis 100).',
     'habitForm.sliderRangeExplain': 'Der Regler zeigt nie eine Min/Max-Beschriftung beim Eintragen (nur hier in der Verwaltung).',
-    'habitForm.rangeLocked': 'Bereich {min}–{max} (durch vorhandene Einträge gesperrt).',
+    'habitForm.rangeLocked': '{steps} Stufen ({min} bis {max})',
     'habitForm.period': 'Wie oft trägst du das ein? Einmal pro …',
     'habitForm.period.day': 'Tag',
     'habitForm.period.week': 'Woche',
@@ -1605,7 +1608,45 @@ const STRINGS = {
     'habitForm.convertConfirm.number': 'Wirklich umwandeln? Die bisherigen Werte bleiben. Neu ist: Ab heute zählt ein Tag ohne Antippen als 0, frühere leere Tage bleiben leer. Zurückwandeln geht nicht.',
     'habitForm.convertConfirm.scale': 'Wirklich umwandeln? Die bisherigen Werte bleiben als Zahlen, die Bezeichnungen der Stufen und die Bewertung entfallen. Ab heute zählt ein Tag ohne Antippen als 0, frühere leere Tage bleiben leer. Zurückwandeln geht nicht.',
     'habitForm.convertDone': '„{name}“ ist jetzt ein Zähler.',
-    'habitForm.lockedNote': 'Für dieses Feld gibt es bereits Einträge – Feld-Typ und Anzahl Stufen sind gesperrt. Bezeichnungen lassen sich trotzdem noch an-/abschalten und bearbeiten. Für eine andere Skala: archivieren und neu anlegen.',
+    'habitForm.labelsLockedWarn': 'Neue Bezeichnungen gelten auch für alle bisherigen Einträge. Sollen alte Einträge auf eine andere Stufe wandern, nimm oben „Stufen ändern“.',
+    'habitForm.goodChangedWarn': 'Das gilt auch rückwirkend: Alle bisherigen Einträge werden danach anders gefärbt.',
+    'stepEdit.title': 'Stufen ändern',
+    'stepEdit.hint': 'Weil es schon Einträge gibt, änderst du die Anzahl hier – und entscheidest dabei selbst, was aus den bisherigen Werten wird.',
+    'stepEdit.open': 'Stufen ändern …',
+    'stepEdit.intro': 'Du entscheidest selbst, was aus den bisherigen Einträgen wird. Überleg dabei, was ein alter Wert damals bedeutet hat: Eine 3 auf einer Skala bis 3 ist nicht dasselbe wie eine 3 auf einer Skala bis 5.',
+    'stepEdit.newSteps': 'Neue Anzahl Stufen',
+    'stepEdit.newLabels': 'Bezeichnungen der neuen Stufen',
+    'stepEdit.mapTitle': 'Was wird aus den bisherigen Einträgen?',
+    'stepEdit.presetExplain': '„Gleichmäßig verteilen“: Die niedrigste Stufe bleibt die niedrigste, die höchste die höchste, alles dazwischen rückt anteilig mit. „Zahlen beibehalten“: Jeder Eintrag behält seine Zahl; was über der neuen höchsten Stufe liegt, landet auf der höchsten. Darunter kannst du jede Stufe einzeln zuordnen oder ihre Einträge entfernen.',
+    'stepEdit.preset.spread': 'Gleichmäßig verteilen',
+    'stepEdit.preset.same': 'Zahlen beibehalten',
+    'stepEdit.valueLabel': '„{label}“ ({value})',
+    'stepEdit.count': '{count}×',
+    'stepEdit.mapAria': 'Bisher {value} ({count}×) wird zu',
+    'stepEdit.remove': 'Entfernen',
+    'stepEdit.summary.changedOne': '1 Eintrag bekommt einen anderen Wert.',
+    'stepEdit.summary.changedMany': '{count} Einträge bekommen einen anderen Wert.',
+    'stepEdit.summary.removedOne': '1 Eintrag wird entfernt.',
+    'stepEdit.summary.removedMany': '{count} Einträge werden entfernt.',
+    'stepEdit.summary.merged': 'Mehrere alte Stufen landen auf derselben neuen und lassen sich danach nicht mehr unterscheiden.',
+    'stepEdit.summary.none': 'Alle bisherigen Einträge behalten ihre Zahl.',
+    'stepEdit.safety': 'Die alten Werte bleiben als Sicherung gespeichert. Rückgängig machen kannst du das hier, bis du etwas Neues in dieses Feld einträgst.',
+    'stepEdit.apply': 'Umstellen …',
+    'stepEdit.confirm': 'Wirklich umstellen? Danach gelten die neuen Stufen auch für alle bisherigen Einträge, so wie oben zugeordnet.',
+    'stepEdit.confirmDo': 'Jetzt umstellen',
+    'stepEdit.progress': 'Wird umgestellt … {done} von {total} Tagen. Lass Logbuch so lange offen.',
+    'stepEdit.done': '„{name}“ hat jetzt {steps} Stufen.',
+    'stepEdit.failed': 'Die Umstellung ist noch nicht fertig, vermutlich fehlte kurz die Verbindung. Sie läuft beim nächsten Öffnen von Logbuch weiter – oder tippe im Feld auf „Weiter umstellen“.',
+    'stepEdit.pending': 'Die Umstellung dieses Felds ist noch nicht fertig.',
+    'stepEdit.resume': 'Weiter umstellen',
+    'stepEdit.resumed': 'Die Umstellung von „{name}“ ist fertig.',
+    'stepEdit.last': 'Am {date} von {from} auf {to} Stufen umgestellt.',
+    'stepEdit.undo': 'Rückgängig machen …',
+    'stepEdit.undoConfirm': 'Zurück zu {from} Stufen? Alle Einträge bekommen wieder ihren Wert von vor der Umstellung.',
+    'stepEdit.undoDo': 'Zurückholen',
+    'stepEdit.undoDone': '„{name}“ hat wieder {steps} Stufen.',
+    'stepEdit.error.nothing': 'Das ist dieselbe Skala wie bisher – es gibt nichts umzustellen.',
+    'habitForm.lockedNote': 'Für dieses Feld gibt es bereits Einträge – Feld-Typ und wie oft du einträgst sind deshalb fest. Für einen anderen Typ: archivieren und neu anlegen.',
     'habitForm.name': 'Feldname',
     'habitForm.fieldType': 'Feld-Typ',
     'habitForm.kindScale': 'Skala',
@@ -2379,7 +2420,7 @@ const STRINGS = {
     'habitForm.numberOfSteps': 'Number of steps',
     'habitForm.stepsExplain': 'In questionnaires, 5 to 7 steps have proven themselves – more gradations rarely make answers more accurate. That is why buttons and custom labels go up to 7. For a finer “roughly how much”, there is the slider without custom labels (up to 100).',
     'habitForm.sliderRangeExplain': 'The slider never shows a min/max label while entering a value (only here in management).',
-    'habitForm.rangeLocked': 'Range {min}–{max} (locked due to existing entries).',
+    'habitForm.rangeLocked': '{steps} steps ({min} to {max})',
     'habitForm.period': 'How often do you fill this in? Once a …',
     'habitForm.period.day': 'Day',
     'habitForm.period.week': 'Week',
@@ -2425,7 +2466,45 @@ const STRINGS = {
     'habitForm.convertConfirm.number': 'Really convert? Previous values are kept. New: from today on, a day without tapping counts as 0; earlier empty days stay empty. You cannot convert back.',
     'habitForm.convertConfirm.scale': 'Really convert? Previous values are kept as numbers; the step labels and the valuation are dropped. From today on, a day without tapping counts as 0; earlier empty days stay empty. You cannot convert back.',
     'habitForm.convertDone': '“{name}” is now a counter.',
-    'habitForm.lockedNote': 'This field already has entries – field type and number of steps are locked. Labels can still be switched on/off and edited. For a different scale: archive and create a new one.',
+    'habitForm.labelsLockedWarn': 'New labels also apply to all previous entries. If old entries should move to a different step, use “Change steps” above.',
+    'habitForm.goodChangedWarn': 'This also applies retroactively: all previous entries will be colored differently.',
+    'stepEdit.title': 'Change steps',
+    'stepEdit.hint': 'Since there are entries already, you change the number of steps here – and decide yourself what happens to the previous values.',
+    'stepEdit.open': 'Change steps …',
+    'stepEdit.intro': 'You decide yourself what happens to the previous entries. Think about what an old value meant back then: a 3 on a scale up to 3 is not the same as a 3 on a scale up to 5.',
+    'stepEdit.newSteps': 'New number of steps',
+    'stepEdit.newLabels': 'Labels of the new steps',
+    'stepEdit.mapTitle': 'What happens to the previous entries?',
+    'stepEdit.presetExplain': '“Spread evenly”: the lowest step stays the lowest, the highest stays the highest, everything in between moves proportionally. “Keep numbers”: every entry keeps its number; anything above the new highest step lands on the highest. Below, you can assign each step individually or remove its entries.',
+    'stepEdit.preset.spread': 'Spread evenly',
+    'stepEdit.preset.same': 'Keep numbers',
+    'stepEdit.valueLabel': '“{label}” ({value})',
+    'stepEdit.count': '{count}×',
+    'stepEdit.mapAria': 'Previously {value} ({count}×) becomes',
+    'stepEdit.remove': 'Remove',
+    'stepEdit.summary.changedOne': '1 entry gets a different value.',
+    'stepEdit.summary.changedMany': '{count} entries get a different value.',
+    'stepEdit.summary.removedOne': '1 entry will be removed.',
+    'stepEdit.summary.removedMany': '{count} entries will be removed.',
+    'stepEdit.summary.merged': 'Several old steps land on the same new one and can no longer be told apart afterwards.',
+    'stepEdit.summary.none': 'All previous entries keep their number.',
+    'stepEdit.safety': 'The old values are kept as a backup. You can undo this here until you enter something new in this field.',
+    'stepEdit.apply': 'Change …',
+    'stepEdit.confirm': 'Really change? Afterwards the new steps apply to all previous entries too, as assigned above.',
+    'stepEdit.confirmDo': 'Change now',
+    'stepEdit.progress': 'Changing … {done} of {total} days. Keep Logbuch open until it is done.',
+    'stepEdit.done': '“{name}” now has {steps} steps.',
+    'stepEdit.failed': 'The change is not finished yet, probably the connection dropped briefly. It continues the next time you open Logbuch – or tap “Continue change” in the field.',
+    'stepEdit.pending': 'The change of this field is not finished yet.',
+    'stepEdit.resume': 'Continue change',
+    'stepEdit.resumed': 'The change of “{name}” is finished.',
+    'stepEdit.last': 'Changed from {from} to {to} steps on {date}.',
+    'stepEdit.undo': 'Undo …',
+    'stepEdit.undoConfirm': 'Back to {from} steps? All entries get their value from before the change again.',
+    'stepEdit.undoDo': 'Restore',
+    'stepEdit.undoDone': '“{name}” has {steps} steps again.',
+    'stepEdit.error.nothing': 'This is the same scale as before – there is nothing to change.',
+    'habitForm.lockedNote': 'This field already has entries – so the field type and how often you enter it are fixed. For a different type: archive and create a new one.',
     'habitForm.name': 'Field name',
     'habitForm.fieldType': 'Field type',
     'habitForm.kindScale': 'Scale',
@@ -4260,6 +4339,11 @@ function syncHabitFormFromDom() {
         f.labels[Number(el.dataset.labelIndex)] = el.value;
       });
     }
+    if (f.stepEdit?.labels) {
+      document.querySelectorAll('[data-step-label]').forEach((el) => {
+        f.stepEdit.labels[Number(el.dataset.stepLabel)] = el.value;
+      });
+    }
     readGoalFromDom(f);
   } else if (f.kind === 'computed') {
     const aggregateEl = document.getElementById('habit-form-computed-aggregate');
@@ -4415,9 +4499,9 @@ async function handleHabitSaveInner() {
     const original = state.habits.find((h) => h.defId === f.defId);
     const stepCount = original.max - original.min + 1;
     if (lockedChoiceBlocked(f, f.displayStyle, f.labelsEnabled)) {
-      // Die Stufenzahl lässt sich bei vorhandenen Daten nicht mehr verkleinern (Tier 3,
-      // bewusst nicht umgesetzt - siehe CLAUDE.md), Buttons/Bezeichnungen sind für so ein
-      // Feld also nicht mehr wählbar. Das Formular sperrt beides schon (scaleBody).
+      // Die Stufenzahl ändert nur "Stufen ändern" (startStepChange) - hier im Formular sind
+      // Buttons/Bezeichnungen für so ein Feld also nicht wählbar. Das Formular sperrt beides
+      // schon (scaleBody).
       state.notice = { type: 'error', text: tPlain('habitForm.lockedStepCap', { steps: stepCount, cap: CHOICE_STEP_CAP }) };
       return;
     }
@@ -4501,6 +4585,7 @@ async function handleHabitSaveInner() {
     archivedInStats: f.defId ? !!state.habits.find((h) => h.defId === f.defId)?.archivedInStats : false,
     counterSince: f.kind === 'counter' && f.defId ? state.habits.find((h) => h.defId === f.defId)?.counterSince ?? undefined : undefined,
     reminderBelow,
+    stepChange: f.kind === 'scale' && f.defId ? state.habits.find((h) => h.defId === f.defId)?.stepChange ?? undefined : undefined,
   };
   const sectionId = period === 'day' && state.sections.some((sec) => sec.id === f.sectionId) ? f.sectionId : null;
   const row = {
@@ -4593,6 +4678,328 @@ async function convertHabitToCounter(defId) {
   closeHabitForm();
   state.notice = { type: 'ok', text: tPlain('habitForm.convertDone', { name: h.name }) };
   render();
+}
+
+// --- Stufen ändern (Skala mit Einträgen) -------------------------------------
+// Nutzer-Entscheidung 2026-10-29: die Anzahl Stufen einer Skala mit Einträgen ist änderbar,
+// was aus den bisherigen Werten wird, entscheidet man selbst (je alte Stufe eine neue oder
+// "entfernen"). Die alten Werte bleiben als Sicherung im selben Tages-Eintrag (withPrev) -
+// nicht als archiviertes Zweitfeld: archivierte Felder rechnen in die Tagesfarbe mit
+// (dayOverallScore), alte Tage zählten doppelt.
+// Ablauf über h.stepChange (verschlüsselt in enc): state 'apply' (Definition noch "from") ->
+// Tage umschreiben -> Definition "to", state 'done'. Rückgängig: state 'undo' -> Tage aus der
+// Sicherung -> Definition "from", stepChange null. Jeder Tag schreibt Wert und Sicherung in
+// einem Zug, und welche Tage fertig sind, steht in den Tagen selbst (_prev.c) - ein Abbruch
+// (Netz weg, App zu) läuft beim nächsten Laden weiter (resumeStepChanges).
+const STEP_CHANGE_PARALLEL = 6;
+const stepChangeRunning = new Set(); // defIds
+const stepChangeStarting = new Set(); // defIds - Definition wird gerade markiert (zeigt schon "Wird umgestellt")
+// Wie oft jeder Wert eines Felds eingetragen ist: [[Wert, Anzahl], ...] aufsteigend.
+function usedStepValues(h) {
+  const counts = new Map();
+  for (const day of Object.values(state.entries)) {
+    const v = day?.[h.id];
+    if (typeof v === 'number') counts.set(v, (counts.get(v) || 0) + 1);
+  }
+  return [...counts].sort((a, b) => a[0] - b[0]);
+}
+// Vorschlag für eine alte Stufe: 'spread' = niedrigste bleibt niedrigste, höchste bleibt
+// höchste, dazwischen anteilig; 'same' = Zahl behalten, oberhalb der neuen Spanne auf die höchste.
+function stepChangeTarget(from, to, preset, old) {
+  if (preset === 'same') return Math.min(to.max, Math.max(to.min, old));
+  const fromSteps = from.max - from.min;
+  const pos = fromSteps > 0 ? Math.min(1, Math.max(0, (old - from.min) / fromSteps)) : 0;
+  return to.min + Math.round(pos * (to.max - to.min));
+}
+// Neuer Wert eines alten (null = entfernen). Werte ohne eigene Zeile (inzwischen auf einem
+// anderen Gerät eingetragen) bekommen den gleichmäßig verteilten Vorschlag.
+function stepChangeMapValue(sc, old) {
+  const key = String(old);
+  return key in sc.map ? sc.map[key] : stepChangeTarget(sc.from, sc.to, 'spread', old);
+}
+function stepChangeId() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => (b % 36).toString(36)).join('');
+}
+// Rückgängig nur, solange seit der Umstellung nichts in dem Feld eingetragen oder geändert
+// wurde - sonst holte die Sicherung einen alten Wert über einen neuen zurück.
+function stepChangeUndoable(h) {
+  const sc = h?.stepChange;
+  if (sc?.state !== 'done') return false;
+  return Object.values(state.entries).every((day) => {
+    const prev = day?.[PREV_KEY]?.[h.id];
+    if (prev?.c !== sc.id) return day?.[h.id] === undefined;
+    const expected = stepChangeMapValue(sc, prev.v);
+    return (day[h.id] ?? null) === expected;
+  });
+}
+async function markStepChange(h, stepChange) {
+  if (stepChangeStarting.has(h.defId) || stepChangeRunning.has(h.defId)) return false; // zweiter Tipp
+  stepChangeStarting.add(h.defId);
+  render();
+  try {
+    return await updateHabitPayload(h, { stepChange });
+  } finally {
+    stepChangeStarting.delete(h.defId);
+  }
+}
+async function startStepChange(defId, to, map) {
+  const h = state.habits.find((x) => x.defId === defId);
+  if (!h) return false;
+  const sc = {
+    id: stepChangeId(), date: formatKey(new Date()), state: 'apply',
+    from: { min: h.min, max: h.max, labels: h.labels ?? null }, to, map,
+  };
+  if (!(await markStepChange(h, sc))) return false;
+  return runStepChange(defId);
+}
+async function startStepChangeUndo(defId) {
+  const h = state.habits.find((x) => x.defId === defId);
+  if (!h || !stepChangeUndoable(h)) return false;
+  if (!(await markStepChange(h, { ...h.stepChange, state: 'undo' }))) return false;
+  return runStepChange(defId);
+}
+// Schreibt alle noch offenen Tage einer laufenden Umstellung (bzw. Rückgängig) und setzt danach
+// die Definition. Rückgabe: true = fertig. Fortschritt direkt ins DOM (#step-change-progress),
+// ohne render() je Tag.
+async function runStepChange(defId) {
+  if (stepChangeRunning.has(defId)) return false;
+  let h = state.habits.find((x) => x.defId === defId);
+  const sc = h?.stepChange;
+  if (!sc || sc.state === 'done') return true;
+  stepChangeRunning.add(defId);
+  render(); // zeigt im offenen Formular die Fortschrittszeile (stepEditHtml)
+  try {
+    const undo = sc.state === 'undo';
+    const todo = Object.keys(state.entries).filter((k) => {
+      const day = state.entries[k];
+      const prev = day?.[PREV_KEY]?.[h.id];
+      if (undo) return prev?.c === sc.id;
+      // Auch Sicherungen früherer Umstellungen ohne Wert (damals entfernt) - die räumt der Lauf weg.
+      return prev?.c !== sc.id && (day?.[h.id] !== undefined || prev !== undefined);
+    });
+    const transform = (day) => {
+      if (undo) {
+        const next = withPrev(day, h.id, undefined);
+        next[h.id] = day[PREV_KEY][h.id].v;
+        return next;
+      }
+      const old = day[h.id];
+      const next = withPrev(day, h.id, old === undefined ? undefined : { c: sc.id, v: old });
+      if (old !== undefined) {
+        const value = stepChangeMapValue(sc, old);
+        if (value === null) delete next[h.id];
+        else next[h.id] = value;
+      }
+      return next;
+    };
+    let done = 0, failed = 0;
+    const queue = [...todo];
+    const showProgress = () => {
+      const el = document.getElementById('step-change-progress');
+      if (el) el.textContent = tPlain('stepEdit.progress', { done: done + failed, total: todo.length });
+    };
+    showProgress();
+    const worker = async () => {
+      while (queue.length) {
+        const dateKey = queue.shift();
+        const before = state.entries[dateKey];
+        const changed = transform(before);
+        state.entries = { ...state.entries, [dateKey]: changed };
+        if (await saveDay(dateKey)) done++;
+        else {
+          failed++;
+          // Nicht gespeichert: den alten Stand zurück, sonst hielte der nächste Lauf den Tag für fertig.
+          if (state.entries[dateKey] === changed) state.entries = { ...state.entries, [dateKey]: before };
+        }
+        showProgress();
+      }
+    };
+    await Promise.all(Array.from({ length: STEP_CHANGE_PARALLEL }, worker));
+    if (failed) return false;
+    h = state.habits.find((x) => x.defId === defId);
+    if (!h) return false;
+    const target = undo ? sc.from : sc.to;
+    return await updateHabitPayload(h, {
+      min: target.min, max: target.max, labels: target.labels,
+      stepChange: undo ? null : { ...sc, state: 'done' },
+    });
+  } finally {
+    stepChangeRunning.delete(defId);
+  }
+}
+// Formular-Zustand "Stufen ändern": f.stepEdit = { steps, labels (null ohne Bezeichnungen),
+// preset ('spread'|'same'|'custom'), map { "<alt>": neu|null }, confirm }.
+function stepEditKey(se) {
+  return JSON.stringify([se.steps, se.labels, se.map]);
+}
+function stepEditCap(h) {
+  return h.displayStyle === 'buttons' || h.labels ? CHOICE_STEP_CAP : SLIDER_STEP_CAP;
+}
+function stepEditFrom(h) {
+  return { min: h.min, max: h.max, labels: h.labels ?? null };
+}
+function stepEditTo(h, se) {
+  return { min: h.min, max: h.min + se.steps - 1, labels: se.labels ? se.labels.map((l) => l.trim()) : null };
+}
+function applyStepEditPreset(h, se) {
+  const from = stepEditFrom(h);
+  const to = stepEditTo(h, se);
+  se.map = Object.fromEntries(usedStepValues(h).map(([v]) => [String(v), stepChangeTarget(from, to, se.preset, v)]));
+  if (h.labels) {
+    // Bezeichnungen wandern mit ihren Stufen (dieselbe Rechnung wie die Werte), neue bleiben leer.
+    const labels = Array(se.steps).fill('');
+    h.labels.forEach((l, i) => {
+      const j = stepChangeTarget(from, to, se.preset, from.min + i) - to.min;
+      if (!labels[j]) labels[j] = l;
+    });
+    se.labels = labels;
+  }
+}
+function stepEditCountChanged(h, se, steps) {
+  se.steps = steps;
+  if (se.preset !== 'custom') { applyStepEditPreset(h, se); return; }
+  // Eigene Zuordnung behalten, nur in die neue Spanne holen.
+  const max = h.min + steps - 1;
+  for (const k of Object.keys(se.map)) if (se.map[k] !== null) se.map[k] = Math.min(max, se.map[k]);
+  if (se.labels) se.labels = resizeLabels(se.labels, steps);
+}
+function stepValueText(labels, min, v) {
+  const label = labels?.[v - min];
+  return label ? t('stepEdit.valueLabel', { label, value: v }) : esc(String(v));
+}
+function stepEditSummary(h, se) {
+  let changed = 0, removed = 0;
+  const targets = new Map();
+  for (const [v, n] of usedStepValues(h)) {
+    const to = se.map[String(v)];
+    if (to === null) { removed += n; continue; }
+    if (to !== v) changed += n;
+    targets.set(to, (targets.get(to) || 0) + 1);
+  }
+  const parts = [];
+  if (changed) parts.push(t(changed === 1 ? 'stepEdit.summary.changedOne' : 'stepEdit.summary.changedMany', { count: changed }));
+  if (removed) parts.push(t(removed === 1 ? 'stepEdit.summary.removedOne' : 'stepEdit.summary.removedMany', { count: removed }));
+  if ([...targets.values()].some((c) => c > 1)) parts.push(t('stepEdit.summary.merged'));
+  if (!parts.length) parts.push(t('stepEdit.summary.none'));
+  return parts.join(' ');
+}
+function stepEditNothingToDo(h, se) {
+  const to = stepEditTo(h, se);
+  return to.max === h.max && Object.entries(se.map).every(([k, v]) => v === Number(k))
+    && JSON.stringify(to.labels) === JSON.stringify(h.labels ?? null);
+}
+// Teil "Anzahl Stufen" eines gesperrten Skala-Felds: Anzeige, Rückgängig, "Stufen ändern".
+function stepEditHtml(f) {
+  const h = state.habits.find((x) => x.defId === f.defId);
+  if (!h) return '';
+  const steps = h.max - h.min + 1;
+  const sc = h.stepChange;
+  const current = `<p class="habit-form-lock-note">${t('habitForm.rangeLocked', { steps, min: h.min, max: h.max })}</p>`;
+  if (stepChangeRunning.has(h.defId) || stepChangeStarting.has(h.defId)) {
+    return current + `<p class="habit-form-lock-note step-edit-progress" id="step-change-progress" role="status">${t('stepEdit.progress', { done: 0, total: '…' })}</p>`;
+  }
+  if (sc && sc.state !== 'done') {
+    return current + `
+      <div class="step-box">
+        <p class="habit-form-lock-note" role="status">${t('stepEdit.pending')}</p>
+        <button type="button" class="manage-btn" data-action="step-edit-resume">${t('stepEdit.resume')}</button>
+      </div>`;
+  }
+  const se = f.stepEdit;
+  if (!se) {
+    const fromSteps = sc ? sc.from.max - sc.from.min + 1 : 0;
+    const undo = !stepChangeUndoable(h) ? '' : f.stepUndoConfirm ? `
+      <div class="step-box">
+        <p class="habit-form-lock-note" role="status">${t('stepEdit.undoConfirm', { from: fromSteps })}</p>
+        <div class="manage-group-tip-actions">
+          <button type="button" class="manage-btn" data-action="step-undo-cancel">${t('common.cancel')}</button>
+          <button type="button" class="manage-btn" data-action="step-undo-confirm">${t('stepEdit.undoDo')}</button>
+        </div>
+      </div>` : `
+      <div class="step-box">
+        <p class="habit-form-lock-note">${t('stepEdit.last', { date: formatDMY(sc.date), from: fromSteps, to: steps })}</p>
+        <button type="button" class="manage-btn" data-action="step-undo">${t('stepEdit.undo')}</button>
+      </div>`;
+    return current + undo + `
+      <div class="step-box">
+        <p class="habit-form-lock-note">${t('stepEdit.hint')}</p>
+        <button type="button" class="manage-btn" data-action="step-edit-open">${t('stepEdit.open')}</button>
+      </div>`;
+  }
+  const to = stepEditTo(h, se);
+  const options = (selected) => Array.from({ length: se.steps }, (_, i) => to.min + i)
+    .map((v) => `<option value="${v}" ${selected === v ? 'selected' : ''}>${se.labels ? `${v} – ${esc(se.labels[v - to.min] || '…')}` : v}</option>`).join('')
+    + `<option value="" ${selected === null ? 'selected' : ''}>${t('stepEdit.remove')}</option>`;
+  const rows = usedStepValues(h).map(([v, n]) => `
+    <div class="step-map-row">
+      <span class="step-map-old">${stepValueText(h.labels, h.min, v)} <span class="step-map-count">${t('stepEdit.count', { count: n })}</span></span>
+      <select data-step-map="${v}" aria-label="${esc(tPlain('stepEdit.mapAria', { value: h.labels?.[v - h.min] || v, count: n }))}">${options(se.map[String(v)])}</select>
+    </div>`).join('');
+  return current + `
+    <div class="step-edit" role="group" aria-labelledby="step-edit-title">
+      <p class="step-edit-title" id="step-edit-title" tabindex="-1">${t('stepEdit.title')}</p>
+      <p class="habit-form-lock-note">${t('stepEdit.intro')}</p>
+      <label for="step-edit-steps">${t('stepEdit.newSteps')}</label>
+      ${stepperInput('step-edit-steps', se.steps, 2, stepEditCap(h), se.confirm, 'data-action="step-edit-count"')}
+      ${se.labels ? `
+        <p class="step-edit-sub">${t('stepEdit.newLabels')}</p>
+        <div class="label-inputs">
+          ${se.labels.map((l, i) => `
+            <div class="label-input-row">
+              <span class="label-input-step" aria-hidden="true">${to.min + i}</span>
+              <input type="text" data-step-label="${i}" value="${esc(l)}" maxlength="20" aria-label="${esc(t('habitForm.labelForStep', { step: to.min + i }))}" ${se.confirm ? 'disabled' : ''} />
+            </div>`).join('')}
+        </div>` : ''}
+      <label class="step-edit-sub" id="step-edit-map-label">${t('stepEdit.mapTitle')}${infoTip(t('stepEdit.presetExplain'))}</label>
+      <div class="pill-group seg" role="group" aria-labelledby="step-edit-map-label">
+        ${['spread', 'same'].map((p) => `<button type="button" class="pill-toggle${se.preset === p ? ' pill-toggle--active' : ''}" data-action="step-edit-preset" data-preset="${p}" aria-pressed="${se.preset === p}" ${se.confirm ? 'disabled' : ''}>${t('stepEdit.preset.' + p)}</button>`).join('')}
+      </div>
+      <div class="step-map">${rows}</div>
+      <p class="habit-form-lock-note" id="step-edit-summary" aria-live="polite">${stepEditSummary(h, se)}</p>
+      <p class="habit-form-lock-note">${t('stepEdit.safety')}</p>
+      ${se.confirm ? `
+        <p class="habit-form-lock-note step-edit-confirm" role="status">${t('stepEdit.confirm')}</p>
+        <div class="manage-group-tip-actions">
+          <button type="button" class="manage-btn" data-action="step-edit-confirm-cancel">${t('common.cancel')}</button>
+          <button type="button" class="manage-btn" data-action="step-edit-confirm">${t('stepEdit.confirmDo')}</button>
+        </div>
+      ` : `
+        <div class="manage-group-tip-actions">
+          <button type="button" class="manage-btn" data-action="step-edit-cancel">${t('common.cancel')}</button>
+          <button type="button" class="manage-btn" data-action="step-edit-apply">${t('stepEdit.apply')}</button>
+        </div>
+      `}
+    </div>`;
+}
+// Nach Umstellen/Rückgängig: das offene Formular (und seinen Vergleichsstand für "Änderungen
+// verwerfen?") auf die neue Skala bringen, ohne andere, noch ungespeicherte Eingaben zu verlieren.
+function refreshFormAfterStepChange(f) {
+  const h = state.habits.find((x) => x.defId === f.defId);
+  if (!h) return;
+  const patch = { min: h.min, max: h.max, labelsEnabled: !!h.labels, labels: h.labels ? [...h.labels] : resizeLabels([], h.max - h.min + 1) };
+  Object.assign(f, patch);
+  if (f.baseline) f.baseline = JSON.stringify({ ...JSON.parse(f.baseline), ...patch, labels: h.labels ? [...h.labels] : null });
+}
+function finishStepChangeAction(f, ok, doneKey) {
+  const h = state.habits.find((x) => x.defId === f.defId);
+  if (ok && h) {
+    refreshFormAfterStepChange(f);
+    state.notice = { type: 'ok', text: tPlain(doneKey, { name: h.name, steps: h.max - h.min + 1 }) };
+  } else {
+    state.notice = { type: 'error', text: t('stepEdit.failed') };
+  }
+  render();
+  // Die Meldung steht oben (wie beim Speichern des Formulars, siehe handleHabitSave).
+  requestAnimationFrame(() => document.querySelector('.notice')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+}
+// Nach dem Laden: abgebrochene Umstellungen fertig machen (im Hintergrund).
+async function resumeStepChanges() {
+  for (const h of state.habits.filter((x) => x.stepChange && x.stepChange.state !== 'done')) {
+    if (await runStepChange(h.defId)) {
+      state.notice = { type: 'ok', text: tPlain('stepEdit.resumed', { name: h.name }) };
+      render();
+    }
+  }
 }
 
 async function handleHabitArchive(defId, archive) {
@@ -4843,14 +5250,16 @@ async function handleHabitDelete(defId) {
   if (habit) purgeKeyFromEntries(habit.id);
 }
 
-// Entfernt Wert und Notiz eines Schlüssels (Feld, bzw. nur Notiz bei 'section:<id>')
-// aus allen Tages-Einträgen - beim endgültigen Löschen eines Feldes bzw. einer Gruppe.
+// Entfernt Wert, Notiz und Sicherung (Stufen ändern) eines Schlüssels (Feld, bzw. nur
+// Notiz bei 'section:<id>') aus allen Tages-Einträgen - beim endgültigen Löschen eines
+// Feldes bzw. einer Gruppe.
 async function purgeKeyFromEntries(key) {
   const affectedDates = Object.keys(state.entries).filter(
     (k) => state.entries[k]?.[key] !== undefined || state.entries[k]?.[NOTES_KEY]?.[key] !== undefined
+      || state.entries[k]?.[PREV_KEY]?.[key] !== undefined
   );
   await Promise.all(affectedDates.map(async (dateKey) => {
-    const day = withNote({ ...state.entries[dateKey] }, key, '');
+    const day = withPrev(withNote({ ...state.entries[dateKey] }, key, ''), key, undefined);
     delete day[key];
     state.entries = { ...state.entries, [dateKey]: day };
     await saveDay(dateKey);
@@ -4896,6 +5305,19 @@ function withNote(day, key, text) {
   const next = { ...day };
   if (Object.keys(notes).length) next[NOTES_KEY] = notes;
   else delete next[NOTES_KEY];
+  return next;
+}
+// Sicherung der Werte von vor "Stufen ändern" (siehe runStepChange): im selben Tagesobjekt
+// unter { _prev: { <Feld>: { c: <Umstellungs-Id>, v: <alter Wert> } } }. Wie bei withNote
+// verschwindet _prev ohne Inhalt wieder; backup undefined entfernt den Eintrag des Felds.
+const PREV_KEY = '_prev';
+function withPrev(day, key, backup) {
+  const prev = { ...(day[PREV_KEY] || {}) };
+  if (backup !== undefined) prev[key] = backup;
+  else delete prev[key];
+  const next = { ...day };
+  if (Object.keys(prev).length) next[PREV_KEY] = prev;
+  else delete next[PREV_KEY];
   return next;
 }
 const NOTE_MAX_LENGTH = 2000;
@@ -5048,7 +5470,7 @@ async function updateHabitPayload(habit, changes) {
     // Ohne diese gingen Ziel/Schritt/Summe einer Zahl bzw. eines Zählers hier still verloren.
     step: isCounterKind(next) ? next.step : undefined, target: next.target ?? undefined,
     summary: next.summary === 'sum' ? 'sum' : undefined, counterSince: next.counterSince ?? undefined,
-    reminderBelow: next.reminderBelow ?? undefined,
+    reminderBelow: next.reminderBelow ?? undefined, stepChange: next.stepChange ?? undefined,
   };
   const enc = await encryptData(currentDek, payload);
   const { error } = await supabase.from('habit_definitions').update({ enc, ...DEF_PLAINTEXT_CLEARED }).eq('id', habit.defId);
@@ -5083,14 +5505,16 @@ function saveDay(dateKey) {
   next.finally(() => { if (daySaveChains.get(dateKey) === next) daySaveChains.delete(dateKey); });
   return next;
 }
+// Rückgabe: true = gespeichert (gebraucht von runStepChange, die anderen Aufrufer melden
+// Fehler nur über die Meldung).
 async function saveDayNow(dateKey) {
   if (undecryptableEntryDates.has(dateKey)) {
     state.entries = { ...state.entries, [dateKey]: {} }; // die Änderung nicht stehen lassen - sie ist ja nicht gespeichert
     state.notice = { type: 'error', text: t('notice.dayUndecryptable') };
     render();
-    return;
+    return false;
   }
-  if (!currentDek || !state.session) return; // inzwischen abgemeldet / Schlüssel verworfen
+  if (!currentDek || !state.session) return false; // inzwischen abgemeldet / Schlüssel verworfen
   try {
     const { data: row, error: fetchErr } = await supabase.from('habit_entries')
       .select('data').eq('entry_date', dateKey).maybeSingle();
@@ -5110,7 +5534,7 @@ async function saveDayNow(dateKey) {
       state.entries = { ...state.entries, [dateKey]: day };
       renderUnlessTyping();
     }
-    if (!currentDek) return;
+    if (!currentDek) return false;
     const encrypted = await encryptData(currentDek, day);
     const { error } = await supabase
       .from('habit_entries')
@@ -5120,9 +5544,11 @@ async function saveDayNow(dateKey) {
       );
     if (error) throw error;
     syncedEntries.set(dateKey, { day, iv: encrypted.iv });
+    return true;
   } catch (err) {
     state.notice = errorNotice('notice.saveFailed', err?.message || String(err));
     render();
+    return false;
   }
 }
 // Dreiwege-Zusammenführung eines Tages: was WIR seit dem gemeinsamen Stand (base)
@@ -7573,6 +7999,15 @@ function renderPrivacySection() {
 // "Über Logbuch" zeigt alle.
 const CHANGELOG = [
   {
+    id: '2026-10-29',
+    de: [
+      'Du kannst jetzt die Anzahl Stufen einer Skala ändern, auch wenn du schon Einträge hast: Bearbeite das Feld und tippe auf „Stufen ändern“. Dort legst du fest, was aus deinen bisherigen Einträgen wird, und kannst es danach auch wieder rückgängig machen.',
+    ],
+    en: [
+      'You can now change the number of steps of a scale, even if it already has entries: edit the field and tap “Change steps”. There you decide what happens to your previous entries, and you can undo it afterwards.',
+    ],
+  },
+  {
     id: '2026-10-28',
     de: [
       'Ein Feld kann jetzt bis zu vier Erinnerungszeiten haben, z. B. morgens und abends. Auch Zähler erinnern dich jetzt – auf Wunsch nur, wenn sie zu der Zeit unter einer Zahl liegen, die du festlegst.',
@@ -8041,7 +8476,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     <div class="auth-field">
       <label for="habit-form-steps">${t('habitForm.numberOfSteps')}${infoTip(t('habitForm.stepsExplain') + (f.displayStyle === 'slider' ? ' ' + t('habitForm.sliderRangeExplain') : ''))}</label>
       ${f.locked
-        ? `<p class="habit-form-lock-note">${t('habitForm.rangeLocked', { min: f.min, max: f.max })}</p>`
+        ? stepEditHtml(f)
         : stepperInput('habit-form-steps', stepCount, 2, habitFormStepCap(f), false, 'data-action="habit-range-change"')}
       ${atChoiceCap ? `
         <p class="habit-form-lock-note">${t('habitForm.stepCapHint', { cap: CHOICE_STEP_CAP })}</p>
@@ -8080,6 +8515,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
               <input type="text" data-label-index="${i}" value="${esc(l)}" maxlength="20" aria-label="${esc(t('habitForm.labelForStep', { step: habitFormStepValue(f, i) }))}" />
             </div>`).join('')}
         </div>
+        ${f.locked ? `<p class="habit-form-lock-note">${t('habitForm.labelsLockedWarn')}</p>` : ''}
       </div>
     ` : ''}
     <div class="auth-field">
@@ -8093,6 +8529,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         <button type="button" class="pill-toggle${f.good === 'low' ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="low">${t('habitForm.lowIsGood')}</button>
         <button type="button" class="pill-toggle${!f.good ? ' pill-toggle--active' : ''}" data-action="habit-good" data-good="">${t('habitForm.noValuation')}</button>
       </div>
+      ${f.locked && f.good !== (state.habits.find((h) => h.defId === f.defId)?.good ?? null) ? `<p class="habit-form-lock-note" role="status">${t('habitForm.goodChangedWarn')}</p>` : ''}
     </div>
   `;
 
@@ -9617,6 +10054,79 @@ app.addEventListener('click', async (e) => {
     document.querySelector('[data-action="habit-convert-counter"]')?.focus();
   } else if (action === 'habit-convert-confirm') {
     await convertHabitToCounter(state.habitForm.defId);
+  } else if (action === 'step-edit-open') {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    const h = state.habits.find((x) => x.defId === f.defId);
+    if (!h) return;
+    f.stepEdit = { steps: h.max - h.min + 1, labels: h.labels ? [...h.labels] : null, preset: 'spread', map: {}, confirm: false };
+    applyStepEditPreset(h, f.stepEdit);
+    f.stepEdit.initial = stepEditKey(f.stepEdit);
+    render();
+    // Auf die Überschrift, nicht ins Zahlenfeld - dort ginge auf dem Handy sofort die Tastatur auf.
+    document.getElementById('step-edit-title')?.focus();
+  } else if (action === 'step-edit-cancel') {
+    syncHabitFormFromDom();
+    state.habitForm.stepEdit = null;
+    render();
+    document.querySelector('[data-action="step-edit-open"]')?.focus();
+  } else if (action === 'step-edit-preset') {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    const h = state.habits.find((x) => x.defId === f.defId);
+    if (!h || !f.stepEdit) return;
+    f.stepEdit.preset = el.dataset.preset;
+    applyStepEditPreset(h, f.stepEdit);
+    render();
+    document.querySelector(`[data-action="step-edit-preset"][data-preset="${el.dataset.preset}"]`)?.focus();
+  } else if (action === 'step-edit-apply') {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    const h = state.habits.find((x) => x.defId === f.defId);
+    if (!h || !f.stepEdit) return;
+    const se = f.stepEdit;
+    if (se.labels && se.labels.some((l) => !l.trim())) {
+      state.notice = { type: 'error', text: t('habitForm.error.fillAllLabels') };
+    } else if (stepEditNothingToDo(h, se)) {
+      state.notice = { type: 'error', text: t('stepEdit.error.nothing') };
+    } else {
+      se.confirm = true;
+    }
+    render();
+    document.querySelector(se.confirm ? '[data-action="step-edit-confirm-cancel"]' : '[data-action="step-edit-apply"]')?.focus();
+  } else if (action === 'step-edit-confirm-cancel') {
+    state.habitForm.stepEdit.confirm = false;
+    render();
+    document.querySelector('[data-action="step-edit-apply"]')?.focus();
+  } else if (action === 'step-edit-confirm') {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    const h = state.habits.find((x) => x.defId === f.defId);
+    if (!h || !f.stepEdit) return;
+    const to = stepEditTo(h, f.stepEdit);
+    const map = { ...f.stepEdit.map };
+    f.stepEdit = null;
+    finishStepChangeAction(f, await startStepChange(h.defId, to, map), 'stepEdit.done');
+  } else if (action === 'step-edit-resume') {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    const sc = state.habits.find((x) => x.defId === f.defId)?.stepChange;
+    finishStepChangeAction(f, await runStepChange(f.defId), sc?.state === 'undo' ? 'stepEdit.undoDone' : 'stepEdit.done');
+  } else if (action === 'step-undo') {
+    syncHabitFormFromDom();
+    state.habitForm.stepUndoConfirm = true;
+    render();
+    document.querySelector('[data-action="step-undo-cancel"]')?.focus();
+  } else if (action === 'step-undo-cancel') {
+    state.habitForm.stepUndoConfirm = false;
+    render();
+    document.querySelector('[data-action="step-undo"]')?.focus();
+  } else if (action === 'step-undo-confirm') {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    if (!f.stepUndoConfirm) return; // zweiter Tipp
+    f.stepUndoConfirm = false;
+    finishStepChangeAction(f, await startStepChangeUndo(f.defId), 'stepEdit.undoDone');
   } else if (action === 'habit-cancel') {
     closeHabitForm();
     render();
@@ -9930,6 +10440,35 @@ app.addEventListener('change', async (e) => {
     clampHabitFormSteps(f);
     f.labels = resizeLabels(f.labels, habitFormStepCount(f), f.labelsEnabled ? (i) => String(habitFormStepValue(f, i)) : undefined);
     render();
+    return;
+  }
+  // Stufen ändern: neue Anzahl.
+  const stepEditCountEl = e.target.closest('[data-action="step-edit-count"]');
+  if (stepEditCountEl && state.habitForm?.stepEdit) {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    const h = state.habits.find((x) => x.defId === f.defId);
+    if (!h) return;
+    const steps = Math.round(Number(stepEditCountEl.value));
+    stepEditCountChanged(h, f.stepEdit, Number.isFinite(steps) ? Math.min(stepEditCap(h), Math.max(2, steps)) : f.stepEdit.steps);
+    render();
+    return;
+  }
+  // Stufen ändern: eine alte Stufe zugeordnet - ohne render() (iOS öffnet die Auswahl sonst
+  // wieder, siehe focusReopensPicker), nur Zusammenfassung und Vorschlag-Knöpfe nachziehen.
+  const stepMapEl = e.target.closest('[data-step-map]');
+  if (stepMapEl && state.habitForm?.stepEdit) {
+    const f = state.habitForm;
+    const h = state.habits.find((x) => x.defId === f.defId);
+    if (!h) return;
+    f.stepEdit.map[stepMapEl.dataset.stepMap] = stepMapEl.value === '' ? null : Number(stepMapEl.value);
+    f.stepEdit.preset = 'custom';
+    document.querySelectorAll('[data-action="step-edit-preset"]').forEach((b) => {
+      b.classList.remove('pill-toggle--active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    const summary = document.getElementById('step-edit-summary');
+    if (summary) summary.innerHTML = stepEditSummary(h, f.stepEdit);
     return;
   }
   // Nur die Vorschau austauschen statt render() - hält den Fokus auf der Checkbox.
@@ -10641,6 +11180,7 @@ async function completeAuthFlow(userId, password, { verifyPassword = false } = {
   state.loading = false;
   saveFieldNamesForPush(); // erst nach loadUserSettings - die Textvorlage hängt an der Sprache
   repadOldEntries();
+  resumeStepChanges();
   checkPushStatus().then(render);
   render();
   maybeShowSpareKey();
@@ -10689,6 +11229,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
         await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections()]);
         saveFieldNamesForPush(); // siehe completeAuthFlow
         repadOldEntries();
+        resumeStepChanges();
         checkPushStatus().then(render);
       }
     } finally {

@@ -115,15 +115,38 @@ weg, Nutzer-Entscheidung 2026-10-14).
 
 ### Bearbeiten mit vorhandenen Daten (`f.locked`)
 
-Nur die Stufenzahl (bzw. das historische `min`/`max`) bleibt gesperrt. Ein bestehendes `min`
-ungleich 1 (alte Felder mit Basis 0) bleibt unangetastet; "immer Basis 1" gilt nur für neue
-Felder. Darstellung, Bezeichnungen-Checkbox und Bezeichnungs-Text bleiben änderbar (ändern
-nur die Beschriftung, nie Zahl/Position). Ausnahme: `lockedChoiceBlocked` (siehe oben).
+Im Formular selbst ist die Stufenzahl fest; sie ändert nur "Stufen ändern" (unten). Ein
+bestehendes `min` ungleich 1 (alte Felder mit Basis 0) bleibt auch dabei unangetastet; "immer
+Basis 1" gilt nur für neue Felder. Darstellung, Bezeichnungen-Checkbox und Bezeichnungs-Text
+bleiben änderbar (ändern nur die Beschriftung, nie Zahl/Position). Ausnahme:
+`lockedChoiceBlocked` (siehe oben). Was rückwirkend umdeutet, sagt ein Hinweis: neue
+Bezeichnungen (`habitForm.labelsLockedWarn`) und eine geänderte Bewertung
+(`habitForm.goodChangedWarn`, färbt alle alten Einträge um).
 
-**Bewusst nicht umgesetzt**: rückwirkende Umrechnung bei einer echten Anzahl-Änderung (z.B.
-3 → 5 Stufen) mit vorhandenen Daten – bei nummerierten Stufen mathematisch unproblematisch,
-bei Bezeichnungen aber riskant (ein altes "Ja" bekäme nachträglich eine Intensität, die nie
-gemeint war). Weg für eine andere Skala: archivieren und neu anlegen.
+### Stufen ändern (`stepEditHtml`, `startStepChange`)
+
+Nutzer-Entscheidung 2026-10-29: die Verantwortung liegt beim Nutzer – er legt je alte Stufe
+fest, auf welche neue sie wandert oder ob ihre Einträge entfernt werden, mit klarer
+Zusammenfassung (geändert / entfernt / zusammengelegt) und Rückfrage. Zwei Vorschläge:
+"Gleichmäßig verteilen" (Enden bleiben Enden, dazwischen anteilig gerundet) und "Zahlen
+beibehalten" (über der neuen Spanne auf die höchste). Bezeichnungen wandern mit derselben
+Rechnung mit, neue Stufen bleiben leer und müssen beschriftet werden. Die Zuordnung zeigt nur
+Stufen mit Einträgen. Grenzen wie beim Anlegen (`stepEditCap`).
+
+- **Sicherung im Tages-Eintrag** (`_prev`, siehe [datenmodell.md](datenmodell.md)), nicht als
+  archiviertes Zweitfeld: archivierte Felder rechnen in die Tagesfarbe mit
+  (`dayOverallScore`), alte Tage zählten doppelt.
+- **Ablauf** über `stepChange` in der verschlüsselten Definition: `state: 'apply'` setzen →
+  Tage umschreiben (Wert + Sicherung in einem `saveDay`, bis zu 6 parallel, Fortschritt
+  `#step-change-progress`) → Definition auf die neue Spanne, `state: 'done'`. Welche Tage fertig
+  sind, steht in den Tagen selbst (`_prev.c`); ein Abbruch läuft beim nächsten Laden weiter
+  (`resumeStepChanges`) oder per "Weiter umstellen". Ein nicht gespeicherter Tag bekommt
+  lokal seinen alten Stand zurück, sonst hielte der nächste Lauf ihn für fertig.
+- **Rückgängig** (`stepChangeUndoable`) nur, solange jeder Tag noch genau den umgerechneten
+  Wert trägt und kein Tag ohne Sicherung einen Wert hat – sonst holte die Sicherung einen
+  alten Wert über einen neuen zurück. Läuft als `state: 'undo'` genauso fortsetzbar.
+- Weiter nur über archivieren und neu anlegen: Feld-Typ, "Wie oft" (Tageswerte lassen sich
+  nicht sinnvoll zu Wochenwerten zusammenlegen und umgekehrt) und alles aus Text.
 
 ### Skalen ohne Wertung (`good = null`)
 
@@ -254,7 +277,7 @@ der Auswertung standardmäßig ausgeblendet (Nutzer-Entscheidung, Übersicht auf
 lassen sich einzeln wieder einblenden (`archivedInStats`, Checkbox "In der Auswertung
 anzeigen" an der archivierten Zeile, gespeichert über `updateHabitPayload`) und sind dann
 sichtbar, solange sie im Zeitraum Daten haben – damit die Vorgeschichte eines abgelösten
-Felds (Skala ändern = archivieren + neu anlegen) nicht verloren ist. Verworfen: archivierte
+Felds (anderer Typ = archivieren + neu anlegen) nicht verloren ist. Verworfen: archivierte
 Felder ausnahmslos ausblenden. Wirkt nur auf die Anzeige – Tagesfarbe und berechnete
 Felder rechnen unverändert mit (Nutzer-Entscheidung).
 

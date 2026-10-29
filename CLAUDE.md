@@ -57,7 +57,8 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
 - `state.entries` enthält immer entschlüsselte Objekte. Zum Speichern `state.entries`
   ändern und dann nur `saveDay(dateKey)` aufrufen. `currentDek` nur über
   `setCurrentDek`/`clearCurrentDek` setzen/leeren, nie in `state`.
-- Schlüssel in einem Tages-Eintrag, die mit `_` beginnen, sind nie Feldwerte (`_notes`).
+- Schlüssel in einem Tages-Eintrag, die mit `_` beginnen, sind nie Feldwerte (`_notes`,
+  `_prev` = Sicherung von "Stufen ändern").
 - Alle UI-Texte über `STRINGS`/`t()`; Meldungen sind reiner Text (mit Parametern
   `tPlain()`); Fehler immer über `errorNotice(key, rawMessage)`, nie roher Fehler im Satz.
 - CSS-Größen immer in `rem`, nie in px (Textgröße-Einstellung skaliert über `<html>`).

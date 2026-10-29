@@ -1305,6 +1305,19 @@
   .auth-field input.goal-slider { border: none; background: transparent; padding: 0; } /* nicht die Kasten-Optik der Eingabefelder */
   .goal-slider-value { flex-shrink: 0; min-width: 5.5rem; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
   .label-input-step { min-width: 1.5rem; text-align: right; font-size: 0.8125rem; color: var(--sand); font-variant-numeric: tabular-nums; }
+  /* Stufen ändern (stepEditHtml): eigener Kasten unter der Stufenzahl; je alte Stufe der alte
+     Wert und daneben die Auswahl, auf schmalen Bildschirmen bricht die Auswahl darunter um. */
+  .step-edit { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; padding: 0.75rem; border: 1px solid var(--line); border-radius: 0.25rem; }
+  .auth-field .step-edit .habit-form-lock-note { margin: 0; line-height: 1.45; }
+  .step-edit-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 600; margin: 0; }
+  .step-edit-sub { font-size: 0.9375rem; margin: 0.25rem 0 0; }
+  .step-map { display: flex; flex-direction: column; gap: 0.375rem; }
+  .step-map-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; }
+  .step-map-old { flex: 1 1 8rem; min-width: 0; overflow-wrap: anywhere; }
+  .step-map-count { color: var(--sand); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+  .step-map-row select { flex: 1 1 9rem; min-width: 0; }
+  .step-box { margin-top: 0.5rem; }
+  .auth-field .step-box > .habit-form-lock-note { margin: 0 0 0.375rem; line-height: 1.45; }
   .field-preview { padding: 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--input-bg); }
   .field-preview .habit-options { max-width: 100%; }
   .field-preview-note { margin: 8px 0 0; }
@@ -1415,6 +1428,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=6f77c4e9ff"></script>
+<script type="module" src="./logbuch.js?v=345d90ddb8"></script>
 </body>
 </html>
