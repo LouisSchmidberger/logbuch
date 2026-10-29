@@ -8630,12 +8630,10 @@ const CHANGELOG = [
     de: [
       'Du kannst jetzt die Anzahl Stufen einer Skala ändern, auch wenn du schon Einträge hast: Bearbeite das Feld und tippe auf „Stufen ändern“. Dort legst du fest, was aus deinen bisherigen Einträgen wird, und kannst es danach auch wieder rückgängig machen.',
       'Genauso kannst du den Typ eines Felds mit Einträgen ändern – eine Skala zur Zahl, eine Zahl zur Skala oder beides zu Text: Bearbeite das Feld und tippe auf „Typ ändern“.',
-      'Du kannst dein Passwort jetzt ändern, während du angemeldet bist: in den Einstellungen unter „Konto“. Dort kannst du auch deine E-Mail-Adresse ändern und prüfen, ob dein aufgeschriebener Ersatzschlüssel noch passt.',
     ],
     en: [
       'You can now change the number of steps of a scale, even if it already has entries: edit the field and tap “Change steps”. There you decide what happens to your previous entries, and you can undo it afterwards.',
       'In the same way you can change the type of a field with entries – a scale to a number, a number to a scale, or either to text: edit the field and tap “Change type”.',
-      'You can now change your password while signed in: in Settings under “Account”. There you can also change your email address and check whether the spare key you wrote down still works.',
     ],
   },
   {
