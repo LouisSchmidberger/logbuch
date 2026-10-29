@@ -110,7 +110,7 @@ function linkFor(redirectTo, userId, type) {
   return `${base}#access_token=preview-link-${userId}&type=${type}`;
 }
 
-function authError(message, status = 400) { return { message, status, name: 'AuthApiError' }; }
+function authError(message, status = 400, code) { return { message, status, code, name: 'AuthApiError' }; }
 
 class MockAuth {
   constructor() {
@@ -128,6 +128,7 @@ class MockAuth {
         if (!u) return;
         if (type === 'signup' && !u.confirmedAt) u.confirmedAt = now();
         db.session = makeSession(u);
+        if (type === 'recovery') db.session.recovery = true; // wie Supabase: Reset ohne aktuelles Passwort
       });
       this.pendingEvent = type === 'recovery' ? 'PASSWORD_RECOVERY' : 'SIGNED_IN';
       history.replaceState(history.state, '', location.pathname + location.search);
@@ -213,7 +214,12 @@ class MockAuth {
       if (!db.session) return { data: { user: null }, error: authError('Auth session missing!', 401) };
       const u = db.users.find((x) => x.id === db.session.user.id);
       if (attrs.password !== undefined) {
-        if (attrs.password === u.password) return { data: { user: null }, error: authError('New password should be different from the old password.', 422) };
+        // Wie "Require current password when updating" (Dashboard): außer im Reset-Link.
+        if (!db.session.recovery) {
+          if (!attrs.current_password) return { data: { user: null }, error: authError('Current password required when setting new password.', 400, 'current_password_required') };
+          if (attrs.current_password !== u.password) return { data: { user: null }, error: authError('Current password required when setting new password.', 400, 'current_password_invalid') };
+        }
+        if (attrs.password === u.password) return { data: { user: null }, error: authError('New password should be different from the old password.', 422, 'same_password') };
         u.password = attrs.password;
       }
       if (attrs.email !== undefined && attrs.email !== u.email) {

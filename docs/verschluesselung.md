@@ -101,6 +101,17 @@ entschlüsselte Objekte, die übrige App arbeitet nur damit.
   Feld-Definitionen mit `enc`, Gruppen) – best effort, das neue Passwort ist dann schon
   gesetzt; bei Fehler `recovery.cleanupFailed`. Bewusst erst nach `setupEncryption`:
   scheitert die, bleibt der alte Stand samt Recovery-Wrapping erhalten.
+- **Passwort ändern** (angemeldet, Einstellungen → Konto, `changePassword`): DEK bleibt, nur
+  die Passwort-Verpackung wechselt (dabei auch auf die aktuelle Rundenzahl). Das aktuelle
+  Passwort wird zuerst lokal geprüft (entpackt es den DEK?), dann **erst die neue Verpackung
+  speichern, danach `auth.updateUser`** mit `current_password`. Lehnt Supabase ab (4xx),
+  wird die alte Verpackung zurückgeschrieben; bei Verbindungsabbruch nicht (offen, ob
+  Supabase geändert hat) – ein erneuter Versuch erkennt, dass das neue Passwort die
+  Verpackung schon öffnet, und schließt nur den Rest ab (meldet Supabase dann "aktuelles
+  Passwort falsch", prüft eine Anmeldung mit dem neuen, ob es schon gilt). Grund für die
+  Reihenfolge: Passwort und Verpackung dürfen nie dauerhaft auseinanderlaufen, sonst kommt
+  man nur noch mit dem Ersatzschlüssel an die Daten. Danach `signOut({ scope: 'others' })`
+  wie beim Reset.
 - **Logout**: `clearLoadedAccountState` verwirft Schlüssel, Daten und alles Kontobezogene
   im State (offene Formulare, Entwürfe, Dialoge, Unterseite); der IndexedDB-Cache bleibt
   für den nächsten Login auf dem Gerät, die Erinnerungen des Geräts enden

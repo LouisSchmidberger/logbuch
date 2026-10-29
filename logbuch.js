@@ -924,6 +924,7 @@ const state = {
   // dass das Tutorial kurz aufblitzt, bevor die tatsächlichen Einstellungen geladen sind.
   userSettings: { defaultReminderMinute: 1320, onboardingCompleted: true, locale: 'de', summaryNotifications: true, timezone: 'Europe/Berlin' },
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
+  passwordChange: null, // { current, next, visible, busy, error } während "Passwort ändern" offen ist
   regenKeyConfirm: false, // Rückfrage vor "Ersatzschlüssel neu erzeugen" offen
   logoutConfirm: false,   // Rückfrage vor "Abmelden" (aus dem Menü) offen
   leaveFormConfirm: false, // Rückfrage "Änderungen verwerfen?" beim Verlassen eines geänderten Formulars (siehe leaveFormGuarded)
@@ -982,6 +983,7 @@ function restoreModalFocus() {
 function closeModals() {
   if (state.whatsNew) closeWhatsNew(); // Schließen = gesehen (speichert)
   state.deleteConfirm = null;
+  if (!state.passwordChange?.busy) state.passwordChange = null;
   state.tutorialSkipConfirm = false;
   state.resetConfirm = null;
   state.regenKeyConfirm = false;
@@ -1033,7 +1035,7 @@ function leaveSubpage() {
   state.view = state.previousTabView || 'today';
 }
 function isOverlayOpen() {
-  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.regenKeyConfirm || !!state.logoutConfirm || state.leaveFormConfirm || !!state.deleteConfirm || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm || !!state.whatsNew;
+  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.regenKeyConfirm || !!state.logoutConfirm || state.leaveFormConfirm || !!state.deleteConfirm || !!state.passwordChange || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm || !!state.whatsNew;
 }
 // Der Notiz-Editor gehört zu einem bestimmten Tag in "Heute" und ist nur offen, solange
 // er dort auch sichtbar ist - wechselt man Tag/Tab, speichert render() den Entwurf und
@@ -1149,7 +1151,7 @@ function leaveFormGuarded(proceed) {
 function closeTopLayer() {
   if (state.whatsNew) {
     closeWhatsNew();
-  } else if (state.deleteConfirm || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm || state.leaveFormConfirm) {
+  } else if (state.deleteConfirm || state.passwordChange || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm || state.leaveFormConfirm) {
     closeModals(); // bei "Änderungen verwerfen?" = Weiter bearbeiten
     restoreModalFocus();
   } else if (stepDialogOpen()) {
@@ -2120,6 +2122,17 @@ const STRINGS = {
     'menu.exportData': 'Meine Daten exportieren',
     'menu.regenerateRecoveryKey': 'Ersatzschlüssel neu erzeugen',
     'menu.deleteAccount': 'Konto löschen',
+    'menu.changePassword': 'Passwort ändern',
+    'passwordChange.title': 'Passwort ändern',
+    'passwordChange.current': 'Aktuelles Passwort',
+    'passwordChange.new': 'Neues Passwort',
+    'passwordChange.note': 'Auf deinen anderen Geräten wirst du danach abgemeldet und meldest dich dort mit dem neuen Passwort an. Dein Ersatzschlüssel bleibt gültig.',
+    'passwordChange.submit': 'Passwort ändern',
+    'passwordChange.saving': 'Wird geändert …',
+    'passwordChange.saved': 'Passwort geändert.',
+    'passwordChange.error.wrongCurrent': 'Das aktuelle Passwort stimmt nicht.',
+    'passwordChange.error.same': 'Das neue Passwort ist dasselbe wie das aktuelle.',
+    'passwordChange.error.failed': 'Passwort nicht geändert.',
     'deleteAccount.title': 'Konto endgültig löschen',
     'deleteAccount.warning': 'Alle deine Einträge, Felder und Einstellungen werden unwiderruflich gelöscht. Das kann nicht rückgängig gemacht werden.',
     'deleteAccount.whichAccount': 'Konto: <strong>{email}</strong>',
@@ -3013,6 +3026,17 @@ const STRINGS = {
     'menu.exportData': 'Export my data',
     'menu.regenerateRecoveryKey': 'Regenerate spare key',
     'menu.deleteAccount': 'Delete account',
+    'menu.changePassword': 'Change password',
+    'passwordChange.title': 'Change password',
+    'passwordChange.current': 'Current password',
+    'passwordChange.new': 'New password',
+    'passwordChange.note': 'You’ll then be signed out on your other devices and sign in there with the new password. Your spare key stays valid.',
+    'passwordChange.submit': 'Change password',
+    'passwordChange.saving': 'Changing …',
+    'passwordChange.saved': 'Password changed.',
+    'passwordChange.error.wrongCurrent': 'The current password is incorrect.',
+    'passwordChange.error.same': 'The new password is the same as the current one.',
+    'passwordChange.error.failed': 'Password not changed.',
     'deleteAccount.title': 'Permanently delete account',
     'deleteAccount.warning': 'All your entries, fields and settings will be permanently deleted. This cannot be undone.',
     'deleteAccount.whichAccount': 'Account: <strong>{email}</strong>',
@@ -3924,6 +3948,105 @@ async function upgradePasswordWrap(row, dek, password) {
   } catch (err) {
     console.warn('[Logbuch] Schlüssel-Verpackung nicht hochgestuft:', err);
   }
+}
+
+// Passwort ändern im angemeldeten Zustand. Das Passwort verpackt zugleich den DEK - beides
+// muss zusammen wechseln, sonst passt nach dem nächsten Anmelden das Passwort nicht mehr zum
+// Schlüssel. Der DEK selbst bleibt gleich (keine Daten neu verschlüsseln, Caches anderer
+// Geräte und der Ersatzschlüssel bleiben gültig).
+// Reihenfolge: erst die neue Verpackung speichern, dann das Passwort bei Supabase ändern.
+// Lehnt Supabase ab (4xx: sicher nichts geändert), kommt die alte Verpackung zurück. Bei
+// einem Verbindungsabbruch ist offen, ob Supabase geändert hat - dann bleibt die neue
+// Verpackung stehen, und ein erneuter Versuch erkennt sie (das neue Passwort öffnet sie
+// schon) und schließt nur noch den Rest ab.
+// Wirft PASSWORD_CHANGE_WRONG_CURRENT oder den Supabase-Fehler.
+const PASSWORD_CHANGE_WRONG_CURRENT = 'password-change-wrong-current';
+async function changePassword(current, next) {
+  const userId = state.session.user.id;
+  const row = await fetchEncryptionRow(userId);
+  if (!row) throw new Error(t('recovery.error.noConfig'));
+  let dek = null;
+  try { dek = await unwrapDekWithPassword(row, current); } catch { /* evtl. früherer Versuch */ }
+  let wrapDone = false;
+  if (!dek) {
+    try { await unwrapDekWithPassword(row, next); wrapDone = true; } catch { throw new Error(PASSWORD_CHANGE_WRONG_CURRENT); }
+  }
+  let newWrapped = null;
+  if (!wrapDone) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const kek = await deriveKek(next, salt, PBKDF2_ITERATIONS);
+    const { iv, wrapped } = await wrapDek(dek, kek);
+    // .eq wrapped_dek: nur, wenn seit dem Laden niemand anders die Verpackung geändert hat.
+    const { data, error } = await supabase.from('user_encryption')
+      .update({ salt: bufToBase64(salt), kdf_iterations: PBKDF2_ITERATIONS, wrap_iv: iv, wrapped_dek: wrapped })
+      .eq('user_id', userId)
+      .eq('wrapped_dek', row.wrapped_dek)
+      .select('user_id');
+    if (error) throw error;
+    if (!data.length) throw new Error('wrapping changed meanwhile');
+    newWrapped = wrapped;
+  }
+  // current_password: Supabase verlangt es ("Require current password when updating",
+  // siehe docs/datenschutz-sicherheit.md) - nur der Link aus "Passwort vergessen" ist ausgenommen.
+  const { error } = await supabase.auth.updateUser({ password: next, current_password: current });
+  if (error) {
+    // Früherer Versuch abgebrochen: hat Supabase das neue Passwort schon, ist alles fertig.
+    if (wrapDone && error.code === 'current_password_invalid') {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: state.session.user.email, password: next });
+      if (!signInError) return;
+    }
+    if (newWrapped && error.status >= 400 && error.status < 500) {
+      const { error: rollbackError } = await supabase.from('user_encryption')
+        .update({ salt: row.salt, kdf_iterations: row.kdf_iterations, wrap_iv: row.wrap_iv, wrapped_dek: row.wrapped_dek })
+        .eq('user_id', userId)
+        .eq('wrapped_dek', newWrapped);
+      if (rollbackError) console.warn('[Logbuch] Alte Schlüssel-Verpackung nicht zurückgeschrieben:', rollbackError.message);
+    }
+    if (error.code === 'current_password_invalid' || error.code === 'current_password_required') throw new Error(PASSWORD_CHANGE_WRONG_CURRENT);
+    throw error;
+  }
+}
+
+async function handlePasswordChangeSubmit() {
+  const pc = state.passwordChange;
+  if (!pc || pc.busy) return;
+  pc.current = document.getElementById('password-change-current').value;
+  pc.next = document.getElementById('password-change-new').value;
+  pc.error = null;
+  let focusId = null;
+  if (pc.current === pc.next) {
+    pc.error = t('passwordChange.error.same');
+    focusId = 'password-change-new';
+  } else {
+    pc.busy = true;
+    render();
+    try {
+      await changePassword(pc.current, pc.next);
+      // Wie beim Passwort-Reset: andere Geräte abmelden (Supabase tut es nicht von selbst).
+      try { await supabase.auth.signOut({ scope: 'others' }); } catch { /* best effort */ }
+      state.passwordChange = null;
+      state.notice = { type: 'ok', text: t('passwordChange.saved') };
+      render();
+      restoreModalFocus();
+      return;
+    } catch (err) {
+      pc.busy = false;
+      if (err?.message === PASSWORD_CHANGE_WRONG_CURRENT) {
+        pc.error = t('passwordChange.error.wrongCurrent');
+        focusId = 'password-change-current';
+      } else if (err?.code === 'same_password') {
+        pc.error = t('passwordChange.error.same');
+        focusId = 'password-change-new';
+      } else if (err?.code === 'weak_password') {
+        pc.error = translateAuthError(err.message);
+        focusId = 'password-change-new';
+      } else {
+        pc.error = errorNotice('passwordChange.error.failed', err?.message || String(err)).text;
+      }
+    }
+  }
+  render();
+  if (focusId) document.getElementById(focusId)?.select();
 }
 
 // Meldung für einen fehlgeschlagenen Entsperr-Versuch: "Falsches Passwort" nur, wenn es
@@ -8383,10 +8506,12 @@ const CHANGELOG = [
     de: [
       'Du kannst jetzt die Anzahl Stufen einer Skala ändern, auch wenn du schon Einträge hast: Bearbeite das Feld und tippe auf „Stufen ändern“. Dort legst du fest, was aus deinen bisherigen Einträgen wird, und kannst es danach auch wieder rückgängig machen.',
       'Genauso kannst du den Typ eines Felds mit Einträgen ändern – eine Skala zur Zahl, eine Zahl zur Skala oder beides zu Text: Bearbeite das Feld und tippe auf „Typ ändern“.',
+      'Du kannst dein Passwort jetzt ändern, während du angemeldet bist: in den Einstellungen unter „Konto“.',
     ],
     en: [
       'You can now change the number of steps of a scale, even if it already has entries: edit the field and tap “Change steps”. There you decide what happens to your previous entries, and you can undo it afterwards.',
       'In the same way you can change the type of a field with entries – a scale to a number, a number to a scale, or either to text: edit the field and tap “Change type”.',
+      'You can now change your password while signed in: in Settings under “Account”.',
     ],
   },
   {
@@ -9740,6 +9865,9 @@ function renderSettings() {
     </details>
     <div class="manage-section-divider"></div>
     ${settingsSectionStart('account', 'menu.groupAccount')}
+      <div class="settings-row" data-menu-target="password">
+        <button type="button" class="menu-item-btn" data-action="open-password-change">${t('menu.changePassword')}</button>
+      </div>
       <div class="settings-row" data-menu-target="export">
         <button type="button" class="menu-item-btn" data-action="export-data">${t('menu.exportData')}</button>
         <p class="settings-note">${t('settings.exportNote')}</p>
@@ -9824,6 +9952,44 @@ function renderLeaveFormConfirm() {
           <button type="button" class="habit-form-cancel" data-action="leave-form-stay">${t('leaveForm.stay')}</button>
           <button type="button" class="manage-btn manage-btn--danger" data-action="leave-form-discard">${t('leaveForm.discard')}</button>
         </div>
+      </div>
+    </div>
+  `;
+}
+
+// Eigenes Formular statt der Anmelde-Felder: Passwort-Manager erkennen am versteckten
+// Benutzernamen (autocomplete="username") und an current-/new-password, zu welchem Konto das
+// neue Passwort gehört, und bieten an, es zu ersetzen.
+function renderPasswordChange() {
+  const pc = state.passwordChange;
+  const off = pc.busy ? 'disabled' : '';
+  const type = pc.visible ? 'text' : 'password';
+  const ok = pc.next.length >= AUTH_MIN_PASSWORD_LENGTH;
+  return `
+    <div class="modal-overlay">
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="password-change-title">
+        <h2 id="password-change-title">${t('passwordChange.title')}</h2>
+        ${pc.error ? `<div class="notice" role="alert">${esc(pc.error)}</div>` : ''}
+        <form id="password-change-form">
+          <input type="email" class="visually-hidden" autocomplete="username" value="${esc(state.session?.user?.email ?? '')}" readonly tabindex="-1" aria-hidden="true" />
+          <div class="auth-field">
+            <div class="auth-field-label-row">
+              <label for="password-change-current">${t('passwordChange.current')}</label>
+              <button type="button" class="push-toggle" data-action="password-change-visibility" ${off}>${pc.visible ? t('auth.hide') : t('auth.show')}</button>
+            </div>
+            <input type="${type}" id="password-change-current" value="${esc(pc.current)}" required autocomplete="current-password" data-autofocus ${off} />
+          </div>
+          <div class="auth-field">
+            <label for="password-change-new">${t('passwordChange.new')}</label>
+            <input type="${type}" id="password-change-new" value="${esc(pc.next)}" required autocomplete="new-password" minlength="${AUTH_MIN_PASSWORD_LENGTH}" aria-describedby="password-change-count" ${off} />
+            <p class="password-count${ok ? ' password-count--ok' : ''}" id="password-change-count" aria-live="polite">${passwordRuleText(pc.next.length)}</p>
+          </div>
+          <p class="settings-note">${t('passwordChange.note')}</p>
+          <div class="habit-form-actions">
+            <button type="button" class="habit-form-cancel" data-action="password-change-cancel" ${off}>${t('common.cancel')}</button>
+            <button type="submit" class="auth-submit" ${off}>${pc.busy ? t('passwordChange.saving') : t('passwordChange.submit')}</button>
+          </div>
+        </form>
       </div>
     </div>
   `;
@@ -9943,12 +10109,13 @@ function renderApp() {
     ${renderInstallHint()}
     <div class="view-body${slideClass}">${body}</div>
     ${state.deleteConfirm ? renderDeleteConfirm() : ''}
+    ${state.passwordChange ? renderPasswordChange() : ''}
     ${state.resetConfirm ? renderResetConfirm() : ''}
     ${state.regenKeyConfirm ? renderRegenKeyConfirm() : ''}
     ${state.logoutConfirm ? renderLogoutConfirm() : ''}
     ${state.leaveFormConfirm ? renderLeaveFormConfirm() : ''}
     ${state.view === 'manage' && stepDialogOpen() && !state.leaveFormConfirm ? renderStepDialog() : ''}
-    ${state.whatsNew &&!state.deleteConfirm && !state.resetConfirm && !state.regenKeyConfirm && !state.logoutConfirm && !state.leaveFormConfirm ? renderWhatsNew() : ''}
+    ${state.whatsNew && !state.deleteConfirm && !state.passwordChange && !state.resetConfirm && !state.regenKeyConfirm && !state.logoutConfirm && !state.leaveFormConfirm ? renderWhatsNew() : ''}
   `;
   // preventScroll: der Header ist ohnehin (sticky) sichtbar - der native
   // Scroll-in-View-Effekt beim Fokussieren kennt "position: sticky" nicht und hat
@@ -9988,7 +10155,8 @@ function announce(text) {
 function focusModalIfOpen() {
   const modalBox = document.querySelector('.modal-box');
   if (!modalBox) return;
-  const focusable = modalBox.querySelector('input, button, select, textarea, [tabindex]:not([tabindex="-1"])');
+  const focusable = modalBox.querySelector('[data-autofocus]')
+    || modalBox.querySelector('input, button, select, textarea, [tabindex]:not([tabindex="-1"])');
   focusable?.focus();
 }
 
@@ -10340,6 +10508,19 @@ app.addEventListener('click', async (e) => {
     render();
   } else if (action === 'export-data') {
     await handleExportData();
+  } else if (action === 'open-password-change') {
+    modalTriggerSelector = '[data-action="open-password-change"]';
+    state.passwordChange = { current: '', next: '', visible: false, busy: false, error: null };
+    state.menuOpen = false;
+    render();
+  } else if (action === 'password-change-cancel') {
+    state.passwordChange = null;
+    render();
+    restoreModalFocus();
+  } else if (action === 'password-change-visibility') {
+    state.passwordChange.visible = !state.passwordChange.visible;
+    render();
+    document.querySelector('[data-action="password-change-visibility"]')?.focus();
   } else if (action === 'open-delete-confirm') {
     modalTriggerSelector = '[data-action="open-delete-confirm"]';
     state.deleteConfirm = { busy: false };
@@ -11082,20 +11263,35 @@ app.addEventListener('change', async (e) => {
   }
 });
 
+// Nur beim Wechsel erfüllt/unerfüllt anfassen - sonst läse ein Screenreader (aria-live)
+// bei jedem Tastendruck denselben Satz vor.
+function syncPasswordCount(id, len) {
+  const count = document.getElementById(id);
+  const ok = len >= AUTH_MIN_PASSWORD_LENGTH;
+  if (count && count.classList.contains('password-count--ok') !== ok) {
+    count.textContent = passwordRuleText(len);
+    count.classList.toggle('password-count--ok', ok);
+  }
+}
+app.addEventListener('submit', (e) => {
+  if (e.target.id !== 'password-change-form') return;
+  e.preventDefault();
+  handlePasswordChangeSubmit();
+});
+
 // Hält E-Mail/Passwort im Anmelde-Formular auch über einen Re-Render (z.B. nach
 // einem Fehler) hinweg – sonst wäre bei jedem Fehlversuch das ganze Formular leer.
 app.addEventListener('input', (e) => {
   if (e.target.id === 'email' && !state.session) { state.authEmail = e.target.value; return; }
   if (e.target.id === 'password' && !state.session) {
     state.authPassword = e.target.value;
-    const count = document.getElementById('password-count');
-    // Nur beim Wechsel erfüllt/unerfüllt anfassen - sonst läse ein Screenreader (aria-live)
-    // bei jedem Tastendruck denselben Satz vor.
-    const ok = e.target.value.length >= AUTH_MIN_PASSWORD_LENGTH;
-    if (count && count.classList.contains('password-count--ok') !== ok) {
-      count.textContent = passwordRuleText(e.target.value.length);
-      count.classList.toggle('password-count--ok', ok);
-    }
+    syncPasswordCount('password-count', e.target.value.length);
+    return;
+  }
+  if (e.target.id === 'password-change-current' && state.passwordChange) { state.passwordChange.current = e.target.value; return; }
+  if (e.target.id === 'password-change-new' && state.passwordChange) {
+    state.passwordChange.next = e.target.value;
+    syncPasswordCount('password-change-count', e.target.value.length);
     return;
   }
   // Kein render() beim Tippen (würde Fokus/Cursor zurücksetzen) - nur merken, damit
@@ -11669,7 +11865,7 @@ if ('serviceWorker' in navigator) {
       state.habitForm = null;
       state.habitDeleteConfirm = null;
       state.sectionForm = null;
-      if (state.deleteConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm) { closeModals(); modalTriggerSelector = null; }
+      if (state.deleteConfirm || state.passwordChange || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm) { closeModals(); modalTriggerSelector = null; }
     }
     window.scrollTo(0, 0); // vor render() - das scrollt ggf. danach zum Feld (consumePendingFieldFocus)
     render();
@@ -11777,6 +11973,7 @@ function clearLoadedAccountState() {
   state.habitFormSaving = false;
   state.habitDeleteConfirm = null;
   state.deleteConfirm = null;
+  state.passwordChange = null;
   state.regenKeyConfirm = false;
   state.logoutConfirm = false;
   state.menuOpen = false;

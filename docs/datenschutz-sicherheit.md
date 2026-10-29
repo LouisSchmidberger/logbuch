@@ -85,7 +85,9 @@ der sonstigen GRANT-Regel), einziger Weg hinein ist die Function.
   aktuelle Empfehlungen stellen Länge über erzwungene Komplexität). Im Dashboard aktiviert
   (Authentication → Sign In / Providers → Email, **nicht** in `config.toml`, per `config
   pull` nicht prüfbar): "Require current password when updating" – passt zur
-  Zero-Access-Architektur, da das Passwort der einzige Schlüssel ist. Davon getrennt:
+  Zero-Access-Architektur, da das Passwort der einzige Schlüssel ist. "Passwort ändern"
+  schickt es als `current_password` mit (Fehlercodes `current_password_invalid`/`_required`);
+  der Link aus "Passwort vergessen" ist davon ausgenommen (Recovery-Session). Davon getrennt:
   `secure_password_change` (Neuanmeldung vor Passwort-Änderung) ist aus (`config.toml`).
   "Leaked password protection" (HaveIBeenPwned) bleibt aus – nur ab Supabase Pro-Plan,
   aktuell Free.
