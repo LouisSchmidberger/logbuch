@@ -152,8 +152,35 @@ Stufen mit Einträgen. Grenzen wie beim Anlegen (`stepEditCap`).
 - **Rückgängig** (`stepChangeUndoable`) nur, solange jeder Tag noch genau den umgerechneten
   Wert trägt und kein Tag ohne Sicherung einen Wert hat – sonst holte die Sicherung einen
   alten Wert über einen neuen zurück. Läuft als `state: 'undo'` genauso fortsetzbar.
-- Weiter nur über archivieren und neu anlegen: Feld-Typ, "Wie oft" (Tageswerte lassen sich
-  nicht sinnvoll zu Wochenwerten zusammenlegen und umgekehrt) und alles aus Text.
+- Weiter nur über archivieren und neu anlegen: "Wie oft" (Tageswerte lassen sich nicht
+  sinnvoll zu Wochenwerten zusammenlegen und umgekehrt) und Text in einen anderen Typ (aus
+  freiem Text lässt sich kein Wert ableiten).
+
+### Typ ändern (`typeEditHtml`, `renderTypeDialog`)
+
+Nutzer-Entscheidung 2026-10-29: Skala → Zahl, Zahl/Zähler → Skala, Skala/Zahl/Zähler → Text,
+mit demselben Ablauf, Dialog, Sicherung, Fortsetzen und Rückgängig wie "Stufen ändern"
+(`stepChange` mit `kind` in `from`/`to`; `isTypeChange` unterscheidet). `to` enthält alle
+typabhängigen Eigenschaften (`TYPE_CHANGE_KEYS`), `from` dieselben von vorher – Rückgängig
+stellt so auch Bezeichnungen, Bewertung, Ziel, Einheit, Schritt und `counterSince` wieder
+her. `updateHabitPayload` schreibt die Klartext-Spalte `kind` mit, wenn sie wechselt.
+
+- **Zuordnung je alter Wert** (bis `TYPE_MAP_ROWS_MAX` = 20 verschiedene; darüber nur die
+  Regel): zu Zahl ein Eingabefeld (Vorschlag: bisherige Zahl), zu Text ein Eingabefeld
+  (Vorschlag: so wie bisher angezeigt, `valueAsText`), zu Skala eine Auswahl mit den
+  Vorschlägen "Runden" (gerundet, in die Spanne geholt; Werte unter 1 → Skala ab 0) und
+  "Gleichmäßig verteilen" (kleinster bis größter eingetragener Wert, `range` im `stepChange`).
+  Leer bzw. "Entfernen" = Einträge entfernen. Werte ohne Zeile (auch inzwischen anderswo
+  eingetragene) laufen über `stepChangeConvert`.
+- **Was wegfällt**, nennt die Zusammenfassung: Bezeichnungen/Bewertung (→ Zahl), Einheit/Ziel
+  (→ Skala; die Bewertung übernimmt die Richtung des alten Ziels), Tagesfarbe/Durchschnitte
+  (→ Text), "leer = 0" und "falls weniger als" (aus Zähler), Notizen werden bei Text nicht
+  angezeigt (bleiben gespeichert). Zähler als Ziel gibt es hier nicht – dafür bleibt "In
+  Zähler umwandeln" (`convertHabitToCounter`, ohne Rückgängig).
+- **Gesperrt**, solange das Feld in einem berechneten Feld steckt (`typeChangeBlocker`, auch
+  archivierte): das berechnete Feld verlangt Skalen bzw. Zahlen. Öffnen nur ohne andere
+  ungespeicherte Änderungen im Formular, weil es danach aus dem Feld neu aufgebaut wird
+  (`finishStepChangeAction` mit `typeChange`).
 
 ### Skalen ohne Wertung (`good = null`)
 
@@ -284,7 +311,7 @@ der Auswertung standardmäßig ausgeblendet (Nutzer-Entscheidung, Übersicht auf
 lassen sich einzeln wieder einblenden (`archivedInStats`, Checkbox "In der Auswertung
 anzeigen" an der archivierten Zeile, gespeichert über `updateHabitPayload`) und sind dann
 sichtbar, solange sie im Zeitraum Daten haben – damit die Vorgeschichte eines abgelösten
-Felds (anderer Typ = archivieren + neu anlegen) nicht verloren ist. Verworfen: archivierte
+Felds (z. B. nach archivieren + neu anlegen) nicht verloren ist. Verworfen: archivierte
 Felder ausnahmslos ausblenden. Wirkt nur auf die Anzeige – Tagesfarbe und berechnete
 Felder rechnen unverändert mit (Nutzer-Entscheidung).
 

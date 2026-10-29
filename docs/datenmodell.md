@@ -47,8 +47,8 @@ Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `reminder
   zur Zero-Access-/Löschrecht-Ausrichtung: "Löschen" soll möglichst wenig übrig lassen.
 - **Feld-Typ und "Wie oft" sind nur änderbar, solange das Feld noch keine Daten hat**
   (`habitHasData`/`f.locked`) – sonst würden alte Werte plötzlich etwas anderes bedeuten.
-  Für einen anderen Typ: archivieren, neu anlegen. Die Stufenzahl einer Skala ändert
-  "Stufen ändern" samt Umrechnung der Einträge (Sicherung `_prev`, siehe unten). Alles andere
+  Die Stufenzahl einer Skala ändert "Stufen ändern", den Typ (außer aus Text) "Typ ändern",
+  beide samt Umrechnung der Einträge (Sicherung `_prev`, siehe unten). Alles andere
   (Name, Einheit, Bezeichnungen, Darstellung, Bewertung, Wiederholung, Erinnerungszeit)
   bleibt änderbar (Details [felder.md](felder.md) → "Bearbeiten mit vorhandenen Daten"). Gilt nicht für
   `computed`: hält nie einen eigenen Eintrag, ist nie "locked"; eine geänderte
@@ -67,7 +67,7 @@ Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `reminder
   `getNote`/`withNote`). Kollidiert nie mit einem Feld, da Feld-Schlüssel nur aus `a-z0-9`
   bestehen. **Konvention: Schlüssel mit `_` am Anfang sind nie Feldwerte.** Ohne
   verbleibende Notiz verschwindet `_notes` wieder.
-- **Sicherung von "Stufen ändern"** unter `_prev`: `{ <Feld>: { c: <Umstellungs-Id>, v: <alter
+- **Sicherung von "Stufen ändern"/"Typ ändern"** unter `_prev`: `{ <Feld>: { c: <Umstellungs-Id>, v: <alter
   Wert> } }` (`PREV_KEY`/`withPrev`), je Feld nur die letzte Umstellung; endgültiges Löschen
   des Felds räumt sie mit weg (`purgeKeyFromEntries`). Ablauf siehe [felder.md](felder.md).
 - `filled_slugs` – bewusst **unverschlüsselt**, nur die **IDs** (`habit_definitions.id`) der

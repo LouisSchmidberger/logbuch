@@ -1108,6 +1108,7 @@ function habitFormSnapshot(f) {
   if (!f.reminderEnabled) { snap.reminderTimes = null; snap.reminderBelow = null; }
   // "Stufen ändern" offen und schon etwas eingestellt (nur Öffnen zählt nicht).
   snap.stepEdit = f.stepEdit && stepEditKey(f.stepEdit) !== f.stepEdit.initial ? 'changed' : null;
+  snap.typeEdit = f.typeEdit && typeEditKey(f.typeEdit) !== f.typeEdit.initial ? 'changed' : null;
   return JSON.stringify(snap);
 }
 function sectionFormSnapshot(sf) {
@@ -1651,7 +1652,39 @@ const STRINGS = {
     'stepEdit.undoDo': 'Zurückholen',
     'stepEdit.undoDone': '„{name}“ hat wieder {steps} Stufen.',
     'stepEdit.error.nothing': 'Das ist dieselbe Skala wie bisher – es gibt nichts umzustellen.',
-    'habitForm.lockedNote': 'Für dieses Feld gibt es bereits Einträge – Feld-Typ und wie oft du einträgst sind deshalb fest. Für einen anderen Typ: archivieren und neu anlegen.',
+    'typeEdit.title': 'Typ ändern',
+    'typeEdit.hint': 'Du kannst den Typ trotz Einträgen ändern – und entscheidest dabei selbst, was aus den bisherigen Werten wird.',
+    'typeEdit.open': 'Typ ändern …',
+    'typeEdit.blocked': 'Den Typ kannst du gerade nicht ändern: Das Feld wird in „{computed}“ mitberechnet. Nimm es dort zuerst heraus.',
+    'typeEdit.fieldNow': '„{name}“ ist bisher vom Typ {kind}.',
+    'typeEdit.intro': 'Du entscheidest selbst, was aus den bisherigen Einträgen wird. Die Vorschläge kannst du für jeden Wert ändern.',
+    'typeEdit.newKind': 'Neuer Typ',
+    'typeEdit.steps': 'Anzahl Stufen',
+    'typeEdit.preset.round': 'Runden',
+    'typeEdit.preset.spread': 'Gleichmäßig verteilen',
+    'typeEdit.presetExplain': '„Runden“: Jeder Wert wird zur nächsten ganzen Zahl; was außerhalb der Skala liegt, landet auf der niedrigsten bzw. höchsten Stufe. „Gleichmäßig verteilen“: Der kleinste eingetragene Wert wird die niedrigste Stufe, der größte die höchste, alles dazwischen rückt anteilig mit.',
+    'typeEdit.emptyRemoves': 'Leer lassen = diese Einträge entfernen.',
+    'typeEdit.manyValues': 'Es gibt {count} verschiedene Werte (von {lo} bis {hi}) – zu viele, um jeden einzeln zuzuordnen. Sie werden alle nach der gewählten Regel umgewandelt.',
+    'typeEdit.manyValuesText': 'Es gibt {count} verschiedene Werte – sie werden alle so zu Text, wie sie bisher angezeigt werden, z. B. „{example}“.',
+    'typeEdit.summary.merged': 'Mehrere bisherige Werte landen auf derselben Stufe und lassen sich danach nicht mehr unterscheiden.',
+    'typeEdit.loss.text': 'Als Text fließen die Einträge nicht mehr in Tagesfarbe, Durchschnitte und Ziele ein.',
+    'typeEdit.loss.scaleToNumber': 'Die Bezeichnungen der Stufen und die Bewertung entfallen; ein Ziel kannst du danach im Feld einstellen.',
+    'typeEdit.loss.numberToScale': 'Einheit und Ziel entfallen; ob hohe Werte gut oder schlecht sind, prüfst du danach im Feld.',
+    'typeEdit.loss.counter': 'Tage ohne Eintrag zählen dann nicht mehr als 0, und „falls weniger als“ bei den Erinnerungen entfällt.',
+    'typeEdit.loss.notes': 'Notizen zu einzelnen Tagen bleiben gespeichert, ein Text-Feld zeigt sie aber nicht an.',
+    'typeEdit.apply': 'Umwandeln …',
+    'typeEdit.confirm': '„{name}“ wird von {from} zu {to}, und alle bisherigen Einträge werden so umgewandelt, wie du es eingestellt hast.',
+    'typeEdit.confirmTitle': 'Wirklich umwandeln?',
+    'typeEdit.confirmDo': 'Jetzt umwandeln',
+    'typeEdit.done': '„{name}“ ist jetzt vom Typ {kind}.',
+    'typeEdit.last': 'Am {date} von {from} zu {to} umgewandelt.',
+    'typeEdit.undoTitle': 'Umwandlung rückgängig machen?',
+    'typeEdit.undoConfirm': '„{name}“ wird wieder vom Typ {from}, und alle Einträge bekommen ihren Wert von vor der Umwandlung zurück.',
+    'typeEdit.undoDone': '„{name}“ ist wieder vom Typ {kind}.',
+    'typeEdit.error.number': 'Bitte überall eine Zahl eintragen – oder leer lassen, um die Einträge zu entfernen.',
+    'typeEdit.error.dirty': 'Speichere zuerst deine anderen Änderungen an diesem Feld (oder verwirf sie) – danach kannst du den Typ ändern.',
+    'habitForm.lockedNote': 'Für dieses Feld gibt es bereits Einträge – wie oft du einträgst, ist deshalb fest. Typ und Stufen änderst du über die eigenen Knöpfe dafür, weil dabei auch die bisherigen Einträge umgewandelt werden.',
+    'habitForm.lockedNoteText': 'Für dieses Feld gibt es bereits Einträge – Feld-Typ und wie oft du einträgst sind deshalb fest. Für einen anderen Typ: archivieren und neu anlegen.',
     'habitForm.name': 'Feldname',
     'habitForm.fieldType': 'Feld-Typ',
     'habitForm.kindScale': 'Skala',
@@ -2512,7 +2545,39 @@ const STRINGS = {
     'stepEdit.undoDo': 'Restore',
     'stepEdit.undoDone': '“{name}” has {steps} steps again.',
     'stepEdit.error.nothing': 'This is the same scale as before – there is nothing to change.',
-    'habitForm.lockedNote': 'This field already has entries – so the field type and how often you enter it are fixed. For a different type: archive and create a new one.',
+    'typeEdit.title': 'Change type',
+    'typeEdit.hint': 'You can change the type despite existing entries – and decide yourself what happens to the previous values.',
+    'typeEdit.open': 'Change type …',
+    'typeEdit.blocked': 'You can’t change the type right now: the field is part of “{computed}”. Remove it there first.',
+    'typeEdit.fieldNow': '“{name}” is currently of type {kind}.',
+    'typeEdit.intro': 'You decide what happens to the previous entries. You can change the suggestion for every value.',
+    'typeEdit.newKind': 'New type',
+    'typeEdit.steps': 'Number of steps',
+    'typeEdit.preset.round': 'Round',
+    'typeEdit.preset.spread': 'Spread evenly',
+    'typeEdit.presetExplain': '“Round”: every value becomes the nearest whole number; anything outside the scale lands on the lowest or highest step. “Spread evenly”: the smallest entered value becomes the lowest step, the largest the highest, everything in between moves proportionally.',
+    'typeEdit.emptyRemoves': 'Leave empty = remove these entries.',
+    'typeEdit.manyValues': 'There are {count} different values (from {lo} to {hi}) – too many to assign each one. They are all converted by the chosen rule.',
+    'typeEdit.manyValuesText': 'There are {count} different values – they all become text the way they are shown now, e.g. “{example}”.',
+    'typeEdit.summary.merged': 'Several previous values land on the same step and can’t be told apart afterwards.',
+    'typeEdit.loss.text': 'As text, the entries no longer count towards the day color, averages and goals.',
+    'typeEdit.loss.scaleToNumber': 'The step labels and the rating are dropped; you can set a goal in the field afterwards.',
+    'typeEdit.loss.numberToScale': 'Unit and goal are dropped; check in the field afterwards whether high values are good or bad.',
+    'typeEdit.loss.counter': 'Days without an entry then no longer count as 0, and “if less than” for the reminders is dropped.',
+    'typeEdit.loss.notes': 'Notes on individual days stay saved, but a text field doesn’t show them.',
+    'typeEdit.apply': 'Convert …',
+    'typeEdit.confirm': '“{name}” changes from {from} to {to}, and all previous entries are converted the way you set it up.',
+    'typeEdit.confirmTitle': 'Really convert?',
+    'typeEdit.confirmDo': 'Convert now',
+    'typeEdit.done': '“{name}” is now of type {kind}.',
+    'typeEdit.last': 'Changed from {from} to {to} on {date}.',
+    'typeEdit.undoTitle': 'Undo the conversion?',
+    'typeEdit.undoConfirm': '“{name}” becomes type {from} again, and all entries get back their value from before the conversion.',
+    'typeEdit.undoDone': '“{name}” is of type {kind} again.',
+    'typeEdit.error.number': 'Please enter a number everywhere – or leave it empty to remove the entries.',
+    'typeEdit.error.dirty': 'Save your other changes to this field first (or discard them) – then you can change the type.',
+    'habitForm.lockedNote': 'This field already has entries – so how often you enter it is fixed. Change type and steps with their own buttons, because the previous entries are converted along with them.',
+    'habitForm.lockedNoteText': 'This field already has entries – so the field type and how often you enter it are fixed. For a different type: archive and create a new one.',
     'habitForm.name': 'Field name',
     'habitForm.fieldType': 'Field type',
     'habitForm.kindScale': 'Scale',
@@ -4324,6 +4389,12 @@ function syncHabitFormFromDom() {
   if (!f) return;
   const nameEl = document.getElementById('habit-form-name');
   if (nameEl) f.name = nameEl.value;
+  if (f.typeEdit) {
+    // Typ ändern: Einheit und die Eingabefelder der Zuordnung (Auswahllisten setzt der change-Handler).
+    const unitEl = document.getElementById('type-edit-unit');
+    if (unitEl) f.typeEdit.unit = unitEl.value;
+    document.querySelectorAll('input[data-type-map]').forEach((el) => { f.typeEdit.map[el.dataset.typeMap] = el.value; });
+  }
   if (f.kind === 'scale') {
     // Bereichs-Input unabhängig von labelsEnabled synchronisieren - Darstellung und
     // Bezeichnungen sind seit dem Formular-Umbau unabhängig voneinander wählbar, nicht
@@ -4719,11 +4790,33 @@ function stepChangeTarget(from, to, preset, old) {
   const pos = fromSteps > 0 ? Math.min(1, Math.max(0, (old - from.min) / fromSteps)) : 0;
   return to.min + Math.round(pos * (to.max - to.min));
 }
-// Neuer Wert eines alten (null = entfernen). Werte ohne eigene Zeile (inzwischen auf einem
-// anderen Gerät eingetragen) bekommen den gleichmäßig verteilten Vorschlag.
+// Vorschlag für einen alten Wert je nach Quell- und Zieltyp (from/to = Definitions-Stand, ohne
+// kind = Skala, so auch alle reinen "Stufen ändern"). Aus Zahlen in eine Skala: 'round' =
+// gerundet und in die Spanne geholt, 'spread' = kleinster bis größter eingetragener Wert
+// (range) gleichmäßig auf die Stufen.
+function stepChangeConvert(from, to, preset, old, range) {
+  const fromKind = from.kind ?? 'scale', toKind = to.kind ?? 'scale';
+  if (toKind === 'text') return valueAsText(from, old);
+  if (toKind !== 'scale') return old;
+  if (fromKind === 'scale') return stepChangeTarget(from, to, preset, old);
+  if (preset === 'spread' && range && range.hi > range.lo) {
+    return to.min + Math.round(Math.min(1, Math.max(0, (old - range.lo) / (range.hi - range.lo))) * (to.max - to.min));
+  }
+  return Math.min(to.max, Math.max(to.min, Math.round(old)));
+}
+// Ein Wert als Text: Skala mit Bezeichnung -> die Bezeichnung, sonst die Zahl (mit Einheit).
+function valueAsText(def, v) {
+  if ((def.kind ?? 'scale') === 'scale') return def.labels?.[v - def.min] || formatNumber(v);
+  return def.unit ? `${formatNumber(v)} ${def.unit}` : formatNumber(v);
+}
+// Neuer Wert eines alten (null = entfernen): die Zuordnung des Nutzers, sonst der Vorschlag
+// (z.B. für Werte, die inzwischen auf einem anderen Gerät eingetragen wurden).
 function stepChangeMapValue(sc, old) {
   const key = String(old);
-  return key in sc.map ? sc.map[key] : stepChangeTarget(sc.from, sc.to, 'spread', old);
+  return key in sc.map ? sc.map[key] : stepChangeConvert(sc.from, sc.to, sc.preset ?? 'spread', old, sc.range);
+}
+function isTypeChange(sc) {
+  return (sc.from.kind ?? 'scale') !== (sc.to.kind ?? 'scale');
 }
 function stepChangeId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => (b % 36).toString(36)).join('');
@@ -4750,13 +4843,14 @@ async function markStepChange(h, stepChange) {
     stepChangeStarting.delete(h.defId);
   }
 }
-async function startStepChange(defId, to, map) {
+// to: die neuen Werte der Definition (bei "Stufen ändern" min/max/labels, beim Typwechsel alle
+// typabhängigen Eigenschaften samt kind); from hält dieselben Eigenschaften von vorher fest -
+// genau das stellt Rückgängig wieder her. extra: { preset, range } für den Vorschlag.
+async function startStepChange(defId, to, map, extra = {}) {
   const h = state.habits.find((x) => x.defId === defId);
   if (!h) return false;
-  const sc = {
-    id: stepChangeId(), date: formatKey(new Date()), state: 'apply',
-    from: { min: h.min, max: h.max, labels: h.labels ?? null }, to, map,
-  };
+  const from = Object.fromEntries(Object.keys(to).map((k) => [k, h[k] ?? null]));
+  const sc = { id: stepChangeId(), date: formatKey(new Date()), state: 'apply', from, to, map, ...extra };
   if (!(await markStepChange(h, sc))) return false;
   return runStepChange(defId);
 }
@@ -4826,11 +4920,11 @@ async function runStepChange(defId) {
     if (failed) return false;
     h = state.habits.find((x) => x.defId === defId);
     if (!h) return false;
-    const target = undo ? sc.from : sc.to;
-    return await updateHabitPayload(h, {
-      min: target.min, max: target.max, labels: target.labels,
-      stepChange: undo ? null : { ...sc, state: 'done' },
-    });
+    const ok = await updateHabitPayload(h, { ...(undo ? sc.from : sc.to), stepChange: undo ? null : { ...sc, state: 'done' } });
+    // Typwechsel von/zu Zähler: den Erinnerungs-Stand von heute neu schreiben (wie beim Speichern des Formulars).
+    const today = formatKey(new Date());
+    if (ok && (isTypeChange(sc) || isCounterKind(h)) && state.entries[today]) saveDay(today);
+    return ok;
   } finally {
     stepChangeRunning.delete(defId);
   }
@@ -4903,7 +4997,8 @@ function stepEditHtml(f) {
   const h = state.habits.find((x) => x.defId === f.defId);
   if (!h) return '';
   const steps = h.max - h.min + 1;
-  const sc = h.stepChange;
+  // Typwechsel zeigt typeEditHtml (unter den Feld-Typ-Karten).
+  const sc = h.stepChange && !isTypeChange(h.stepChange) ? h.stepChange : null;
   const current = `<p class="habit-form-lock-note">${t('habitForm.rangeLocked', { steps, min: h.min, max: h.max })}</p>`;
   if (sc && sc.state !== 'done' && !stepChangeRunning.has(h.defId)) {
     return current + `
@@ -4912,7 +5007,7 @@ function stepEditHtml(f) {
         <button type="button" class="manage-btn" data-action="step-edit-resume">${t('stepEdit.resume')}</button>
       </div>`;
   }
-  const undo = !stepChangeUndoable(h) ? '' : `
+  const undo = !sc || !stepChangeUndoable(h) ? '' : `
     <div class="step-box">
       <p class="habit-form-lock-note">${t('stepEdit.last', { date: formatDMY(sc.date), from: sc.from.max - sc.from.min + 1, to: steps })}</p>
       <button type="button" class="manage-btn" data-action="step-undo">${t('stepEdit.undo')}</button>
@@ -4925,7 +5020,7 @@ function stepEditHtml(f) {
 }
 function stepDialogOpen() {
   const f = state.habitForm;
-  return !!f && (!!f.stepEdit || !!f.stepUndoConfirm || stepChangeRunning.has(f.defId) || stepChangeStarting.has(f.defId));
+  return !!f && (!!f.stepEdit || !!f.typeEdit || !!f.stepUndoConfirm || stepChangeRunning.has(f.defId) || stepChangeStarting.has(f.defId));
 }
 // Escape, Android-Zurück: wie "Abbrechen" bzw. in der Rückfrage "Zurück". Ist im Dialog schon
 // etwas eingestellt, erst die übliche Rückfrage "Änderungen verwerfen?". Während des Umstellens
@@ -4934,12 +5029,12 @@ function closeStepDialog() {
   const f = state.habitForm;
   if (!f || stepChangeRunning.has(f.defId) || stepChangeStarting.has(f.defId)) return;
   if (f.stepUndoConfirm) { f.stepUndoConfirm = false; return; }
-  const se = f.stepEdit;
+  const se = f.stepEdit ?? f.typeEdit;
   if (!se) return;
   if (se.confirm) { se.confirm = false; return; }
   syncHabitFormFromDom();
-  if (stepEditKey(se) === se.initial) { f.stepEdit = null; return; }
-  pendingFormLeave = () => { if (state.habitForm) state.habitForm.stepEdit = null; };
+  if ((f.stepEdit ? stepEditKey(se) : typeEditKey(se)) === se.initial) { f.stepEdit = null; f.typeEdit = null; return; }
+  pendingFormLeave = () => { if (state.habitForm) { state.habitForm.stepEdit = null; state.habitForm.typeEdit = null; } };
   state.leaveFormConfirm = true;
   modalTriggerSelector = '#step-dialog-title'; // "Weiter bearbeiten" führt zurück in den Dialog
 }
@@ -4957,13 +5052,16 @@ function renderStepDialog() {
     </div>`;
   if (stepChangeRunning.has(h.defId) || stepChangeStarting.has(h.defId)) {
     const undo = h.stepChange?.state === 'undo';
-    return box(t(undo ? 'stepEdit.undoTitle' : 'stepEdit.title'), `
+    const type = f.typeRunning || (h.stepChange && isTypeChange(h.stepChange));
+    return box(t(undo ? (type ? 'typeEdit.undoTitle' : 'stepEdit.undoTitle') : (type ? 'typeEdit.title' : 'stepEdit.title')), `
       <p id="step-change-progress" role="status">${t('stepEdit.progress', { done: 0, total: '…' })}</p>`);
   }
+  if (f.typeEdit) return renderTypeDialog(h, f.typeEdit, box);
   if (f.stepUndoConfirm && h.stepChange) {
     const sc = h.stepChange;
-    return box(t('stepEdit.undoTitle'), `
-      <p>${t('stepEdit.undoConfirm', { name: h.name, from: sc.from.max - sc.from.min + 1 })}</p>
+    const type = isTypeChange(sc);
+    return box(t(type ? 'typeEdit.undoTitle' : 'stepEdit.undoTitle'), `
+      <p>${type ? t('typeEdit.undoConfirm', { name: h.name, from: kindLabel(sc.from.kind) }) : t('stepEdit.undoConfirm', { name: h.name, from: sc.from.max - sc.from.min + 1 })}</p>
       <div class="habit-form-actions">
         <button type="button" class="habit-form-cancel" data-action="step-undo-cancel">${t('common.cancel')}</button>
         <button type="button" class="auth-submit" data-action="step-undo-confirm">${t('stepEdit.undoDo')}</button>
@@ -5030,17 +5128,25 @@ function refreshFormAfterStepChange(f) {
   Object.assign(f, patch);
   if (f.baseline) f.baseline = JSON.stringify({ ...JSON.parse(f.baseline), ...patch, labels: h.labels ? [...h.labels] : null });
 }
-function finishStepChangeAction(f, ok, doneKey) {
+// typeChange: der Typ hat gewechselt (bzw. zurück) - dann das Formular neu aus dem Feld aufbauen
+// (andere ungespeicherte Eingaben gibt es dabei nicht, siehe 'type-edit-open').
+function finishStepChangeAction(f, ok, doneKey, typeChange = false) {
   const h = state.habits.find((x) => x.defId === f.defId);
   if (ok && h) {
-    refreshFormAfterStepChange(f);
-    state.notice = { type: 'ok', text: tPlain(doneKey, { name: h.name, steps: h.max - h.min + 1 }) };
+    if (typeChange) {
+      Object.assign(f, habitToForm(h), { stepEdit: null, typeEdit: null, stepUndoConfirm: false, typeRunning: false });
+    } else {
+      refreshFormAfterStepChange(f);
+    }
+    state.notice = { type: 'ok', text: tPlain(doneKey, { name: h.name, steps: h.max - h.min + 1, kind: kindLabel(h.kind) }) };
   } else {
+    f.typeRunning = false;
     state.notice = { type: 'error', text: t('stepEdit.failed') };
   }
   render();
+  if (ok && h && typeChange && f.baseline) markFormBaseline();
   // Der Dialog ist zu - zurück auf den Knopf, von dem aus er geöffnet wurde.
-  document.querySelector('[data-action="step-edit-open"], [data-action="step-edit-resume"]')?.focus({ preventScroll: true });
+  document.querySelector('[data-action="step-edit-open"], [data-action="type-edit-open"], [data-action="step-edit-resume"], [data-action="step-undo"]')?.focus({ preventScroll: true });
 }
 // Nach dem Laden: abgebrochene Umstellungen fertig machen (im Hintergrund).
 async function resumeStepChanges() {
@@ -5050,6 +5156,228 @@ async function resumeStepChanges() {
       render();
     }
   }
+}
+
+// --- Typ ändern (Feld mit Einträgen) -----------------------------------------
+// Nutzer-Entscheidung 2026-10-29: Skala -> Zahl, Zahl/Zähler -> Skala und alles -> Text, mit
+// demselben Ablauf wie "Stufen ändern" (stepChange mit kind in from/to, Sicherung _prev,
+// Rückgängig). Nicht möglich, weil sich daraus kein Wert ableiten lässt: Text -> anderes;
+// Berechnet hat keine eigenen Einträge. Felder, die in einem berechneten Feld stecken, erst dort
+// herausnehmen (das berechnete Feld verlangt Skalen bzw. Zahlen).
+// Alle Eigenschaften, die vom Typ abhängen - from hält sie fest, Rückgängig stellt sie wieder her.
+const TYPE_CHANGE_KEYS = ['kind', 'min', 'max', 'labels', 'good', 'goalThreshold', 'target', 'unit', 'displayStyle', 'sliderShowValue', 'step', 'reminderBelow', 'counterSince'];
+const TYPE_MAP_ROWS_MAX = 20; // mehr verschiedene alte Werte: keine Einzel-Zuordnung, nur die Regel
+function typeChangeTargets(h) {
+  if (h.kind === 'scale') return ['number', 'text'];
+  if (h.kind === 'number' || h.kind === 'counter') return ['scale', 'text'];
+  return [];
+}
+function typeChangeBlocker(h) {
+  return state.habits.find((x) => x.kind === 'computed' && (x.members || []).includes(h.id)) ?? null;
+}
+function kindLabel(kind) {
+  return tPlain({ scale: 'habitForm.kindScale', number: 'habitForm.kindNumber', text: 'habitForm.kindText', counter: 'habitForm.kindCounter' }[kind] ?? 'habitForm.kindText');
+}
+function usedValueRange(h) {
+  const used = usedStepValues(h);
+  return used.length ? { lo: used[0][0], hi: used[used.length - 1][0] } : { lo: 1, hi: 1 };
+}
+// Formular-Zustand: f.typeEdit = { kind, steps, preset ('round'|'spread'|'custom', nur Skala),
+// unit, map { "<alt>": neu }, confirm }. map hält bei Zahl/Text den Text der Eingabefelder
+// (umgerechnet erst in typeEditFinalMap), bei Skala die gewählte Stufe bzw. null.
+function typeEditKey(te) {
+  return JSON.stringify([te.kind, te.steps, te.preset, te.unit, te.map]);
+}
+function typeEditScaleMin(h, te) {
+  // "Runden" mit Werten unter 1 (z.B. 0 Gläser): die Skala beginnt bei 0 statt sie alle auf 1 zu legen.
+  return te.preset === 'round' && usedValueRange(h).lo < 1 ? 0 : 1;
+}
+function typeEditTo(h, te) {
+  const base = {
+    min: null, max: null, labels: null, good: null, goalThreshold: null, target: null, unit: null,
+    displayStyle: 'buttons', sliderShowValue: true, step: 1, reminderBelow: null, counterSince: null,
+  };
+  if (te.kind === 'number') return { ...base, kind: 'number', unit: te.unit.trim() || null };
+  if (te.kind === 'text') return { ...base, kind: 'text' };
+  const min = typeEditScaleMin(h, te);
+  // Bewertung: die Richtung des bisherigen Ziels (mindestens = hohe Werte gut), sonst keine.
+  return { ...base, kind: 'scale', min, max: min + te.steps - 1, good: h.good || null, displayStyle: te.steps > CHOICE_STEP_CAP ? 'slider' : 'buttons' };
+}
+function typeEditRows(h) {
+  const used = usedStepValues(h);
+  return used.length <= TYPE_MAP_ROWS_MAX ? used : null;
+}
+function applyTypeEditPreset(h, te) {
+  const rows = typeEditRows(h);
+  if (!rows) { te.map = {}; return; }
+  const to = typeEditTo(h, te);
+  const range = usedValueRange(h);
+  te.map = Object.fromEntries(rows.map(([v]) => {
+    const value = stepChangeConvert(h, to, te.preset, v, range);
+    return [String(v), te.kind === 'scale' ? value : String(value)];
+  }));
+}
+function typeEditKindChanged(h, te, kind) {
+  te.kind = kind;
+  if (kind === 'scale') {
+    // Ganze Zahlen, die als Skala passen (z.B. 0-10): "Runden" behält sie, sonst verteilen.
+    const { lo, hi } = usedValueRange(h);
+    const fits = usedStepValues(h).every(([v]) => Number.isInteger(v)) && lo >= 0 && hi - Math.min(lo, 1) + 1 <= SLIDER_STEP_CAP;
+    te.preset = fits ? 'round' : 'spread';
+    te.steps = fits ? Math.max(2, hi - typeEditScaleMin(h, te) + 1) : 5;
+  }
+  applyTypeEditPreset(h, te);
+}
+function typeEditStepsChanged(h, te, steps) {
+  te.steps = steps;
+  if (te.preset !== 'custom') { applyTypeEditPreset(h, te); return; }
+  const max = typeEditTo(h, te).max;
+  for (const k of Object.keys(te.map)) if (te.map[k] !== null) te.map[k] = Math.min(max, te.map[k]);
+}
+// -> { map } oder { error } (Zahl nicht lesbar). Leeres Eingabefeld = Eintrag entfernen.
+function typeEditFinalMap(te) {
+  if (te.kind === 'scale') return { map: { ...te.map } };
+  const map = {};
+  for (const [k, raw] of Object.entries(te.map)) {
+    const s = String(raw).trim();
+    if (te.kind === 'text') { map[k] = s || null; continue; }
+    const n = s === '' ? null : Number(s.replace(',', '.'));
+    if (n !== null && !Number.isFinite(n)) return { error: 'typeEdit.error.number' };
+    map[k] = n;
+  }
+  return { map };
+}
+function typeEditSummary(h, te) {
+  const rows = typeEditRows(h);
+  let removed = 0, changed = 0;
+  const targets = new Map();
+  if (rows) {
+    for (const [v, n] of rows) {
+      const raw = te.map[String(v)];
+      const to = te.kind === 'scale' ? raw : String(raw ?? '').trim() === '' ? null : raw;
+      if (to === null) { removed += n; continue; }
+      if (te.kind === 'scale') {
+        if (to !== v) changed += n;
+        targets.set(to, (targets.get(to) || 0) + 1);
+      }
+    }
+  }
+  const parts = [];
+  if (changed) parts.push(t(changed === 1 ? 'stepEdit.summary.changedOne' : 'stepEdit.summary.changedMany', { count: changed }));
+  if (removed) parts.push(t(removed === 1 ? 'stepEdit.summary.removedOne' : 'stepEdit.summary.removedMany', { count: removed }));
+  if ([...targets.values()].some((c) => c > 1)) parts.push(t('typeEdit.summary.merged'));
+  // Was beim neuen Typ wegfällt.
+  if (te.kind === 'text') parts.push(t('typeEdit.loss.text'));
+  else if (te.kind === 'number') parts.push(t('typeEdit.loss.scaleToNumber'));
+  else parts.push(t('typeEdit.loss.numberToScale'));
+  if (h.kind === 'counter') parts.push(t('typeEdit.loss.counter'));
+  if (te.kind === 'text' && Object.keys(state.entries).some((k) => getNote(k, h.id))) parts.push(t('typeEdit.loss.notes'));
+  return parts.join(' ');
+}
+// Teil unter den Feld-Typ-Karten eines gesperrten Felds: letzte Umwandlung (Rückgängig), eine
+// abgebrochene, und der Knopf "Typ ändern …" (Dialog: renderStepDialog -> renderTypeDialog).
+function typeEditHtml(f) {
+  const h = state.habits.find((x) => x.defId === f.defId);
+  if (!h || !f.locked || f.revealStage !== undefined) return '';
+  const sc = h.stepChange && isTypeChange(h.stepChange) ? h.stepChange : null;
+  if (sc && sc.state !== 'done' && !stepChangeRunning.has(h.defId)) {
+    return `
+      <div class="auth-field step-box">
+        <p class="habit-form-lock-note" role="status">${t('stepEdit.pending')}</p>
+        <button type="button" class="manage-btn" data-action="step-edit-resume">${t('stepEdit.resume')}</button>
+      </div>`;
+  }
+  const undo = !sc || !stepChangeUndoable(h) ? '' : `
+    <div class="auth-field step-box">
+      <p class="habit-form-lock-note">${t('typeEdit.last', { date: formatDMY(sc.date), from: kindLabel(sc.from.kind), to: kindLabel(sc.to.kind) })}</p>
+      <button type="button" class="manage-btn" data-action="step-undo">${t('stepEdit.undo')}</button>
+    </div>`;
+  if (!typeChangeTargets(h).length) return undo;
+  const blocker = typeChangeBlocker(h);
+  return undo + `
+    <div class="auth-field step-box">
+      ${blocker
+        ? `<p class="habit-form-lock-note">${t('typeEdit.blocked', { computed: blocker.name })}</p>`
+        : `<p class="habit-form-lock-note">${t('typeEdit.hint')}</p>
+           <button type="button" class="manage-btn" data-action="type-edit-open">${t('typeEdit.open')}</button>`}
+    </div>`;
+}
+function renderTypeDialog(h, te, box) {
+  const fromLabel = kindLabel(h.kind);
+  if (te.confirm) {
+    return box(t('typeEdit.confirmTitle'), `
+      <p>${t('typeEdit.confirm', { name: h.name, from: fromLabel, to: kindLabel(te.kind) })}</p>
+      <p>${typeEditSummary(h, te)}</p>
+      <p>${t('stepEdit.safety')}</p>
+      <div class="habit-form-actions">
+        <button type="button" class="habit-form-cancel" data-action="type-edit-confirm-cancel">${t('common.back')}</button>
+        <button type="button" class="auth-submit" data-action="type-edit-confirm">${t('typeEdit.confirmDo')}</button>
+      </div>`);
+  }
+  const used = usedStepValues(h);
+  const rows = typeEditRows(h);
+  const oldText = (v) => (h.kind === 'scale' ? stepValueText(h.labels, h.min, v) : esc(valueAsText(h, v)));
+  const aria = (v, n) => esc(tPlain('stepEdit.mapAria', { value: h.kind === 'scale' ? h.labels?.[v - h.min] || v : valueAsText(h, v), count: n }));
+  let settings = '', mapBody;
+  if (te.kind === 'scale') {
+    const to = typeEditTo(h, te);
+    const range = usedValueRange(h);
+    const options = (selected) => Array.from({ length: te.steps }, (_, i) => to.min + i)
+      .map((v) => `<option value="${v}" ${selected === v ? 'selected' : ''}>${v}</option>`).join('')
+      + `<option value="" ${selected === null ? 'selected' : ''}>${t('stepEdit.remove')}</option>`;
+    settings = `
+      <div class="auth-field">
+        <label for="type-edit-steps">${t('typeEdit.steps')}</label>
+        ${stepperInput('type-edit-steps', te.steps, 2, SLIDER_STEP_CAP, false, 'data-action="type-edit-count"')}
+      </div>`;
+    mapBody = `
+      <div class="pill-group seg" role="group" aria-labelledby="type-edit-map-label">
+        ${['round', 'spread'].map((p) => `<button type="button" class="pill-toggle${te.preset === p ? ' pill-toggle--active' : ''}" data-action="type-edit-preset" data-preset="${p}" aria-pressed="${te.preset === p}">${t('typeEdit.preset.' + p)}</button>`).join('')}
+      </div>
+      ${rows ? `<div class="step-map">${rows.map(([v, n]) => `
+        <div class="step-map-row">
+          <span class="step-map-old">${oldText(v)} <span class="step-map-count">${t('stepEdit.count', { count: n })}</span></span>
+          <select data-type-map="${v}" aria-label="${aria(v, n)}">${options(te.map[String(v)])}</select>
+        </div>`).join('')}</div>`
+        : `<p class="step-dialog-note">${t('typeEdit.manyValues', { count: used.length, lo: formatNumber(range.lo), hi: formatNumber(range.hi) })}</p>`}`;
+  } else {
+    if (te.kind === 'number') {
+      settings = `
+        <div class="auth-field">
+          <label for="type-edit-unit">${t('habitForm.unit')}</label>
+          <input type="text" id="type-edit-unit" value="${esc(te.unit)}" maxlength="10" placeholder="${esc(t('habitForm.unitPlaceholder'))}" />
+        </div>`;
+    }
+    const isNumber = te.kind === 'number';
+    mapBody = rows ? `
+      <p class="step-dialog-note">${t('typeEdit.emptyRemoves')}</p>
+      <div class="step-map">${rows.map(([v, n]) => `
+        <div class="step-map-row">
+          <span class="step-map-old">${oldText(v)} <span class="step-map-count">${t('stepEdit.count', { count: n })}</span></span>
+          <input type="text" data-type-map="${v}" value="${esc(te.map[String(v)] ?? '')}" ${isNumber ? 'inputmode="decimal" class="step-map-number"' : `maxlength="${NOTE_MAX_LENGTH}"`} aria-label="${aria(v, n)}" />
+        </div>`).join('')}</div>`
+      : `<p class="step-dialog-note">${t('typeEdit.manyValuesText', { count: used.length, example: esc(valueAsText(h, used[0][0])) })}</p>`;
+  }
+  const targets = typeChangeTargets(h);
+  return box(t('typeEdit.title'), `
+    <p class="step-dialog-field">${t('typeEdit.fieldNow', { name: h.name, kind: fromLabel })}</p>
+    <p class="step-dialog-note">${t('typeEdit.intro')}</p>
+    <div class="auth-field">
+      <label id="type-edit-kind-label">${t('typeEdit.newKind')}</label>
+      <div class="pill-group seg" role="group" aria-labelledby="type-edit-kind-label">
+        ${targets.map((k) => `<button type="button" class="pill-toggle${te.kind === k ? ' pill-toggle--active' : ''}" data-action="type-edit-kind" data-kind="${k}" aria-pressed="${te.kind === k}">${kindLabel(k)}</button>`).join('')}
+      </div>
+    </div>
+    ${settings}
+    <div class="auth-field">
+      <label id="type-edit-map-label">${t('stepEdit.mapTitle')}${te.kind === 'scale' ? infoTip(t('typeEdit.presetExplain')) : ''}</label>
+      ${mapBody}
+    </div>
+    <p class="step-dialog-note" id="type-edit-summary" aria-live="polite">${typeEditSummary(h, te)}</p>
+    <div class="habit-form-actions">
+      <button type="button" class="habit-form-cancel" data-action="step-edit-cancel">${t('common.cancel')}</button>
+      <button type="button" class="auth-submit" data-action="type-edit-apply">${t('typeEdit.apply')}</button>
+    </div>`);
 }
 
 async function handleHabitArchive(defId, archive) {
@@ -5523,7 +5851,9 @@ async function updateHabitPayload(habit, changes) {
     reminderBelow: next.reminderBelow ?? undefined, stepChange: next.stepChange ?? undefined,
   };
   const enc = await encryptData(currentDek, payload);
-  const { error } = await supabase.from('habit_definitions').update({ enc, ...DEF_PLAINTEXT_CLEARED }).eq('id', habit.defId);
+  // Typwechsel (siehe startStepChange): kind steht im Klartext, weil die Erinnerungen ihn brauchen.
+  const kindChange = next.kind !== habit.kind ? { kind: next.kind } : {};
+  const { error } = await supabase.from('habit_definitions').update({ enc, ...DEF_PLAINTEXT_CLEARED, ...kindChange }).eq('id', habit.defId);
   if (error) {
     state.notice = errorNotice('notice.saveFailed', error.message);
     render();
@@ -8052,9 +8382,11 @@ const CHANGELOG = [
     id: '2026-10-29',
     de: [
       'Du kannst jetzt die Anzahl Stufen einer Skala ändern, auch wenn du schon Einträge hast: Bearbeite das Feld und tippe auf „Stufen ändern“. Dort legst du fest, was aus deinen bisherigen Einträgen wird, und kannst es danach auch wieder rückgängig machen.',
+      'Genauso kannst du den Typ eines Felds mit Einträgen ändern – eine Skala zur Zahl, eine Zahl zur Skala oder beides zu Text: Bearbeite das Feld und tippe auf „Typ ändern“.',
     ],
     en: [
       'You can now change the number of steps of a scale, even if it already has entries: edit the field and tap “Change steps”. There you decide what happens to your previous entries, and you can undo it afterwards.',
+      'In the same way you can change the type of a field with entries – a scale to a number, a number to a scale, or either to text: edit the field and tap “Change type”.',
     ],
   },
   {
@@ -8842,7 +9174,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   return `
     <div class="habit-form" id="habit-form">
       ${titleInHeader ? '' : `<h2>${t(habitFormTitleKey(f))}</h2>`}
-      ${f.locked ? `<p class="habit-form-lock-note">${t('habitForm.lockedNote')}</p>` : ''}
+      ${f.locked ? `<p class="habit-form-lock-note">${t(f.kind === 'text' ? 'habitForm.lockedNoteText' : 'habitForm.lockedNote')}</p>` : ''}
       ${part('what', `
         <div class="auth-field">
           <label for="habit-form-name">${t('habitForm.name')}</label>
@@ -8858,6 +9190,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
             <label id="habit-form-kind-label">${t('habitForm.fieldType')}</label>
             ${kindCards}
           </div>
+          ${typeEditHtml(f)}
           ${canConvertToCounter(f) ? `
             <div class="auth-field convert-box">
               ${f.convertConfirm ? `
@@ -10116,11 +10449,65 @@ app.addEventListener('click', async (e) => {
     render();
     // Auf die Überschrift, nicht ins Zahlenfeld - dort ginge auf dem Handy sofort die Tastatur auf.
     document.getElementById('step-dialog-title')?.focus();
+  } else if (action === 'type-edit-open') {
+    const f = state.habitForm;
+    const h = state.habits.find((x) => x.defId === f.defId);
+    if (!h || !typeChangeTargets(h).length || typeChangeBlocker(h)) return;
+    // Nach der Umwandlung wird das Formular neu aus dem Feld aufgebaut - andere Eingaben gingen verloren.
+    if (openFormHasChanges()) {
+      state.notice = { type: 'error', text: t('typeEdit.error.dirty') };
+      render();
+      return;
+    }
+    f.typeEdit = { kind: null, steps: 5, preset: 'round', unit: '', map: {}, confirm: false };
+    typeEditKindChanged(h, f.typeEdit, typeChangeTargets(h)[0]);
+    f.typeEdit.initial = typeEditKey(f.typeEdit);
+    render();
+    document.getElementById('step-dialog-title')?.focus();
+  } else if (action === 'type-edit-kind' || action === 'type-edit-preset') {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    const h = state.habits.find((x) => x.defId === f.defId);
+    if (!h || !f.typeEdit) return;
+    if (action === 'type-edit-kind') typeEditKindChanged(h, f.typeEdit, el.dataset.kind);
+    else {
+      f.typeEdit.preset = el.dataset.preset;
+      applyTypeEditPreset(h, f.typeEdit);
+    }
+    render();
+    const attr = action === 'type-edit-kind' ? `data-kind="${el.dataset.kind}"` : `data-preset="${el.dataset.preset}"`;
+    document.querySelector(`[data-action="${action}"][${attr}]`)?.focus();
+  } else if (action === 'type-edit-apply') {
+    syncHabitFormFromDom();
+    const te = state.habitForm.typeEdit;
+    if (!te) return;
+    const { error } = typeEditFinalMap(te);
+    if (error) state.notice = { type: 'error', text: t(error) };
+    else te.confirm = true;
+    render();
+    document.querySelector(te.confirm ? '[data-action="type-edit-confirm-cancel"]' : '[data-action="type-edit-apply"]')?.focus();
+  } else if (action === 'type-edit-confirm-cancel') {
+    state.habitForm.typeEdit.confirm = false;
+    render();
+    document.querySelector('[data-action="type-edit-apply"]')?.focus();
+  } else if (action === 'type-edit-confirm') {
+    const f = state.habitForm;
+    const h = state.habits.find((x) => x.defId === f.defId);
+    if (!h || !f.typeEdit?.confirm) return; // zweiter Tipp
+    const te = f.typeEdit;
+    const { map } = typeEditFinalMap(te);
+    const to = typeEditTo(h, te);
+    const extra = te.kind === 'scale' ? { preset: te.preset === 'custom' ? 'round' : te.preset, range: usedValueRange(h) } : {};
+    f.typeEdit = null;
+    f.typeRunning = true;
+    finishStepChangeAction(f, await startStepChange(h.defId, to, map, extra), 'typeEdit.done', true);
   } else if (action === 'step-edit-cancel') {
     syncHabitFormFromDom();
+    const wasType = !!state.habitForm.typeEdit;
     state.habitForm.stepEdit = null;
+    state.habitForm.typeEdit = null;
     render();
-    document.querySelector('[data-action="step-edit-open"]')?.focus();
+    document.querySelector(wasType ? '[data-action="type-edit-open"]' : '[data-action="step-edit-open"]')?.focus();
   } else if (action === 'step-edit-preset') {
     syncHabitFormFromDom();
     const f = state.habitForm;
@@ -10162,7 +10549,10 @@ app.addEventListener('click', async (e) => {
     syncHabitFormFromDom();
     const f = state.habitForm;
     const sc = state.habits.find((x) => x.defId === f.defId)?.stepChange;
-    finishStepChangeAction(f, await runStepChange(f.defId), sc?.state === 'undo' ? 'stepEdit.undoDone' : 'stepEdit.done');
+    const type = !!sc && isTypeChange(sc);
+    if (type) f.typeRunning = true;
+    const doneKey = sc?.state === 'undo' ? (type ? 'typeEdit.undoDone' : 'stepEdit.undoDone') : (type ? 'typeEdit.done' : 'stepEdit.done');
+    finishStepChangeAction(f, await runStepChange(f.defId), doneKey, type);
   } else if (action === 'step-undo') {
     syncHabitFormFromDom();
     state.habitForm.stepUndoConfirm = true;
@@ -10177,7 +10567,10 @@ app.addEventListener('click', async (e) => {
     const f = state.habitForm;
     if (!f.stepUndoConfirm) return; // zweiter Tipp
     f.stepUndoConfirm = false;
-    finishStepChangeAction(f, await startStepChangeUndo(f.defId), 'stepEdit.undoDone');
+    const sc = state.habits.find((x) => x.defId === f.defId)?.stepChange;
+    const type = !!sc && isTypeChange(sc);
+    if (type) f.typeRunning = true;
+    finishStepChangeAction(f, await startStepChangeUndo(f.defId), type ? 'typeEdit.undoDone' : 'stepEdit.undoDone', type);
   } else if (action === 'habit-cancel') {
     closeHabitForm();
     render();
@@ -10503,6 +10896,38 @@ app.addEventListener('change', async (e) => {
     const steps = Math.round(Number(stepEditCountEl.value));
     stepEditCountChanged(h, f.stepEdit, Number.isFinite(steps) ? Math.min(stepEditCap(h), Math.max(2, steps)) : f.stepEdit.steps);
     render();
+    return;
+  }
+  // Typ ändern: Anzahl Stufen der neuen Skala.
+  const typeEditCountEl = e.target.closest('[data-action="type-edit-count"]');
+  if (typeEditCountEl && state.habitForm?.typeEdit) {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    const h = state.habits.find((x) => x.defId === f.defId);
+    if (!h) return;
+    const steps = Math.round(Number(typeEditCountEl.value));
+    typeEditStepsChanged(h, f.typeEdit, Number.isFinite(steps) ? Math.min(SLIDER_STEP_CAP, Math.max(2, steps)) : f.typeEdit.steps);
+    render();
+    return;
+  }
+  // Typ ändern: Zuordnung eines alten Werts - wie bei Stufen ändern ohne render().
+  const typeMapEl = e.target.closest('[data-type-map]');
+  if (typeMapEl && state.habitForm?.typeEdit) {
+    const f = state.habitForm;
+    const h = state.habits.find((x) => x.defId === f.defId);
+    if (!h) return;
+    if (typeMapEl.tagName === 'SELECT') {
+      f.typeEdit.map[typeMapEl.dataset.typeMap] = typeMapEl.value === '' ? null : Number(typeMapEl.value);
+      f.typeEdit.preset = 'custom';
+      document.querySelectorAll('[data-action="type-edit-preset"]').forEach((b) => {
+        b.classList.remove('pill-toggle--active');
+        b.setAttribute('aria-pressed', 'false');
+      });
+    } else {
+      f.typeEdit.map[typeMapEl.dataset.typeMap] = typeMapEl.value;
+    }
+    const summary = document.getElementById('type-edit-summary');
+    if (summary) summary.innerHTML = typeEditSummary(h, f.typeEdit);
     return;
   }
   // Stufen ändern: eine alte Stufe zugeordnet - ohne render() (iOS öffnet die Auswahl sonst
