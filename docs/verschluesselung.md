@@ -58,6 +58,9 @@ entschlüsselbare Zeilen werden nicht angezeigt (`notice.habitsUndecryptable`). 
     (`spareKeyPending`), `maybeShowSpareKey` erzeugt nach dem Laden bzw. dem Tutorial einen
     frischen und zeigt ihn, `confirmSpareKey` setzt `true`. Wer vorher schließt, bekommt
     beim nächsten Öffnen einen neuen (der ungesehene ist damit ungültig).
+  - In den Einstellungen prüfbar (`renderSpareKeyCheck`): entpackt der eingegebene Schlüssel
+    den DEK? Nur auf dem Gerät, ändert nichts – sonst merkte man erst beim Passwort-Reset,
+    dass der aufgeschriebene nicht (mehr) passt.
   - In den Einstellungen jederzeit neu erzeugbar (`regenerateRecoveryKey`, macht den alten
     ungültig, braucht kein Passwort, da der DEK im Speicher liegt). Fragt vorher nach
     (`renderRegenKeyConfirm`) – der alte ist sofort ungültig, auch der aufgeschriebene.

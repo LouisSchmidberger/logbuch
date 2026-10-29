@@ -925,6 +925,7 @@ const state = {
   userSettings: { defaultReminderMinute: 1320, onboardingCompleted: true, locale: 'de', summaryNotifications: true, timezone: 'Europe/Berlin' },
   deleteConfirm: null, // { busy: boolean } während der Konto-Löschen-Bestätigung offen ist
   passwordChange: null, // { current, next, visible, busy, error } während "Passwort ändern" offen ist
+  spareKeyCheck: null, // { value, busy, result: 'ok'|'wrong'|'error'|null, errorText } während "Ersatzschlüssel prüfen" offen ist
   regenKeyConfirm: false, // Rückfrage vor "Ersatzschlüssel neu erzeugen" offen
   logoutConfirm: false,   // Rückfrage vor "Abmelden" (aus dem Menü) offen
   leaveFormConfirm: false, // Rückfrage "Änderungen verwerfen?" beim Verlassen eines geänderten Formulars (siehe leaveFormGuarded)
@@ -984,6 +985,7 @@ function closeModals() {
   if (state.whatsNew) closeWhatsNew(); // Schließen = gesehen (speichert)
   state.deleteConfirm = null;
   if (!state.passwordChange?.busy) state.passwordChange = null;
+  state.spareKeyCheck = null;
   state.tutorialSkipConfirm = false;
   state.resetConfirm = null;
   state.regenKeyConfirm = false;
@@ -1035,7 +1037,7 @@ function leaveSubpage() {
   state.view = state.previousTabView || 'today';
 }
 function isOverlayOpen() {
-  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.regenKeyConfirm || !!state.logoutConfirm || state.leaveFormConfirm || !!state.deleteConfirm || !!state.passwordChange || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm || !!state.whatsNew;
+  return state.menuOpen || !!state.rowMenu || isNoteEditorOpen() || !!state.sectionForm || !!state.resetConfirm || !!state.regenKeyConfirm || !!state.logoutConfirm || state.leaveFormConfirm || !!state.deleteConfirm || !!state.passwordChange || !!state.spareKeyCheck || state.tutorialSkipConfirm || !!state.habitForm || !!state.habitDeleteConfirm || !!state.whatsNew;
 }
 // Der Notiz-Editor gehört zu einem bestimmten Tag in "Heute" und ist nur offen, solange
 // er dort auch sichtbar ist - wechselt man Tag/Tab, speichert render() den Entwurf und
@@ -1151,7 +1153,7 @@ function leaveFormGuarded(proceed) {
 function closeTopLayer() {
   if (state.whatsNew) {
     closeWhatsNew();
-  } else if (state.deleteConfirm || state.passwordChange || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm || state.leaveFormConfirm) {
+  } else if (state.deleteConfirm || state.passwordChange || state.spareKeyCheck || state.tutorialSkipConfirm || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm || state.leaveFormConfirm) {
     closeModals(); // bei "Änderungen verwerfen?" = Weiter bearbeiten
     restoreModalFocus();
   } else if (stepDialogOpen()) {
@@ -1823,6 +1825,7 @@ const STRINGS = {
     'habitForm.moreSubPeriod': 'Ziel, Erinnerung und mehr – kannst du auch später ändern',
     'habitForm.computedExplain': 'Ein berechnetes Feld fasst mehrere Felder zu einem live berechneten Wert zusammen – Skalen als Durchschnitt, Zahlenwerte z. B. als Summe. Selbst ausfüllen kann man es nicht.',
     'common.finish': 'Fertig',
+    'common.close': 'Schließen',
     'menu.defaultReminderTime': 'Standard-Erinnerungszeit',
     'menu.timezoneNote': 'Zeitzone: {tz} (folgt deinem Gerät)',
     'time.label': 'Uhrzeit',
@@ -2133,6 +2136,15 @@ const STRINGS = {
     'passwordChange.error.wrongCurrent': 'Das aktuelle Passwort stimmt nicht.',
     'passwordChange.error.same': 'Das neue Passwort ist dasselbe wie das aktuelle.',
     'passwordChange.error.failed': 'Passwort nicht geändert.',
+    'menu.checkSpareKey': 'Ersatzschlüssel prüfen',
+    'settings.checkSpareKeyNote': 'Prüft, ob dein aufgeschriebener oder gespeicherter Ersatzschlüssel noch passt. Dabei wird nichts verändert.',
+    'spareKeyCheck.title': 'Ersatzschlüssel prüfen',
+    'spareKeyCheck.body': 'Gib deinen Ersatzschlüssel ein, so wie du ihn aufgeschrieben oder gespeichert hast. Geprüft wird nur hier auf deinem Gerät, er wird nirgends gespeichert.',
+    'spareKeyCheck.submit': 'Prüfen',
+    'spareKeyCheck.checking': 'Wird geprüft …',
+    'spareKeyCheck.ok': 'Passt. Mit diesem Ersatzschlüssel kommst du an deine Daten, falls du dein Passwort vergisst.',
+    'spareKeyCheck.wrong': 'Dieser Ersatzschlüssel passt nicht. Sieh nach, ob du ihn vollständig und ohne Tippfehler eingegeben hast. Hast du keinen passenden mehr, erzeuge einen neuen.',
+    'spareKeyCheck.failed': 'Prüfen hat nicht geklappt.',
     'deleteAccount.title': 'Konto endgültig löschen',
     'deleteAccount.warning': 'Alle deine Einträge, Felder und Einstellungen werden unwiderruflich gelöscht. Das kann nicht rückgängig gemacht werden.',
     'deleteAccount.whichAccount': 'Konto: <strong>{email}</strong>',
@@ -2727,6 +2739,7 @@ const STRINGS = {
     'habitForm.moreSubPeriod': 'Goal, reminder and more – you can change these later',
     'habitForm.computedExplain': 'A calculated field combines multiple fields into one live-calculated value – scales as an average, number fields e.g. as a sum. You cannot fill it in yourself.',
     'common.finish': 'Done',
+    'common.close': 'Close',
     'menu.defaultReminderTime': 'Default reminder time',
     'menu.timezoneNote': 'Time zone: {tz} (follows your device)',
     'time.label': 'Time',
@@ -3037,6 +3050,15 @@ const STRINGS = {
     'passwordChange.error.wrongCurrent': 'The current password is incorrect.',
     'passwordChange.error.same': 'The new password is the same as the current one.',
     'passwordChange.error.failed': 'Password not changed.',
+    'menu.checkSpareKey': 'Check spare key',
+    'settings.checkSpareKeyNote': 'Checks whether the spare key you wrote down or saved still works. Nothing is changed.',
+    'spareKeyCheck.title': 'Check spare key',
+    'spareKeyCheck.body': 'Enter your spare key the way you wrote it down or saved it. It’s only checked here on your device and isn’t stored anywhere.',
+    'spareKeyCheck.submit': 'Check',
+    'spareKeyCheck.checking': 'Checking …',
+    'spareKeyCheck.ok': 'It works. With this spare key you can get to your data if you forget your password.',
+    'spareKeyCheck.wrong': 'This spare key doesn’t work. Check that you entered all of it without typos. If you no longer have one that works, create a new one.',
+    'spareKeyCheck.failed': 'The check didn’t work.',
     'deleteAccount.title': 'Permanently delete account',
     'deleteAccount.warning': 'All your entries, fields and settings will be permanently deleted. This cannot be undone.',
     'deleteAccount.whichAccount': 'Account: <strong>{email}</strong>',
@@ -4005,6 +4027,30 @@ async function changePassword(current, next) {
     if (error.code === 'current_password_invalid' || error.code === 'current_password_required') throw new Error(PASSWORD_CHANGE_WRONG_CURRENT);
     throw error;
   }
+}
+
+async function handleSpareKeyCheckSubmit() {
+  const sc = state.spareKeyCheck;
+  if (!sc || sc.busy) return;
+  sc.value = document.getElementById('spare-key-check-input').value;
+  sc.busy = true;
+  sc.result = null;
+  render();
+  let row;
+  try {
+    row = await fetchEncryptionRow(state.session.user.id);
+    if (!row) throw new Error(t('recovery.error.noConfig'));
+  } catch (err) {
+    sc.busy = false;
+    sc.result = 'error';
+    sc.errorText = errorNotice('spareKeyCheck.failed', err?.message || String(err)).text;
+    render();
+    return;
+  }
+  try { await unwrapDekWithRecoveryKey(row, sc.value); sc.result = 'ok'; } catch { sc.result = 'wrong'; }
+  sc.busy = false;
+  render();
+  if (sc.result === 'wrong') document.getElementById('spare-key-check-input')?.select();
 }
 
 async function handlePasswordChangeSubmit() {
@@ -8506,12 +8552,12 @@ const CHANGELOG = [
     de: [
       'Du kannst jetzt die Anzahl Stufen einer Skala ändern, auch wenn du schon Einträge hast: Bearbeite das Feld und tippe auf „Stufen ändern“. Dort legst du fest, was aus deinen bisherigen Einträgen wird, und kannst es danach auch wieder rückgängig machen.',
       'Genauso kannst du den Typ eines Felds mit Einträgen ändern – eine Skala zur Zahl, eine Zahl zur Skala oder beides zu Text: Bearbeite das Feld und tippe auf „Typ ändern“.',
-      'Du kannst dein Passwort jetzt ändern, während du angemeldet bist: in den Einstellungen unter „Konto“.',
+      'Du kannst dein Passwort jetzt ändern, während du angemeldet bist: in den Einstellungen unter „Konto“. Dort kannst du auch prüfen, ob dein aufgeschriebener Ersatzschlüssel noch passt.',
     ],
     en: [
       'You can now change the number of steps of a scale, even if it already has entries: edit the field and tap “Change steps”. There you decide what happens to your previous entries, and you can undo it afterwards.',
       'In the same way you can change the type of a field with entries – a scale to a number, a number to a scale, or either to text: edit the field and tap “Change type”.',
-      'You can now change your password while signed in: in Settings under “Account”.',
+      'You can now change your password while signed in: in Settings under “Account”. There you can also check whether the spare key you wrote down still works.',
     ],
   },
   {
@@ -9872,6 +9918,10 @@ function renderSettings() {
         <button type="button" class="menu-item-btn" data-action="export-data">${t('menu.exportData')}</button>
         <p class="settings-note">${t('settings.exportNote')}</p>
       </div>
+      <div class="settings-row" data-menu-target="spare-key-check">
+        <button type="button" class="menu-item-btn" data-action="open-spare-key-check">${t('menu.checkSpareKey')}</button>
+        <p class="settings-note">${t('settings.checkSpareKeyNote')}</p>
+      </div>
       <div class="settings-row" data-menu-target="recovery-key">
         <button type="button" class="menu-item-btn" data-action="regenerate-recovery-key">${t('menu.regenerateRecoveryKey')}</button>
         <p class="settings-note">${t('settings.recoveryKeyNote')}</p>
@@ -9995,6 +10045,37 @@ function renderPasswordChange() {
   `;
 }
 
+// Prüft nur auf dem Gerät (entpackt der Schlüssel den DEK?) - nichts wird gespeichert oder
+// verändert. Wer erst beim Passwort-Reset merkt, dass der aufgeschriebene Schlüssel nicht
+// (mehr) passt, verliert sonst alle Daten.
+function renderSpareKeyCheck() {
+  const sc = state.spareKeyCheck;
+  const off = sc.busy ? 'disabled' : '';
+  const result = sc.result === 'ok'
+    ? `<div class="notice notice--ok" role="status">${t('spareKeyCheck.ok')}</div>`
+    : sc.result === 'wrong' ? `<div class="notice" role="alert">${t('spareKeyCheck.wrong')}</div>`
+    : sc.result === 'error' ? `<div class="notice" role="alert">${esc(sc.errorText)}</div>` : '';
+  return `
+    <div class="modal-overlay">
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="spare-key-check-title">
+        <h2 id="spare-key-check-title">${t('spareKeyCheck.title')}</h2>
+        <p>${t('spareKeyCheck.body')}</p>
+        <form id="spare-key-check-form">
+          <div class="auth-field">
+            <label for="spare-key-check-input">${t('recovery.key')}</label>
+            <input type="text" id="spare-key-check-input" value="${esc(sc.value)}" required autocomplete="off" autocapitalize="off" spellcheck="false" data-autofocus ${off} />
+          </div>
+          ${result}
+          <div class="habit-form-actions">
+            <button type="button" class="habit-form-cancel" data-action="spare-key-check-close" ${off}>${t('common.close')}</button>
+            <button type="submit" class="auth-submit" ${off}>${sc.busy ? t('spareKeyCheck.checking') : t('spareKeyCheck.submit')}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
 function renderDeleteConfirm() {
   const busy = state.deleteConfirm.busy;
   return `
@@ -10110,12 +10191,13 @@ function renderApp() {
     <div class="view-body${slideClass}">${body}</div>
     ${state.deleteConfirm ? renderDeleteConfirm() : ''}
     ${state.passwordChange ? renderPasswordChange() : ''}
+    ${state.spareKeyCheck ? renderSpareKeyCheck() : ''}
     ${state.resetConfirm ? renderResetConfirm() : ''}
     ${state.regenKeyConfirm ? renderRegenKeyConfirm() : ''}
     ${state.logoutConfirm ? renderLogoutConfirm() : ''}
     ${state.leaveFormConfirm ? renderLeaveFormConfirm() : ''}
     ${state.view === 'manage' && stepDialogOpen() && !state.leaveFormConfirm ? renderStepDialog() : ''}
-    ${state.whatsNew && !state.deleteConfirm && !state.passwordChange && !state.resetConfirm && !state.regenKeyConfirm && !state.logoutConfirm && !state.leaveFormConfirm ? renderWhatsNew() : ''}
+    ${state.whatsNew && !state.deleteConfirm && !state.passwordChange && !state.spareKeyCheck && !state.resetConfirm && !state.regenKeyConfirm && !state.logoutConfirm && !state.leaveFormConfirm ? renderWhatsNew() : ''}
   `;
   // preventScroll: der Header ist ohnehin (sticky) sichtbar - der native
   // Scroll-in-View-Effekt beim Fokussieren kennt "position: sticky" nicht und hat
@@ -10521,6 +10603,15 @@ app.addEventListener('click', async (e) => {
     state.passwordChange.visible = !state.passwordChange.visible;
     render();
     document.querySelector('[data-action="password-change-visibility"]')?.focus();
+  } else if (action === 'open-spare-key-check') {
+    modalTriggerSelector = '[data-action="open-spare-key-check"]';
+    state.spareKeyCheck = { value: '', busy: false, result: null, errorText: '' };
+    state.menuOpen = false;
+    render();
+  } else if (action === 'spare-key-check-close') {
+    state.spareKeyCheck = null;
+    render();
+    restoreModalFocus();
   } else if (action === 'open-delete-confirm') {
     modalTriggerSelector = '[data-action="open-delete-confirm"]';
     state.deleteConfirm = { busy: false };
@@ -11274,9 +11365,8 @@ function syncPasswordCount(id, len) {
   }
 }
 app.addEventListener('submit', (e) => {
-  if (e.target.id !== 'password-change-form') return;
-  e.preventDefault();
-  handlePasswordChangeSubmit();
+  if (e.target.id === 'password-change-form') { e.preventDefault(); handlePasswordChangeSubmit(); }
+  if (e.target.id === 'spare-key-check-form') { e.preventDefault(); handleSpareKeyCheckSubmit(); }
 });
 
 // Hält E-Mail/Passwort im Anmelde-Formular auch über einen Re-Render (z.B. nach
@@ -11288,6 +11378,7 @@ app.addEventListener('input', (e) => {
     syncPasswordCount('password-count', e.target.value.length);
     return;
   }
+  if (e.target.id === 'spare-key-check-input' && state.spareKeyCheck) { state.spareKeyCheck.value = e.target.value; return; }
   if (e.target.id === 'password-change-current' && state.passwordChange) { state.passwordChange.current = e.target.value; return; }
   if (e.target.id === 'password-change-new' && state.passwordChange) {
     state.passwordChange.next = e.target.value;
@@ -11865,7 +11956,7 @@ if ('serviceWorker' in navigator) {
       state.habitForm = null;
       state.habitDeleteConfirm = null;
       state.sectionForm = null;
-      if (state.deleteConfirm || state.passwordChange || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm) { closeModals(); modalTriggerSelector = null; }
+      if (state.deleteConfirm || state.passwordChange || state.spareKeyCheck || state.resetConfirm || state.regenKeyConfirm || state.logoutConfirm) { closeModals(); modalTriggerSelector = null; }
     }
     window.scrollTo(0, 0); // vor render() - das scrollt ggf. danach zum Feld (consumePendingFieldFocus)
     render();
@@ -11974,6 +12065,7 @@ function clearLoadedAccountState() {
   state.habitDeleteConfirm = null;
   state.deleteConfirm = null;
   state.passwordChange = null;
+  state.spareKeyCheck = null;
   state.regenKeyConfirm = false;
   state.logoutConfirm = false;
   state.menuOpen = false;
