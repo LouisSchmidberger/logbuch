@@ -65,15 +65,19 @@ stehen also an zwei verschiedenen Tagen. Die Dauer ist ein berechnetes Feld (unt
 - **Wert** = Minuten ab Mitternacht des Tages, unter dem er steht; ≥ 1440 = nach Mitternacht.
   Nur Tagesfelder (kein "Wie oft"), nicht im Tutorial, kein "Typ ändern", keine Bewertung
   (`habitScore` = null), Erinnerung wie ein normales Feld (leer = fehlt).
-- **"Nachts noch zum Vortag bis"** (`nightUntil` in `enc`, 0–8 Stunden, Standard 0): Uhrzeiten
-  davor gehören zum Vortag (`clockToTimeValue`, `timeEntryFor`) – sonst stünde an einem Tag mit
-  Bettzeit 0:30 abends die nächste schon belegt. Gilt auch für die freie Eingabe (0:40 am
-  Dienstag = Dienstagnacht, Wert 1480).
+- **Eingetragen wird immer auf dem angezeigten Tag**, nie eigenmächtig auf einem anderen
+  (Nutzer-Entscheidung 2026-10-30): wer um 0:30 die Bettzeit vom Vorabend einträgt, wechselt
+  selbst zum Vortag. Verworfen: eine Einstellung "Nachts noch zum Vortag bis …" je Feld, die
+  "Jetzt" nach Mitternacht auf den Vortag umleitete (unverständlich, und ein Eintrag auf einem
+  anderen als dem gewählten Tag ist nie gewollt), und ein späterer Tageswechsel für die ganze App.
+- **Tag neben der Uhrzeit** (`timeDayLabel`, Knopf `time-day-toggle`): "Do 29.10." bzw. "Fr
+  30.10.", antippen wechselt zwischen diesem und dem nächsten Tag – eine eingetippte 0:30 kann
+  früh an diesem Tag oder spät in der Nacht danach meinen, für die Dauer 24 Stunden Unterschied.
+  Eine geänderte Uhrzeit behält den Tag der bisherigen; leer startet sie auf dem Tag selbst.
 - **In "Heute"** (`renderTimeBox`): natives `<input type="time">` (anders als bei den
   Erinnerungszeiten: hier zählt jede Minute), × zum Löschen, dazu "Jetzt" und "+ [20 min]"
   ("Handy schon weglegen"; Spanne wählbar, pro Feld auf dem Gerät gemerkt, `localStorage`
-  `timeLater:<defId>`). Die Knöpfe nur heute bzw. an dem Tag, zu dem "jetzt" gehört; fällt der
-  Zeitpunkt auf einen anderen als den angezeigten Tag, landet er dort, mit Meldung. Eine leere
+  `timeLater:<defId>`) – heute und gestern (`timeValueOn`: gestern um 0:30 = 1470). Eine leere
   Eingabe (halb gelöschte Ziffern) löscht nicht – dafür ist das ×.
 - **Auswertung**: Verlauf wie bei Zahlen (`hasNumericSeries`). Uhrzeiten liegen auf einem Kreis
   – `unwrapClockSeries` legt jeden Wert auf die Seite des Kreis-Mittels, auf der er näher

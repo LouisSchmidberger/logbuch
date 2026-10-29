@@ -87,7 +87,7 @@ export function install(app) {
         { key: 'fmonat', name: 'Monatsrückblick', kind: 'text', period: 'month' },
         { key: 'fbuch', name: 'Gelesene Bücher', kind: 'number', period: 'month' },
         // Uhrzeiten (Werte unten mit eigenem Zufall, damit die übrigen Beispielwerte gleich bleiben)
-        { key: 'fbett', name: 'Ins Bett', kind: 'time', section: 'abends', nightUntil: 4 },
+        { key: 'fbett', name: 'Ins Bett', kind: 'time', section: 'abends' },
         { key: 'fauf', name: 'Aufgestanden', kind: 'time', section: 'morgens' },
         { key: 'fschlafdauer', name: 'Schlafdauer', kind: 'computed', section: 'morgens', groupMembers: ['fbett', 'fauf'], aggregate: 'duration' },
       ];

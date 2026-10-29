@@ -246,7 +246,6 @@ function habitFromParts(row, payload) {
     counterSince: payload.counterSince ?? null, // umgewandelter Zähler: 0 erst ab diesem Tag (siehe convertHabitToCounter)
     periodReminderDay: row.period_reminder_day ?? null, // Tag der Erinnerung im Zeitraum, null = Standard
     stepChange: payload.stepChange ?? null, // Stufen ändern: laufende bzw. letzte Umstellung (siehe runStepChange)
-    nightUntil: payload.nightUntil ?? 0,  // nur kind 'time': Uhrzeiten vor dieser Stunde zählen zum Vortag
   };
 }
 // Eigene Erinnerungszeiten einer Zeile: bis zu MAX_REMINDER_TIMES (reminder_minutes, nur
@@ -616,26 +615,23 @@ function counterZeroApplies(h, dateKey) {
 function isTextKind(h) { return h.kind === 'text'; }
 
 // Uhrzeit-Felder (kind 'time', Nutzer-Entscheidung 2026-10-29): ein Zeitpunkt pro Tag, z.B.
-// "ins Bett" oder "aufgestanden". Wert = Minuten ab Mitternacht des Tages, unter dem er steht;
-// über 1440 heißt nach Mitternacht. nightUntil (volle Stunden, 0-8): Uhrzeiten davor gehören
-// noch zum Vortag - "ins Bett um 0:30" meint den Abend davor, sonst stünden an einem Tag zwei
-// Bettzeiten. Gerechnet wird mit Wanduhr-Zeit über Tagesnummern: eine Dauer über die Nacht der
-// Zeitumstellung liegt eine Stunde daneben (bewusst hingenommen).
+// "ins Bett" oder "aufgestanden". Eingetragen wird immer auf dem Tag, den man gerade ansieht
+// (nie eigenmächtig auf einem anderen). Wert = Minuten ab Mitternacht dieses Tages; ab 1440
+// liegt der Zeitpunkt auf dem nächsten Kalendertag ("ins Bett" Dienstag um 0:30 Mittwoch früh =
+// 1470) - in "Heute" sichtbar und umschaltbar am Tag neben der Uhrzeit. Gerechnet wird mit
+// Wanduhr-Zeit über Tagesnummern: eine Dauer über die Nacht der Zeitumstellung liegt eine
+// Stunde daneben (bewusst hingenommen).
 function isTimeKind(h) { return h.kind === 'time'; }
 const MINUTES_PER_DAY = 1440;
-const NIGHT_UNTIL_MAX = 8;
-function nightUntilMinutes(h) { return Number.isInteger(h.nightUntil) ? h.nightUntil * 60 : 0; }
 function dayIndex(dateKey) {
   const [y, m, d] = dateKey.split('-').map(Number);
   return Math.round(Date.UTC(y, m - 1, d) / 86400000);
 }
-// Uhrzeit (Minuten ab 0:00) aus der Eingabe -> Wert am Tag des Felds.
-function clockToTimeValue(h, clock) { return clock < nightUntilMinutes(h) ? clock + MINUTES_PER_DAY : clock; }
-// Zu welchem Tag ein Zeitpunkt gehört und mit welchem Wert ("Jetzt", "+20 min").
-function timeEntryFor(h, moment) {
-  const clock = moment.getHours() * 60 + moment.getMinutes();
-  const day = clock < nightUntilMinutes(h) ? addDays(startOfDay(moment), -1) : startOfDay(moment);
-  return { dateKey: formatKey(day), value: clockToTimeValue(h, clock) };
+// Wie viele Kalendertage nach dem Tag des Eintrags der Zeitpunkt liegt (0 = derselbe).
+function timeDayOffset(v) { return Math.floor(v / MINUTES_PER_DAY); }
+// Ein Zeitpunkt als Wert auf dem Tag dateKey ("Jetzt", "+20 min" - auch auf der Seite von gestern).
+function timeValueOn(dateKey, moment) {
+  return (dayIndex(formatKey(moment)) - dayIndex(dateKey)) * MINUTES_PER_DAY + moment.getHours() * 60 + moment.getMinutes();
 }
 function formatClock(v) { return minutesToTimeStr(((Math.round(v) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY); }
 // Dauer in Stunden als "7:30" (Stunden:Minuten statt 7,5 - so liest man Schlaf).
@@ -1592,7 +1588,7 @@ const STRINGS = {
     'timeBox.laterAria': 'In {n} Minuten eintragen',
     'timeBox.laterChoose': 'Wie viel später',
     'timeBox.laterOption': '{n} min',
-    'timeBox.savedOtherDay': '{time} für den {date} eingetragen.',
+    'timeBox.dayAria': 'Tag der Uhrzeit: {day}. Antippen für {other}',
     'today.jumpToday': 'Zu heute springen',
     'today.pickDate': 'Datum wählen',
     'today.noFields': 'Noch keine Felder angelegt.',
@@ -1898,11 +1894,7 @@ const STRINGS = {
     'todayIntro.menu': '⋮ <strong>Mehr:</strong> Über die drei Punkte vor einem Feld schreibst du eine Notiz dazu oder bearbeitest es. Unter <strong>☰ Menü</strong> oben rechts findest du deine Felder, die Einstellungen und Erklärungen zu allem.',
     'todayIntro.done': 'Verstanden',
     'habitForm.textNote': 'Für Fragen wie „Wofür bin ich heute dankbar?“: in „Heute“ steht dafür ein Textfeld, das automatisch speichert. Fließt nicht in die Auswertung ein, erscheint dort aber als Liste zum Nachlesen.',
-    'habitForm.timeNote': 'In „Heute“ wählst du die Uhrzeit aus – oder tippst auf „Jetzt“ bzw. auf „+“ für etwas später, z. B. wenn du das Handy schon weglegst. Zwei Uhrzeiten ergeben mit einem berechneten Feld „Dauer“ z. B. deine Schlafdauer.',
-    'habitForm.nightUntil': 'Nachts noch zum Vortag bis',
-    'habitForm.nightUntilExplain': 'Für Dinge wie „ins Bett“: Gehst du um 0:30 schlafen, gehört das zum Abend davor. Uhrzeiten vor der gewählten Zeit zählen dann zum Vortag – auch wenn du sie erst nach Mitternacht einträgst.',
-    'habitForm.nightUntil.none': 'Nein, der Tag endet um Mitternacht',
-    'habitForm.nightUntil.hour': '{time} Uhr',
+    'habitForm.timeNote': 'In „Heute“ wählst du die Uhrzeit aus – oder tippst auf „Jetzt“ bzw. auf „+“ für etwas später, z. B. wenn du das Handy schon weglegst. Nach Mitternacht steht neben der Uhrzeit der nächste Tag – antippen wechselt. Zwei Uhrzeiten ergeben mit einem berechneten Feld „Dauer“ z. B. deine Schlafdauer.',
     'textReview.countOne': '1 Eintrag',
     'textReview.countMany': '{count} Einträge',
     'common.saving': 'Wird gespeichert …',
@@ -2552,7 +2544,7 @@ const STRINGS = {
     'timeBox.laterAria': 'Enter in {n} minutes',
     'timeBox.laterChoose': 'How much later',
     'timeBox.laterOption': '{n} min',
-    'timeBox.savedOtherDay': '{time} entered for {date}.',
+    'timeBox.dayAria': 'Day of this time: {day}. Tap for {other}',
     'today.jumpToday': 'Jump to today',
     'today.pickDate': 'Choose date',
     'today.noFields': 'No fields created yet.',
@@ -2858,11 +2850,7 @@ const STRINGS = {
     'todayIntro.menu': '⋮ <strong>More:</strong> the three dots in front of a field let you add a note or edit it. Under <strong>☰ Menu</strong> at the top right you find your fields, the settings and explanations for everything.',
     'todayIntro.done': 'Got it',
     'habitForm.textNote': 'For questions like “What am I grateful for today?”: “Today” shows a text box for it that saves automatically. Not part of the statistics, but shown there as a list to read back.',
-    'habitForm.timeNote': 'In “Today” you pick the time – or tap “Now”, or “+” for a bit later, e.g. when you’re putting your phone away already. Two times plus a calculated “Duration” field give you e.g. how long you slept.',
-    'habitForm.nightUntil': 'Still counts as the previous day until',
-    'habitForm.nightUntilExplain': 'For things like “went to bed”: if you go to sleep at 0:30, that belongs to the evening before. Times before the chosen hour then count for the previous day – even if you only enter them after midnight.',
-    'habitForm.nightUntil.none': 'No, the day ends at midnight',
-    'habitForm.nightUntil.hour': '{time}',
+    'habitForm.timeNote': 'In “Today” you pick the time – or tap “Now”, or “+” for a bit later, e.g. when you’re putting your phone away already. After midnight, the next day shows next to the time – tap it to switch. Two times plus a calculated “Duration” field give you e.g. how long you slept.',
     'textReview.countOne': '1 entry',
     'textReview.countMany': '{count} entries',
     'common.saving': 'Saving…',
@@ -4738,7 +4726,6 @@ function defaultHabitForm() {
     step: 1, // nur Zähler
     numberGoalDir: null, numberGoalValue: '', // Zahl/Zähler: Ziel 'high' = mindestens, 'low' = höchstens
     summary: 'avg', // Zahlen: in Woche/Monat/Jahr als Durchschnitt oder Summe
-    nightUntil: 0, // nur Uhrzeit: bis zu welcher Stunde nachts noch der Vortag gilt
     durationFrom: null, durationTo: null, // nur berechnet "Dauer": Schlüssel der beiden Uhrzeit-Felder
   };
 }
@@ -4798,7 +4785,6 @@ function habitToForm(h) {
     aggregate: h.aggregate && h.aggregate !== 'duration' ? h.aggregate : 'sum',
     durationFrom: h.aggregate === 'duration' ? h.members?.[0] ?? null : null,
     durationTo: h.aggregate === 'duration' ? h.members?.[1] ?? null : null,
-    nightUntil: h.nightUntil ?? 0,
     showInStats: !h.hideInStats,
     sectionId: h.sectionId,
     goal: h.goalThreshold ?? 1,
@@ -4867,9 +4853,6 @@ function syncHabitFormFromDom() {
       });
     }
     readGoalFromDom(f);
-  } else if (f.kind === 'time') {
-    const nightEl = document.getElementById('habit-form-night-until');
-    if (nightEl) f.nightUntil = Number(nightEl.value);
   } else if (f.kind === 'computed') {
     const aggregateEl = document.getElementById('habit-form-computed-aggregate');
     if (aggregateEl) f.aggregate = aggregateEl.value;
@@ -5125,7 +5108,6 @@ async function handleHabitSaveInner() {
     counterSince: f.kind === 'counter' && f.defId ? state.habits.find((h) => h.defId === f.defId)?.counterSince ?? undefined : undefined,
     reminderBelow,
     stepChange: f.kind === 'scale' && f.defId ? state.habits.find((h) => h.defId === f.defId)?.stepChange ?? undefined : undefined,
-    nightUntil: f.kind === 'time' && f.nightUntil ? f.nightUntil : undefined,
   };
   const sectionId = period === 'day' && state.sections.some((sec) => sec.id === f.sectionId) ? f.sectionId : null;
   const row = {
@@ -6808,7 +6790,6 @@ async function handleExportData() {
           good: p.good, display_style: p.displayStyle, slider_show_value: p.sliderShowValue,
           group_members: p.groupMembers, goal_threshold: p.goalThreshold, aggregate: p.aggregate ?? null,
           hide_in_stats: !!p.hideInStats, archived_in_stats: !!p.archivedInStats,
-          ...(row.kind === 'time' ? { night_until: p.nightUntil ?? 0 } : {}),
         };
       } catch {
         return { ...rest, decrypt_error: true };
@@ -8262,24 +8243,34 @@ function renderNumberBox(h, dateKey, dayEntry, marker = '') {
 
 // Uhrzeit (Nutzer-Entscheidung 2026-10-29): freie Eingabe über die Uhrzeit-Auswahl des Geräts,
 // dazu "Jetzt" und "+ 20 min" (für "Handy weglegen, gleich ins Bett"; die Spanne ist wählbar und
-// wird pro Feld gemerkt). Die beiden Knöpfe nur an dem Tag, zu dem "jetzt" gehört (bzw. heute):
-// an einem alten Tag ergäbe "jetzt" keinen Sinn. Gehört der Zeitpunkt zu einem anderen Tag als
-// dem angezeigten (nach Mitternacht, siehe nightUntilMinutes), landet er dort - mit Meldung.
+// wird pro Feld gemerkt). Die beiden Knöpfe heute und gestern - gestern, damit man nach
+// Mitternacht zum Vortag wechseln und dort "Jetzt" tippen kann; an älteren Tagen ergäbe "jetzt"
+// keinen Sinn. Neben der Uhrzeit steht ihr Kalendertag (dieser oder der nächste, antippen
+// wechselt): eine von Hand eingetippte 0:30 kann früh an diesem Tag oder spät in der Nacht
+// danach meinen - für die Dauer macht das 24 Stunden aus.
 // Bewusst natives <input type="time"> (anders als bei den Erinnerungszeiten): hier zählt jede
 // Minute, und das Gerät bringt seine gewohnte Uhrzeit-Auswahl mit.
+function timeDayLabel(dateKey, v) {
+  const day = addDays(parseDateKey(dateKey), timeDayOffset(v));
+  return `${weekdayShort(day)} ${dtf({ day: '2-digit', month: '2-digit' }).format(day)}`;
+}
 function renderTimeBox(h, dateKey, dayEntry, marker = '') {
   const value = dayEntry[h.id];
   const has = typeof value === 'number';
   const now = new Date();
-  const quick = dateKey === formatKey(now) || dateKey === timeEntryFor(h, now).dateKey;
+  const quick = dateKey === formatKey(now) || dateKey === formatKey(addDays(startOfDay(now), -1));
   const later = timeLaterMinutes(h);
+  const otherValue = has ? (timeDayOffset(value) > 0 ? value % MINUTES_PER_DAY : value + MINUTES_PER_DAY) : null;
   return `
     <div class="number-box habit-row--time">
       ${renderRowHead(h, esc(h.name) + marker)}
       <div class="time-controls">
         <input type="time" id="time-input-${h.id}" class="number-input time-field-input" data-action="time-input" data-habit="${h.id}" value="${has ? formatClock(value) : ''}" aria-label="${esc(h.name)}" />
-        ${has ? `<button type="button" class="slider-clear" data-action="clear-value" data-habit="${h.id}" aria-label="${esc(t('ariaLabel.deleteEntry'))}">×</button>` : ''}
-        ${quick ? `
+        ${has ? `
+          <button type="button" class="manage-btn time-day-toggle" data-action="time-day-toggle" data-habit="${h.id}" aria-label="${esc(tPlain('timeBox.dayAria', { day: timeDayLabel(dateKey, value), other: timeDayLabel(dateKey, otherValue) }))}">${esc(timeDayLabel(dateKey, value))} ⇄</button>
+          <button type="button" class="slider-clear" data-action="clear-value" data-habit="${h.id}" aria-label="${esc(t('ariaLabel.deleteEntry'))}">×</button>
+        ` : ''}
+        ${quick ? `<span class="time-quick">
           <button type="button" class="manage-btn" data-action="time-now" data-habit="${h.id}" data-offset="0">${t('timeBox.now')}</button>
           <span class="time-later" role="group" aria-label="${esc(t('timeBox.laterGroup'))}">
             <button type="button" class="manage-btn" data-action="time-now" data-habit="${h.id}" data-offset="${later}" aria-label="${esc(tPlain('timeBox.laterAria', { n: later }))}">+</button>
@@ -8287,7 +8278,7 @@ function renderTimeBox(h, dateKey, dayEntry, marker = '') {
               ${TIME_LATER_CHOICES.map((n) => `<option value="${n}" ${n === later ? 'selected' : ''}>${tPlain('timeBox.laterOption', { n })}</option>`).join('')}
             </select>
           </span>
-        ` : ''}
+        </span>` : ''}
       </div>
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
@@ -9556,7 +9547,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     `}
   `;
 
-  // Uhrzeit: wann der Tag des Felds nachts endet (siehe nightUntilMinutes) und die Vorschau.
+  // Uhrzeit: Erklärung und Vorschau.
   const timeBody = `
     <p class="habit-form-lock-note">${t('habitForm.timeNote')}</p>
     <div class="auth-field">
@@ -9571,12 +9562,6 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         </span>
         <p class="habit-form-lock-note field-preview-note">${t('habitForm.entryPreviewNote')}</p>
       </div>
-    </div>
-    <div class="auth-field">
-      <label for="habit-form-night-until">${t('habitForm.nightUntil')}${infoTip(t('habitForm.nightUntilExplain'))}</label>
-      <select id="habit-form-night-until">
-        ${Array.from({ length: NIGHT_UNTIL_MAX + 1 }, (_, hour) => `<option value="${hour}" ${(f.nightUntil || 0) === hour ? 'selected' : ''}>${hour === 0 ? t('habitForm.nightUntil.none') : tPlain('habitForm.nightUntil.hour', { time: minutesToTimeStr(hour * 60) })}</option>`).join('')}
-      </select>
     </div>
   `;
 
@@ -11137,15 +11122,15 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'counter-step') {
     handleCounterStep(formatKey(state.currentDate), el.dataset.habit, Number(el.dataset.dir));
   } else if (action === 'time-now') {
-    const h = state.habits.find((x) => x.id === el.dataset.habit);
-    if (h) {
-      const { dateKey, value } = timeEntryFor(h, new Date(Date.now() + Number(el.dataset.offset) * 60000));
-      // Nach Mitternacht (bzw. +20 min darüber hinweg) gehört der Zeitpunkt evtl. zu einem
-      // anderen Tag als dem angezeigten - dann dort eintragen und es sagen.
-      if (dateKey !== formatKey(state.currentDate)) {
-        state.notice = { type: 'ok', text: tPlain('timeBox.savedOtherDay', { time: formatClock(value), date: formatDMY(dateKey) }) };
-      }
-      handleSetValue(dateKey, h.id, value);
+    const dateKey = formatKey(state.currentDate);
+    handleSetValue(dateKey, el.dataset.habit, timeValueOn(dateKey, new Date(Date.now() + Number(el.dataset.offset) * 60000)));
+  } else if (action === 'time-day-toggle') {
+    // Dieser Tag <-> nächster Tag, gleiche Uhrzeit.
+    const dateKey = formatKey(state.currentDate);
+    const v = state.entries[dateKey]?.[el.dataset.habit];
+    if (typeof v === 'number') {
+      handleSetValue(dateKey, el.dataset.habit, timeDayOffset(v) > 0 ? v % MINUTES_PER_DAY : v + MINUTES_PER_DAY);
+      document.querySelector(`[data-action="time-day-toggle"][data-habit="${el.dataset.habit}"]`)?.focus();
     }
   } else if (action === 'clear-value') {
     handleClearValue(formatKey(state.currentDate), el.dataset.habit);
@@ -11652,9 +11637,12 @@ app.addEventListener('change', async (e) => {
   // Uhrzeit: leere Eingabe (Ziffern halb gelöscht) nicht als Löschen werten - dafür gibt es das ×.
   const timeInput = e.target.closest('[data-action="time-input"]');
   if (timeInput) {
-    const h = state.habits.find((x) => x.id === timeInput.dataset.habit);
+    // Eine neue Uhrzeit behält den Tag der bisherigen (0:30 -> 0:45 bleibt in der Nacht danach).
+    const dateKey = formatKey(state.currentDate);
+    const habitId = timeInput.dataset.habit;
+    const old = state.entries[dateKey]?.[habitId];
     const m = /^(\d{2}):(\d{2})/.exec(timeInput.value);
-    if (h && m) handleSetValue(formatKey(state.currentDate), h.id, clockToTimeValue(h, Number(m[1]) * 60 + Number(m[2])));
+    if (m) handleSetValue(dateKey, habitId, (typeof old === 'number' ? timeDayOffset(old) * MINUTES_PER_DAY : 0) + Number(m[1]) * 60 + Number(m[2]));
     return;
   }
   // "+ 20 min": gewählte Spanne merken und am Knopf nachziehen, ohne Neuzeichnen (das würde die
