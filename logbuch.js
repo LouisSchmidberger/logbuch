@@ -33,6 +33,15 @@ async function fetchWithJwtFutureRetry(input, init) {
 const ARRIVED_VIA_SIGNUP_CONFIRM = /(^#|&)type=signup(&|$)/.test(location.hash);
 // Rückkehr über den Link aus der Mail von "E-Mail ändern" (Anmeldung mit type=email_change).
 const ARRIVED_VIA_EMAIL_CHANGE = /(^#|&)type=email_change(&|$)/.test(location.hash);
+// Link aus einer Mail (Registrierung, Passwort vergessen, E-Mail ändern) abgelaufen oder schon
+// benutzt: Supabase leitet dann mit error_code statt einer Anmeldung zurück (otp_expired -
+// auch, wenn ein Virenscanner des Mail-Anbieters den Link vorab geöffnet hat). Ohne Meldung
+// sähe es aus, als hätte der Knopf in der Mail nichts getan. Welche Mail es war, steht nicht
+// darin, deshalb eine Meldung, die für alle passt.
+const MAIL_LINK_ERROR = (() => {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  return hash.get('error_code') || hash.get('error');
+})();
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { fetch: fetchWithJwtFutureRetry } });
 
 function urlBase64ToUint8Array(base64String) {
@@ -2161,6 +2170,8 @@ const STRINGS = {
     'emailChange.error.invalid': 'Das sieht nicht nach einer gültigen E-Mail-Adresse aus.',
     'emailChange.error.rateLimit': 'Gerade wurden zu viele Mails verschickt. Versuch es in ein paar Minuten noch einmal.',
     'emailChange.error.failed': 'Mail nicht gesendet.',
+    'mailLink.expired': 'Dieser Link aus der Mail ist abgelaufen oder wurde schon benutzt. Hast du schon bestätigt, ist alles erledigt. Sonst fordere einfach eine neue Mail an.',
+    'mailLink.failed': 'Der Link aus der Mail hat nicht funktioniert. Fordere einfach eine neue Mail an.',
     'menu.checkSpareKey': 'Ersatzschlüssel prüfen',
     'settings.checkSpareKeyNote': 'Prüft, ob dein aufgeschriebener oder gespeicherter Ersatzschlüssel noch passt. Dabei wird nichts verändert.',
     'spareKeyCheck.title': 'Ersatzschlüssel prüfen',
@@ -3096,6 +3107,8 @@ const STRINGS = {
     'emailChange.error.invalid': 'That doesn’t look like a valid email address.',
     'emailChange.error.rateLimit': 'Too many emails were sent just now. Please try again in a few minutes.',
     'emailChange.error.failed': 'Email not sent.',
+    'mailLink.expired': 'This link from the email has expired or was already used. If you already confirmed, you’re all set. Otherwise, just request a new email.',
+    'mailLink.failed': 'The link from the email didn’t work. Just request a new email.',
     'menu.checkSpareKey': 'Check spare key',
     'settings.checkSpareKeyNote': 'Checks whether the spare key you wrote down or saved still works. Nothing is changed.',
     'spareKeyCheck.title': 'Check spare key',
@@ -6842,6 +6855,7 @@ function renderAuthWelcome() {
     <div class="auth-box auth-box--welcome">
       <h1 tabindex="-1">Logbuch</h1>
       <p class="auth-welcome-lead">${t('auth.welcome.lead')}</p>
+      ${renderNotice()}
       ${choiceCard({ action: 'auth-choose', mode: 'mode', title: t('auth.welcome.new'), note: t('auth.welcome.newNote') })}
       ${choiceCard({ action: 'auth-choose', mode: 'signin', title: t('auth.welcome.existing'), note: t('auth.welcome.existingNote') })}
       <div class="onb-display onb-display--welcome">
@@ -12285,6 +12299,11 @@ state.confirmLanding = ARRIVED_VIA_SIGNUP_CONFIRM && isMobileDevice() && !isStan
 applyLocale(detectInitialLocale());
 applyTheme(getThemeOverride());
 if (ARRIVED_VIA_EMAIL_CHANGE) state.notice = { type: 'ok', text: t('emailChange.landedDone') };
+if (MAIL_LINK_ERROR) {
+  state.notice = { type: 'error', text: t(MAIL_LINK_ERROR === 'otp_expired' ? 'mailLink.expired' : 'mailLink.failed') };
+  // Sonst käme die Meldung bei jedem Neuladen wieder.
+  history.replaceState(history.state, '', location.pathname + location.search);
+}
 applyTextSize(getTextSize());
 try {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {

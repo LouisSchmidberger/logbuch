@@ -129,6 +129,11 @@ dort sowie beim Anmelden mit unbestätigter Adresse eine Hilfe (`renderConfirmEm
 "Mail nochmal senden" (`supabase.auth.resend`; Supabase erlaubt eine Mail pro Minute und
 Adresse – die Wartezeit wird angezeigt).
 
+**Link aus einer Mail abgelaufen oder schon benutzt** (gilt 1h, nur einmal; manche
+Mail-Anbieter/Virenscanner öffnen Links vorab): Supabase leitet mit `error_code` (meist
+`otp_expired`) statt einer Anmeldung zurück, die App zeigt dann eine Meldung für alle drei Mails
+(`MAIL_LINK_ERROR`, auch auf dem Willkommensbildschirm) und räumt die Adresse auf.
+
 **Spam-Rückmeldung** (Migration `20261028152727_add_signup_mail_feedback`): die Antwort auf
 die Spam-Rückfrage (siehe [onboarding.md](onboarding.md)) speichert
 `record_signup_mail_feedback()` in `signup_mail_feedback` – nur Ja/Nein, Monat und der
