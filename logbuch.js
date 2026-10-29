@@ -297,7 +297,7 @@ const DEF_PLAINTEXT_CLEARED = {
 // (der frühere slug "gekifft" verriet den Namen). Bestehende Felder behalten ihren alten
 // Schlüssel - der steht nur noch verschlüsselt (in enc und in habit_entries.data).
 function newHabitKey() {
-  const existing = new Set(state.habits.map((h) => h.id));
+  const existing = new Set([...state.habits, ...state.unsupportedHabits].map((h) => h.id));
   let key;
   do {
     key = 'f' + Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => (b % 36).toString(36)).join('');
@@ -920,6 +920,7 @@ const state = {
   todayIntroStep: 0, // aktuelle Karte der einmaligen Erklärung in "Heute" (renderTodayIntro)
   pushStatus: 'unknown', // 'unsupported' | 'unknown' | 'off' | 'on' | 'busy' | 'blocked' (Mitteilungen im Browser/Handy verboten)
   habits: [],         // alle Felder des Nutzers (aktiv + archiviert), sort_order-sortiert
+  unsupportedHabits: [], // Felder eines Typs, den diese Version nicht kennt (siehe isSupportedHabit)
   sections: [],       // Gruppen (intern "sections"): { id, name, sortOrder } (siehe layoutBlocks)
   sectionForm: null,  // { id: null (neu) | Gruppen-ID, name, members: [defId] } - offenes Gruppen-Formular
   sectionDeleteConfirm: null, // Gruppen-ID, deren Löschen gerade bestätigt wird
@@ -3712,6 +3713,11 @@ async function repadOldEntries() {
   }
 }
 
+const SUPPORTED_KINDS = ['scale', 'number', 'counter', 'computed', 'text'];
+const SUPPORTED_AGGREGATES = [null, 'sum', 'avg', 'min', 'max'];
+function isSupportedHabit(h) {
+  return SUPPORTED_KINDS.includes(h.kind) && (h.kind !== 'computed' || SUPPORTED_AGGREGATES.includes(h.aggregate));
+}
 async function loadHabits() {
   const { data, error } = await supabase.from('habit_definitions').select('*').order('sort_order');
   if (error) {
@@ -3733,7 +3739,12 @@ async function loadHabits() {
       unencrypted.push(row);
     }
   }
-  state.habits = habits;
+  // Felder eines Typs (bzw. einer Berechnung), den diese App-Version noch nicht kennt - angelegt
+  // mit einer neueren Version (z.B. auf der Beta, gleiche Datenbank). Sie bleiben draußen statt
+  // halb kaputt angezeigt oder über ein unpassendes Formular überschrieben zu werden; nur
+  // filledFieldIds kennt sie noch, damit ihre Werte für die Erinnerungen als eingetragen zählen.
+  state.habits = habits.filter(isSupportedHabit);
+  state.unsupportedHabits = habits.filter((h) => !isSupportedHabit(h));
   if (undecryptable) state.notice = { type: 'error', text: tPlain('notice.habitsUndecryptable', { count: undecryptable }) };
   if (unencrypted.length) migrateHabitDefinitions(unencrypted);
 }
@@ -6099,7 +6110,7 @@ function closeNoteEditor(save) {
 function filledFieldIds(dayData) {
   return Object.keys(dayData)
     .filter((k) => !k.startsWith('_'))
-    .map((k) => state.habits.find((h) => h.id === k)?.defId)
+    .map((k) => (state.habits.find((h) => h.id === k) || state.unsupportedHabits.find((h) => h.id === k))?.defId)
     .filter(Boolean);
 }
 
@@ -12258,6 +12269,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 function clearLoadedAccountState() {
   state.entries = {};
   state.habits = [];
+  state.unsupportedHabits = [];
   state.noteEditor = null;
   state.rowMenu = null;
   state.resetConfirm = null;

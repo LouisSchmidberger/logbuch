@@ -17,6 +17,12 @@ in der verschlüsselten payload heißt die Mitgliederliste `groupMembers` (Klart
   seiner Mitglieder.
 - `kind='text'`: freie Text-Antwort.
 
+**Neuer Typ oder neue Berechnungsart** → in `SUPPORTED_KINDS`/`SUPPORTED_AGGREGATES`
+aufnehmen. Eine App-Version, die ihn nicht kennt (live, während er auf der Beta mit derselben
+Datenbank schon angelegt werden kann), lässt solche Felder ganz weg (`isSupportedHabit`,
+`state.unsupportedHabits` nur für `filledFieldIds`), statt sie halb kaputt anzuzeigen oder über
+ein unpassendes Formular zu überschreiben.
+
 Es gibt keinen Bool-Typ – ein Ja/Nein-Feld ist eine `scale` mit 2 Stufen und Bezeichnungen
 (`min:1, max:2, labels:['Nein','Ja']`; ältere Felder können `min:0, max:1` haben).
 

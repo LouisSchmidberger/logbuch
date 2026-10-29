@@ -42,6 +42,16 @@ export function install(app) {
       });
     },
 
+    // Legt eine Feld-Definition direkt an (verschlüsselte payload), z.B. einen Typ, den diese
+    // App-Version nicht kennt - so lässt sich prüfen, wie eine ältere Version damit umgeht.
+    async addRawDefinition(row, payload) {
+      const { error } = await app.supabase.from('habit_definitions').insert({
+        user_id: app.state.session.user.id, sort_order: 99, ...app.DEF_PLAINTEXT_CLEARED, ...row,
+        enc: await app.encryptData(app.dek(), payload),
+      });
+      if (error) throw error;
+    },
+
     // Füllt das angemeldete, entsperrte Konto mit Beispiel-Feldern und `days` Tagen
     // Einträgen, schließt Tutorial und Ersatzschlüssel ab. Danach neu laden.
     async seedDemo({ days = 21 } = {}) {
