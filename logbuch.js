@@ -2177,6 +2177,13 @@ const STRINGS = {
     'habitForm.showInStatsNote': 'Aus: erscheint nur in „Heute“, nicht in Woche, Monat, Jahr und Gesamt – z. B. wenn dir ein berechnetes Feld daraus reicht. Die Tagesfarbe rechnet es trotzdem mit ein.',
     'habitForm.more': 'Mehr Einstellungen',
     'habitForm.moreSub': 'Tage, Erinnerungszeit, Auswertung – kannst du auch später ändern',
+    'habitForm.partMore': 'Mehr: {what}',
+    'habitForm.partMore.slider': 'Schieberegler',
+    'habitForm.partMore.numbers': 'Zahlen ab 0',
+    'habitForm.partMore.interval': 'Alle paar Tage',
+    'habitForm.partMore.goal': 'Ziel',
+    'habitForm.partMore.showInStats': 'Ausblenden',
+    'habitForm.textShort': 'In „Heute“ steht dafür ein Textfeld.',
     'habitForm.moreSubPeriod': 'Ziel, Erinnerung und mehr – kannst du auch später ändern',
     'habitForm.computedExplain': 'Ein berechnetes Feld fasst mehrere Felder zu einem live berechneten Wert zusammen – Skalen als Durchschnitt, Zahlenwerte z. B. als Summe, zwei Uhrzeiten als Dauer dazwischen – oder es zählt die Tage seit einem Eintrag. Selbst ausfüllen kann man es nicht.',
     'common.finish': 'Fertig',
@@ -2237,7 +2244,7 @@ const STRINGS = {
     'tutorial.form.tipKind': 'Der Feld-Typ bestimmt, wie du einträgst: <strong>Skala</strong> für „wie sehr“ (z. B. Stimmung 1–5), <strong>Zahl</strong> für Messwerte (z. B. Schlafstunden oder Wassergläser), <strong>Text</strong> für ein paar Worte.',
     'tutorial.form.tipKindMoreTitle': 'Und für Ja/Nein-Fragen?',
     'tutorial.form.tipKindMore': 'Nimm eine Skala mit 2 Stufen und schalte „Eigene Bezeichnungen“ ein – dann schreibst du „Nein“ und „Ja“ hinein.',
-    'tutorial.form.tip.scale': 'Stell ein, wie viele Stufen es gibt und ob die Werte als Knöpfe oder Schieberegler erscheinen. Mit <strong>„Eigene Bezeichnungen“</strong> gibst du den Stufen Namen statt Zahlen (z. B. schlecht – okay – gut). In der <strong>Vorschau</strong> kannst du gleich ausprobieren, wie das in „Heute“ aussieht.',
+    'tutorial.form.tip.scale': 'Stell ein, wie viele Stufen es gibt. Mit <strong>„Eigene Bezeichnungen“</strong> gibst du den Stufen Namen statt Zahlen (z. B. schlecht – okay – gut). In der <strong>Vorschau</strong> kannst du gleich ausprobieren, wie das in „Heute“ aussieht. Einen Schieberegler statt Knöpfen findest du unter „Mehr“.',
     'tutorial.form.tipScaleMoreTitle': 'Was bedeutet „Bewertung“?',
     'tutorial.form.tipScaleMore': '„Bewertung“ legt fest, was gut ist – danach richten sich die Farben in der Auswertung (grün = gut). Bei „Keine Wertung“ wird nur festgehalten, ohne gut oder schlecht.',
     'tutorial.form.tip.number': 'Gib eine Einheit an, wenn du magst (z. B. kg). Eingetragen wird dann einfach eine Zahl.',
@@ -3285,6 +3292,13 @@ const STRINGS = {
     'habitForm.showInStatsNote': 'Off: only appears in “Today”, not in the week, month, year, and overall views – e.g. if a calculated field made from it is enough for you. It still counts towards the day’s color.',
     'habitForm.more': 'More settings',
     'habitForm.moreSub': 'Days, reminder time, statistics – you can also change these later',
+    'habitForm.partMore': 'More: {what}',
+    'habitForm.partMore.slider': 'slider',
+    'habitForm.partMore.numbers': 'numbers from 0',
+    'habitForm.partMore.interval': 'every few days',
+    'habitForm.partMore.goal': 'goal',
+    'habitForm.partMore.showInStats': 'hide',
+    'habitForm.textShort': 'In “Today” there is a text box for it.',
     'habitForm.moreSubPeriod': 'Goal, reminder and more – you can change these later',
     'habitForm.computedExplain': 'A calculated field combines multiple fields into one live-calculated value – scales as an average, number fields e.g. as a sum, two times as the duration between them – or it counts the days since an entry. You cannot fill it in yourself.',
     'common.finish': 'Done',
@@ -3345,7 +3359,7 @@ const STRINGS = {
     'tutorial.form.tipKind': 'The field type decides how you enter things: <strong>Scale</strong> for “how much” (e.g. mood 1–5), <strong>Number</strong> for measurements (e.g. hours of sleep or glasses of water), <strong>Text</strong> for a few words.',
     'tutorial.form.tipKindMoreTitle': 'And for yes/no questions?',
     'tutorial.form.tipKindMore': 'Choose a scale with 2 steps and turn on “Custom labels” – then type “No” and “Yes”.',
-    'tutorial.form.tip.scale': 'Set how many steps there are and whether values appear as buttons or a slider. With <strong>“Custom labels”</strong> you give the steps names instead of numbers (e.g. bad – okay – good). In the <strong>preview</strong> you can try out right away how it looks in “Today”.',
+    'tutorial.form.tip.scale': 'Set how many steps there are. With <strong>“Custom labels”</strong> you give the steps names instead of numbers (e.g. bad – okay – good). In the <strong>preview</strong> you can try out right away how it looks in “Today”. A slider instead of buttons is under “More”.',
     'tutorial.form.tipScaleMoreTitle': 'What does “Valuation” mean?',
     'tutorial.form.tipScaleMore': '“Valuation” decides what is good – the colors in the statistics follow it (green = good). With “No valuation” things are just recorded, without good or bad.',
     'tutorial.form.tip.number': 'Add a unit if you like (e.g. kg). Then you simply enter a number.',
@@ -4002,12 +4016,64 @@ function clearableInputHtml(id, type, value, opts = {}) {
   `;
 }
 
-// Kleine "?"-Box mit Erklärungstext, per Tap auf-/zuklappbar (natives <details>, kein
-// JS nötig) — für Erklärungen, die nicht direkt sichtbar sein sollen (zu viel auf
-// einmal), aber bei Bedarf griffbereit sind.
+// "?" mit Erklärung für alles, was nicht dauernd dastehen muss. Öffnet eine Sprechblase direkt
+// unter der Zeile (openInfoTip) - vorher klappte ein kleiner blasser Text auf, der unterging
+// (Nutzer, Hub 1.1). Die Blase steht im Fluss statt darüber zu schweben: nichts wird verdeckt
+// oder am Rand abgeschnitten, auch nicht in Dialogen.
 function infoTip(text) {
-  return `<details class="info-tip"><summary aria-label="${esc(t('ariaLabel.explain'))}">?</summary><p>${esc(text)}</p></details>`;
+  return `<button type="button" class="info-tip" data-tip="${esc(text)}" aria-expanded="false" aria-label="${esc(t('ariaLabel.explain'))}">?</button>`;
 }
+let infoPop = null; // { btn, el }
+function closeInfoTip(focusBack = false) {
+  if (!infoPop) return;
+  const { btn, el } = infoPop;
+  infoPop = null;
+  el.remove();
+  btn.setAttribute('aria-expanded', 'false');
+  btn.removeAttribute('aria-controls');
+  if (focusBack && btn.isConnected) btn.focus();
+}
+function openInfoTip(btn) {
+  closeInfoTip();
+  // Hinter die Zeile, zu der das "?" gehört - nie in ein <label> (Antippen der Blase sollte
+  // nicht das Eingabefeld bedienen) oder eine Überschrift.
+  const host = btn.closest('label, h3, legend, .info-tip-host') || btn;
+  const el = document.createElement('div');
+  el.className = 'info-pop';
+  el.id = 'info-pop';
+  el.setAttribute('role', 'note');
+  el.tabIndex = -1;
+  el.innerHTML = `<p>${esc(btn.dataset.tip)}</p><button type="button" class="info-pop-close" aria-label="${esc(t('common.close'))}">×</button>`;
+  host.after(el);
+  // Spitze der Blase unter das "?".
+  const b = btn.getBoundingClientRect();
+  el.style.setProperty('--arrow-x', `${Math.max(12, b.left + b.width / 2 - el.getBoundingClientRect().left)}px`);
+  btn.setAttribute('aria-expanded', 'true');
+  btn.setAttribute('aria-controls', 'info-pop');
+  infoPop = { btn, el };
+  el.focus({ preventScroll: true }); // Screenreader lesen die Erklärung gleich vor
+}
+// Vor allen anderen Klick-Handlern (Erfassungsphase): "?" öffnet/schließt, Antippen woanders
+// schließt die Blase (ohne den Tipp selbst zu schlucken).
+document.addEventListener('click', (e) => {
+  const tip = e.target.closest?.('.info-tip');
+  if (tip) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (infoPop?.btn === tip) closeInfoTip();
+    else openInfoTip(tip);
+    return;
+  }
+  if (e.target.closest?.('.info-pop-close')) { closeInfoTip(true); return; }
+  if (infoPop && !e.target.closest?.('.info-pop')) closeInfoTip();
+}, true);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && infoPop) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    closeInfoTip(true);
+  }
+}, true);
 
 // Zentrale Stelle für state.notice → DOM: state.notice wird an vielen Stellen im
 // Code gesetzt, aber nur hier gerendert — role/aria-live sorgen dafür, dass
@@ -10714,6 +10780,15 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const defaultReminderMinute = state.userSettings.defaultReminderMinute;
 
   const goalField = goalControlHtml(f);
+  // Selten Gebrauchtes je Abschnitt zugeklappt unter "Mehr: …" (Nutzer-Entscheidung 2026-10-30:
+  // das Formular war für Neulinge zu unübersichtlich). Offen, sobald dort etwas vom Standard
+  // abweicht; offen/zu übersteht Re-Renders (f.partMore, gesetzt vom toggle-Listener).
+  const partMore = (key, names, nonDefault, body) => (body.trim() ? `
+    <details class="part-more" data-more="${key}" ${(f.partMore?.[key] ?? nonDefault) ? 'open' : ''}>
+      <summary>${t('habitForm.partMore', { what: names.map((n) => tPlain('habitForm.partMore.' + n)).join(', ') })}</summary>
+      ${body}
+    </details>
+  ` : '');
 
   // Ein gesperrtes Feld mit mehr Stufen als CHOICE_STEP_CAP kann seine Stufenzahl nicht
   // mehr verkleinern - Buttons/Bezeichnungen sind dann direkt hier gesperrt (mit
@@ -10729,14 +10804,6 @@ function renderHabitForm({ titleInHeader = false } = {}) {
 
   const scaleBody = `
     <div class="auth-field">
-      <label id="habit-form-display-label">${t('habitForm.display')}${f.locked ? infoTip(t('habitForm.displayLockedExplain')) : ''}</label>
-      <div class="pill-group seg" role="group" aria-labelledby="habit-form-display-label">
-        <button type="button" class="pill-toggle${f.displayStyle === 'buttons' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="buttons" ${buttonsBlocked ? 'disabled' : ''}>${t('habitForm.buttons')}</button>
-        <button type="button" class="pill-toggle${f.displayStyle === 'slider' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="slider">${t('habitForm.slider')}</button>
-      </div>
-      ${buttonsBlocked ? lockedCapNote : ''}
-    </div>
-    <div class="auth-field">
       <label for="habit-form-steps">${t('habitForm.numberOfSteps')}${infoTip(t('habitForm.stepsExplain') + (f.displayStyle === 'slider' ? ' ' + t('habitForm.sliderRangeExplain') : ''))}</label>
       ${f.locked
         ? stepEditHtml(f)
@@ -10746,14 +10813,6 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         <button type="button" class="link-btn tip-link" data-action="habit-steps-to-slider">${t(f.displayStyle === 'buttons' ? 'habitForm.stepCapToSlider' : 'habitForm.stepCapLabelsOff')}</button>
       ` : ''}
     </div>
-    ${f.displayStyle === 'slider' ? `
-      <div class="auth-field">
-        <label class="checkbox-field">
-          <input type="checkbox" id="habit-form-slider-show-value" data-action="habit-slider-show-value" ${f.sliderShowValue ? 'checked' : ''} />
-          ${t('habitForm.showValueWhileEntering')}
-        </label>
-      </div>
-    ` : ''}
     <div class="auth-field">
       <label class="checkbox-field">
         <input type="checkbox" id="habit-form-labels-toggle" data-action="habit-labels-toggle" ${f.labelsEnabled ? 'checked' : ''} ${labelsBlocked ? 'disabled' : ''} />
@@ -10761,14 +10820,6 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       </label>
       ${labelsBlocked && !buttonsBlocked ? lockedCapNote : ''}
     </div>
-    ${!f.locked && !f.labelsEnabled ? `
-      <div class="auth-field">
-        <label id="habit-form-numbers-label">${t('habitForm.numbers')}${infoTip(t('habitForm.numbersExplain'))}</label>
-        <div class="pill-group seg" role="group" aria-labelledby="habit-form-numbers-label">
-          ${[1, 0].map((start) => `<button type="button" class="pill-toggle${(f.min === 0 ? 0 : 1) === start ? ' pill-toggle--active' : ''}" data-action="habit-start" data-start="${start}">${tPlain('habitForm.numbersRange', { min: start, max: start + stepCount - 1 })}</button>`).join('')}
-        </div>
-      </div>
-    ` : ''}
     ${f.labelsEnabled ? `
       <div class="auth-field">
         <div class="label-inputs">
@@ -10794,9 +10845,35 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       </div>
       ${f.locked && f.good !== (state.habits.find((h) => h.defId === f.defId)?.good ?? null) ? `<p class="habit-form-lock-note" role="status">${t('habitForm.goodChangedWarn')}</p>` : ''}
     </div>
+    ${partMore('entry', ['slider', ...(!f.locked && !f.labelsEnabled ? ['numbers'] : [])], f.displayStyle === 'slider' || (f.min === 0 && !f.labelsEnabled) || buttonsBlocked, `
+      <div class="auth-field">
+        <label id="habit-form-display-label">${t('habitForm.display')}${f.locked ? infoTip(t('habitForm.displayLockedExplain')) : ''}</label>
+        <div class="pill-group seg" role="group" aria-labelledby="habit-form-display-label">
+          <button type="button" class="pill-toggle${f.displayStyle === 'buttons' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="buttons" ${buttonsBlocked ? 'disabled' : ''}>${t('habitForm.buttons')}</button>
+          <button type="button" class="pill-toggle${f.displayStyle === 'slider' ? ' pill-toggle--active' : ''}" data-action="habit-display-style" data-style="slider">${t('habitForm.slider')}</button>
+        </div>
+        ${buttonsBlocked ? lockedCapNote : ''}
+      </div>
+      ${f.displayStyle === 'slider' ? `
+        <div class="auth-field">
+          <label class="checkbox-field">
+            <input type="checkbox" id="habit-form-slider-show-value" data-action="habit-slider-show-value" ${f.sliderShowValue ? 'checked' : ''} />
+            ${t('habitForm.showValueWhileEntering')}
+          </label>
+        </div>
+      ` : ''}
+      ${!f.locked && !f.labelsEnabled ? `
+        <div class="auth-field">
+          <label id="habit-form-numbers-label">${t('habitForm.numbers')}${infoTip(t('habitForm.numbersExplain'))}</label>
+          <div class="pill-group seg" role="group" aria-labelledby="habit-form-numbers-label">
+            ${[1, 0].map((start) => `<button type="button" class="pill-toggle${(f.min === 0 ? 0 : 1) === start ? ' pill-toggle--active' : ''}" data-action="habit-start" data-start="${start}">${tPlain('habitForm.numbersRange', { min: start, max: start + stepCount - 1 })}</button>`).join('')}
+          </div>
+        </div>
+      ` : ''}
+    `)}
   `;
 
-  const textBody = `<p class="habit-form-lock-note">${t('habitForm.textNote')}</p>`;
+  const textBody = `<p class="habit-form-lock-note">${t('habitForm.textShort')}</p>`;
 
   const numberBody = `
     <div class="auth-field">
@@ -10828,7 +10905,6 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const counterBody = `
     ${entryModeField}
     ${entryPreview}
-    <p class="habit-form-lock-note">${t('habitForm.counterNote')}</p>
     ${numberBody}
     <div class="auth-field">
       <label for="habit-form-step">${t('habitForm.counterStep')}</label>
@@ -10910,7 +10986,6 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const computedTypes = [['scale', 'habitForm.computedType.scale'], ['number', 'habitForm.computedType.number'], ['duration', 'habitForm.computedType.duration']]
     .concat(featureOn('since') || isSinceForm ? [['since', 'habitForm.computedType.since']] : []);
   const computedBody = `
-    <p class="habit-form-lock-note">${t('habitForm.computedExplain')}</p>
     <div class="auth-field">
       <label id="habit-form-computed-type-label">${t('habitForm.computedType')}</label>
       <div class="pill-group seg" role="group" aria-labelledby="habit-form-computed-type-label">
@@ -10949,7 +11024,6 @@ function renderHabitForm({ titleInHeader = false } = {}) {
 
   // Uhrzeit: Erklärung und Vorschau.
   const timeBody = `
-    <p class="habit-form-lock-note">${t('habitForm.timeNote')}</p>
     <div class="auth-field">
       <span class="settings-label" id="habit-form-time-preview-label">${t('habitForm.preview')}</span>
       <div class="field-preview entry-preview" role="img" aria-label="${esc(t('habitForm.entryPreviewAria.time'))}">
@@ -10964,7 +11038,6 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const multiKey = f.defId ? state.habits.find((h) => h.defId === f.defId)?.id : null;
   const multiAnyUsed = !!multiKey && f.multiOptions.some((o) => multiOptionUsed(multiKey, o.id));
   const multiBody = f.kind !== 'multi' ? '' : `
-    <p class="habit-form-lock-note">${t('habitForm.multiNote')}</p>
     <div class="auth-field">
       <span class="settings-label" id="habit-form-multi-label">${t('habitForm.multiOptions')}</span>
       <ul class="multi-option-list" aria-labelledby="habit-form-multi-label">
@@ -11021,19 +11094,16 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const isInterval = sch.mode === 'interval';
   const scheduleBody = `
     <div class="auth-field">
-      <label id="habit-form-days-label">${t('habitForm.days')}</label>
-      <div class="pill-group seg" role="group" aria-labelledby="habit-form-days-label">
-        ${[['weekdays', 'habitForm.days.modeWeekdays'], ['interval', 'habitForm.days.modeInterval']].map(([m, key]) => `<button type="button" class="pill-toggle${sch.mode === m ? ' pill-toggle--active' : ''}" data-action="habit-schedule-mode" data-mode="${m}" aria-pressed="${sch.mode === m}">${t(key)}</button>`).join('')}
-      </div>
+      <label id="habit-form-days-label">${t('habitForm.days')}${infoTip(tPlain(isInterval ? 'habitForm.days.intervalHint' : sch.days.length === 7 ? 'habitForm.days.hint' : 'habitForm.days.explain'))}</label>
       ${isInterval ? `
         <div class="schedule-inline schedule-interval">
           <label for="habit-form-every">${t('habitForm.days.every')}</label>
-          <input type="number" id="habit-form-every" class="schedule-every" inputmode="numeric" min="2" max="365" step="1" value="${esc(sch.every)}" aria-describedby="habit-form-days-note" />
+          <input type="number" id="habit-form-every" class="schedule-every" inputmode="numeric" min="2" max="365" step="1" value="${esc(sch.every)}" />
           <span>${t('habitForm.days.everyUnit')}</span>
         </div>
         <div class="schedule-inline schedule-interval">
           <label for="habit-form-every-start">${t('habitForm.days.everyStart')}</label>
-          <input type="date" id="habit-form-every-start" class="schedule-start" value="${esc(sch.start)}" aria-describedby="habit-form-days-note" />
+          <input type="date" id="habit-form-every-start" class="schedule-start" value="${esc(sch.start)}" />
         </div>
       ` : `
         <div class="pill-group weekday-group" role="group" aria-label="${esc(t('habitForm.days.modeWeekdays'))}">
@@ -11043,8 +11113,14 @@ function renderHabitForm({ titleInHeader = false } = {}) {
           }).join('')}
         </div>
       `}
-      <p class="habit-form-lock-note" id="habit-form-days-note">${t(isInterval ? 'habitForm.days.intervalHint' : sch.days.length === 7 ? 'habitForm.days.hint' : 'habitForm.days.explain')}</p>
     </div>
+    ${partMore('when', ['interval'], isInterval, `
+      <div class="auth-field">
+        <div class="pill-group seg" role="group" aria-label="${esc(tPlain('habitForm.days'))}">
+          ${[['weekdays', 'habitForm.days.modeWeekdays'], ['interval', 'habitForm.days.modeInterval']].map(([m, key]) => `<button type="button" class="pill-toggle${sch.mode === m ? ' pill-toggle--active' : ''}" data-action="habit-schedule-mode" data-mode="${m}" aria-pressed="${sch.mode === m}">${t(key)}</button>`).join('')}
+        </div>
+      </div>
+    `)}
   `;
 
   const isComputed = f.kind === 'computed';
@@ -11104,9 +11180,9 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // untereinander, getrennt nur nach "wichtig" und "Mehr Einstellungen". Leere Abschnitte
   // entfallen. Im Tutorial stehen Wann/Auswertung/Gruppe weiter zugeklappt unter "Mehr
   // Einstellungen" (Formular sonst zu lang für das erste Feld).
-  const part = (key, body) => (body.trim() ? `
+  const part = (key, body, tip = '') => (body.trim() ? `
     <section class="form-part" aria-labelledby="habit-form-part-${key}">
-      <h3 class="form-part-title" id="habit-form-part-${key}">${t('habitForm.part.' + key)}</h3>
+      <h3 class="form-part-title" id="habit-form-part-${key}">${t('habitForm.part.' + key)}${tip ? infoTip(tip) : ''}</h3>
       ${body}
     </section>
   ` : '');
@@ -11126,17 +11202,19 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     ${isPeriod ? (isCounter ? '' : periodReminderControl(f)) : scheduleBody}
     ${habitFormReminderShown(f) ? reminderBody : ''}
   `;
+  const hasGoalField = showGoal || f.kind === 'number' || f.kind === 'counter';
   const statsBody = `
-    ${showGoal ? goalField : ''}
-    ${f.kind === 'number' || f.kind === 'counter' ? numberGoalField(f) : ''}
     ${summaryField}
-    <div class="auth-field">
-      <label class="checkbox-field">
-        <input type="checkbox" id="habit-form-show-in-stats" aria-describedby="habit-form-show-in-stats-note" ${f.showInStats ? 'checked' : ''} />
-        ${t('habitForm.showInStats')}
-      </label>
-      <p class="habit-form-lock-note" id="habit-form-show-in-stats-note">${t('habitForm.showInStatsNote')}</p>
-    </div>
+    ${partMore('stats', [...(hasGoalField ? ['goal'] : []), 'showInStats'], (showGoal && f.goal < 1) || !!f.numberGoalDir || !f.showInStats, `
+      ${showGoal ? goalField : ''}
+      ${f.kind === 'number' || f.kind === 'counter' ? numberGoalField(f) : ''}
+      <div class="auth-field">
+        <label class="checkbox-field">
+          <input type="checkbox" id="habit-form-show-in-stats" ${f.showInStats ? 'checked' : ''} />
+          ${t('habitForm.showInStats')}${infoTip(tPlain('habitForm.showInStatsNote'))}
+        </label>
+      </div>
+    `)}
   `;
   const groupBody = state.sections.length && !isPeriod ? `
     <div class="auth-field">
@@ -11146,6 +11224,9 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       </select>
     </div>
   ` : '';
+  // Was die Feld-Art in "Heute" bedeutet: hinter dem "?" am Abschnitt statt als Absatz darin.
+  const kindExplainKey = { text: 'habitForm.textNote', counter: 'habitForm.counterNote', computed: 'habitForm.computedExplain', time: 'habitForm.timeNote', multi: 'habitForm.multiNote' }[f.kind];
+  const kindExplain = kindExplainKey ? tPlain(kindExplainKey) : '';
   const laterParts = part('when', whenBody) + part('stats', statsBody) + part('group', groupBody);
   const kindCards = `
     <div class="kind-cards" role="group" aria-labelledby="habit-form-kind-label">
@@ -11194,7 +11275,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       ${stage < 3 ? `<button type="button" class="auth-submit" data-action="habit-reveal-next">${t('common.next')}</button>` : `
       ${tutorialForm ? tipBox(`tutorial.form.tip.${f.kind}`, 'tutorial.form.tipScaleMoreTitle', f.kind === 'scale' ? 'tutorial.form.tipScaleMore' : null) : ''}
       <div id="habit-form-details"></div>
-      ${part('entry', entryBody)}
+      ${part('entry', entryBody, kindExplain)}
       ${tutorialForm ? `
         <details class="habit-form-more" ${moreOpen ? 'open' : ''}>
           <summary><span class="habit-form-more-title">${t('habitForm.more')}</span><span class="habit-form-more-sub">${t(isPeriod ? 'habitForm.moreSubPeriod' : 'habitForm.moreSub')}</span></summary>
@@ -12216,6 +12297,7 @@ app.addEventListener('input', (e) => {
 });
 
 function render() {
+  if (infoPop) closeInfoTip();
   const focusKey = focusKeyOf(document.activeElement);
   const layersBefore = openLayerKeys();
   // Ein Notiz-Editor, der durch einen Tag-/Tab-Wechsel o.ä. nicht mehr sichtbar ist,
@@ -13486,6 +13568,10 @@ app.addEventListener('toggle', (e) => {
   }
   if (e.target.matches?.('details.habit-form-more') && state.habitForm) {
     state.habitForm.moreOpen = e.target.open;
+    return;
+  }
+  if (e.target.matches?.('details.part-more') && state.habitForm) {
+    state.habitForm.partMore = { ...state.habitForm.partMore, [e.target.dataset.more]: e.target.open };
     return;
   }
   const details = e.target.closest('details[data-collapse-key]');

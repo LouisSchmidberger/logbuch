@@ -420,6 +420,15 @@ Einstellungen gleichförmig untereinander, getrennt nur in wichtig / "Mehr Einst
 unübersichtlich. Im Tutorial liegen Wann/Auswertung/Gruppe weiter zugeklappt unter "Mehr
 Einstellungen" (`habit-form-more`, offen, sobald dort etwas vom Standard abweicht, `f.moreOpen`).
 
+**Selten Gebrauchtes je Abschnitt unter "Mehr: …"** (`partMore`, Nutzer-Entscheidung
+2026-10-30, das Formular war für Neulinge zu unübersichtlich): Wie trägst du ein? →
+Schieberegler (Darstellung, Wert beim Eintragen) und Zahlen ab 0; Wann? → Alle paar Tage;
+Auswertung → Ziel und "In der Auswertung anzeigen" (Durchschnitt/Summe bleibt sichtbar). Der
+Titel nennt, was darin steckt; offen, sobald dort etwas vom Standard abweicht, offen/zu
+übersteht Re-Renders (`f.partMore`). Längere Erklärungen stehen hinter einem "?" (Sprechblase,
+siehe [design-bedienung.md](design-bedienung.md)), die zur Feld-Art (Text, Zähler, Uhrzeit,
+Mehrfachauswahl, Berechnet) am Titel "Wie trägst du ein?".
+
 **Auswahlformen**: genau eine von 2–4 Optionen = Segment-Schalter (`.pill-group.seg`, bei
 langen Texten untereinander `.seg--stack`, auch in den Einstellungen); Mehrfachauswahl
 (Wochentage) bleibt runde Pillen – die Form zeigt so "eins" gegenüber "mehrere". Feld-Typ als
