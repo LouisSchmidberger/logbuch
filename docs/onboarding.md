@@ -232,9 +232,7 @@ Tab-Leiste/kein Menü; eine `beforeunload`-Warnung verhindert versehentliches Ve
 1. **Hallo** (`renderTutorialHello`): was Logbuch ist + drei Versprechen mit Symbol (privat ·
    ohne Druck · deins). Platz für einen persönlichen Satz des Nutzers ist vorgesehen, Inhalt
    noch offen. Noch kein "Überspringen" – das erscheint erst ab dem ersten Feld.
-2. **Erstes Feld** (`renderTutorialFieldForm`): Satz, was ein Feld ist, aufklappbarer Kasten
-   "Warum erst mal nur eins?" (wenige Felder sind schnell eingetragen und halten länger durch
-   als ein langer Fragebogen), mit Schalter `templates` erst die Vorlagen (eine Vorlage mit
+2. **Erstes Feld** (`renderTutorialFieldForm`): Satz, was ein Feld ist, mit Schalter `templates` erst die Vorlagen (eine Vorlage mit
    mehreren Teilen legt alle an; "Zurück" von "Geschafft" öffnet den ersten), sonst bzw. bei
    "Eigenes Feld" das echte Feld-Formular, Stück für Stück aufgedeckt
    (`f.revealStage`: 1 Name mit Ideen als Text darunter → 2 + Feld-Typ → 3 + Einstellungen

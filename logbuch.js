@@ -2251,8 +2251,6 @@ const STRINGS = {
     'tutorial.form.tip.text': 'In „Heute“ steht für dieses Feld ein Textfeld, das von selbst speichert.',
     'tutorial.form.tip.computed': '',
     'tutorial.form.create': 'Feld anlegen',
-    'tutorial.field.whyTitle': 'Warum erst mal nur eins?',
-    'tutorial.field.whyBody': 'Wenige Felder heißt: schnell eingetragen. Das hält länger durch als ein langer Fragebogen – ergänzen kannst du jederzeit.',
     'tutorial.done.title': 'Dein erstes Feld steht.',
     'tutorial.done.titleMore': 'Deine {count} Felder stehen.',
     'tutorial.done.body': 'Du kannst noch ein, zwei weitere anlegen oder es erst mal dabei lassen. <strong>Tipp: lieber klein anfangen und später erweitern.</strong>',
@@ -3366,8 +3364,6 @@ const STRINGS = {
     'tutorial.form.tip.text': 'In “Today” this field gets a text box that saves by itself.',
     'tutorial.form.tip.computed': '',
     'tutorial.form.create': 'Create field',
-    'tutorial.field.whyTitle': 'Why just one for now?',
-    'tutorial.field.whyBody': 'Few fields means: quickly filled in. That lasts longer than a long questionnaire – you can add more anytime.',
     'tutorial.done.title': 'Your first field is set.',
     'tutorial.done.titleMore': 'Your {count} fields are set.',
     'tutorial.done.body': 'You can add one or two more or leave it at that for now. <strong>Tip: better start small and expand later.</strong>',
@@ -11627,7 +11623,6 @@ function renderTutorialFieldForm() {
     step: TUTORIAL_STEP_FIELD, icon: 'manage', title: t('tutorial.field.title'),
     body: `
       <p class="tutorial-text">${t(state.habitForm.template ? 'tutorial.field.introTpl' : 'tutorial.field.intro')}</p>
-      ${whyBox('tutorial.field.whyTitle', 'tutorial.field.whyBody')}
       ${renderHabitForm({ titleInHeader: true })}
       ${tutorialNav({ back: true, skip: true })}
     `,

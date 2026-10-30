@@ -5,6 +5,12 @@ Habit-Tracker mit frei anlegbaren Feldern (Skala, Zahl, Text, berechnete Werte),
 Registrierung offen (kein Invite-System). Zero-Access-Verschlüsselung: der Betreiber kann
 weder Werte noch Feldnamen lesen.
 
+**Kern** (Nutzer, 2026-10-30): Logbuch trägt viele Dinge des Alltags zusammen – Befinden und
+Einflüsse nebeneinander –, damit Zusammenhänge sichtbar und verständlich werden; der Nutzen
+entsteht aus genug Daten, nicht aus einem einzeln protokollierten Symptom. Viele Felder sind
+gewollt (Eintragen bleibt schnell: der Nutzer braucht für viele Felder unter einer Minute).
+Anlegen, Vorlagen und Auswertung richten sich danach.
+
 **Zielbild**: langfristig breite Öffentlichkeit + eingeschränkt kommerzielle Nutzung.
 Rechtlicher/geschäftlicher Rahmen (Impressum, Datenschutzerklärung, AGB, Gewerbe) klärt der
 Nutzer außerhalb dieses Repos – hier nur die technischen Vorbereitungen (Sicherheit/
