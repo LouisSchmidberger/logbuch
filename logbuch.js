@@ -8381,8 +8381,12 @@ function markWheel(w, idx) {
   w.setAttribute('aria-valuenow', item.dataset.v);
   w.setAttribute('aria-valuetext', item.textContent);
 }
-function setWheel(w, idx, smooth = false) {
+// Dreht das Rad auf idx. w._target hält fest, wohin: Zwischenstände unterwegs zählen nicht
+// (wheelSettled). apply: danach den Wert übernehmen (angetippte Zahl), sonst ist er schon
+// in timePicker.value (Jetzt, +15 min, Öffnen).
+function setWheel(w, idx, smooth = false, apply = false) {
   const behavior = smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'instant';
+  w._target = { idx, apply };
   w.scrollTo({ top: idx * w.firstElementChild.offsetHeight, behavior });
   markWheel(w, idx);
 }
@@ -8393,11 +8397,21 @@ function wheelIndexOf(w, v) {
   for (let i = 1; i < n; i++) if (Math.abs(Number(w.children[i].dataset.v) - v) < Math.abs(Number(w.children[best].dataset.v) - v)) best = i;
   return n + best;
 }
-// Rad steht: Wert übernehmen, dann ohne sichtbaren Sprung zurück ins mittlere Drittel.
+// Rad steht. Hat die App es gedreht: falls es (Einrasten, ältere Browser) nicht ganz
+// angekommen ist, hinsetzen. Hat der Nutzer es gedreht: seinen Wert übernehmen. Danach ohne
+// sichtbaren Sprung zurück ins mittlere Drittel.
 function wheelSettled(w) {
-  timePickerWheelChanged();
-  const n = wheelSize(w), idx = wheelIndex(w);
-  if (idx < n || idx >= 2 * n) setWheel(w, n + (idx % n));
+  const n = wheelSize(w);
+  const target = w._target;
+  if (target) {
+    if (wheelIndex(w) % n !== target.idx % n) { setWheel(w, target.idx, false, target.apply); return; }
+    w._target = null;
+    if (target.apply) timePickerWheelChanged(w);
+  } else {
+    timePickerWheelChanged(w);
+  }
+  const idx = wheelIndex(w);
+  if (idx < n || idx >= 2 * n) { setWheel(w, n + (idx % n)); w._target = null; }
 }
 
 // Schreibt timePicker.value in Räder und Knöpfe.
@@ -8408,8 +8422,23 @@ function syncTimePicker(smooth = false) {
   const clock = p.value % MINUTES_PER_DAY;
   const h = Math.floor(clock / 60), m = clock % 60;
   const hw = dlg.querySelector('#tp-hour'), mw = dlg.querySelector('#tp-minute');
-  setWheel(hw, wheelIndexOf(hw, clockUses12h() ? h % 12 || 12 : h), smooth);
-  setWheel(mw, wheelIndexOf(mw, m), smooth);
+  // Beim sichtbaren Drehen (Jetzt, +60 min) den kürzesten Weg nehmen: von 23 auf 0 eine Zeile
+  // weiter statt 23 zurück.
+  const nearest = (w, idx) => {
+    if (!smooth) return idx;
+    const n = wheelSize(w), cur = wheelIndex(w);
+    return [idx - n, idx, idx + n].reduce((a, b) => (Math.abs(b - cur) < Math.abs(a - cur) ? b : a));
+  };
+  setWheel(hw, nearest(hw, wheelIndexOf(hw, clockUses12h() ? h % 12 || 12 : h)), smooth);
+  setWheel(mw, nearest(mw, wheelIndexOf(mw, m)), smooth);
+  syncTimePickerButtons();
+}
+// AM/PM und Tag nach timePicker.value.
+function syncTimePickerButtons() {
+  const p = timePicker;
+  const dlg = document.getElementById('time-picker');
+  if (!p || !dlg) return;
+  const h = Math.floor((p.value % MINUTES_PER_DAY) / 60);
   const press = (sel, on) => dlg.querySelectorAll(sel).forEach((b) => {
     const active = on(b);
     b.classList.toggle('pill-toggle--active', active);
@@ -8422,22 +8451,22 @@ function syncTimePicker(smooth = false) {
 // Rad gedreht: Uhrzeit übernehmen. Auf der Seite von gestern bekommt sie den spätesten
 // Zeitpunkt, der nicht in der Zukunft liegt (um 0:40 wird 0:10 zu heute Nacht, 23:45 zu
 // gestern Abend) - solange man den Tag nicht selbst gewählt hat.
-function timePickerWheelChanged() {
+function timePickerWheelChanged(w) {
   const p = timePicker;
-  const dlg = document.getElementById('time-picker');
-  if (!p || !dlg) return;
-  const hw = dlg.querySelector('#tp-hour'), mw = dlg.querySelector('#tp-minute');
-  let h = Number(hw.children[wheelIndex(hw)].dataset.v);
-  if (clockUses12h()) h = (h % 12) + (p.value % MINUTES_PER_DAY >= 720 ? 12 : 0);
-  const clock = h * 60 + Number(mw.children[wheelIndex(mw)].dataset.v);
-  if (clock === p.value % MINUTES_PER_DAY) return; // eigenes Setzen (syncTimePicker) - nichts zu tun
+  if (!p || !document.getElementById('time-picker')) return;
+  const v = Number(w.children[wheelIndex(w)].dataset.v);
+  const old = p.value % MINUTES_PER_DAY;
+  let clock;
+  if (w.id === 'tp-hour') clock = ((clockUses12h() ? (v % 12) + (old >= 720 ? 12 : 0) : v) * 60) + (old % 60);
+  else clock = old - (old % 60) + v;
+  if (clock === old) return;
   let offset = timeDayOffset(p.value);
   if (p.autoDay && !p.dayTouched) {
     const now = new Date();
     offset = clock <= now.getHours() * 60 + now.getMinutes() ? 1 : 0;
   }
   p.value = offset * MINUTES_PER_DAY + clock;
-  syncTimePicker();
+  syncTimePickerButtons();
 }
 
 function openTimePicker(p) {
@@ -8453,6 +8482,10 @@ function openTimePicker(p) {
   // Beim Drehen sofort die Mitte hervorheben, den Wert erst übernehmen, wenn das Rad steht.
   const settle = new Map();
   dlg.querySelectorAll('.tp-wheel').forEach((w) => {
+    const grab = () => { w._target = null; };
+    w.addEventListener('pointerdown', grab, { passive: true });
+    w.addEventListener('touchstart', grab, { passive: true });
+    w.addEventListener('wheel', grab, { passive: true });
     w.addEventListener('scroll', () => {
       markWheel(w, wheelIndex(w));
       clearTimeout(settle.get(w));
@@ -8480,8 +8513,9 @@ function openTimePicker(p) {
     } else if (e.key === 'Enter') { e.preventDefault(); applyTimePicker(); return; }
     if (next === null) return;
     e.preventDefault();
-    setWheel(w, n + next);
-    timePickerWheelChanged();
+    setWheel(w, n + next, false, true);
+    w._target = null;
+    timePickerWheelChanged(w);
   });
   dlg.addEventListener('cancel', (e) => { e.preventDefault(); closeTimePicker(); });
   dlg.showModal();
@@ -8496,7 +8530,7 @@ function onTimePickerClick(e) {
   const item = e.target.closest('.tp-item');
   if (item) { // Zahl im Rad angetippt: in die Mitte drehen
     const w = item.parentElement;
-    setWheel(w, [...w.children].indexOf(item), true);
+    setWheel(w, [...w.children].indexOf(item), true, true);
     return;
   }
   const btn = e.target.closest('[data-tp]');
@@ -8522,8 +8556,8 @@ function onTimePickerClick(e) {
 function applyTimePicker() {
   const p = timePicker;
   if (!p) return;
-  // Ein Rad, das noch ausläuft, zählt mit dem Stand, auf dem es gerade steht.
-  timePickerWheelChanged();
+  // Ein Rad, das der Nutzer gerade noch auslaufen lässt, zählt mit dem Stand, auf dem es steht.
+  document.querySelectorAll('#time-picker .tp-wheel').forEach((w) => { if (!w._target) timePickerWheelChanged(w); });
   const value = timePicker.value;
   closeTimePicker({ focus: false });
   p.onPick(value);
