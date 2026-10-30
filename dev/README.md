@@ -51,6 +51,12 @@ Eigene Abläufe ohne neues Skript: `node dev/shoot.mjs <Schritte>`, zum Beispiel
 `seeded "tap:Menü" "tap:Einstellungen" shot:einstellungen` (alle Schritte im Dateikopf).
 `buttons` listet, was gerade antippbar ist.
 
+**Automatische Tests** der Rechenlogik (Tage seit, Dauer, Zeitpläne, Schalter …):
+`node dev/tests.mjs` bei laufendem Server, Ausgabe je Fall `ok`/`FEHLER`, Exit-Code 1 bei
+Fehlern. Sie laufen im echten `logbuch.js`: der Server reicht die getesteten Funktionen über
+`internals` im Vorschau-Haken (`dev/server.mjs`) durch - eine neue getestete Funktion dort
+aufnehmen.
+
 Von Hand im Browser: Server starten, `http://localhost:5180/` öffnen. In der Konsole
 `await __logbuchPreview.resetAll()` (alles frisch) oder nach dem Anmelden
 `await __logbuchPreview.seedDemo()` (Beispieldaten), danach neu laden.

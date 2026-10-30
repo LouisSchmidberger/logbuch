@@ -289,6 +289,7 @@ eingetragen). Keine Werte für Tage in der Zukunft. Berechnet einmal je Stand vo
 der Auswertung nur "zuletzt", kein Ø und keine Anzahl (sagen bei Zähl-Tagen nichts).
 "Stufen ändern" am Quellfeld rechnet die gewählten Stufen mit (`remapSinceStages`, auch
 Rückgängig). Eine Vorlage "Zyklus" (Skala "Periode" + Zyklustag) kommt mit den Vorlagen.
+Im Formular nur mit Schalter `since` (docs/freigabe.md).
 
 ## Gruppen (`sections`)
 

@@ -47,6 +47,10 @@ const TABLES = {
     key: ['endpoint'],
     defaults: () => ({ id: crypto.randomUUID(), created_at: now() }),
   },
+  // Schalter: für alle Angemeldeten lesbar (kein user_id), ändern nur der Betreiber -
+  // in der Vorschau über previewAdmin.setFeature / setAccessGroup.
+  feature_flags: { key: ['key'], shared: true, readOnly: true, defaults: () => ({ stage: 'off', note: null, updated_at: now() }) },
+  user_access: { key: ['user_id'], readOnly: true, defaults: () => ({ created_at: now() }) },
 };
 
 function now() { return new Date().toISOString(); }
@@ -300,6 +304,8 @@ class QueryBuilder {
     const uid = session.user.id;
     const spec = TABLES[this.table];
     if (!spec) return { data: null, error: dbError(`relation "public.${this.table}" does not exist`, '42P01') };
+    this.spec = spec;
+    if (spec.readOnly && this.op !== 'select') return { data: null, error: dbError(`permission denied for table ${this.table}`, '42501') };
     let out;
     try {
       out = withDb((db) => this.run(db, spec, uid));
@@ -311,7 +317,7 @@ class QueryBuilder {
 
   visible(rows, uid) {
     // RLS: jede Tabelle mit user_id zeigt nur die eigenen Zeilen.
-    return rows.filter((r) => r.user_id === uid && this.filters.every((f) => f(r)));
+    return rows.filter((r) => (this.spec?.shared || r.user_id === uid) && this.filters.every((f) => f(r)));
   }
 
   run(db, spec, uid) {
@@ -440,6 +446,23 @@ export function createClient() {
 
 // Für Startskripte und Screenshots (über window.__logbuchPreview, siehe preview-hook.js).
 export const previewAdmin = {
+  // Schalter pro Funktion (wie im Dashboard): Stufe setzen bzw. ein Konto in eine Gruppe.
+  setFeature(key, stage) {
+    withDb((db) => {
+      db.tables.feature_flags ??= [];
+      const row = db.tables.feature_flags.find((r) => r.key === key);
+      if (row) row.stage = stage; else db.tables.feature_flags.push({ key, stage, note: null, updated_at: now() });
+    });
+  },
+  setAccessGroup(email, group) {
+    withDb((db) => {
+      const u = db.users.find((x) => x.email === email);
+      if (!u) throw new Error(`Kein Konto ${email}`);
+      db.tables.user_access ??= [];
+      db.tables.user_access = db.tables.user_access.filter((r) => r.user_id !== u.id);
+      if (group) db.tables.user_access.push({ user_id: u.id, access_group: group, created_at: now() });
+    });
+  },
   reset() { localStorage.removeItem(DB_KEY); },
   createConfirmedUser(email, password) {
     return withDb((db) => createUser(db, email, password, { confirmed: true }).id);

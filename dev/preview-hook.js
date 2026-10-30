@@ -30,6 +30,7 @@ export function install(app) {
     admin: previewAdmin,
     state: app.state, // zum Nachsehen in Skripten (z.B. Feld-IDs für Deep-Links)
     render: app.render, // nach Änderungen an state von Hand neu zeichnen
+    internals: app.internals, // reine Rechenfunktionen für dev/tests.mjs
 
     // Alles weg: nachgebaute Datenbank, Schlüssel-Cache, Gerätespuren. Danach neu laden.
     async resetAll() {

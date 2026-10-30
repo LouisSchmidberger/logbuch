@@ -23,6 +23,11 @@ const TYPES = {
 const HOOK = `
 ;import('./dev/preview-hook.js').then((m) => m.install({
   state, render, saveDayNow, encryptData, DEF_PLAINTEXT_CLEARED, supabase, dek: () => currentDek,
+  // für dev/tests.mjs (reine Rechenlogik)
+  internals: {
+    sinceComputedDay, durationComputedDay, numberComputedDay, formatSeriesValue, isScheduledOn, isFutureKey,
+    timeValueOn, featureVisible, remapSince, stepChangeMapValue, parseDateKey, formatKey, addDays,
+  },
 }));
 `;
 

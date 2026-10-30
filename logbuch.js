@@ -1123,6 +1123,7 @@ function setCurrentDek(dek, dekId, userId) {
   currentDekUserId = userId;
 }
 function clearCurrentDek() {
+  clearFeatureAccess(); // gehört zum angemeldeten Konto wie der Schlüssel
   currentDek = null;
   currentDekId = null;
   currentDekUserId = null;
@@ -4051,6 +4052,28 @@ async function loadSections() {
   state.sections = sections;
 }
 
+// --- Schalter pro Funktion (feature_flags/user_access, siehe docs/freigabe.md) ---
+// Eine neue Funktion geht mit dem normalen Live-Gang raus, sichtbar ist sie erst ab ihrer
+// Stufe. Schalter sperren nur den Einstieg (z.B. eine Feld-Art im Formular), nie
+// vorhandene Daten: wer ein Feld schon hat, sieht es weiter, auch wenn die Stufe sinkt.
+// Unbekannte Schalter und ein Ladefehler gelten als aus.
+let featureStages = {}; // key -> 'off' | 'owner' | 'testers' | 'all'
+let accessGroup = null; // 'owner' | 'tester' | null (eigene Zeile in user_access)
+function featureVisible(stage, group) {
+  return stage === 'all' || (stage === 'testers' && (group === 'tester' || group === 'owner')) || (stage === 'owner' && group === 'owner');
+}
+function featureOn(key) { return featureVisible(featureStages[key], accessGroup); }
+async function loadFeatureAccess() {
+  const [flags, access] = await Promise.all([
+    supabase.from('feature_flags').select('key, stage'),
+    supabase.from('user_access').select('access_group').maybeSingle(),
+  ]);
+  if (flags.error || access.error) console.error('[Logbuch] Schalter nicht geladen', flags.error || access.error);
+  featureStages = Object.fromEntries((flags.data || []).map((f) => [f.key, f.stage]));
+  accessGroup = access.data?.access_group ?? null;
+}
+function clearFeatureAccess() { featureStages = {}; accessGroup = null; }
+
 async function loadUserSettings() {
   const { data, error } = await supabase.from('user_settings')
     .select('default_reminder_minute, onboarding_completed, locale, summary_notifications, timezone, last_seen_changelog').maybeSingle();
@@ -5454,19 +5477,22 @@ async function remapSinceStages(sourceId, sc, undo) {
   const src = state.habits.find((x) => x.id === sourceId);
   if (!src) return;
   for (const h of state.habits.filter((x) => isSinceComputed(x) && x.members?.[0] === sourceId)) {
-    const before = undo ? sc.to : sc.from;
-    const oldValues = Array.isArray(h.since?.values) ? h.since.values
-      : Array.from({ length: before.max - before.min + 1 }, (_, i) => before.min + i).filter((v) => v >= (h.since?.atLeast ?? Infinity));
-    let values;
-    if (undo) {
-      values = [];
-      for (let v = sc.from.min; v <= sc.from.max; v++) if (oldValues.includes(stepChangeMapValue(sc, v))) values.push(v);
-    } else {
-      values = [...new Set(oldValues.map((v) => stepChangeMapValue(sc, v)).filter((v) => v !== null))].sort((a, b) => a - b);
-    }
-    const since = sinceUsesStages(src) ? { ...h.since, values, atLeast: null } : { ...h.since, values: null, atLeast: values.length ? values[0] : src.max + 1 };
-    await updateHabitPayload(h, { since });
+    await updateHabitPayload(h, { since: remapSince(h.since, sc, undo, sinceUsesStages(src)) });
   }
+}
+function remapSince(since, sc, undo, stagesNow) {
+  const before = undo ? sc.to : sc.from;
+  const oldValues = Array.isArray(since?.values) ? since.values
+    : Array.from({ length: before.max - before.min + 1 }, (_, i) => before.min + i).filter((v) => v >= (since?.atLeast ?? Infinity));
+  let values;
+  if (undo) {
+    values = [];
+    for (let v = sc.from.min; v <= sc.from.max; v++) if (oldValues.includes(stepChangeMapValue(sc, v))) values.push(v);
+  } else {
+    values = [...new Set(oldValues.map((v) => stepChangeMapValue(sc, v)).filter((v) => v !== null))].sort((a, b) => a - b);
+  }
+  const after = undo ? sc.from : sc.to;
+  return stagesNow ? { ...since, values, atLeast: null } : { ...since, values: null, atLeast: values.length ? values[0] : after.max + 1 };
 }
 async function markStepChange(h, stepChange) {
   if (stepChangeStarting.has(h.defId) || stepChangeRunning.has(h.defId)) return false; // zweiter Tipp
@@ -6998,6 +7024,7 @@ async function handleExportData() {
     })),
     habit_entries: decryptedEntries,
     user_settings: settingsRes.data,
+    access_group: accessGroup,
     push_subscriptions: subsRes.data,
   };
   const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
@@ -7602,7 +7629,7 @@ function renderPasswordRecovery() {
         : { type: 'ok', text: t('recovery.passwordSaved') };
       state.loading = true;
       render();
-      await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections()]);
+      await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections(), loadFeatureAccess()]);
       state.loading = false;
       saveFieldNamesForPush(); // siehe completeAuthFlow
       render();
@@ -10009,7 +10036,8 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     </div>
     <p class="habit-form-lock-note">${t('habitForm.sinceNote.' + f.sinceMode)}</p>
   ` : `<p class="habit-form-lock-note">${t('habitForm.noSinceCandidates')}</p>`;
-  const computedTypes = [['scale', 'habitForm.computedType.scale'], ['number', 'habitForm.computedType.number'], ['duration', 'habitForm.computedType.duration'], ['since', 'habitForm.computedType.since']];
+  const computedTypes = [['scale', 'habitForm.computedType.scale'], ['number', 'habitForm.computedType.number'], ['duration', 'habitForm.computedType.duration']]
+    .concat(featureOn('since') || isSinceForm ? [['since', 'habitForm.computedType.since']] : []);
   const computedBody = `
     <p class="habit-form-lock-note">${t('habitForm.computedExplain')}</p>
     <div class="auth-field">
@@ -10152,7 +10180,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     || others.filter((h) => h.kind === 'scale' && !isNeutralScale(h)).length >= 2
     || others.filter((h) => h.kind === 'number').length >= 2
     || others.filter(isTimeKind).length >= 2
-    || others.some(sinceSourceCandidate)));
+    || (featureOn('since') && others.some(sinceSourceCandidate))));
   // Zähler ist für Nutzer eine Art, eine Zahl einzutragen ("hochzählen"), kein eigener Typ -
   // intern 'counter', weil der Server ihn für Erinnerungen unterscheiden muss.
   const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber']]
@@ -12996,7 +13024,7 @@ async function completeAuthFlow(userId, password, { verifyPassword = false } = {
   await unlockEncryption(userId, password, { verifyPassword });
   state.loading = true;
   render();
-  await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections()]);
+  await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections(), loadFeatureAccess()]);
   state.loading = false;
   saveFieldNamesForPush(); // erst nach loadUserSettings - die Textvorlage hängt an der Sprache
   repadOldEntries();
@@ -13046,7 +13074,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
       if (cached) {
         setCurrentDek(cached, row.dek_id, session.user.id);
         spareKeyPending = !row.recovery_key_confirmed;
-        await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections()]);
+        await Promise.all([loadEntries(), loadHabits(), loadUserSettings(), loadSections(), loadFeatureAccess()]);
         saveFieldNamesForPush(); // siehe completeAuthFlow
         repadOldEntries();
         resumeStepChanges();
