@@ -8575,6 +8575,9 @@ function renderTimeBox(h, dateKey, dayEntry, marker = '') {
     <div class="number-box">
       ${renderRowHead(h, esc(h.name) + marker)}
       <button type="button" class="time-pick${has ? '' : ' time-pick--empty'}" id="time-pick-${h.id}" data-action="time-pick" data-habit="${h.id}" aria-label="${esc(aria)}">${has ? esc(formatClock(value)) : '--:--'}${nextDay ? `<span class="time-pick-day"> · ${esc(weekdayShort(nextDay))}</span>` : ''}</button>
+      ${has /* × wie beim Schieberegler; leer ein unsichtbarer Platzhalter, damit nichts springt */
+        ? `<button type="button" class="slider-clear" data-action="clear-value" data-habit="${h.id}" aria-label="${esc(t('ariaLabel.deleteEntry'))}">×</button>`
+        : '<span class="slider-clear slider-clear--placeholder" aria-hidden="true"></span>'}
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
     </div>

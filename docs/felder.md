@@ -68,7 +68,7 @@ stehen also an zwei verschiedenen Tagen. Die Dauer ist ein berechnetes Feld (unt
   (`habitScore` = null), Erinnerung wie ein normales Feld (leer = fehlt).
 - **Eingetragen wird immer auf dem angezeigten Tag**: wer um 0:30 die Bettzeit vom Vorabend
   einträgt, wechselt selbst zum Vortag.
-- **In "Heute"** (`renderTimeBox`): nur ein Knopf mit der Uhrzeit ("--:--" solange leer); nach
+- **In "Heute"** (`renderTimeBox`): ein Knopf mit der Uhrzeit ("--:--" solange leer), daneben das × zum Löschen wie beim Schieberegler; nach
   Mitternacht steht der Wochentag dahinter ("0:30 · Fr") – eine 0:30 kann früh an diesem Tag
   oder spät in der Nacht danach meinen, für die Dauer 24 Stunden Unterschied.
 - **Eingabe über die eigene Uhrzeit-Auswahl** (`openTimePicker`, Nutzer-Entscheidung
