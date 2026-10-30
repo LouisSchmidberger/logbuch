@@ -28,6 +28,8 @@ const HOOK = `
     sinceComputedDay, durationComputedDay, numberComputedDay, formatSeriesValue, isScheduledOn, isFutureKey,
     timeValueOn, featureVisible, remapSince, stepChangeMapValue, parseDateKey, formatKey, addDays,
     multiOptionCounts,
+    // Texte: fehlende Schlüssel (dynamisch gebaute wie tutorial.form.tip.<Typ>) und de/en gleich
+    STRINGS, SUPPORTED_KINDS, FIELD_TEMPLATES, PACKAGE_GROUPS,
   },
 }));
 `;

@@ -97,6 +97,17 @@ try {
       eq('Stufe testers', g.map((x) => f.featureVisible('testers', x)), [false, true, true]);
       eq('Stufe all', g.map((x) => f.featureVisible('all', x)), [true, true, true]);
       eq('unbekannter Schalter ist aus', f.featureVisible(undefined, 'owner'), false);
+
+      // --- Texte --------------------------------------------------------------
+      // Gleiche Schlüssel in derselben Reihenfolge (CLAUDE.md), und die dynamisch gebauten gibt es.
+      eq('Texte: de und en gleiche Schlüssel', Object.keys(f.STRINGS.en), Object.keys(f.STRINGS.de));
+      const needed = [
+        ...f.SUPPORTED_KINDS.map((k) => 'tutorial.form.tip.' + k),
+        ...f.FIELD_TEMPLATES.flatMap((x) => [`tpl.${x.id}.name`, `tpl.${x.id}.note`, ...(x.direct ? [] : [`tpl.${x.id}.explain`]),
+          ...(x.slots.length > 1 ? x.slots.map((s) => `tpl.${x.id}.${s.slot}`) : [])]),
+        ...f.PACKAGE_GROUPS.flatMap((g) => [`pkg.group.${g.id}`, ...g.items.flatMap((it) => [`pkg.item.${it.id}`, `tpl.${it.tpl || it.id}.name`])]),
+      ];
+      eq('Texte: dynamische Schlüssel vorhanden', needed.filter((k) => !(k in f.STRINGS.de)), []);
     } finally {
       state.habits = saved.habits;
       state.entries = saved.entries;
