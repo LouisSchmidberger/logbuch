@@ -10469,14 +10469,14 @@ const PACKAGE_GROUPS = [
   ] },
   { id: 'influences', items: [
     { id: 'sport', on: true, slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 2, good: 'high', labelsEnabled: true, labels: YES_NO() }) }] },
-    { id: 'alcohol', on: true, slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 2, good: 'low', labelsEnabled: true, labels: YES_NO() }) }] },
     // Nur Kontext ohne Wertung (Nutzer-Entscheidung 2026-10-30): was man bewerten oder mit Ziel
-    // verfolgen will, steht als eigenes Ja/Nein-Feld darüber.
+    // verfolgen will (Sport, Alkohol), ist ein eigenes Ja/Nein-Feld.
     { id: 'dayEvents', on: true, slots: [{ slot: 'main', form: () => ({ kind: 'multi', multiOptions: ['outside', 'friends', 'argument', 'screen'].map((k) => ({ id: newMultiOptionId(), label: t('tpl.events.' + k) })) }) }] },
     { id: 'water', tpl: 'water', on: true },
     { id: 'caffeine', on: false, slots: [{ slot: 'main', form: () => ({ kind: 'counter' }) }] },
-    { id: 'meds', tpl: 'meds', on: false },
     { id: 'cigarettes', on: false, slots: [{ slot: 'main', form: () => ({ kind: 'counter' }) }] },
+    { id: 'alcohol', on: false, slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 2, good: 'low', labelsEnabled: true, labels: YES_NO() }) }] },
+    { id: 'meds', tpl: 'meds', on: false },
   ] },
   { id: 'other', items: [
     { id: 'cycle', tpl: 'cycle', on: false },
