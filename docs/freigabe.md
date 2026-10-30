@@ -17,6 +17,18 @@ Funktionen zurückhalten bräuchte ständig zusammenzuführende Zweige), GitHub 
 "nur ausgewählte Leute" nicht (nur über den Link), und Datenbank/Functions teilen sich ohnehin
 alle.
 
+## Deployment-Schritte
+
+1. `logbuch.html`, `logbuch.js`, `sw.js`, `vendor/`, `fonts/` → GitHub Pages (Root).
+2. `supabase functions deploy <name>` (Code unter `supabase/functions/<name>/index.ts`).
+3. Schema-Änderungen nur über Migrationen (`supabase/migrations/`):
+   `supabase migration new <name>`, dann `supabase db push --linked` gegen das Live-Projekt
+   (vorher `--dry-run` zeigt, was ginge). Nach Dashboard-Änderungen am Schema (Ausnahme)
+   `supabase db pull` (braucht Docker Desktop für die Schatten-Datenbank).
+   Vault-Secrets sind nicht Teil der Migrationen (siehe docs/datenschutz-sicherheit.md).
+4. `supabase/config.toml` spiegelt Auth-/API-/DB-Einstellungen rein dokumentarisch (kein
+   `config push`); nach Dashboard-Änderungen `supabase config pull --force`.
+
 ## Im Code
 
 - `featureOn('<key>')` (Stand aus `loadFeatureAccess` beim Anmelden, geleert mit

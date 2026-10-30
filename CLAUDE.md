@@ -144,14 +144,8 @@ Nutzer nutzt die Beta täglich mit seinem echten Konto und testet dort. Live
 Functions sind für beide dieselben**: Migrationen/Deploys wirken sofort auch live, deshalb so
 bauen, dass die alte Live-Version damit weiterläuft.
 
-1. `logbuch.html`, `logbuch.js`, `sw.js`, `vendor/`, `fonts/` → GitHub Pages (Root).
-2. `supabase functions deploy <name>` (Code unter `supabase/functions/<name>/index.ts`).
-3. Schema-Änderungen nur über Migrationen (`supabase/migrations/`):
-   `supabase migration new <name>`, dann `supabase db push` gegen das Live-Projekt
-   (lokal braucht das Docker Desktop für die Schatten-Datenbank). Nach Dashboard-Änderungen am Schema (Ausnahme) `supabase db pull`.
-   Vault-Secrets sind nicht Teil der Migrationen (siehe docs/datenschutz-sicherheit.md).
-4. `supabase/config.toml` spiegelt Auth-/API-/DB-Einstellungen rein dokumentarisch (kein
-   `config push`); nach Dashboard-Änderungen `supabase config pull --force`.
+Schritte (Pages, Edge Functions, Migrationen, `config.toml`) und Freigabe neuer Funktionen
+per Schalter: **docs/freigabe.md**.
 
 ## Hub
 
