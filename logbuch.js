@@ -9896,16 +9896,42 @@ function renderPrivacySection() {
 // Ältere Einträge ohne short zeigen im Fenster die ausführliche Fassung.
 const CHANGELOG = [
   {
-    id: '2026-10-29',
+    id: '2026-10-30',
     short: {
-      de: ['Felder, in die du schon etwas eingetragen hast, kannst du jetzt umbauen – z. B. einer Skala mehr Stufen geben.'],
-      en: ['You can now rework fields you’ve already filled in – e.g. give a scale more steps.'],
+      de: [
+        'Neues Feld: Such dir eine Vorlage aus – fertige Felder oder Bausteine wie „Ja oder Nein“.',
+        'Felder, die du schon hast, kannst du in eine Vorlage übernehmen – deine Einträge bleiben.',
+        'Neue Feld-Arten: Uhrzeit (z. B. ins Bett und aufgestanden, mit Schlafdauer daraus) und „Mehrere ankreuzen“.',
+        'Berechnete Felder zählen jetzt auch die Tage seit etwas, z. B. seit dem letzten Sport.',
+        'Felder, in die du schon etwas eingetragen hast, kannst du jetzt umbauen – z. B. einer Skala mehr Stufen geben.',
+        'Beim Anlegen und Bearbeiten steht Seltenes jetzt unter „Mehr“, Erklärungen hinter dem „?“.',
+      ],
+      en: [
+        'New field: pick a template – ready-made fields or building blocks like “Yes or No”.',
+        'Fields you already have can be taken into a template – your entries stay.',
+        'New field types: time (e.g. went to bed and got up, with how long you slept) and “Tick several”.',
+        'Calculated fields can now count the days since something, e.g. since your last workout.',
+        'You can now rework fields you’ve already filled in – e.g. give a scale more steps.',
+        'When you create or edit a field, rarely used settings are now under “More”, explanations behind the “?”.',
+      ],
     },
     de: [
+      'Wenn du ein neues Feld anlegst, suchst du dir jetzt zuerst eine Vorlage aus: fertige Felder wie Stimmung, Schlaf oder Zyklus, oder Bausteine wie „Ja oder Nein“ oder „Wie stark?“, denen du selbst einen Namen gibst. Alles lässt sich danach wie jedes andere Feld ändern; „Eigenes Feld“ gibt es weiterhin.',
+      'Hast du schon ein passendes Feld, kannst du es in die Vorlage übernehmen: Es bekommt ihre Einstellungen, deine Einträge bleiben. Oder du ersetzt es – dann wird das alte archiviert und bleibt in der Auswertung sichtbar. Ja/Nein-Felder kannst du in „Was war heute?“ zusammenführen: Jedes wird eine Option, deine Einträge kommen mit.',
+      'Neue Feld-Art Uhrzeit, z. B. für „ins Bett“ und „aufgestanden“. Ein berechnetes Feld macht daraus die Dauer, auch über Mitternacht. Die Uhrzeit wählst du mit Drehrädern, mit „+5 min“ kommst du schnell etwas später an.',
+      'Neue Feld-Art „Mehrere ankreuzen“: Du tippst alles an, was heute war, oder „nichts davon“. In der Auswertung bekommt jede Option eine eigene Zeile.',
+      'Berechnete Felder können jetzt die Tage seit etwas zählen: seit dem letzten Mal (z. B. Tage seit dem letzten Sport) oder seit Beginn (z. B. der Zyklustag).',
       'Felder, in die du schon etwas eingetragen hast, kannst du jetzt umbauen: einer Skala mehr oder weniger Stufen geben („Stufen ändern“) oder den Typ wechseln, z. B. von Skala zu Zahl („Typ ändern“). Beides findest du, wenn du das Feld bearbeitest. Du legst selbst fest, was aus deinen bisherigen Einträgen wird, und kannst es wieder rückgängig machen.',
+      'Wenn du ein Feld anlegst oder bearbeitest, steht Seltenes jetzt zugeklappt unter „Mehr“ – z. B. der Schieberegler oder ein Ziel. Längere Erklärungen öffnest du mit dem „?“.',
     ],
     en: [
+      'When you create a new field, you now pick a template first: ready-made fields like Mood, Sleep or Cycle, or building blocks like “Yes or No” or “How strong?” that you name yourself. Afterwards you can change everything like with any other field; “Your own field” is still there.',
+      'If you already have a matching field, you can take it into the template: it gets the template’s settings and your entries stay. Or you replace it – then the old one is archived and stays visible in the stats. Yes/no fields can be merged into “What happened today?”: each becomes an option, and your entries come along.',
+      'New field type time, e.g. for “went to bed” and “got up”. A calculated field turns them into a duration, even across midnight. You pick the time with scroll wheels, and “+5 min” quickly moves it a bit later.',
+      'New field type “Tick several”: you tap everything that happened today, or “none of these”. In the stats each option gets its own row.',
+      'Calculated fields can now count the days since something: since the last time (e.g. days since your last workout) or since the start (e.g. your cycle day).',
       'You can now rework fields you’ve already filled in: give a scale more or fewer steps (“Change steps”) or switch its type, e.g. from scale to number (“Change type”). You’ll find both when you edit the field. You decide what happens to your previous entries, and you can undo it.',
+      'When you create or edit a field, rarely used settings are now folded away under “More” – e.g. the slider or a goal. Longer explanations open with the “?”.',
     ],
   },
   {

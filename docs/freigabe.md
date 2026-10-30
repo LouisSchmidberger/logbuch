@@ -42,7 +42,8 @@ alle.
   Funktion freischalten. Für Tests egal; für Premium siehe unten.
 
 **Aktuelle Schalter**: `since` (berechnet "Tage seit"), `multi` (Feld-Typ Mehrfachauswahl),
-`templates` (Vorlagen bei "Neues Feld" und im Tutorial).
+`templates` (Vorlagen bei "Neues Feld" und im Tutorial). Alle drei seit 2026-10-30 auf `all`;
+nach ein paar ruhigen Tagen aus dem Code nehmen, dann die Zeilen löschen.
 
 ## Schalter setzen (Dashboard → SQL)
 
