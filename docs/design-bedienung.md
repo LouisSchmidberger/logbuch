@@ -130,7 +130,7 @@ Zeitraum-Wechsel.
 **Zeitraum-Wechsel** (Wischen und ‹ › über `shiftPeriod(dir)`): der Inhalt (`.view-body`,
 bewusst nicht die fixierten Dialoge) gleitet in ~0,2 s aus der Wischrichtung herein
 (`.view-slide-next`/`-prev`), bei "Bewegung reduzieren" nur Einblenden – in "Heute" sehen
-zwei Tage oft fast gleich aus. In "Heute" steht "Heute"/"Gestern"/"Morgen" neben dem Datum
+zwei Tage oft fast gleich aus. In "Heute" steht "Heute"/"Gestern" neben dem Datum
 (`relativeDay`), Screenreader bekommen den neuen Zeitraum über `#sr-announcer`
 (`announce()`, liegt außerhalb von `#app` und übersteht jedes `render()`), der Fokus bleibt
 nach einem Pfeil-Klick auf dem Pfeil. In den Gestaltungs-Durchgang geschoben: Inhalt folgt
@@ -267,6 +267,27 @@ in "gestern" ein). "Zu heute springen" bleibt im Inhalt.
 Das Datum darin ist die Datumsauswahl des Geräts (ein unsichtbares `<input type="date">`
 darüber, gepunktet unterstrichen): weite Sprünge ohne viele Pfeil-Tipps, ohne eigenen Kalender.
 Am PC öffnet ein Klick sie per `showPicker()`, sonst nur das kleine Symbol im Feld.
+
+**Keine Tage in der Zukunft** (Nutzer-Entscheidung 2026-10-30, Grenze Mitternacht, bewusst ohne
+Einstellung): › bleibt bei heute stehen (`aria-disabled`, behält so den Fokus), Wischen und
+`shiftPeriod` ebenso, die Datumsauswahl hat `max` (und macht aus einem trotzdem gewählten
+späteren Tag heute), zukünftige Zellen der Übersicht sind keine Knöpfe (`openDayAttrs`,
+`isFutureKey`). Die Übersicht selbst blättert weiter in die Zukunft. Uhrzeiten nach Mitternacht
+auf der heutigen Seite bleiben möglich.
+
+**Tastatur am Computer** (`keydown` auf `document`, greift auch ohne Fokus): ← → wie Wischen
+(nicht in Eingabefeldern, nicht bei offenem Menü/Dialog), Strg/⌘+Enter klickt den
+Speichern-Knopf des offenen Formulars bzw. der Notiz oder des Feedbacks (`CTRL_ENTER_ACTIONS`).
+Bewusst keine Kürzel mit einzelnen Buchstaben (WCAG 2.1.4: Screenreader-Nutzer lösten sie aus
+Versehen aus). Erklärt im Tipp "Tastatur am Computer" in "Über Logbuch".
+
+**Uhrzeit-Auswahl** (`openTimePicker`, Uhrzeit-Felder und alle Erinnerungszeiten): eigenes
+Fenster statt der Auswahl des Geräts (die von Android schnitt bei großer Schrift ihren
+Bestätigen-Knopf ab, kennt kein "Jetzt" und passt nicht zur App). Als `<dialog>` außerhalb von
+`#app`, nicht als Modal im State: `render()` ersetzt `#app` komplett, ein Formular dahinter
+verlöre seinen ungespeicherten Stand. `showModal()` bringt Fokus-Sperre und Escape mit; eine
+eigene Ebene in `currentLayerCount`, Android-Zurück schließt sie ohne `render()`. 12 oder 24
+Stunden nach der Region des Geräts (`clockUses12h`, siehe i18n.md).
 
 **Ende von "Heute"**: zwei erkennbare Teile – der Tag ("Heute nicht geplant", Tagesnotiz), zuletzt eine Fußleiste mit Trennlinie
 für "+ Neues Feld" (`.today-footer`, gehört nicht zum Tag). Alles linksbündig. Verworfen:

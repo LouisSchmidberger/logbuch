@@ -67,15 +67,16 @@ stehen also an zwei verschiedenen Tagen. Die Dauer ist ein berechnetes Feld (unt
   (`habitScore` = null), Erinnerung wie ein normales Feld (leer = fehlt).
 - **Eingetragen wird immer auf dem angezeigten Tag**: wer um 0:30 die Bettzeit vom Vorabend
   einträgt, wechselt selbst zum Vortag.
-- **Tag neben der Uhrzeit** (`timeDayLabel`, Knopf `time-day-toggle`): "Do 29.10." bzw. "Fr
-  30.10.", antippen wechselt zwischen diesem und dem nächsten Tag – eine eingetippte 0:30 kann
-  früh an diesem Tag oder spät in der Nacht danach meinen, für die Dauer 24 Stunden Unterschied.
-  Eine geänderte Uhrzeit behält den Tag der bisherigen; leer startet sie auf dem Tag selbst.
-- **In "Heute"** (`renderTimeBox`): natives `<input type="time">` (anders als bei den
-  Erinnerungszeiten: hier zählt jede Minute), × zum Löschen, dazu "Jetzt" und "+ [20 min]"
-  ("Handy schon weglegen"; Spanne wählbar, pro Feld auf dem Gerät gemerkt, `localStorage`
-  `timeLater:<defId>`) – heute und gestern (`timeValueOn`: gestern um 0:30 = 1470). Eine leere
-  Eingabe (halb gelöschte Ziffern) löscht nicht – dafür ist das ×.
+- **In "Heute"** (`renderTimeBox`): nur ein Knopf mit der Uhrzeit ("--:--" solange leer); nach
+  Mitternacht steht der Wochentag dahinter ("0:30 · Fr") – eine 0:30 kann früh an diesem Tag
+  oder spät in der Nacht danach meinen, für die Dauer 24 Stunden Unterschied.
+- **Eingabe über die eigene Uhrzeit-Auswahl** (`openTimePicker`, Nutzer-Entscheidung
+  2026-10-30, auch für Erinnerungszeiten, siehe design-bedienung.md): Stunde und Minute zum
+  Tippen, "Jetzt" und "+5/+15/+60 min" (addieren sich), "Welcher Tag?" (dieser / nach
+  Mitternacht), "Uhrzeit löschen". Leer startet sie bei jetzt (`timeValueOn`: gestern um 0:30 =
+  1470) – heute und gestern; an älteren Tagen ohne "Jetzt". Auf der Seite von gestern bekommt
+  eine getippte Uhrzeit den spätesten Zeitpunkt, der nicht in der Zukunft liegt (um 0:40: 0:10
+  → heute Nacht, 23:45 → gestern Abend), bis man den Tag selbst wählt; sonst behält sie ihren Tag.
 - **Auswertung**: Verlauf wie bei Zahlen (`hasNumericSeries`). Uhrzeiten liegen auf einem Kreis
   – `unwrapClockSeries` legt jeden Wert auf die Seite des Kreis-Mittels, auf der er näher
   liegt, damit Ø 23:30/0:30 = 0:00 ist und nicht 12:00.

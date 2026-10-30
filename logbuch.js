@@ -633,23 +633,17 @@ function timeDayOffset(v) { return Math.floor(v / MINUTES_PER_DAY); }
 function timeValueOn(dateKey, moment) {
   return (dayIndex(formatKey(moment)) - dayIndex(dateKey)) * MINUTES_PER_DAY + moment.getHours() * 60 + moment.getMinutes();
 }
-function formatClock(v) { return minutesToTimeStr(((Math.round(v) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY); }
+// Uhrzeit zum Anzeigen: 12 oder 24 Stunden nach der Region des Geräts (clockUses12h).
+function formatClock(v) {
+  const m = ((Math.round(v) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  if (!clockUses12h()) return minutesToTimeStr(m);
+  const h = Math.floor(m / 60);
+  return `${h % 12 || 12}:${String(m % 60).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+}
 // Dauer in Stunden als "7:30" (Stunden:Minuten statt 7,5 - so liest man Schlaf).
 function formatDuration(hours) {
   const total = Math.round(Math.abs(hours) * 60);
   return `${hours < 0 ? '-' : ''}${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
-// "+ 20 min": wie viel später, pro Feld auf dem Gerät gemerkt (zuletzt gewählte Spanne).
-const TIME_LATER_CHOICES = [5, 10, 15, 20, 30, 45, 60];
-const TIME_LATER_DEFAULT = 20;
-function timeLaterMinutes(h) {
-  try {
-    const v = Number(localStorage.getItem('timeLater:' + h.defId));
-    return TIME_LATER_CHOICES.includes(v) ? v : TIME_LATER_DEFAULT;
-  } catch { return TIME_LATER_DEFAULT; }
-}
-function setTimeLaterMinutes(h, minutes) {
-  try { localStorage.setItem('timeLater:' + h.defId, String(minutes)); } catch { /* dann eben der Standard */ }
 }
 
 // --- Feste Tage (habit_definitions.schedule) -------------------------------
@@ -697,6 +691,16 @@ function parseDateKey(key) {
   const [y, m, d] = key.split('-').map(Number);
   return new Date(y, m - 1, d);
 }
+// Tage nach heute lassen sich nicht öffnen und nichts eintragen (Nutzer-Entscheidung
+// 2026-10-30, Grenze Mitternacht ohne Einstellung): Pfeil, Wischen, Kalender und die Zellen
+// der Übersicht enden bei heute. Uhrzeiten nach Mitternacht auf der heutigen Seite bleiben.
+function isFutureKey(dateKey) { return dateKey > formatKey(new Date()); }
+function isPastKey(dateKey) { return dateKey < formatKey(new Date()); }
+// Zellen der Übersicht, die einen Tag öffnen - zukünftige sind keine Knöpfe.
+function openDayAttrs(d) {
+  const key = formatKey(d);
+  return isFutureKey(key) ? 'role="img"' : `data-action="open-day" data-date="${key}" tabindex="0" role="button"`;
+}
 function startOfWeek(date) { const d = startOfDay(date); const off = (d.getDay() + 6) % 7; d.setDate(d.getDate() - off); return d; }
 // Zeitraum-Felder (period 'week'/'month'/'year', siehe docs/datenmodell.md): ein Wert pro
 // Zeitraum, gespeichert im Eintrag des ersten Tags des Zeitraums. Gegenstück zu
@@ -735,35 +739,29 @@ function minutesToTimeStr(min) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 const REMINDER_TIME_STEP = 15; // Minuten — muss zum Cron-Intervall in send-notifications passen
-// Uhrzeit als zwei Auswahllisten Stunde : Minute (seit 2026-10-01; vorher eine Liste mit
-// allen 96 Viertelstunden, auf Android ein endloses Scrollen). Bewusst <select> statt
-// <input type="time" step="900">: das step-Attribut ignorieren viele Browser (v.a. mobil),
-// man hätte trotzdem jede Minute wählen können, obwohl nur im 15-Minuten-Raster zugestellt
-// wird. Die Minuten-Liste bietet deshalb von vornherein nur 00/15/30/45. Wert lesen über
-// readTimeInput(id); beide Listen tragen dieselbe data-action.
+// Uhrzeit als Knopf, der die eigene Uhrzeit-Auswahl öffnet (openTimePicker), Minuten nur
+// 00/15/30/45 - so oft läuft der Versand. dataAction sagt, was nach der Auswahl passiert
+// (reminderTimePicked). Wert lesen über readTimeInput(id).
 function reminderTimeInputHtml(id, minutes, dataAction, disabled, describedBy, labelledBy) {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  const attrs = `${dataAction ? `data-action="${dataAction}"` : ''} ${disabled ? 'disabled' : ''} ${describedBy ? `aria-describedby="${describedBy}"` : ''}`;
-  const hours = Array.from({ length: 24 }, (_, i) => `<option value="${i}" ${i === h ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('');
-  const mins = Array.from({ length: 60 / REMINDER_TIME_STEP }, (_, i) => i * REMINDER_TIME_STEP)
-    .map((v) => `<option value="${v}" ${v === m ? 'selected' : ''}>${String(v).padStart(2, '0')}</option>`).join('');
-  return `
-    <span class="time-input" id="${id}" data-time-input role="group" ${labelledBy ? `aria-labelledby="${labelledBy}"` : `aria-label="${esc(t('time.label'))}"`}>
-      <select id="${id}-h" ${attrs} aria-label="${esc(t('time.hour'))}">${hours}</select>
-      <span class="time-input-sep" aria-hidden="true">:</span>
-      <select id="${id}-m" ${attrs} aria-label="${esc(t('time.minute'))}">${mins}</select>
-    </span>
-  `;
+  const label = labelledBy ? `aria-labelledby="${labelledBy} ${id}"` : `aria-label="${esc(t('time.label'))}: ${esc(formatClock(minutes))}"`;
+  return `<button type="button" class="time-pick" id="${id}" data-time-input data-action="reminder-time-pick" data-then="${dataAction || ''}" data-value="${minutes}" ${disabled ? 'disabled' : ''} ${describedBy ? `aria-describedby="${describedBy}"` : ''} ${label}>${esc(formatClock(minutes))}</button>`;
 }
-// Minuten seit Mitternacht aus reminderTimeInputHtml (id des Ganzen oder ein Element
-// darin), null wenn es nicht im DOM steht.
+// Minuten seit Mitternacht aus reminderTimeInputHtml (id oder das Element), null wenn es
+// nicht im DOM steht.
 function readTimeInput(idOrEl) {
-  const wrap = typeof idOrEl === 'string' ? document.getElementById(idOrEl) : idOrEl?.closest('[data-time-input]');
-  if (!wrap) return null;
-  const h = Number(wrap.querySelector('[id$="-h"]').value);
-  const m = Number(wrap.querySelector('[id$="-m"]').value);
-  return h * 60 + m;
+  const el = typeof idOrEl === 'string' ? document.getElementById(idOrEl) : idOrEl?.closest('[data-time-input]');
+  return el ? Number(el.dataset.value) : null;
+}
+// Nach der Auswahl: Knopf nachziehen, dann je nach Stelle speichern bzw. ins Formular übernehmen.
+function reminderTimePicked(id, v) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.dataset.value = String(v);
+  el.textContent = formatClock(v);
+  if (el.hasAttribute('aria-label')) el.setAttribute('aria-label', `${t('time.label')}: ${formatClock(v)}`);
+  if (el.dataset.then === 'menu-default-time') saveDefaultReminderMinute(v);
+  else if (el.dataset.then === 'habit-reminder-time-changed' && state.habitForm) { syncHabitFormFromDom(); render(); }
+  else if (state.sectionForm && id === 'section-form-reminder-time') state.sectionForm.reminderMinute = v;
 }
 
 // 0 = schlechtester, 1 = bester Wert
@@ -1155,7 +1153,7 @@ function isNoteEditorOpen() {
   return activeHabits().some((h) => h.id === ed.key && !isTextKind(h));
 }
 function currentLayerCount() {
-  return (isSubpageView(state.view) ? 1 : 0) + (isOverlayOpen() ? 1 : 0);
+  return (isSubpageView(state.view) ? 1 : 0) + (isOverlayOpen() ? 1 : 0) + (timePicker ? 1 : 0);
 }
 // Das Feld-Formular ist eine eigene Ebene innerhalb der Verwaltung: solange es offen
 // ist, zeigt die Verwaltung NUR das Formular (kein Weiterscrollen zu den anderen
@@ -1289,6 +1287,8 @@ window.addEventListener('popstate', () => {
   if (closingLayerViaPopstate) { closingLayerViaPopstate = false; return; }
   if (currentLayerCount() === 0) return; // nichts (mehr) zu schließen - Browser navigiert normal weiter
   openLayerCount = Math.max(0, openLayerCount - 1); // History-Position ist durch den Pop bereits korrekt
+  // Die Uhrzeit-Auswahl liegt über allem und außerhalb von #app: ohne render() schließen.
+  if (timePicker) { closeTimePicker({ viaPopstate: true }); return; }
   closeTopLayer();
   // Schließt closeTopLayer dabei mehr als eine Ebene (z.B. Feld-Formular aus dem
   // "Heute"-Shortcut: Formular UND Verwaltung), räumt syncLayerHistory in render() den
@@ -1584,11 +1584,17 @@ const STRINGS = {
     'habitForm.error.durationMembers': 'Bitte zwei verschiedene Uhrzeit-Felder für „Von“ und „Bis“ wählen.',
     'numberBox.last': 'zuletzt: {value} ({date})',
     'timeBox.now': 'Jetzt',
-    'timeBox.laterGroup': 'Etwas später eintragen',
-    'timeBox.laterAria': 'In {n} Minuten eintragen',
-    'timeBox.laterChoose': 'Wie viel später',
-    'timeBox.laterOption': '{n} min',
-    'timeBox.dayAria': 'Tag der Uhrzeit: {day}. Antippen für {other}',
+    'timeBox.aria': '{name}: {time} – ändern',
+    'timeBox.ariaEmpty': '{name}: noch keine Uhrzeit – eintragen',
+    'timeBox.ariaNextDay': '{name}: {time} nach Mitternacht ({day}) – ändern',
+    'timePicker.addAria': '{n} Minuten später',
+    'timePicker.addLabel': '+{n} min',
+    'timePicker.dayLabel': 'Welcher Tag?',
+    'timePicker.sameDay': 'am {day}',
+    'timePicker.nextDay': 'nach Mitternacht ({day})',
+    'timePicker.clear': 'Uhrzeit löschen',
+    'timePicker.apply': 'Übernehmen',
+    'timePicker.invalid': 'Bitte eine gültige Uhrzeit eingeben, z. B. {example}.',
     'today.jumpToday': 'Zu heute springen',
     'today.pickDate': 'Datum wählen',
     'today.noFields': 'Noch keine Felder angelegt.',
@@ -1871,12 +1877,11 @@ const STRINGS = {
     'habitForm.entryPreviewNote': 'So sieht es in „Heute“ aus.',
     'habitForm.entryPreviewAria.number': 'Vorschau: ein Eingabefeld, in das du die Zahl tippst',
     'habitForm.entryPreviewAria.counter': 'Vorschau: die Zahl mit den Knöpfen „−“ und „+“',
-    'habitForm.entryPreviewAria.time': 'Vorschau: Uhrzeit-Eingabe mit den Knöpfen „Jetzt“ und „+“',
+    'habitForm.entryPreviewAria.time': 'Vorschau: Uhrzeit-Feld, noch leer',
     'today.unplanned': 'Heute nicht geplant ({count})',
     'today.nothingPlanned': 'Für heute ist kein Feld geplant.',
     'day.today': 'Heute',
     'day.yesterday': 'Gestern',
-    'day.tomorrow': 'Morgen',
     'today.openField': '(noch offen)',
     'today.sectionHasOpen': '(enthält noch offene Felder)',
     'today.sectionDone': '✓ erledigt',
@@ -1894,7 +1899,7 @@ const STRINGS = {
     'todayIntro.menu': '⋮ <strong>Mehr:</strong> Über die drei Punkte vor einem Feld schreibst du eine Notiz dazu oder bearbeitest es. Unter <strong>☰ Menü</strong> oben rechts findest du deine Felder, die Einstellungen und Erklärungen zu allem.',
     'todayIntro.done': 'Verstanden',
     'habitForm.textNote': 'Für Fragen wie „Wofür bin ich heute dankbar?“: in „Heute“ steht dafür ein Textfeld, das automatisch speichert. Fließt nicht in die Auswertung ein, erscheint dort aber als Liste zum Nachlesen.',
-    'habitForm.timeNote': 'In „Heute“ wählst du die Uhrzeit aus – oder tippst auf „Jetzt“ bzw. auf „+“ für etwas später, z. B. wenn du das Handy schon weglegst. Nach Mitternacht steht neben der Uhrzeit der nächste Tag – antippen wechselt. Zwei Uhrzeiten ergeben mit einem berechneten Feld „Dauer“ z. B. deine Schlafdauer.',
+    'habitForm.timeNote': 'In „Heute“ tippst du auf das Feld und wählst die Uhrzeit. Ist es noch leer, steht dort schon die aktuelle; mit „+5 min“ usw. kommst du etwas später an, z. B. wenn du das Handy schon weglegst. Liegt die Uhrzeit nach Mitternacht, steht der Wochentag dahinter. Zwei Uhrzeiten ergeben mit einem berechneten Feld „Dauer“ z. B. deine Schlafdauer.',
     'textReview.countOne': '1 Eintrag',
     'textReview.countMany': '{count} Einträge',
     'common.saving': 'Wird gespeichert …',
@@ -2207,6 +2212,8 @@ const STRINGS = {
     'about.privacy.yourData.title': 'Deine Daten gehören dir',
     'about.privacy.yourData.body': 'Du kannst jederzeit alles als Datei exportieren – dein Recht auf Auskunft über deine Daten – oder dein Konto löschen (in den Einstellungen unter „Konto“). Dein Konto und alle Einträge werden dabei endgültig gelöscht.',
     'about.privacy.feedback': 'Hast du Fragen dazu, oder fehlt dir etwas? Schreib mir gern.',
+    'about.tip.keys.title': 'Tastatur am Computer',
+    'about.tip.keys.body': '← und → blättern zum vorigen bzw. nächsten Tag oder Zeitraum, solange kein Eingabefeld ausgewählt ist. Strg+Enter (Mac: ⌘+Enter) speichert ein Feld, eine Gruppe, eine Notiz oder dein Feedback. Escape schließt Fenster und Menüs.',
     'about.tip.swipe.title': 'Wischen',
     'about.tip.swipe.body': 'In Tag-, Wochen-, Monats- und Jahresansicht kannst du nach links/rechts wischen, um zum vorherigen/nächsten Zeitraum zu springen — schneller als die Pfeil-Buttons. In "Felder verwalten" und "Über Logbuch" bringt dich ein Wisch nach rechts zurück.',
     'about.tip.jumpDay.title': 'Direkt zu einem Tag springen',
@@ -2540,11 +2547,17 @@ const STRINGS = {
     'habitForm.error.durationMembers': 'Please choose two different time fields for “From” and “To”.',
     'numberBox.last': 'last: {value} ({date})',
     'timeBox.now': 'Now',
-    'timeBox.laterGroup': 'Enter a bit later',
-    'timeBox.laterAria': 'Enter in {n} minutes',
-    'timeBox.laterChoose': 'How much later',
-    'timeBox.laterOption': '{n} min',
-    'timeBox.dayAria': 'Day of this time: {day}. Tap for {other}',
+    'timeBox.aria': '{name}: {time} – change',
+    'timeBox.ariaEmpty': '{name}: no time yet – enter one',
+    'timeBox.ariaNextDay': '{name}: {time} after midnight ({day}) – change',
+    'timePicker.addAria': '{n} minutes later',
+    'timePicker.addLabel': '+{n} min',
+    'timePicker.dayLabel': 'Which day?',
+    'timePicker.sameDay': 'on {day}',
+    'timePicker.nextDay': 'after midnight ({day})',
+    'timePicker.clear': 'Delete time',
+    'timePicker.apply': 'Set',
+    'timePicker.invalid': 'Please enter a valid time, e.g. {example}.',
     'today.jumpToday': 'Jump to today',
     'today.pickDate': 'Choose date',
     'today.noFields': 'No fields created yet.',
@@ -2827,12 +2840,11 @@ const STRINGS = {
     'habitForm.entryPreviewNote': 'This is how it looks in “Today”.',
     'habitForm.entryPreviewAria.number': 'Preview: a box where you type the number',
     'habitForm.entryPreviewAria.counter': 'Preview: the number with “−” and “+” buttons',
-    'habitForm.entryPreviewAria.time': 'Preview: time entry with “Now” and “+” buttons',
+    'habitForm.entryPreviewAria.time': 'Preview: time field, still empty',
     'today.unplanned': 'Not planned today ({count})',
     'today.nothingPlanned': 'No fields are planned for today.',
     'day.today': 'Today',
     'day.yesterday': 'Yesterday',
-    'day.tomorrow': 'Tomorrow',
     'today.openField': '(not filled in yet)',
     'today.sectionHasOpen': '(has fields not filled in yet)',
     'today.sectionDone': '✓ done',
@@ -2850,7 +2862,7 @@ const STRINGS = {
     'todayIntro.menu': '⋮ <strong>More:</strong> the three dots in front of a field let you add a note or edit it. Under <strong>☰ Menu</strong> at the top right you find your fields, the settings and explanations for everything.',
     'todayIntro.done': 'Got it',
     'habitForm.textNote': 'For questions like “What am I grateful for today?”: “Today” shows a text box for it that saves automatically. Not part of the statistics, but shown there as a list to read back.',
-    'habitForm.timeNote': 'In “Today” you pick the time – or tap “Now”, or “+” for a bit later, e.g. when you’re putting your phone away already. After midnight, the next day shows next to the time – tap it to switch. Two times plus a calculated “Duration” field give you e.g. how long you slept.',
+    'habitForm.timeNote': 'In “Today” you tap the field and pick the time. If it’s still empty, the current time is already set; “+5 min” etc. move it a bit later, e.g. when you’re putting your phone away already. If the time is after midnight, the weekday shows next to it. Two times plus a calculated “Duration” field give you e.g. how long you slept.',
     'textReview.countOne': '1 entry',
     'textReview.countMany': '{count} entries',
     'common.saving': 'Saving…',
@@ -3163,6 +3175,8 @@ const STRINGS = {
     'about.privacy.yourData.title': 'Your data belongs to you',
     'about.privacy.yourData.body': 'You can export everything as a file at any time – your right to access your data – or delete your account (in the settings under “Account”). Your account and all entries are then permanently deleted.',
     'about.privacy.feedback': 'Do you have questions about this, or is something missing? Feel free to write to me.',
+    'about.tip.keys.title': 'Keyboard on a computer',
+    'about.tip.keys.body': '← and → go to the previous or next day or period, as long as no input field is selected. Ctrl+Enter (Mac: ⌘+Enter) saves a field, a group, a note or your feedback. Escape closes windows and menus.',
     'about.tip.swipe.title': 'Swiping',
     'about.tip.swipe.body': 'In the day, week, month, and year views, you can swipe left/right to jump to the previous/next period — faster than the arrow buttons. On "Manage fields" and "About Logbuch", swiping right takes you back.',
     'about.tip.jumpDay.title': 'Jump straight to a day',
@@ -3458,6 +3472,33 @@ function localeTag() {
   return currentLocale === 'en' ? 'en-US' : 'de-DE';
 }
 const dtfCache = new Map();
+// Sprache der App + Region des Geräts ("en" + "DE" -> en-DE): ob die Uhr 12 oder 24 Stunden
+// zeigt, hängt an der Region, nicht an der Sprache - ein englisch eingestelltes Handy in
+// Deutschland zeigt 24 Stunden. Ohne erkennbare Region wie localeTag().
+function regionTag() {
+  try {
+    const region = new Intl.Locale(navigator.language).maximize().region;
+    if (region) return `${currentLocale}-${region}`;
+  } catch { /* alter Browser */ }
+  return localeTag();
+}
+const clock12hCache = new Map();
+function clockUses12h() {
+  const tag = regionTag();
+  if (!clock12hCache.has(tag)) {
+    let twelve = false;
+    try {
+      // Die Gewohnheit der Region (getHourCycles); DateTimeFormat allein nähme die der
+      // Sprache ("de-US" ergäbe 24 Stunden).
+      const loc = new Intl.Locale(tag);
+      const hc = (loc.getHourCycles?.() || loc.hourCycles)?.[0]
+        || new Intl.DateTimeFormat(tag, { hour: 'numeric' }).resolvedOptions().hourCycle;
+      twelve = hc === 'h11' || hc === 'h12';
+    } catch { /* dann 24 Stunden */ }
+    clock12hCache.set(tag, twelve);
+  }
+  return clock12hCache.get(tag);
+}
 function dtf(options) {
   const key = localeTag() + JSON.stringify(options);
   if (!dtfCache.has(key)) dtfCache.set(key, new Intl.DateTimeFormat(localeTag(), options));
@@ -3955,9 +3996,6 @@ document.addEventListener('visibilitychange', () => {
 
 async function saveDefaultReminderMinute(minutes) {
   state.userSettings = { ...state.userSettings, defaultReminderMinute: minutes };
-  // Re-rendert das Zeit-Feld sofort mit dem tatsächlich gespeicherten (ggf. auf
-  // 15-Minuten-Schritte gerundeten) Wert – sonst zeigte das Eingabefeld weiter den
-  // ungerundeten, eingetippten Wert an, obwohl im Hintergrund längst gerundet wurde.
   render();
   const { error } = await supabase.from('user_settings')
     .upsert({ user_id: state.session.user.id, default_reminder_minute: minutes }, { onConflict: 'user_id' });
@@ -6019,7 +6057,7 @@ function renderSectionForm() {
         ${sf.reminderEnabled ? reminderTimeInputHtml('section-form-reminder-time', sf.reminderMinute, null, false, 'section-form-reminder-note') : ''}
         <p class="habit-form-lock-note" id="section-form-reminder-note">${sf.reminderEnabled
           ? t('sectionForm.reminderExplain')
-          : t('sectionForm.defaultReminderNote', { time: minutesToTimeStr(state.userSettings.defaultReminderMinute) })}</p>
+          : t('sectionForm.defaultReminderNote', { time: formatClock(state.userSettings.defaultReminderMinute) })}</p>
       </div>
       <div class="habit-form-actions">
         <button type="button" class="habit-form-cancel" data-action="section-form-cancel">${t('common.cancel')}</button>
@@ -8213,7 +8251,7 @@ function focusTodayField(habitId, { editInput = false } = {}) {
   const row = trigger?.closest('.habit-row, .number-box');
   if (!row) return;
   row.scrollIntoView({ block: 'center' });
-  const input = editInput && row.querySelector(`#number-input-${habitId}, #text-input-${habitId}, #time-input-${habitId}`);
+  const input = editInput && row.querySelector(`#number-input-${habitId}, #text-input-${habitId}, #time-pick-${habitId}`);
   (input || trigger).focus({ preventScroll: true });
   row.classList.add('field-highlight');
   row.addEventListener('animationend', () => row.classList.remove('field-highlight'), { once: true });
@@ -8241,49 +8279,229 @@ function renderNumberBox(h, dateKey, dayEntry, marker = '') {
   `;
 }
 
-// Uhrzeit (Nutzer-Entscheidung 2026-10-29): freie Eingabe über die Uhrzeit-Auswahl des Geräts,
-// dazu "Jetzt" und "+ 20 min" (für "Handy weglegen, gleich ins Bett"; die Spanne ist wählbar und
-// wird pro Feld gemerkt). Die beiden Knöpfe heute und gestern - gestern, damit man nach
-// Mitternacht zum Vortag wechseln und dort "Jetzt" tippen kann; an älteren Tagen ergäbe "jetzt"
-// keinen Sinn. Neben der Uhrzeit steht ihr Kalendertag (dieser oder der nächste, antippen
-// wechselt): eine von Hand eingetippte 0:30 kann früh an diesem Tag oder spät in der Nacht
-// danach meinen - für die Dauer macht das 24 Stunden aus.
-// Bewusst natives <input type="time"> (anders als bei den Erinnerungszeiten): hier zählt jede
-// Minute, und das Gerät bringt seine gewohnte Uhrzeit-Auswahl mit.
-function timeDayLabel(dateKey, v) {
-  const day = addDays(parseDateKey(dateKey), timeDayOffset(v));
-  return `${weekdayShort(day)} ${dtf({ day: '2-digit', month: '2-digit' }).format(day)}`;
-}
+// Uhrzeit: ein Knopf mit der Uhrzeit ("--:--" solange leer), der die eigene Uhrzeit-Auswahl
+// öffnet (openTimePicker). Liegt die Uhrzeit nach Mitternacht, steht der Wochentag dahinter
+// ("0:30 · Fr."): eine 0:30 kann früh an diesem Tag oder spät in der Nacht danach meinen -
+// für die Dauer macht das 24 Stunden aus.
 function renderTimeBox(h, dateKey, dayEntry, marker = '') {
   const value = dayEntry[h.id];
   const has = typeof value === 'number';
-  const now = new Date();
-  const quick = dateKey === formatKey(now) || dateKey === formatKey(addDays(startOfDay(now), -1));
-  const later = timeLaterMinutes(h);
-  const otherValue = has ? (timeDayOffset(value) > 0 ? value % MINUTES_PER_DAY : value + MINUTES_PER_DAY) : null;
+  const nextDay = has && timeDayOffset(value) > 0 ? addDays(parseDateKey(dateKey), timeDayOffset(value)) : null;
+  const aria = !has ? tPlain('timeBox.ariaEmpty', { name: h.name })
+    : nextDay ? tPlain('timeBox.ariaNextDay', { name: h.name, time: formatClock(value), day: weekdayLong(nextDay) })
+    : tPlain('timeBox.aria', { name: h.name, time: formatClock(value) });
   return `
-    <div class="number-box habit-row--time">
+    <div class="number-box">
       ${renderRowHead(h, esc(h.name) + marker)}
-      <div class="time-controls">
-        <input type="time" id="time-input-${h.id}" class="number-input time-field-input" data-action="time-input" data-habit="${h.id}" value="${has ? formatClock(value) : ''}" aria-label="${esc(h.name)}" />
-        ${has ? `
-          <button type="button" class="manage-btn time-day-toggle" data-action="time-day-toggle" data-habit="${h.id}" aria-label="${esc(tPlain('timeBox.dayAria', { day: timeDayLabel(dateKey, value), other: timeDayLabel(dateKey, otherValue) }))}">${esc(timeDayLabel(dateKey, value))} ⇄</button>
-          <button type="button" class="slider-clear" data-action="clear-value" data-habit="${h.id}" aria-label="${esc(t('ariaLabel.deleteEntry'))}">×</button>
-        ` : ''}
-        ${quick ? `<span class="time-quick">
-          <button type="button" class="manage-btn" data-action="time-now" data-habit="${h.id}" data-offset="0">${t('timeBox.now')}</button>
-          <span class="time-later" role="group" aria-label="${esc(t('timeBox.laterGroup'))}">
-            <button type="button" class="manage-btn" data-action="time-now" data-habit="${h.id}" data-offset="${later}" aria-label="${esc(tPlain('timeBox.laterAria', { n: later }))}">+</button>
-            <select class="time-later-select" data-action="time-later" data-habit="${h.id}" aria-label="${esc(t('timeBox.laterChoose'))}">
-              ${TIME_LATER_CHOICES.map((n) => `<option value="${n}" ${n === later ? 'selected' : ''}>${tPlain('timeBox.laterOption', { n })}</option>`).join('')}
-            </select>
-          </span>
-        </span>` : ''}
-      </div>
+      <button type="button" class="time-pick${has ? '' : ' time-pick--empty'}" id="time-pick-${h.id}" data-action="time-pick" data-habit="${h.id}" aria-label="${esc(aria)}">${has ? esc(formatClock(value)) : '--:--'}${nextDay ? `<span class="time-pick-day"> · ${esc(weekdayShort(nextDay))}</span>` : ''}</button>
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
     </div>
   `;
+}
+
+// --- Uhrzeit-Auswahl ----------------------------------------------------------------
+// Eigenes Fenster für Uhrzeit-Felder und Erinnerungszeiten statt der Auswahl des Geräts
+// (Nutzer-Entscheidung 2026-10-30): die von Android schnitt bei großer Schrift ihren
+// Bestätigen-Knopf ab, kennt kein "Jetzt" und passt nicht zur App.
+// Ein <dialog> außerhalb von #app statt eines Modals im State: render() baut #app komplett
+// neu, ein offenes Formular dahinter (Erinnerungszeiten) verlöre dabei seinen
+// ungespeicherten Stand. showModal() sperrt die Seite dahinter, hält den Tab-Fokus im
+// Fenster und meldet Escape ('cancel'); Android-Zurück über currentLayerCount/popstate.
+// timePicker: { title, value (Minuten; bei Uhrzeit-Feldern ab 1440 = nach Mitternacht),
+// dateKey (nur Uhrzeit-Felder), step (1 oder 15), nowAllowed, autoDay, dayTouched,
+// triggerId, onPick(v), onClear }.
+let timePicker = null;
+const TIME_PICKER_STEPS = [5, 15, 60];
+const TIME_PICKER_MAX = 2 * MINUTES_PER_DAY - 1; // höchstens 23:59 am nächsten Tag
+
+function timePickerHtml(p) {
+  const twelve = clockUses12h();
+  const field = !!p.dateKey;
+  const day = field ? parseDateKey(p.dateKey) : null;
+  const numInput = (id, label) => `<input id="${id}" class="tp-num" type="text" inputmode="numeric" autocomplete="off" maxlength="2" aria-label="${esc(label)}" aria-describedby="tp-error" />`;
+  const seg = (labelId, label, buttons, hiddenLabel) => `
+    <span class="settings-label tp-label${hiddenLabel ? ' visually-hidden' : ''}" id="${labelId}">${label}</span>
+    <div class="pill-group seg" role="group" aria-labelledby="${labelId}">${buttons}</div>`;
+  const pill = (tp, attrs, text) => `<button type="button" class="pill-toggle" data-tp="${tp}" ${attrs} aria-pressed="false">${text}</button>`;
+  return `
+    <h2 id="time-picker-title">${esc(p.title)}</h2>
+    <div class="tp-clock">
+      ${numInput('tp-hour', t('time.hour'))}
+      <span class="tp-sep" aria-hidden="true">:</span>
+      ${p.step === 1 ? numInput('tp-minute', t('time.minute')) : '<span class="tp-num tp-num--fixed" id="tp-minute-shown" aria-hidden="true"></span>'}
+    </div>
+    ${p.step !== 1 ? seg('tp-minute-label', t('time.minute'), Array.from({ length: 60 / p.step }, (_, i) => i * p.step)
+      .map((m) => pill('minute', `data-minute="${m}"`, String(m).padStart(2, '0'))).join('')) : ''}
+    ${twelve ? seg('tp-ampm-label', t('time.label'), pill('ampm', 'data-pm="0"', 'AM') + pill('ampm', 'data-pm="1"', 'PM'), true) : ''}
+    ${field ? `<div class="tp-quick">
+      ${p.nowAllowed ? `<button type="button" class="manage-btn" data-tp="now">${t('timeBox.now')}</button>` : ''}
+      ${TIME_PICKER_STEPS.map((n) => `<button type="button" class="manage-btn" data-tp="add" data-n="${n}" aria-label="${esc(tPlain('timePicker.addAria', { n }))}">${tPlain('timePicker.addLabel', { n })}</button>`).join('')}
+    </div>
+    ${seg('tp-day-label', t('timePicker.dayLabel'),
+      pill('day', 'data-offset="0"', esc(tPlain('timePicker.sameDay', { day: weekdayLong(day) })))
+      + pill('day', 'data-offset="1"', esc(tPlain('timePicker.nextDay', { day: weekdayShort(addDays(day, 1)) }))))}` : ''}
+    <p class="tp-error" id="tp-error" aria-live="polite"></p>
+    ${p.onClear ? `<button type="button" class="manage-btn manage-btn--danger tp-clear" data-tp="clear">${t('timePicker.clear')}</button>` : ''}
+    <div class="habit-form-actions">
+      <button type="button" class="habit-form-cancel" data-tp="cancel">${t('common.cancel')}</button>
+      <button type="button" class="auth-submit" data-tp="apply">${t('timePicker.apply')}</button>
+    </div>
+  `;
+}
+
+// Schreibt timePicker.value in die Anzeige. typing: das gerade getippte Feld nicht
+// überschreiben (sonst springt der Cursor), nur Tag und AM/PM nachziehen.
+function syncTimePicker(typing = false) {
+  const p = timePicker;
+  const dlg = document.getElementById('time-picker');
+  if (!p || !dlg) return;
+  const clock = p.value % MINUTES_PER_DAY;
+  const h = Math.floor(clock / 60), m = clock % 60;
+  const twelve = clockUses12h();
+  if (!typing) {
+    dlg.querySelector('#tp-hour').value = twelve ? String(h % 12 || 12) : String(h).padStart(2, '0');
+    const minuteEl = dlg.querySelector('#tp-minute');
+    if (minuteEl) minuteEl.value = String(m).padStart(2, '0');
+  }
+  const shown = dlg.querySelector('#tp-minute-shown');
+  if (shown) shown.textContent = String(m).padStart(2, '0');
+  const press = (sel, on) => dlg.querySelectorAll(sel).forEach((b) => {
+    const active = on(b);
+    b.classList.toggle('pill-toggle--active', active);
+    b.setAttribute('aria-pressed', String(active));
+  });
+  press('[data-tp="minute"]', (b) => Number(b.dataset.minute) === m);
+  press('[data-tp="ampm"]', (b) => (b.dataset.pm === '1') === (h >= 12));
+  press('[data-tp="day"]', (b) => Number(b.dataset.offset) === timeDayOffset(p.value));
+}
+
+// Uhrzeit aus den Eingabefeldern (Minuten ab Mitternacht), null wenn ungültig.
+function readTimePickerInputs() {
+  const p = timePicker;
+  const dlg = document.getElementById('time-picker');
+  if (!p || !dlg) return null; // schon geschlossen (focusout beim Entfernen)
+  const hs = dlg.querySelector('#tp-hour').value.trim();
+  const minuteEl = dlg.querySelector('#tp-minute');
+  if (!/^\d{1,2}$/.test(hs)) return null;
+  let h = Number(hs);
+  if (clockUses12h()) {
+    if (h < 1 || h > 12) return null;
+    h = (h % 12) + (p.value % MINUTES_PER_DAY >= 720 ? 12 : 0);
+  } else if (h > 23) return null;
+  let m = p.value % 60;
+  if (minuteEl) {
+    if (!/^\d{1,2}$/.test(minuteEl.value.trim())) return null;
+    m = Number(minuteEl.value.trim());
+    if (m > 59) return null;
+  }
+  return h * 60 + m;
+}
+
+// Getippt: Wert übernehmen. Auf der Seite von gestern bekommt die Uhrzeit den spätesten
+// Zeitpunkt, der nicht in der Zukunft liegt (um 0:40 wird 0:10 zu heute Nacht, 23:45 zu
+// gestern Abend) - solange man den Tag nicht selbst gewählt hat.
+function timePickerTyped() {
+  const p = timePicker;
+  const clock = readTimePickerInputs();
+  if (clock === null) return;
+  let offset = timeDayOffset(p.value);
+  if (p.autoDay && !p.dayTouched) {
+    const now = new Date();
+    offset = clock <= now.getHours() * 60 + now.getMinutes() ? 1 : 0;
+  }
+  p.value = offset * MINUTES_PER_DAY + clock;
+  document.getElementById('tp-error').textContent = '';
+  syncTimePicker(true);
+}
+
+function openTimePicker(p) {
+  if (timePicker) return;
+  timePicker = { dayTouched: false, ...p };
+  const dlg = document.createElement('dialog');
+  dlg.id = 'time-picker';
+  dlg.className = 'time-picker';
+  dlg.setAttribute('aria-labelledby', 'time-picker-title');
+  dlg.innerHTML = timePickerHtml(timePicker);
+  document.body.appendChild(dlg);
+  dlg.addEventListener('click', onTimePickerClick);
+  dlg.addEventListener('input', (e) => {
+    if (!e.target.classList.contains('tp-num')) return;
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 2);
+    timePickerTyped();
+    // Stunde fertig (zwei Ziffern oder eine, nach der keine zweite mehr passt): weiter zur Minute.
+    const v = e.target.value;
+    if (e.target.id === 'tp-hour' && (v.length === 2 || Number(v) > (clockUses12h() ? 1 : 2))) dlg.querySelector('#tp-minute')?.focus();
+  });
+  dlg.addEventListener('focusin', (e) => { if (e.target.classList.contains('tp-num')) e.target.select(); });
+  dlg.addEventListener('focusout', (e) => { if (e.target.classList.contains('tp-num') && readTimePickerInputs() !== null) syncTimePicker(); });
+  dlg.addEventListener('keydown', (e) => {
+    if (!e.target.classList.contains('tp-num')) return;
+    if (e.key === 'Enter') { e.preventDefault(); applyTimePicker(); return; }
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    // Hoch/runter: Stunde bzw. Minute um 1, im Kreis innerhalb des Tages.
+    const p = timePicker;
+    const base = timeDayOffset(p.value) * MINUTES_PER_DAY;
+    const step = (e.target.id === 'tp-hour' ? 60 : 1) * (e.key === 'ArrowUp' ? 1 : -1);
+    p.value = base + (((p.value - base + step) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+    syncTimePicker();
+    e.target.select();
+  });
+  dlg.addEventListener('cancel', (e) => { e.preventDefault(); closeTimePicker(); });
+  syncTimePicker();
+  dlg.showModal();
+  dlg.querySelector('[data-tp="cancel"]').focus(); // wie alle Dialoge: Anfangsfokus auf "Abbrechen"
+  syncLayerHistory();
+}
+
+function onTimePickerClick(e) {
+  const btn = e.target.closest('[data-tp]');
+  const p = timePicker;
+  if (!btn || !p) return;
+  const tp = btn.dataset.tp;
+  const clock = p.value % MINUTES_PER_DAY;
+  const base = timeDayOffset(p.value) * MINUTES_PER_DAY;
+  if (tp === 'cancel') { closeTimePicker(); return; }
+  if (tp === 'apply') { applyTimePicker(); return; }
+  if (tp === 'clear') {
+    closeTimePicker({ focus: false });
+    p.onClear();
+    document.getElementById(p.triggerId)?.focus({ preventScroll: true });
+    return;
+  }
+  if (tp === 'now') p.value = timeValueOn(p.dateKey, new Date());
+  else if (tp === 'add') p.value = Math.min(p.value + Number(btn.dataset.n), TIME_PICKER_MAX);
+  else if (tp === 'day') { p.value = Number(btn.dataset.offset) * MINUTES_PER_DAY + clock; p.dayTouched = true; }
+  else if (tp === 'ampm') p.value = base + (clock % 720) + (btn.dataset.pm === '1' ? 720 : 0);
+  else if (tp === 'minute') p.value = base + clock - (clock % 60) + Number(btn.dataset.minute);
+  document.getElementById('tp-error').textContent = '';
+  syncTimePicker();
+}
+
+function applyTimePicker() {
+  const p = timePicker;
+  const clock = readTimePickerInputs();
+  if (clock === null) {
+    document.getElementById('tp-error').textContent = tPlain('timePicker.invalid', { example: formatClock(23 * 60 + 45) });
+    document.getElementById('tp-hour').focus();
+    return;
+  }
+  const value = timeDayOffset(p.value) * MINUTES_PER_DAY + clock;
+  closeTimePicker({ focus: false });
+  p.onPick(value);
+  document.getElementById(p.triggerId)?.focus({ preventScroll: true });
+}
+
+// viaPopstate: Android-Zurück hat den History-Eintrag schon verbraucht.
+function closeTimePicker({ viaPopstate = false, focus = true } = {}) {
+  const p = timePicker;
+  if (!p) return;
+  timePicker = null;
+  const dlg = document.getElementById('time-picker');
+  if (dlg) { if (dlg.open) dlg.close(); dlg.remove(); }
+  if (!viaPopstate) syncLayerHistory();
+  if (focus) document.getElementById(p.triggerId)?.focus({ preventScroll: true });
 }
 
 // Eine Feld-Zeile in "Heute" - gemeinsam für geplante Felder und den eingeklappten
@@ -8430,16 +8648,17 @@ function renderTodayDayNav() {
   // "Heute"/"Gestern"/"Morgen" neben dem Datum - zwei Tage sehen in "Heute" oft fast gleich
   // aus, so sieht man auf einen Blick, welcher gerade gezeigt wird.
   const dayOffset = Math.round((startOfDay(state.currentDate) - startOfDay(new Date())) / 86400000);
-  const relativeDay = { 0: t('day.today'), [-1]: t('day.yesterday'), 1: t('day.tomorrow') }[dayOffset] || '';
+  const relativeDay = { 0: t('day.today'), [-1]: t('day.yesterday') }[dayOffset] || '';
+  const atToday = !isPastKey(dateKey);
   return `
     <div class="day-nav">
       <button type="button" class="nav-btn" data-action="nav-day" data-dir="-1" aria-label="${esc(t('ariaLabel.prevDay'))}">‹</button>
       <div class="day-label">
         <span class="day-weekday">${renderRowMenuButton(DAY_MENU_KEY, t('today.dayOptions'))}${weekdayLong(state.currentDate)}</span>
-        <span class="day-date day-date-pick">${relativeDay ? `<span class="day-relative">${relativeDay}</span> · ` : ''}${longDate(state.currentDate)}<input type="date" id="day-date-input" class="day-date-input" data-action="pick-date" value="${dateKey}" aria-label="${esc(t('today.pickDate'))}" /></span>
+        <span class="day-date day-date-pick">${relativeDay ? `<span class="day-relative">${relativeDay}</span> · ` : ''}${longDate(state.currentDate)}<input type="date" id="day-date-input" class="day-date-input" data-action="pick-date" value="${dateKey}" max="${formatKey(new Date())}" aria-label="${esc(t('today.pickDate'))}" /></span>
         <span class="day-status">${dayStatusHtml(dayEntry)}</span>
       </div>
-      <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" aria-label="${esc(t('ariaLabel.nextDay'))}">›</button>
+      <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" aria-label="${esc(t('ariaLabel.nextDay'))}"${atToday ? ' aria-disabled="true"' : ''}>›</button>
       ${renderDayMenuPanel()}
     </div>
   `;
@@ -8604,7 +8823,7 @@ function renderWeek() {
     return `
       <div class="grid-row">
         <div class="grid-label">${statsFieldName(h, 'grid')}</div>
-        ${scores.map((s, i) => `<div class="grid-cell${getNote(dayKeys[i], h.id) ? ' has-note' : ''}${s === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" data-action="open-day" data-date="${formatKey(days[i])}" data-focus-habit="${h.id}" style="background-color:${habitColor(h, applyGoal(h, s))};${neutral ? '' : scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
+        ${scores.map((s, i) => `<div class="grid-cell${getNote(dayKeys[i], h.id) ? ' has-note' : ''}${s === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" ${isFutureKey(dayKeys[i]) ? '' : `data-action="open-day" data-date="${dayKeys[i]}" data-focus-habit="${h.id}"`} style="background-color:${habitColor(h, applyGoal(h, s))};${neutral ? '' : scorePatternStyle(applyGoal(h, s))}" aria-hidden="true"></div>`).join('')}
         ${avgCell}
       </div>
     `;
@@ -8621,7 +8840,7 @@ function renderWeek() {
     <div class="grid-scroll">
       <div class="grid-row grid-row--header">
         <div class="grid-label"></div>
-        ${days.map((d) => `<div class="grid-col-header${dayHasNote(formatKey(d)) ? ' has-note' : ''}" data-action="open-day" data-date="${formatKey(d)}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(d, dayOverallScore(d)) + (dayHasNote(formatKey(d)) ? t('ariaLabel.withNote') : ''))}"><span>${weekdayShort(d)}</span><span class="grid-col-date">${d.getDate()}</span></div>`).join('')}
+        ${days.map((d) => `<div class="grid-col-header${dayHasNote(formatKey(d)) ? ' has-note' : ''}" ${openDayAttrs(d)} aria-label="${esc(dayCellAriaLabel(d, dayOverallScore(d)) + (dayHasNote(formatKey(d)) ? t('ariaLabel.withNote') : ''))}"><span>${weekdayShort(d)}</span><span class="grid-col-date">${d.getDate()}</span></div>`).join('')}
         <div class="grid-col-header grid-col-header--avg">Ø</div>
       </div>
       ${rows}
@@ -8666,7 +8885,7 @@ function renderMonth() {
         if (!d) return `<div class="month-cell month-cell--empty"></div>`;
         const s = dayOverallScore(d);
         const hasNote = dayHasNote(formatKey(d));
-        return `<div class="month-cell${hasNote ? ' has-note' : ''}" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(s)};${scorePatternStyle(s)}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(d, s) + (hasNote ? t('ariaLabel.withNote') : ''))}"><span class="month-cell-num"${s !== null && s !== undefined ? ` style="color:${textOnScore(scoreColor(s))};background-color:${scoreColor(s)}"` : ''}>${d.getDate()}</span></div>`;
+        return `<div class="month-cell${hasNote ? ' has-note' : ''}" ${openDayAttrs(d)} style="background:${scoreColor(s)};${scorePatternStyle(s)}" aria-label="${esc(dayCellAriaLabel(d, s) + (hasNote ? t('ariaLabel.withNote') : ''))}"><span class="month-cell-num"${s !== null && s !== undefined ? ` style="color:${textOnScore(scoreColor(s))};background-color:${scoreColor(s)}"` : ''}>${d.getDate()}</span></div>`;
       }).join('')}
     </div>
     <div class="month-stats">${renderBySection(monthStats.map((st) => st.habit), 'stats', (list) => renderStatsRows(monthStats.filter((st) => list.includes(st.habit))))}</div>
@@ -8688,7 +8907,7 @@ function renderYear() {
       <div class="year-month">
         <div class="year-month-label">${monthShort(new Date(year, mIdx, 1))}</div>
         <div class="year-month-grid">
-          ${cells.map((d) => { const s = dayOverallScore(d); return `<div class="year-day-cell" data-action="open-day" data-date="${formatKey(d)}" style="background:${scoreColor(s)};${scorePatternStyle(s, true)}" tabindex="0" role="button" aria-label="${esc(dayCellAriaLabel(d, s))}"></div>`; }).join('')}
+          ${cells.map((d) => { const s = dayOverallScore(d); return `<div class="year-day-cell" ${openDayAttrs(d)} style="background:${scoreColor(s)};${scorePatternStyle(s, true)}" aria-label="${esc(dayCellAriaLabel(d, s))}"></div>`; }).join('')}
         </div>
       </div>
     `;
@@ -9030,6 +9249,7 @@ function renderAbout() {
     <div class="manage-section-divider"></div>
     ${tipGroup('about.group.usage', [
       ['about.tip.swipe.title', 'about.tip.swipe.body'],
+      ['about.tip.keys.title', 'about.tip.keys.body'],
       ['about.tip.jumpDay.title', 'about.tip.jumpDay.body'],
       ['about.tip.toggleOff.title', 'about.tip.toggleOff.body'],
       ['about.tip.openDot.title', 'about.tip.openDot.body'],
@@ -9554,12 +9774,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       <span class="settings-label" id="habit-form-time-preview-label">${t('habitForm.preview')}</span>
       <div class="field-preview entry-preview" role="img" aria-label="${esc(t('habitForm.entryPreviewAria.time'))}">
         <span class="entry-preview-name" aria-hidden="true">${esc(f.name.trim() || t('habitForm.preview'))}</span>
-        <span class="time-controls" aria-hidden="true">
-          <span class="number-input entry-preview-input time-preview-input">--:--</span>
-          <span class="manage-btn">${t('timeBox.now')}</span>
-          <span class="manage-btn">+</span>
-          <span class="time-later-select">${tPlain('timeBox.laterOption', { n: TIME_LATER_DEFAULT })} ▾</span>
-        </span>
+        <span class="time-pick time-pick--empty" aria-hidden="true">--:--</span>
         <p class="habit-form-lock-note field-preview-note">${t('habitForm.entryPreviewNote')}</p>
       </div>
     </div>
@@ -9585,7 +9800,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
                 <input type="number" id="habit-form-reminder-below-${i}" inputmode="decimal" step="any" min="0" value="${esc(f.reminderBelow[i] ?? '')}" aria-describedby="habit-form-reminder-times-note" />
               </label>
             ` : ''}
-            ${times.length > 1 ? `<button type="button" class="manage-btn" data-action="habit-reminder-remove" data-index="${i}">${t('habitForm.reminderRemove')}<span class="visually-hidden"> ${minutesToTimeStr(m)}</span></button>` : ''}
+            ${times.length > 1 ? `<button type="button" class="manage-btn" data-action="habit-reminder-remove" data-index="${i}">${t('habitForm.reminderRemove')}<span class="visually-hidden"> ${formatClock(m)}</span></button>` : ''}
           </div>
         `).join('')}
         ${times.length < maxTimes ? `<button type="button" class="manage-btn reminder-time-add" data-action="habit-reminder-add">${t('habitForm.reminderAdd')}</button>` : ''}
@@ -9805,8 +10020,8 @@ function habitFormReminderTimesNote(f, count) {
 function habitFormReminderNote(f) {
   const sec = f.sectionId ? state.sections.find((x) => x.id === f.sectionId) : null;
   return sec && sec.reminderMinute !== null
-    ? t('habitForm.sectionReminderNote', { name: sec.name, time: minutesToTimeStr(sec.reminderMinute) })
-    : t('habitForm.defaultReminderNote', { time: minutesToTimeStr(state.userSettings.defaultReminderMinute) });
+    ? t('habitForm.sectionReminderNote', { name: sec.name, time: formatClock(sec.reminderMinute) })
+    : t('habitForm.defaultReminderNote', { time: formatClock(state.userSettings.defaultReminderMinute) });
 }
 
 // Zusatzinfo pro Feld in der Verwaltungsliste: nur, was vom Standard abweicht
@@ -9911,7 +10126,7 @@ function renderManage() {
               <span class="manage-name manage-section-name">${esc(sec.name)}</span>
               ${confirmingDelete
                 ? `<span class="manage-delete-warning">${t('manage.sectionDeleteWarning')}${keyHasNotes(SECTION_NOTE_PREFIX + sec.id) ? ' ' + t('manage.sectionDeleteNotesWarning') : ''}</span>`
-                : `<span class="manage-meta"><span class="manage-tag">${t('manage.sectionTag')}</span>${sec.reminderMinute !== null ? ' ' + t('manage.reminderAt', { time: minutesToTimeStr(sec.reminderMinute) }) : ''}</span>`}
+                : `<span class="manage-meta"><span class="manage-tag">${t('manage.sectionTag')}</span>${sec.reminderMinute !== null ? ' ' + t('manage.reminderAt', { time: formatClock(sec.reminderMinute) }) : ''}</span>`}
             </div>
             <div class="manage-actions">
               ${confirmingDelete ? `
@@ -10812,6 +11027,8 @@ function render() {
   else if (!currentDek) { renderUnlockPrompt(); }
   else if (!state.loading && !state.userSettings.onboardingCompleted) { renderTutorial(); }
   else { renderApp(); }
+  // Uhrzeit-Auswahl offen, aber ihr Knopf ist weg (z.B. Abmelden auf einem anderen Weg): schließen.
+  if (timePicker && !document.getElementById(timePicker.triggerId)) closeTimePicker({ focus: false });
   if (!app.querySelector('.view-body')) addOnbDisplayBar();
   syncCharCounters();
   markNewLayers(layersBefore);
@@ -11091,6 +11308,7 @@ app.addEventListener('click', async (e) => {
     state.currentDate = today;
     render();
   } else if (action === 'open-day') {
+    if (isFutureKey(el.dataset.date)) return;
     state.currentDate = parseDateKey(el.dataset.date);
     state.view = 'today';
     render();
@@ -11121,17 +11339,30 @@ app.addEventListener('click', async (e) => {
     closeNoteEditor(false);
   } else if (action === 'counter-step') {
     handleCounterStep(formatKey(state.currentDate), el.dataset.habit, Number(el.dataset.dir));
-  } else if (action === 'time-now') {
+  } else if (action === 'time-pick') {
+    // Leer startet die Auswahl bei "jetzt" - heute und gestern (nach Mitternacht am Vortag =
+    // heute Nacht); an älteren Tagen ergäbe "jetzt" keinen Sinn, dort nur die Uhrzeit.
     const dateKey = formatKey(state.currentDate);
-    handleSetValue(dateKey, el.dataset.habit, timeValueOn(dateKey, new Date(Date.now() + Number(el.dataset.offset) * 60000)));
-  } else if (action === 'time-day-toggle') {
-    // Dieser Tag <-> nächster Tag, gleiche Uhrzeit.
-    const dateKey = formatKey(state.currentDate);
-    const v = state.entries[dateKey]?.[el.dataset.habit];
-    if (typeof v === 'number') {
-      handleSetValue(dateKey, el.dataset.habit, timeDayOffset(v) > 0 ? v % MINUTES_PER_DAY : v + MINUTES_PER_DAY);
-      document.querySelector(`[data-action="time-day-toggle"][data-habit="${el.dataset.habit}"]`)?.focus();
-    }
+    const h = state.habits.find((x) => x.id === el.dataset.habit);
+    if (!h) return;
+    const now = new Date();
+    const yesterday = dateKey === formatKey(addDays(startOfDay(now), -1));
+    const nowAllowed = yesterday || dateKey === formatKey(now);
+    const old = state.entries[dateKey]?.[h.id];
+    const has = typeof old === 'number';
+    openTimePicker({
+      title: h.name, dateKey, step: 1, nowAllowed, autoDay: yesterday, triggerId: el.id,
+      value: has ? old : nowAllowed ? timeValueOn(dateKey, now) : now.getHours() * 60 + now.getMinutes(),
+      onPick: (v) => handleSetValue(dateKey, h.id, v),
+      onClear: has ? () => { handleClearValue(dateKey, h.id); flushDaySave(dateKey); } : null,
+    });
+  } else if (action === 'reminder-time-pick') {
+    const labelId = (el.getAttribute('aria-labelledby') || '').split(' ')[0];
+    openTimePicker({
+      title: (labelId && document.getElementById(labelId)?.textContent.trim()) || t('time.label'),
+      step: REMINDER_TIME_STEP, value: Number(el.dataset.value), triggerId: el.id,
+      onPick: (v) => reminderTimePicked(el.id, v),
+    });
   } else if (action === 'clear-value') {
     handleClearValue(formatKey(state.currentDate), el.dataset.habit);
   } else if (action === 'preview-select') {
@@ -11602,7 +11833,8 @@ app.addEventListener('change', async (e) => {
   state.notice = null; // siehe Kommentar beim 'click'-Listener oben
   if (e.target.id === 'day-date-input') {
     if (!e.target.value) return; // "Löschen" in der Datumsauswahl: Tag bleibt
-    const picked = parseDateKey(e.target.value);
+    // max= hält nicht jeder Browser ein: ein Tag in der Zukunft wird zu heute.
+    const picked = isFutureKey(e.target.value) ? startOfDay(new Date()) : parseDateKey(e.target.value);
     if (formatKey(picked) === formatKey(state.currentDate)) return;
     pendingPeriodSlide = picked > state.currentDate ? 1 : -1;
     state.currentDate = picked;
@@ -11632,31 +11864,6 @@ app.addEventListener('change', async (e) => {
   }
   if (e.target.classList?.contains('text-field-input')) {
     flushDaySave(formatKey(state.currentDate)); // Feld verlassen: nicht erst auf den Timer warten
-    return;
-  }
-  // Uhrzeit: leere Eingabe (Ziffern halb gelöscht) nicht als Löschen werten - dafür gibt es das ×.
-  const timeInput = e.target.closest('[data-action="time-input"]');
-  if (timeInput) {
-    // Eine neue Uhrzeit behält den Tag der bisherigen (0:30 -> 0:45 bleibt in der Nacht danach).
-    const dateKey = formatKey(state.currentDate);
-    const habitId = timeInput.dataset.habit;
-    const old = state.entries[dateKey]?.[habitId];
-    const m = /^(\d{2}):(\d{2})/.exec(timeInput.value);
-    if (m) handleSetValue(dateKey, habitId, (typeof old === 'number' ? timeDayOffset(old) * MINUTES_PER_DAY : 0) + Number(m[1]) * 60 + Number(m[2]));
-    return;
-  }
-  // "+ 20 min": gewählte Spanne merken und am Knopf nachziehen, ohne Neuzeichnen (das würde die
-  // Auswahlliste neu fokussieren, siehe focusReopensPicker).
-  const laterSelect = e.target.closest('[data-action="time-later"]');
-  if (laterSelect) {
-    const h = state.habits.find((x) => x.id === laterSelect.dataset.habit);
-    const n = Number(laterSelect.value);
-    if (h && TIME_LATER_CHOICES.includes(n)) {
-      setTimeLaterMinutes(h, n);
-      const btn = laterSelect.parentElement.querySelector('[data-action="time-now"]');
-      btn.dataset.offset = String(n);
-      btn.setAttribute('aria-label', tPlain('timeBox.laterAria', { n }));
-    }
     return;
   }
   const numberInput = e.target.closest('[data-action="number-input"]');
@@ -11819,22 +12026,9 @@ app.addEventListener('change', async (e) => {
     saveSummaryNotifications(summaryToggle.checked);
     return;
   }
-  const defaultTimeEl = e.target.closest('[data-action="menu-default-time"]');
-  if (defaultTimeEl) {
-    saveDefaultReminderMinute(readTimeInput(defaultTimeEl));
-    return;
-  }
   const localeEl = e.target.closest('[data-action="menu-locale"]');
   if (localeEl) {
     saveLocale(localeEl.value);
-    return;
-  }
-  const habitReminderTimeEl = e.target.closest('[data-action="habit-reminder-time-changed"]');
-  if (habitReminderTimeEl && state.habitForm) {
-    // Re-rendert sofort mit dem gerundeten Wert (siehe syncHabitFormFromDom) - sonst
-    // zeigte das Feld weiter die eingetippte, ungerundete Uhrzeit an.
-    syncHabitFormFromDom();
-    render();
     return;
   }
   const slider = e.target.closest('[data-action="value-slider"], [data-action="preview-slider"]');
@@ -12054,6 +12248,29 @@ app.addEventListener('keydown', (e) => {
   }
 });
 
+// Tastatur am Computer: ← → blättern wie Wischen, Strg/⌘+Enter speichert das offene Formular,
+// die Notiz bzw. das Feedback. Bewusst keine Kürzel mit einzelnen Buchstaben: Screenreader-
+// Nutzer lösten sie beim Lesen aus Versehen aus (WCAG 2.1.4). Auf document statt #app: nach
+// einem Neuzeichnen hat nichts den Fokus, die Tasten kommen dann bei <body> an.
+const CTRL_ENTER_ACTIONS = ['note-save', 'habit-save', 'section-form-save', 'feedback-submit'];
+document.addEventListener('keydown', (e) => {
+  if (timePicker || e.defaultPrevented || !state.session || !currentDek) return;
+  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+    if (!SWIPEABLE_VIEWS.includes(state.view) || state.loading || isOverlayOpen() || document.querySelector('.modal-box')
+      || !app.querySelector('.view-body') || e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    e.preventDefault();
+    shiftPeriod(e.key === 'ArrowRight' ? 1 : -1);
+    render();
+    return;
+  }
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !document.querySelector('.modal-box')) {
+    const btn = CTRL_ENTER_ACTIONS.map((a) => app.querySelector(`[data-action="${a}"]`)).find((b) => b && !b.disabled && b.getClientRects().length);
+    if (!btn) return;
+    e.preventDefault();
+    btn.click();
+  }
+});
+
 // --- Swipe-Navigation (Heute/Woche/Monat/Jahr: vorheriger/nächster Zeitraum) --------
 let touchStartX = null;
 let touchStartY = null;
@@ -12105,6 +12322,7 @@ app.addEventListener('touchend', (e) => {
 let pendingPeriodSlide = 0;
 function shiftPeriod(dir) {
   if (state.view === 'today') {
+    if (dir > 0 && !isPastKey(formatKey(state.currentDate))) return; // Zukunft gesperrt, siehe isFutureKey
     state.currentDate = addDays(state.currentDate, dir);
   } else if (state.view === 'week') {
     state.weekAnchor = addDays(state.weekAnchor, dir * 7);

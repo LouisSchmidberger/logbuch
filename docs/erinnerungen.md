@@ -60,9 +60,9 @@ Offline-Caching). Alle Zeiten/Daten gelten in der **Ortszeit des Nutzers**
   Standardzeit – nur wenn im ersten Tag des Zeitraums noch kein Wert steht. Immer mit Namen
   (in `custom_missing`), da einzeln und selten. Standard-, Gruppen- und Feld-Erinnerung der
   Tagesfelder zählen nur `period = 'day'`.
-- Uhrzeiten überall (Feld, Gruppe, Standardzeit, Tutorial) als zwei Auswahllisten Stunde :
-  Minute (00/15/30/45, `reminderTimeInputHtml`/`readTimeInput`) – bewusst kein natives
-  `<input type="time">`, dessen `step` viele Browser/Betriebssysteme ignorieren.
+- Uhrzeiten überall (Feld, Gruppe, Standardzeit, Tutorial) als Knopf, der die eigene
+  Uhrzeit-Auswahl öffnet (`reminderTimeInputHtml`/`readTimeInput`/`reminderTimePicked`), Minuten
+  nur 00/15/30/45 – kein natives `<input type="time">`, dessen `step` viele Browser ignorieren.
 
 ## Feldnamen erst auf dem Gerät
 
