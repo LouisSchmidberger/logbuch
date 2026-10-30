@@ -65,11 +65,8 @@ stehen also an zwei verschiedenen Tagen. Die Dauer ist ein berechnetes Feld (unt
 - **Wert** = Minuten ab Mitternacht des Tages, unter dem er steht; ≥ 1440 = nach Mitternacht.
   Nur Tagesfelder (kein "Wie oft"), nicht im Tutorial, kein "Typ ändern", keine Bewertung
   (`habitScore` = null), Erinnerung wie ein normales Feld (leer = fehlt).
-- **Eingetragen wird immer auf dem angezeigten Tag**, nie eigenmächtig auf einem anderen
-  (Nutzer-Entscheidung 2026-10-30): wer um 0:30 die Bettzeit vom Vorabend einträgt, wechselt
-  selbst zum Vortag. Verworfen: eine Einstellung "Nachts noch zum Vortag bis …" je Feld, die
-  "Jetzt" nach Mitternacht auf den Vortag umleitete (unverständlich, und ein Eintrag auf einem
-  anderen als dem gewählten Tag ist nie gewollt), und ein späterer Tageswechsel für die ganze App.
+- **Eingetragen wird immer auf dem angezeigten Tag**: wer um 0:30 die Bettzeit vom Vorabend
+  einträgt, wechselt selbst zum Vortag.
 - **Tag neben der Uhrzeit** (`timeDayLabel`, Knopf `time-day-toggle`): "Do 29.10." bzw. "Fr
   30.10.", antippen wechselt zwischen diesem und dem nächsten Tag – eine eingetippte 0:30 kann
   früh an diesem Tag oder spät in der Nacht danach meinen, für die Dauer 24 Stunden Unterschied.
