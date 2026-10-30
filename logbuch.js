@@ -2109,6 +2109,18 @@ const STRINGS = {
     'tpl.create': 'Anlegen',
     'tpl.adjust': 'Anpassen',
     'tpl.created': 'Angelegt: {names}',
+    'tpl.source': 'Hast du so ein Feld schon?',
+    'tpl.sourceNew': 'Nein, neu anlegen',
+    'tpl.sourceTake': 'Daraus machen – Einträge bleiben',
+    'tpl.sourceReplace': 'Ersetzen – das alte wird archiviert',
+    'tpl.takeNote.same': '„{name}“ bekommt die Einstellungen der Vorlage, seine Einträge bleiben.',
+    'tpl.takeNote.steps': '„{name}“ bekommt Name und Gruppe der Vorlage, seine Einträge bleiben. Danach stellst du seine Stufen um ({from} → {to}) und entscheidest, welcher alte Wert wohin kommt.',
+    'tpl.takeNote.type': '„{name}“ bekommt Name und Gruppe der Vorlage, seine Einträge bleiben. Danach wandelst du es in den Typ der Vorlage um und entscheidest, was aus den alten Werten wird.',
+    'tpl.takeNote.counter': '„{name}“ wird ein Zähler, seine Einträge bleiben. Leere Tage zählen erst ab heute als 0.',
+    'tpl.replaceNote': '„{name}“ wird archiviert und bleibt in der Auswertung sichtbar. Das neue Feld beginnt ab heute.',
+    'tpl.error.sameField': 'Ein Feld kann nur einen Teil der Vorlage übernehmen.',
+    'tpl.followUp.steps': 'Fast fertig: stell jetzt noch die Stufen von „{name}“ um.',
+    'tpl.followUp.type': 'Fast fertig: wandle „{name}“ jetzt noch in den neuen Typ um.',
     'textReview.countOne': '1 Eintrag',
     'textReview.countMany': '{count} Einträge',
     'common.saving': 'Wird gespeichert …',
@@ -3196,6 +3208,18 @@ const STRINGS = {
     'tpl.create': 'Create',
     'tpl.adjust': 'Adjust',
     'tpl.created': 'Created: {names}',
+    'tpl.source': 'Do you already have a field like this?',
+    'tpl.sourceNew': 'No, create a new one',
+    'tpl.sourceTake': 'Turn it into this – entries stay',
+    'tpl.sourceReplace': 'Replace – the old one is archived',
+    'tpl.takeNote.same': '“{name}” gets the template’s settings, its entries stay.',
+    'tpl.takeNote.steps': '“{name}” gets the template’s name and group, its entries stay. Afterwards you change its steps ({from} → {to}) and decide where each old value goes.',
+    'tpl.takeNote.type': '“{name}” gets the template’s name and group, its entries stay. Afterwards you convert it to the template’s type and decide what becomes of the old values.',
+    'tpl.takeNote.counter': '“{name}” becomes a counter, its entries stay. Empty days count as 0 only from today on.',
+    'tpl.replaceNote': '“{name}” is archived and stays visible in the evaluation. The new field starts today.',
+    'tpl.error.sameField': 'A field can only fill one part of the template.',
+    'tpl.followUp.steps': 'Almost done: now change the steps of “{name}”.',
+    'tpl.followUp.type': 'Almost done: now convert “{name}” to its new type.',
     'textReview.countOne': '1 entry',
     'textReview.countMany': '{count} entries',
     'common.saving': 'Saving…',
@@ -10240,9 +10264,11 @@ function templateSlotName(tpl, slot) { return tPlain(tpl.slots.length > 1 ? `tpl
 // Formular-Zustand eines Teils; refs = { slot: Schlüssel } der schon angelegten Teile.
 function templateSlotForm(tpl, s, name, refs = {}, answers = {}) {
   const ref = (v) => (typeof v === 'string' && v.startsWith('@') ? refs[v.slice(1)] ?? null : v);
-  const form = { ...defaultHabitForm(), ...Object.fromEntries(Object.entries(s.form()).map(([k, v]) => [k, ref(v)])), name };
-  if ('good' in answers) form.good = answers.good;
-  if ('unit' in answers) form.unit = answers.unit;
+  const own = Object.fromEntries(Object.entries(s.form()).map(([k, v]) => [k, ref(v)]));
+  if ('good' in answers) own.good = answers.good;
+  if ('unit' in answers) own.unit = answers.unit;
+  const form = { ...defaultHabitForm(), ...own, name };
+  Object.defineProperty(form, '__keys', { value: Object.fromEntries(Object.keys(own).map((k) => [k, true])), enumerable: false });
   if (form.labelsEnabled) form.labels = resizeLabels(form.labels, form.max - form.min + 1);
   return form;
 }
@@ -10271,6 +10297,16 @@ function readTemplateFromDom(f) {
   if (groupNameEl) tp.groupName = groupNameEl.value;
   const unitEl = document.getElementById('tpl-unit');
   if (unitEl) tp.answers.unit = unitEl.value;
+  tp.sources ??= {};
+  for (const slot of Object.keys(tp.names)) {
+    const el = document.getElementById(`tpl-source-${slot}`);
+    if (!el) continue;
+    const before = tp.sources[slot];
+    tp.sources[slot] = el.value;
+    // Baustein ohne Namen: das übernommene Feld behält seinen.
+    const { habit } = templateSourceOf(tp, slot);
+    if (habit && before !== el.value && !tp.names[slot].trim()) tp.names[slot] = habit.name;
+  }
 }
 // "Anpassen" (nur Vorlagen mit einem Teil): weiter im vollen Formular, schon ausgefüllt.
 function adjustTemplate(f) {
@@ -10282,6 +10318,78 @@ function adjustTemplate(f) {
   Object.assign(f, form, { sectionId, returnToTab: f.returnToTab, revealStage: f.revealStage });
   if (f.revealStage !== undefined) f.revealStage = 3;
 }
+// Aus vorhandenem Feld (Nutzer-Entscheidung 2026-10-30): pro Teil "neu", "take:<defId>" (das Feld
+// wird an Ort und Stelle umgebaut, behält Schlüssel und Einträge) oder "replace:<defId>" (neues
+// Feld, das alte wird archiviert und bleibt in der Auswertung sichtbar). Wie umgebaut wird:
+// 'same' = Typ und Stufen passen, nur Einstellungen; 'steps'/'type' = danach öffnet "Stufen
+// ändern" bzw. "Typ ändern", schon auf die Vorlage eingestellt - die Zuordnung der alten Werte
+// entscheidet man dort (eine Stelle für Wert-Umwandlungen); 'counter' = Zahl wird Zähler (Werte
+// bleiben, leer = 0 erst ab heute, wie convertHabitToCounter).
+function templateTakeMode(slotForm, h) {
+  if (isPeriodField(h) || h.archivedAt) return null;
+  const k = slotForm.kind;
+  const steps = (x) => x.max - x.min + 1;
+  if (k === 'computed') return h.kind === 'computed' && h.aggregate === slotForm.computedType ? 'same' : null;
+  if (h.kind === 'computed') return null;
+  const canType = (to) => typeChangeTargets(h).includes(to) && !typeChangeBlocker(h);
+  // Schieberegler ohne Bezeichnungen (Stress 0-10): der Bereich des vorhandenen Felds bleibt - ob
+  // 0-10 oder 1-10 macht für die Vorlage keinen Unterschied, eine Umstellung wäre nur Aufwand.
+  const freeSlider = slotForm.displayStyle === 'slider' && !slotForm.labelsEnabled && h.kind === 'scale' && !h.labels;
+  if (k === 'scale') return h.kind === 'scale' ? (steps(h) === steps(slotForm) || freeSlider ? 'same' : 'steps') : canType('scale') ? 'type' : null;
+  if (k === 'counter') return h.kind === 'counter' ? 'same' : h.kind === 'number' ? 'counter' : null;
+  if (k === 'number') return h.kind === 'number' ? 'same' : canType('number') ? 'type' : null;
+  if (k === 'text') return h.kind === 'text' ? 'same' : canType('text') ? 'type' : null;
+  return h.kind === k ? 'same' : null; // Uhrzeit, Mehrfachauswahl
+}
+function templateSourceOf(tp, slot) {
+  const [how, defId] = (tp.sources?.[slot] || 'new').split(':');
+  return { how, habit: defId ? state.habits.find((h) => h.defId === defId) ?? null : null };
+}
+// Einstellungen der Vorlage, die ein übernommenes Feld bekommt. Nie die Optionen einer
+// Mehrfachauswahl (gewählte Ids in den Einträgen verlören ihre Bedeutung) und bei 'steps'/'type'
+// nur, was nicht an den Werten hängt - den Rest stellt "Stufen/Typ ändern" um.
+function templateTakeOverlay(slotForm, mode) {
+  const skip = new Set(['kind', 'min', 'max', 'multiOptions']);
+  if (mode !== 'same' && mode !== 'counter') ['labelsEnabled', 'labels', 'displayStyle', 'unit', 'numberGoalDir', 'numberGoalValue'].forEach((k) => skip.add(k));
+  return Object.fromEntries(Object.entries(slotForm).filter(([k]) => !skip.has(k) && k in templateSlotOverrideKeys(slotForm)));
+}
+// Nur die Schlüssel, die der Teil selbst setzt (nicht die Vorgaben von defaultHabitForm).
+function templateSlotOverrideKeys(slotForm) { return slotForm.__keys || {}; }
+async function takeIntoTemplate(h, slotForm, mode, sectionId) {
+  const f = { ...habitToForm(h), ...templateTakeOverlay(slotForm, mode), name: slotForm.name, sectionId };
+  if (mode === 'counter') { f.kind = 'counter'; f.step = 1; }
+  const def = habitFormDefinition(f);
+  if (def.notice) return def;
+  const result = await persistHabitForm(f, def);
+  if (result.notice) return result;
+  let habit = result.habit;
+  if (mode === 'counter' && !habit.counterSince) {
+    await updateHabitPayload(habit, { counterSince: formatKey(new Date()) });
+    habit = state.habits.find((x) => x.defId === habit.defId);
+  }
+  return { habit, followUp: mode === 'steps' || mode === 'type' ? { defId: habit.defId, mode, target: slotForm } : null };
+}
+// Nach dem Anlegen: "Stufen ändern" bzw. "Typ ändern" des übernommenen Felds öffnen, schon auf
+// die Vorlage eingestellt (Stufenzahl, Bezeichnungen bzw. Ziel-Typ).
+function openTemplateFollowUp(fu) {
+  const h = state.habits.find((x) => x.defId === fu.defId);
+  if (!h) return;
+  const form = habitToForm(h);
+  const steps = fu.target.max - fu.target.min + 1;
+  if (fu.mode === 'steps') {
+    form.stepEdit = { steps, labels: fu.target.labelsEnabled ? [...fu.target.labels] : null, preset: 'spread', map: {}, confirm: false };
+    applyStepEditPreset(h, form.stepEdit);
+    form.stepEdit.initial = '';
+  } else {
+    form.typeEdit = { kind: null, steps: 5, preset: 'round', unit: fu.target.unit || '', map: {}, confirm: false };
+    typeEditKindChanged(h, form.typeEdit, fu.target.kind);
+    if (fu.target.kind === 'scale') typeEditStepsChanged(h, form.typeEdit, steps);
+    form.typeEdit.initial = '';
+  }
+  openHabitForm(form);
+  state.notice = { type: 'ok', text: tPlain(fu.mode === 'steps' ? 'tpl.followUp.steps' : 'tpl.followUp.type', { name: h.name }) };
+}
+
 // Anlegen: erst die Gruppe, dann die Teile in ihrer Reihenfolge. Scheitert ein Teil, bleibt das
 // schon Angelegte stehen (normale Felder, einzeln zu bearbeiten oder zu archivieren).
 async function createFromTemplate(f) {
@@ -10297,18 +10405,38 @@ async function createFromTemplate(f) {
     if (created.notice) return created;
     sectionId = created.id;
   } else if (tp.group !== 'none' && state.sections.some((sec) => sec.id === tp.group)) sectionId = tp.group;
+  const sources = tpl.slots.map((s) => templateSourceOf(tp, s.slot));
+  const chosen = sources.filter((x) => x.habit).map((x) => x.habit.defId);
+  if (new Set(chosen).size !== chosen.length) return { notice: { type: 'error', text: t('tpl.error.sameField') } };
   const refs = {};
   const habits = [];
+  let followUp = null;
   for (const [i, s] of tpl.slots.entries()) {
-    const form = { ...templateSlotForm(tpl, s, names[i], refs, tp.answers), sectionId };
-    const def = habitFormDefinition(form);
-    if (def.notice) return def;
-    const result = await persistHabitForm(form, def);
+    const { how, habit: old } = sources[i];
+    const slotForm = templateSlotForm(tpl, s, names[i], refs, tp.answers);
+    let result;
+    if (how === 'take' && old) {
+      const mode = templateTakeMode(slotForm, old);
+      if (!mode) return { notice: { type: 'error', text: t('tpl.error.sameField') } };
+      // Ohne Gruppe in der Vorlage bleibt ein übernommenes Feld, wo es ist.
+      result = await takeIntoTemplate(old, slotForm, mode, tpl.group || tp.group !== 'none' ? sectionId : old.sectionId);
+      if (result.followUp) followUp = result.followUp;
+    } else {
+      const form = { ...slotForm, sectionId };
+      const def = habitFormDefinition(form);
+      if (def.notice) return def;
+      result = await persistHabitForm(form, def);
+      if (!result.notice && how === 'replace' && old) {
+        await handleHabitArchive(old.defId, true);
+        const archived = state.habits.find((x) => x.defId === old.defId);
+        if (archived && !archived.archivedInStats) await updateHabitPayload(archived, { archivedInStats: true });
+      }
+    }
     if (result.notice) return result;
     refs[s.slot] = result.habit.id;
     habits.push(result.habit);
   }
-  return { habits };
+  return { habits, followUp };
 }
 // Vorschau: die Zeilen wie in "Heute", aber inert (nicht antippbar, nichts wird gespeichert).
 // Berechnete Teile nur als Text - ihr Wert hängt an den noch nicht angelegten Feldern.
@@ -10346,6 +10474,32 @@ function renderTemplatePicker(f) {
     </div>
   `;
 }
+// "Hast du so ein Feld schon?": übernehmbare Felder (Einträge bleiben) und alle übrigen zum
+// Ersetzen. Nur, wenn es überhaupt aktive Tagesfelder gibt.
+function templateSourceHtml(tpl, s, tp) {
+  const slotForm = templateSlotForm(tpl, s, '', {}, tp.answers);
+  const active = state.habits.filter((h) => !h.archivedAt && !isPeriodField(h) && (slotForm.kind === 'computed') === (h.kind === 'computed'));
+  if (!active.length) return '';
+  const take = active.filter((h) => templateTakeMode(slotForm, h));
+  const replace = active; // auch passende Felder: bewusst neu beginnen soll gehen
+  const value = tp.sources?.[s.slot] || 'new';
+  const opt = (v, h) => `<option value="${v}" ${value === v ? 'selected' : ''}>${esc(h.name)}</option>`;
+  const { how, habit } = templateSourceOf(tp, s.slot);
+  const mode = habit && how === 'take' ? templateTakeMode(slotForm, habit) : null;
+  const note = !habit ? ''
+    : how === 'replace' ? tPlain('tpl.replaceNote', { name: habit.name })
+    : mode === 'steps' ? tPlain('tpl.takeNote.steps', { name: habit.name, from: habit.max - habit.min + 1, to: slotForm.max - slotForm.min + 1 })
+    : tPlain('tpl.takeNote.' + mode, { name: habit.name });
+  return `
+    <label class="tpl-source-label" for="tpl-source-${s.slot}">${t('tpl.source')}</label>
+    <select id="tpl-source-${s.slot}" class="tpl-source">
+      <option value="new" ${value === 'new' ? 'selected' : ''}>${t('tpl.sourceNew')}</option>
+      ${take.length ? `<optgroup label="${esc(tPlain('tpl.sourceTake'))}">${take.map((h) => opt(`take:${h.defId}`, h)).join('')}</optgroup>` : ''}
+      ${replace.length && slotForm.kind !== 'computed' ? `<optgroup label="${esc(tPlain('tpl.sourceReplace'))}">${replace.map((h) => opt(`replace:${h.defId}`, h)).join('')}</optgroup>` : ''}
+    </select>
+    ${note ? `<p class="habit-form-lock-note">${esc(note)}</p>` : ''}
+  `;
+}
 function renderTemplateConfirm(f) {
   const tp = f.template;
   const tpl = templateById(tp.id);
@@ -10363,6 +10517,7 @@ function renderTemplateConfirm(f) {
         <div class="auth-field">
           <label for="tpl-name-${s.slot}">${multi ? t('tpl.nameOf', { what: templateSlotName(tpl, s.slot) }) : t('habitForm.name')}</label>
           <input type="text" id="tpl-name-${s.slot}" value="${esc(tp.names[s.slot])}" maxlength="40"${tpl.blank ? ` placeholder="${esc(tPlain(`tpl.${tpl.id}.placeholder`))}"` : ''} />
+          ${templateSourceHtml(tpl, s, tp)}
         </div>
       `).join('')}
       ${'good' in tp.answers ? `
@@ -12572,7 +12727,10 @@ app.addEventListener('click', async (e) => {
     let result;
     try { result = await createFromTemplate(state.habitForm); } finally { state.habitFormSaving = false; }
     if (result.notice) state.notice = result.notice;
-    else {
+    else if (result.followUp) {
+      closeHabitForm();
+      openTemplateFollowUp(result.followUp);
+    } else {
       closeHabitForm();
       state.notice = { type: 'ok', text: tPlain('tpl.created', { names: result.habits.map((h) => h.name).join(', ') }) };
       if (state.tutorialStep === TUTORIAL_STEP_FIELD) state.tutorialStep = TUTORIAL_STEP_DONE;
@@ -12829,7 +12987,7 @@ app.addEventListener('change', async (e) => {
   // Berechnetes Feld aus Zahlen: nach jeder Mitglieder-Änderung neu rendern, damit Felder mit anderer
   // Einheit gesperrt bzw. wieder freigegeben werden (siehe computedBody).
   // "Tage seit": anderes Quellfeld -> andere Stufen zur Auswahl.
-  if (e.target.id === 'tpl-group' && state.habitForm?.template) {
+  if ((e.target.id === 'tpl-group' || e.target.id?.startsWith('tpl-source-')) && state.habitForm?.template) {
     readTemplateFromDom(state.habitForm);
     render();
     return;
