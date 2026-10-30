@@ -2008,7 +2008,7 @@ const STRINGS = {
     'habitForm.timeNote': 'In „Heute“ tippst du auf das Feld und wählst die Uhrzeit. Ist es noch leer, steht dort schon die aktuelle; mit „+5 min“ usw. kommst du etwas später an, z. B. wenn du das Handy schon weglegst. Liegt die Uhrzeit nach Mitternacht, steht der Wochentag dahinter. Zwei Uhrzeiten ergeben mit einem berechneten Feld „Dauer“ z. B. deine Schlafdauer.',
     'habitForm.kindMulti': 'Mehrfachauswahl',
     'habitForm.kindMultiNote': 'Mehrere ankreuzen – z. B. was heute war: Sport, Streit, Kaffee',
-    'habitForm.multiNote': 'In „Heute“ tippst du alle Optionen an, die zutreffen – oder „nichts davon“. In der Auswertung bekommt jede Option eine eigene Zeile.',
+    'habitForm.multiNote': 'In „Heute“ tippst du alle Optionen an, die zutreffen – oder „nichts davon“. In der Auswertung bekommt jede Option eine eigene Zeile. Gut für Dinge, die du nur festhalten willst: Bewertung und Ziel gibt es nur für das ganze Feld – was du einzeln bewerten oder mit Ziel verfolgen willst, legst du besser als eigenes Ja/Nein-Feld an.',
     'habitForm.multiOptions': 'Optionen',
     'habitForm.multiOptionAria': 'Option {n}',
     'habitForm.multiAdd': '+ Option',
@@ -2078,7 +2078,8 @@ const STRINGS = {
     'tpl.weight.explain': 'Eine Zahl in kg. In der Auswertung siehst du den Verlauf.',
     'tpl.sleep.name': 'Schlaf',
     'tpl.sleep.note': 'Ins Bett, aufgestanden und die Schlafdauer daraus',
-    'tpl.sleep.explain': 'Zwei Uhrzeiten und die Schlafdauer, die Logbuch daraus rechnet. Die Bettzeit trägst du abends ein, die Aufstehzeit am Morgen.',
+    'tpl.sleep.explain': 'Zwei Uhrzeiten und die Schlafdauer, die Logbuch daraus rechnet. Die Aufstehzeit trägst du morgens ein, die Bettzeit abends – die Schlafdauer steht dann am Morgen, auch über Mitternacht.',
+    'tpl.placeLastNote': 'Kommt in „Heute“ nach ganz unten – das trägst du abends ein.',
     'tpl.sleep.bed': 'Ins Bett',
     'tpl.sleep.up': 'Aufgestanden',
     'tpl.sleep.duration': 'Schlafdauer',
@@ -2089,7 +2090,7 @@ const STRINGS = {
     'tpl.cycle.day': 'Zyklustag',
     'tpl.events.name': 'Was war heute?',
     'tpl.events.note': 'Mehrere ankreuzen: Sport, Freunde, Streit …',
-    'tpl.events.explain': 'Eine Mehrfachauswahl: du tippst alles an, was heute war. Die Optionen änderst und ergänzt du über „Anpassen“ oder später über „Bearbeiten“.',
+    'tpl.events.explain': 'Eine Mehrfachauswahl: du tippst alles an, was heute war. Gut für Dinge, die du nur festhalten willst – was du bewerten oder mit Ziel verfolgen willst (z. B. Sport an 3 Tagen pro Woche), legst du besser als eigenes Ja/Nein-Feld an. Die Optionen änderst und ergänzt du über „Anpassen“ oder später über „Bearbeiten“.',
     'tpl.events.sport': 'Sport',
     'tpl.events.friends': 'Freunde getroffen',
     'tpl.events.argument': 'Streit',
@@ -2097,6 +2098,9 @@ const STRINGS = {
     'tpl.events.outside': 'Draußen gewesen',
     'tpl.events.screen': 'Viel Bildschirm',
     'tpl.sleepQuality.name': 'Schlafqualität',
+    'tpl.sport.name': 'Sport',
+    'tpl.alcohol.name': 'Alkohol',
+    'tpl.dayEvents.name': 'Was war heute?',
     'tpl.energy.name': 'Energie',
     'tpl.body.name': 'Körperliche Beschwerden',
     'tpl.headache.name': 'Kopfschmerzen',
@@ -2104,18 +2108,21 @@ const STRINGS = {
     'tpl.cigarettes.name': 'Zigaretten',
     'tpl.grateful.name': 'Wofür bin ich dankbar?',
     'pkg.intro': 'Damit du nicht bei null anfängst: ein Startpaket mit Feldern, die bei vielen etwas zeigen. Es ist nur ein Vorschlag – nimm heraus, was nicht zu dir passt, und nimm dazu, was dich interessiert. Ändern, umbenennen und ergänzen kannst du alles jederzeit.',
-    'pkg.group.sleep': 'Schlaf',
+    'pkg.group.morning': 'Morgens',
     'pkg.group.feeling': 'Befinden',
     'pkg.group.influences': 'Einflüsse',
     'pkg.group.other': 'Sonstiges',
-    'pkg.item.sleep': 'Ins Bett, Aufgestanden und die Schlafdauer daraus',
+    'pkg.group.evening': 'Abends',
+    'pkg.item.sleep': 'Aufgestanden und die Schlafdauer hier, „Ins Bett“ abends ganz unten',
     'pkg.item.sleepQuality': '1 bis 5',
     'pkg.item.mood': '1 bis 5',
     'pkg.item.energy': '1 bis 5',
     'pkg.item.stress': '0 bis 10, wenig ist gut',
     'pkg.item.body': 'keine bis stark',
     'pkg.item.headache': 'keine bis stark',
-    'pkg.item.events': 'Sport, draußen gewesen, Freunde getroffen, Streit, Alkohol, viel Bildschirm – zum Antippen',
+    'pkg.item.sport': 'Ja oder Nein',
+    'pkg.item.alcohol': 'Ja oder Nein, Nein ist gut',
+    'pkg.item.dayEvents': 'Draußen gewesen, Freunde getroffen, Streit, viel Bildschirm – zum Antippen, ohne Bewertung',
     'pkg.item.water': 'Gläser hochzählen, Ziel mindestens 8',
     'pkg.item.caffeine': 'Tassen hochzählen',
     'pkg.item.meds': 'Ja oder Nein, mit Erinnerung',
@@ -3161,7 +3168,7 @@ const STRINGS = {
     'habitForm.timeNote': 'In “Today” you tap the field and pick the time. If it’s still empty, the current time is already set; “+5 min” etc. move it a bit later, e.g. when you’re putting your phone away already. If the time is after midnight, the weekday shows next to it. Two times plus a calculated “Duration” field give you e.g. how long you slept.',
     'habitForm.kindMulti': 'Multiple choice',
     'habitForm.kindMultiNote': 'Tick several – e.g. what happened today: workout, argument, coffee',
-    'habitForm.multiNote': 'In “Today” you tap every option that applies – or “none of these”. In the evaluation, each option gets its own row.',
+    'habitForm.multiNote': 'In “Today” you tap every option that applies – or “none of these”. In the evaluation, each option gets its own row. Good for things you just want to note: options have no rating or goal of their own – what you want to rate or pursue with a goal is better as its own yes/no field.',
     'habitForm.multiOptions': 'Options',
     'habitForm.multiOptionAria': 'Option {n}',
     'habitForm.multiAdd': '+ Option',
@@ -3231,7 +3238,8 @@ const STRINGS = {
     'tpl.weight.explain': 'A number in kg. The evaluation shows its course.',
     'tpl.sleep.name': 'Sleep',
     'tpl.sleep.note': 'Went to bed, got up and how long you slept',
-    'tpl.sleep.explain': 'Two times and the sleep duration Logbuch calculates from them. Enter bedtime in the evening and the time you got up in the morning.',
+    'tpl.sleep.explain': 'Two times and the sleep duration Logbuch calculates from them. Enter the time you got up in the morning and bedtime in the evening – the sleep duration then shows in the morning, even across midnight.',
+    'tpl.placeLastNote': 'Goes to the very bottom of “Today” – you enter it in the evening.',
     'tpl.sleep.bed': 'Went to bed',
     'tpl.sleep.up': 'Got up',
     'tpl.sleep.duration': 'Sleep duration',
@@ -3242,7 +3250,7 @@ const STRINGS = {
     'tpl.cycle.day': 'Cycle day',
     'tpl.events.name': 'What happened today?',
     'tpl.events.note': 'Tick several: sports, friends, argument …',
-    'tpl.events.explain': 'A multiple choice: you tap everything that happened today. Change and add options via “Adjust” or later via “Edit”.',
+    'tpl.events.explain': 'A multiple choice: you tap everything that happened today. Good for things you just want to note – what you want to rate or pursue with a goal (e.g. sports on 3 days a week) is better as its own yes/no field. Change and add options via “Adjust” or later via “Edit”.',
     'tpl.events.sport': 'Sports',
     'tpl.events.friends': 'Met friends',
     'tpl.events.argument': 'Argument',
@@ -3250,6 +3258,9 @@ const STRINGS = {
     'tpl.events.outside': 'Went outside',
     'tpl.events.screen': 'Lots of screen time',
     'tpl.sleepQuality.name': 'Sleep quality',
+    'tpl.sport.name': 'Sports',
+    'tpl.alcohol.name': 'Alcohol',
+    'tpl.dayEvents.name': 'What happened today?',
     'tpl.energy.name': 'Energy',
     'tpl.body.name': 'Physical complaints',
     'tpl.headache.name': 'Headache',
@@ -3257,18 +3268,21 @@ const STRINGS = {
     'tpl.cigarettes.name': 'Cigarettes',
     'tpl.grateful.name': 'What am I grateful for?',
     'pkg.intro': 'So you don’t start from scratch: a starter set of fields that tell many people something. It’s only a suggestion – take out what doesn’t fit you and add what interests you. You can change, rename and extend everything anytime.',
-    'pkg.group.sleep': 'Sleep',
+    'pkg.group.morning': 'Morning',
     'pkg.group.feeling': 'How you feel',
     'pkg.group.influences': 'Influences',
     'pkg.group.other': 'Other',
-    'pkg.item.sleep': 'Bedtime, got up and the sleep duration from them',
+    'pkg.group.evening': 'Evening',
+    'pkg.item.sleep': 'Got up and the sleep duration here, bedtime in the evening at the very bottom',
     'pkg.item.sleepQuality': '1 to 5',
     'pkg.item.mood': '1 to 5',
     'pkg.item.energy': '1 to 5',
     'pkg.item.stress': '0 to 10, less is good',
     'pkg.item.body': 'none to strong',
     'pkg.item.headache': 'none to strong',
-    'pkg.item.events': 'Sports, went outside, met friends, argument, alcohol, lots of screen time – to tap',
+    'pkg.item.sport': 'Yes or no',
+    'pkg.item.alcohol': 'Yes or no, no is good',
+    'pkg.item.dayEvents': 'Went outside, met friends, argument, lots of screen time – to tap, without rating',
     'pkg.item.water': 'Count glasses, goal at least 8',
     'pkg.item.caffeine': 'Count cups',
     'pkg.item.meds': 'Yes or no, with a reminder',
@@ -10400,6 +10414,8 @@ function renderTextReviews(habits, dateKeys, labelFor = formatDMY) {
 // verweist auf den Schlüssel eines anderen Teils derselben Vorlage (berechnete Felder) - die
 // Teile stehen deshalb in der Reihenfolge, in der sie angelegt werden. Namen und Bezeichnungen
 // in der Sprache beim Anlegen (tpl.*), danach normale Felder. Hinter dem Schalter 'templates'.
+// placeLast: der Teil wird abends eingetragen ("Ins Bett") und kommt deshalb nach ganz unten statt in
+// die Gruppe der Vorlage (Nutzer-Entscheidung 2026-10-30: in "Heute" nach Tageszeit sortiert).
 const YES_NO = () => [t('tpl.no'), t('tpl.yes')];
 const STRENGTH_LABELS = () => ['none', 'light', 'medium', 'strong'].map((k) => t('tpl.strength.' + k));
 // Bausteine (blank: ohne Namen, Beispiele als Platzhalter - Nutzer-Entscheidung 2026-10-30: viele
@@ -10422,7 +10438,7 @@ const FIELD_TEMPLATES = [
   { id: 'meds', topic: 'ready', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 2, good: 'high', labelsEnabled: true, labels: YES_NO(), reminderEnabled: true }) }] },
   { id: 'weight', topic: 'ready', slots: [{ slot: 'main', form: () => ({ kind: 'number', unit: 'kg' }) }] },
   { id: 'sleep', topic: 'ready', group: true, slots: [
-    { slot: 'bed', form: () => ({ kind: 'time' }) },
+    { slot: 'bed', placeLast: true, form: () => ({ kind: 'time' }) },
     { slot: 'up', form: () => ({ kind: 'time' }) },
     { slot: 'duration', form: () => ({ kind: 'computed', computedType: 'duration', durationFrom: '@bed', durationTo: '@up' }) },
   ] },
@@ -10437,9 +10453,10 @@ const TEMPLATE_TOPICS = ['blocks', 'ready'];
 // An-/Abwählen, statt dass Neulinge selbst verantworten, alles anzulegen - Logbuch lebt davon, dass
 // vieles zusammenkommt (CLAUDE.md "Kern"). Nur eine Vorauswahl: die Texte ermutigen ausdrücklich,
 // anzupassen und Eigenes anzulegen. Ein Eintrag verweist auf eine Vorlage (tpl) oder hat eigene
-// Teile (Namen dann unter tpl.<id>.*). Gruppen außer 'other' werden als Gruppe angelegt.
+// Teile (Namen dann unter tpl.<id>.*). Gruppen außer 'other' werden als Gruppe angelegt; Teile mit
+// placeLast ("Ins Bett") kommen in eine eigene Gruppe "Abends" ganz unten.
 const PACKAGE_GROUPS = [
-  { id: 'sleep', items: [
+  { id: 'morning', items: [
     { id: 'sleep', tpl: 'sleep', on: true },
     { id: 'sleepQuality', on: true, slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 5, good: 'high' }) }] },
   ] },
@@ -10451,7 +10468,11 @@ const PACKAGE_GROUPS = [
     { id: 'headache', on: false, slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 4, good: 'low', labelsEnabled: true, labels: STRENGTH_LABELS() }) }] },
   ] },
   { id: 'influences', items: [
-    { id: 'events', tpl: 'events', on: true },
+    { id: 'sport', on: true, slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 2, good: 'high', labelsEnabled: true, labels: YES_NO() }) }] },
+    { id: 'alcohol', on: true, slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 2, good: 'low', labelsEnabled: true, labels: YES_NO() }) }] },
+    // Nur Kontext ohne Wertung (Nutzer-Entscheidung 2026-10-30): was man bewerten oder mit Ziel
+    // verfolgen will, steht als eigenes Ja/Nein-Feld darüber.
+    { id: 'dayEvents', on: true, slots: [{ slot: 'main', form: () => ({ kind: 'multi', multiOptions: ['outside', 'friends', 'argument', 'screen'].map((k) => ({ id: newMultiOptionId(), label: t('tpl.events.' + k) })) }) }] },
     { id: 'water', tpl: 'water', on: true },
     { id: 'caffeine', on: false, slots: [{ slot: 'main', form: () => ({ kind: 'counter' }) }] },
     { id: 'meds', tpl: 'meds', on: false },
@@ -10474,19 +10495,23 @@ function packageFieldCount(chosen) {
 // Angelegte stehen (normale Felder, wie bei Vorlagen).
 async function createStarterPackage(chosen) {
   const habits = [];
+  // Erst alle Gruppen in Anzeige-Reihenfolge ("Abends" zuletzt), dann die Felder - "Ins Bett" wird
+  // als Verweis für die Schlafdauer zuerst angelegt, gehört aber in die letzte Gruppe.
+  const chosenItems = (g) => g.items.filter((it) => chosen[it.id]);
+  const sectionKeys = PACKAGE_GROUPS.filter((g) => g.id !== 'other' && chosenItems(g).length).map((g) => g.id);
+  if (PACKAGE_GROUPS.some((g) => chosenItems(g).some((it) => packageItemTemplate(it).slots.some((sl) => sl.placeLast)))) sectionKeys.push('evening');
+  const sections = {};
+  for (const key of sectionKeys) {
+    const sec = await insertSection(tPlain('pkg.group.' + key), 'done');
+    if (sec.notice) return sec;
+    sections[key] = sec.id;
+  }
   for (const g of PACKAGE_GROUPS) {
-    const items = g.items.filter((it) => chosen[it.id]);
-    if (!items.length) continue;
-    let sectionId = null;
-    if (g.id !== 'other') {
-      const sec = await insertSection(tPlain('pkg.group.' + g.id), 'done');
-      if (sec.notice) return sec;
-      sectionId = sec.id;
-    }
-    for (const it of items) {
+    for (const it of chosenItems(g)) {
       const tpl = packageItemTemplate(it);
       const refs = {};
       for (const slot of tpl.slots) {
+        const sectionId = sections[slot.placeLast ? 'evening' : g.id] ?? null;
         const form = { ...templateSlotForm(tpl, slot, templateSlotName(tpl, slot.slot), refs), sectionId };
         const def = habitFormDefinition(form);
         if (def.notice) return def;
@@ -10524,6 +10549,7 @@ function renderStarterPackage(f) {
   `;
 }
 function templateById(id) { return FIELD_TEMPLATES.find((x) => x.id === id); }
+function templateDisplaySlots(tpl) { return [...tpl.slots.filter((s) => !s.placeLast), ...tpl.slots.filter((s) => s.placeLast)]; }
 function templateSlotName(tpl, slot) { return tPlain(tpl.slots.length > 1 ? `tpl.${tpl.id}.${slot}` : `tpl.${tpl.id}.name`); }
 // Formular-Zustand eines Teils; refs = { slot: Schlüssel } der schon angelegten Teile.
 function templateSlotForm(tpl, s, name, refs = {}, answers = {}) {
@@ -10758,15 +10784,15 @@ async function createFromTemplate(f) {
     if (how === 'take' && old) {
       const mode = templateTakeMode(slotForm, old);
       if (!mode) return { notice: { type: 'error', text: t('tpl.error.sameField') } };
-      // Ohne Gruppe in der Vorlage bleibt ein übernommenes Feld, wo es ist.
-      result = await takeIntoTemplate(old, slotForm, mode, tpl.group || tp.group !== 'none' ? sectionId : old.sectionId);
+      // Ohne Gruppe in der Vorlage (bzw. bei placeLast) bleibt ein übernommenes Feld, wo es ist.
+      result = await takeIntoTemplate(old, slotForm, mode, !s.placeLast && (tpl.group || tp.group !== 'none') ? sectionId : old.sectionId);
       if (result.followUp) followUp = result.followUp;
       if (!result.notice && merging) {
         if (!(await updateHabitPayload(result.habit, { options: mergedOptions.options }))) return { notice: { type: 'error', text: t('tpl.error.merge') } };
         result.habit = state.habits.find((x) => x.defId === result.habit.defId);
       }
     } else {
-      const form = { ...slotForm, sectionId, ...(merging ? { multiOptions: mergedOptions.options } : {}) };
+      const form = { ...slotForm, sectionId: s.placeLast ? null : sectionId, ...(merging ? { multiOptions: mergedOptions.options } : {}) };
       const def = habitFormDefinition(form);
       if (def.notice) return def;
       result = await persistHabitForm(form, def);
@@ -10803,7 +10829,7 @@ async function createFromTemplate(f) {
 function templatePreviewHtml(tpl, names, answers = {}, mergeFields = []) {
   const rows = [];
   const computed = [];
-  for (const s of tpl.slots) {
+  for (const s of templateDisplaySlots(tpl)) {
     const form = templateSlotForm(tpl, s, names[s.slot] || templateSlotName(tpl, s.slot), {}, answers);
     if (form.kind === 'computed') { computed.push(form.name); continue; }
     if (form.kind === 'multi' && mergeFields.length) form.multiOptions = mergedMultiOptions(form.multiOptions, mergeFields).options;
@@ -10898,10 +10924,11 @@ function renderTemplateConfirm(f) {
     <div class="habit-form" id="habit-form">
       <h3 class="form-part-title">${t(`tpl.${tpl.id}.name`)}</h3>
       <p class="habit-form-lock-note">${t(`tpl.${tpl.id}.explain`)}</p>
-      ${tpl.slots.map((s) => `
+      ${templateDisplaySlots(tpl).map((s) => `
         <div class="auth-field">
           <label for="tpl-name-${s.slot}">${multi ? t('tpl.nameOf', { what: templateSlotName(tpl, s.slot) }) : t('habitForm.name')}</label>
           <input type="text" id="tpl-name-${s.slot}" value="${esc(tp.names[s.slot])}" maxlength="40"${tpl.blank ? ` placeholder="${esc(tPlain(`tpl.${tpl.id}.placeholder`))}"` : ''} />
+          ${s.placeLast ? `<p class="habit-form-lock-note">${t('tpl.placeLastNote')}</p>` : ''}
           ${templateSourceHtml(tpl, s, tp)}
         </div>
       `).join('')}

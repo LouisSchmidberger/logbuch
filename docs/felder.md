@@ -386,7 +386,11 @@ nur noch über "Eigenes Feld" bzw. "Anpassen". Zwei Arten:
 - **Fertige Felder**: Einstellungen, die wirklich zur Sache gehören (Stress 0–10 wenig ist gut,
   Schlaf als Gruppe mit berechneter Dauer, Zyklus mit "Tage seit").
 
-Eine Vorlage = Teile (`slots`, je ein Formular-Zustand) + optional Gruppe; angelegt über
+Eine Vorlage = Teile (`slots`, je ein Formular-Zustand) + optional Gruppe; `placeLast`-Teile
+("Ins Bett", abends eingetragen) kommen statt in die Gruppe nach ganz unten – "Heute" ist nach
+Tageszeit sortiert, die Schlafdauer steht trotzdem richtig am Morgen (über Mitternacht).
+Mehrfachauswahl-Vorlagen sagen dazu: Bewertung und Ziel gibt es nur fürs ganze Feld, was man
+einzeln bewerten will, gehört in ein eigenes Ja/Nein-Feld (Nutzer-Entscheidung 2026-10-30). angelegt über
 dieselben Bausteine wie das Formular (`habitFormDefinition`/`persistHabitForm`), damit es nur
 einen Speicherweg gibt. `'@slot'` verweist auf den Schlüssel eines vorher angelegten Teils.
 Namen in der Sprache beim Anlegen, danach normale Felder. Bestätigen zeigt die echten Zeilen

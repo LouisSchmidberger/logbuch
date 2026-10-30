@@ -235,7 +235,9 @@ Tab-Leiste/kein Menü; eine `beforeunload`-Warnung verhindert versehentliches Ve
 2. **Erstes Feld** (`renderTutorialFieldForm`): Satz, was ein Feld ist (je mehr zusammenkommt,
    desto eher sieht man Zusammenhänge), mit Schalter `templates` zuerst das **Startpaket**
    (`PACKAGE_GROUPS`, Nutzer-Entscheidung 2026-10-30): ein ausgereifter Satz Felder in Gruppen
-   (Schlaf, Befinden, Einflüsse, Sonstiges) zum An-/Abwählen, statt dass Neulinge selbst
+   nach Tageszeit des Eintragens (Morgens, Befinden, Einflüsse, Sonstiges ohne Gruppe, "Ins Bett"
+   allein in "Abends" ganz unten) zum An-/Abwählen. Sport und Alkohol als eigene Ja/Nein-Felder
+   (Bewertung, Ziel), "Was war heute?" nur mit Kontext ohne Wertung, statt dass Neulinge selbst
    verantworten, alles anzulegen. Die Texte sagen ausdrücklich: nur ein Vorschlag, anpassen,
    Eigenes überlegen und anlegen (Kasten "Was spielt bei dir noch eine Rolle?") – nichts
    vorschreiben, nur anregen. "Lieber einzeln auswählen" führt zu den Vorlagen (mit Karte
