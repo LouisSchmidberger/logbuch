@@ -1394,6 +1394,10 @@
   /* Gruppen-Formular: die Erinnerungszeit klar von der Mitglieder-Checkliste darüber absetzen */
   .section-form-reminder { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 20px; }
   .checkbox-field input { margin: 0; }
+  /* Vorlage "Was war heute?": Ja/Nein-Felder hineinnehmen (templateMergeHtml) */
+  .tpl-merge { border: 0; padding: 0; margin: 0.75rem 0 0; }
+  .tpl-merge legend { padding: 0; font-size: 0.875rem; color: var(--sand); }
+  .tpl-merge .checkbox-field { margin: 0.5rem 0; }
   /* Tipp-Kasten im Tutorial-Formular (renderHabitForm, f.revealStage). */
   .form-tip {
     display: flex; align-items: flex-start; gap: 0.25rem; margin: 0.75rem 0; padding: 0.75rem;
@@ -1493,6 +1497,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=321e7b79b2"></script>
+<script type="module" src="./logbuch.js?v=ed6d10b3d5"></script>
 </body>
 </html>

@@ -2119,6 +2119,14 @@ const STRINGS = {
     'tpl.takeNote.counter': '„{name}“ wird ein Zähler, seine Einträge bleiben. Leere Tage zählen erst ab heute als 0.',
     'tpl.replaceNote': '„{name}“ wird archiviert und bleibt in der Auswertung sichtbar. Das neue Feld beginnt ab heute.',
     'tpl.error.sameField': 'Ein Feld kann nur einen Teil der Vorlage übernehmen.',
+    'tpl.merge': 'Ja/Nein-Felder hineinnehmen',
+    'tpl.mergeHint': 'Jedes angekreuzte Feld wird eine Option, deine Einträge kommen mit.',
+    'tpl.mergeNote': 'Jedes wird eine Option, deine Einträge kommen mit: „Ja“ wird angekreuzt. Die alten Felder werden archiviert und bleiben in der Auswertung sichtbar.',
+    'tpl.mergeProgress': 'Einträge werden übernommen: {done} von {total} Tagen',
+    'tpl.merged': 'Angelegt: {names} – darin aufgegangen: {fields}',
+    'tpl.mergeUndone': 'Rückgängig gemacht – die alten Felder sind wieder da.',
+    'tpl.error.mergeTooMany': 'Höchstens {max} Optionen – nimm weniger Felder hinein.',
+    'tpl.error.merge': 'Nicht alle Einträge ließen sich übernehmen. Es wurde nichts geändert – versuch es bitte nochmal.',
     'tpl.followUp.steps': 'Fast fertig: stell jetzt noch die Stufen von „{name}“ um.',
     'tpl.followUp.type': 'Fast fertig: wandle „{name}“ jetzt noch in den neuen Typ um.',
     'textReview.countOne': '1 Eintrag',
@@ -3218,6 +3226,14 @@ const STRINGS = {
     'tpl.takeNote.counter': '“{name}” becomes a counter, its entries stay. Empty days count as 0 only from today on.',
     'tpl.replaceNote': '“{name}” is archived and stays visible in the evaluation. The new field starts today.',
     'tpl.error.sameField': 'A field can only fill one part of the template.',
+    'tpl.merge': 'Add yes/no fields to it',
+    'tpl.mergeHint': 'Each field you tick becomes an option, your entries come along.',
+    'tpl.mergeNote': 'Each becomes an option, your entries come along: “Yes” gets ticked. The old fields are archived and stay visible in the evaluation.',
+    'tpl.mergeProgress': 'Moving entries: {done} of {total} days',
+    'tpl.merged': 'Created: {names} – merged into it: {fields}',
+    'tpl.mergeUndone': 'Undone – the old fields are back.',
+    'tpl.error.mergeTooMany': 'At most {max} options – add fewer fields.',
+    'tpl.error.merge': 'Not all entries could be moved. Nothing was changed – please try again.',
     'tpl.followUp.steps': 'Almost done: now change the steps of “{name}”.',
     'tpl.followUp.type': 'Almost done: now convert “{name}” to its new type.',
     'textReview.countOne': '1 entry',
@@ -5798,6 +5814,30 @@ async function startStepChangeUndo(defId) {
 // Schreibt alle noch offenen Tage einer laufenden Umstellung (bzw. Rückgängig) und setzt danach
 // die Definition. Rückgabe: true = fertig. Fortschritt direkt ins DOM (#step-change-progress),
 // ohne render() je Tag.
+// Schreibt viele Tage um (Stufen/Typ ändern, Felder zusammenführen): transform(day, dateKey) gibt
+// den neuen Tag zurück, je STEP_CHANGE_PARALLEL Tage gleichzeitig. Ein nicht gespeicherter Tag
+// bekommt seinen alten Stand zurück - sonst hielte ein zweiter Lauf ihn für fertig.
+async function rewriteDays(dateKeys, transform, onProgress = () => {}) {
+  let done = 0, failed = 0;
+  const queue = [...dateKeys];
+  onProgress(0, dateKeys.length);
+  const worker = async () => {
+    while (queue.length) {
+      const dateKey = queue.shift();
+      const before = state.entries[dateKey] || {};
+      const changed = transform(before, dateKey);
+      state.entries = { ...state.entries, [dateKey]: changed };
+      if (await saveDay(dateKey)) done++;
+      else {
+        failed++;
+        if (state.entries[dateKey] === changed) state.entries = { ...state.entries, [dateKey]: before };
+      }
+      onProgress(done + failed, dateKeys.length);
+    }
+  };
+  await Promise.all(Array.from({ length: STEP_CHANGE_PARALLEL }, worker));
+  return { done, failed };
+}
 async function runStepChange(defId) {
   if (stepChangeRunning.has(defId)) return false;
   let h = state.habits.find((x) => x.defId === defId);
@@ -5829,29 +5869,10 @@ async function runStepChange(defId) {
       }
       return next;
     };
-    let done = 0, failed = 0;
-    const queue = [...todo];
-    const showProgress = () => {
+    const { failed } = await rewriteDays(todo, transform, (done, total) => {
       const el = document.getElementById('step-change-progress');
-      if (el) el.textContent = tPlain('stepEdit.progress', { done: done + failed, total: todo.length });
-    };
-    showProgress();
-    const worker = async () => {
-      while (queue.length) {
-        const dateKey = queue.shift();
-        const before = state.entries[dateKey];
-        const changed = transform(before);
-        state.entries = { ...state.entries, [dateKey]: changed };
-        if (await saveDay(dateKey)) done++;
-        else {
-          failed++;
-          // Nicht gespeichert: den alten Stand zurück, sonst hielte der nächste Lauf den Tag für fertig.
-          if (state.entries[dateKey] === changed) state.entries = { ...state.entries, [dateKey]: before };
-        }
-        showProgress();
-      }
-    };
-    await Promise.all(Array.from({ length: STEP_CHANGE_PARALLEL }, worker));
+      if (el) el.textContent = tPlain('stepEdit.progress', { done, total });
+    });
     if (failed) return false;
     h = state.habits.find((x) => x.defId === defId);
     if (!h) return false;
@@ -10297,6 +10318,8 @@ function readTemplateFromDom(f) {
   if (groupNameEl) tp.groupName = groupNameEl.value;
   const unitEl = document.getElementById('tpl-unit');
   if (unitEl) tp.answers.unit = unitEl.value;
+  const mergeEls = [...document.querySelectorAll('[id^="tpl-merge-"][data-def]')];
+  if (mergeEls.length) tp.merge = mergeEls.filter((el) => el.checked).map((el) => el.dataset.def);
   tp.sources ??= {};
   for (const slot of Object.keys(tp.names)) {
     const el = document.getElementById(`tpl-source-${slot}`);
@@ -10390,6 +10413,75 @@ function openTemplateFollowUp(fu) {
   state.notice = { type: 'ok', text: tPlain(fu.mode === 'steps' ? 'tpl.followUp.steps' : 'tpl.followUp.type', { name: h.name }) };
 }
 
+// Ja/Nein-Felder in einer Mehrfachauswahl aufgehen lassen (Nutzer-Entscheidung 2026-10-30): jedes
+// Feld wird eine Option (eine gleichnamige vorhandene Option wird mitbenutzt), pro Tag "Ja" =
+// angekreuzt, "Nein" = eingetragen, aber nicht angekreuzt; Tage ohne Antwort bleiben leer. Die
+// alten Felder werden unverändert archiviert (in der Auswertung sichtbar) - sie sind zugleich die
+// Sicherung. Rückgängig nur direkt danach über die Meldung.
+function isYesNoField(h) { return h.kind === 'scale' && h.max - h.min === 1 && !h.archivedAt && !isPeriodField(h); }
+// Welcher Wert "Ja" ist: steht "Ja" vorn (Bezeichnungen andersherum), die untere Stufe, sonst die obere.
+function yesValueOf(h) { return /^(ja|yes)$/i.test((h.labels?.[0] || '').trim()) ? h.min : h.max; }
+function templateMergeCandidates(tp) {
+  const taken = new Set(Object.values(tp.sources || {}).map((v) => v.split(':')[1]).filter(Boolean));
+  return state.habits.filter((h) => isYesNoField(h) && !taken.has(h.defId));
+}
+function templateMergeFields(tp) {
+  const candidates = templateMergeCandidates(tp);
+  return (tp.merge || []).map((id) => candidates.find((h) => h.defId === id)).filter(Boolean);
+}
+// Optionen nach dem Zusammenführen und welches Feld zu welcher Option wird.
+function mergedMultiOptions(base, fields) {
+  const options = base.map((o) => ({ ...o }));
+  const idOf = new Map();
+  for (const h of fields) {
+    const label = h.name.trim().replace(/\s*\?+$/, '') || h.name.trim();
+    let option = options.find((o) => o.label.trim().toLocaleLowerCase() === label.toLocaleLowerCase());
+    if (!option) options.push(option = { id: newMultiOptionId(), label });
+    else delete option.hidden;
+    idOf.set(h.defId, option.id);
+  }
+  return { options, idOf };
+}
+// Schreibt die Antworten der Felder als Optionen in die Mehrfachauswahl. before: alter Wert pro Tag.
+async function mergeIntoMulti(multi, fields, idOf, onProgress) {
+  const answered = (day) => fields.filter((h) => typeof day?.[h.id] === 'number');
+  const todo = Object.keys(state.entries).filter((k) => answered(state.entries[k]).length);
+  const before = Object.fromEntries(todo.map((k) => [k, state.entries[k][multi.id]]));
+  const { failed } = await rewriteDays(todo, (day) => {
+    const prev = Array.isArray(day[multi.id]) ? day[multi.id] : [];
+    const yes = answered(day).filter((h) => day[h.id] === yesValueOf(h)).map((h) => idOf.get(h.defId));
+    return { ...day, [multi.id]: [...new Set([...prev, ...yes])] };
+  }, onProgress);
+  return { before, failed };
+}
+// m = { defId, created, before, oldOptions, archived: [{ defId, inStats }] }
+async function undoTemplateMerge(m) {
+  const multi = state.habits.find((h) => h.defId === m.defId);
+  if (multi && m.created) await handleHabitDelete(m.defId);
+  else if (multi) {
+    await rewriteDays(Object.keys(m.before), (day, dateKey) => {
+      const next = { ...day };
+      if (m.before[dateKey] === undefined) delete next[multi.id];
+      else next[multi.id] = m.before[dateKey];
+      return next;
+    });
+    await updateHabitPayload(multi, { options: m.oldOptions });
+  }
+  for (const a of m.archived) {
+    if (!(await handleHabitArchive(a.defId, false))) continue;
+    const h = state.habits.find((x) => x.defId === a.defId);
+    if (h && !!h.archivedInStats !== a.inStats) await updateHabitPayload(h, { archivedInStats: a.inStats });
+  }
+}
+async function archiveIntoStats(defId) {
+  const h = state.habits.find((x) => x.defId === defId);
+  const entry = { defId, inStats: !!h?.archivedInStats };
+  if (!(await handleHabitArchive(defId, true))) return null;
+  const archived = state.habits.find((x) => x.defId === defId);
+  if (archived && !archived.archivedInStats) await updateHabitPayload(archived, { archivedInStats: true });
+  return entry;
+}
+
 // Anlegen: erst die Gruppe, dann die Teile in ihrer Reihenfolge. Scheitert ein Teil, bleibt das
 // schon Angelegte stehen (normale Felder, einzeln zu bearbeiten oder zu archivieren).
 async function createFromTemplate(f) {
@@ -10408,12 +10500,17 @@ async function createFromTemplate(f) {
   const sources = tpl.slots.map((s) => templateSourceOf(tp, s.slot));
   const chosen = sources.filter((x) => x.habit).map((x) => x.habit.defId);
   if (new Set(chosen).size !== chosen.length) return { notice: { type: 'error', text: t('tpl.error.sameField') } };
+  const mergeFields = templateMergeFields(tp);
   const refs = {};
   const habits = [];
   let followUp = null;
+  let merged = null;
   for (const [i, s] of tpl.slots.entries()) {
     const { how, habit: old } = sources[i];
     const slotForm = templateSlotForm(tpl, s, names[i], refs, tp.answers);
+    const merging = slotForm.kind === 'multi' && mergeFields.length;
+    const mergedOptions = merging ? mergedMultiOptions(how === 'take' && old ? old.options || [] : slotForm.multiOptions, mergeFields) : null;
+    if (mergedOptions && mergedOptions.options.length > MULTI_MAX_OPTIONS) return { notice: { type: 'error', text: t('tpl.error.mergeTooMany', { max: MULTI_MAX_OPTIONS }) } };
     let result;
     if (how === 'take' && old) {
       const mode = templateTakeMode(slotForm, old);
@@ -10421,31 +10518,52 @@ async function createFromTemplate(f) {
       // Ohne Gruppe in der Vorlage bleibt ein übernommenes Feld, wo es ist.
       result = await takeIntoTemplate(old, slotForm, mode, tpl.group || tp.group !== 'none' ? sectionId : old.sectionId);
       if (result.followUp) followUp = result.followUp;
+      if (!result.notice && merging) {
+        if (!(await updateHabitPayload(result.habit, { options: mergedOptions.options }))) return { notice: { type: 'error', text: t('tpl.error.merge') } };
+        result.habit = state.habits.find((x) => x.defId === result.habit.defId);
+      }
     } else {
-      const form = { ...slotForm, sectionId };
+      const form = { ...slotForm, sectionId, ...(merging ? { multiOptions: mergedOptions.options } : {}) };
       const def = habitFormDefinition(form);
       if (def.notice) return def;
       result = await persistHabitForm(form, def);
-      if (!result.notice && how === 'replace' && old) {
-        await handleHabitArchive(old.defId, true);
-        const archived = state.habits.find((x) => x.defId === old.defId);
-        if (archived && !archived.archivedInStats) await updateHabitPayload(archived, { archivedInStats: true });
-      }
     }
     if (result.notice) return result;
+    if (merging) {
+      merged = { defId: result.habit.defId, created: how !== 'take', before: {}, oldOptions: old?.options, archived: [], names: mergeFields.map((h) => h.name) };
+      const { before, failed } = await mergeIntoMulti(result.habit, mergeFields, mergedOptions.idOf, (done, total) => {
+        const el = document.getElementById('tpl-merge-progress');
+        if (el) el.textContent = tPlain('tpl.mergeProgress', { done, total });
+      });
+      merged.before = before;
+      if (failed) {
+        // Halb übernommen hilft niemandem: alles zurück, die alten Felder bleiben, wie sie sind.
+        await undoTemplateMerge(merged);
+        return { notice: { type: 'error', text: t('tpl.error.merge') } };
+      }
+      for (const h of mergeFields) {
+        const entry = await archiveIntoStats(h.defId);
+        if (entry) merged.archived.push(entry);
+      }
+    }
+    if (how === 'replace' && old) {
+      const entry = await archiveIntoStats(old.defId);
+      if (entry && merged) merged.archived.push(entry);
+    }
     refs[s.slot] = result.habit.id;
     habits.push(result.habit);
   }
-  return { habits, followUp };
+  return { habits, followUp, merged };
 }
 // Vorschau: die Zeilen wie in "Heute", aber inert (nicht antippbar, nichts wird gespeichert).
 // Berechnete Teile nur als Text - ihr Wert hängt an den noch nicht angelegten Feldern.
-function templatePreviewHtml(tpl, names, answers = {}) {
+function templatePreviewHtml(tpl, names, answers = {}, mergeFields = []) {
   const rows = [];
   const computed = [];
   for (const s of tpl.slots) {
     const form = templateSlotForm(tpl, s, names[s.slot] || templateSlotName(tpl, s.slot), {}, answers);
     if (form.kind === 'computed') { computed.push(form.name); continue; }
+    if (form.kind === 'multi' && mergeFields.length) form.multiOptions = mergedMultiOptions(form.multiOptions, mergeFields).options;
     const def = habitFormDefinition({ ...form, sinceSource: null });
     if (def.notice) continue;
     const h = habitFromParts({ id: `tpl-${s.slot}`, kind: def.fields.kind, schedule: null, reminder_minute: null, period: 'day', created_at: new Date().toISOString() },
@@ -10498,7 +10616,30 @@ function templateSourceHtml(tpl, s, tp) {
       ${replace.length && slotForm.kind !== 'computed' ? `<optgroup label="${esc(tPlain('tpl.sourceReplace'))}">${replace.map((h) => opt(`replace:${h.defId}`, h)).join('')}</optgroup>` : ''}
     </select>
     ${note ? `<p class="habit-form-lock-note">${esc(note)}</p>` : ''}
+    ${slotForm.kind === 'multi' ? templateMergeHtml(tp) : ''}
   `;
+}
+function templateMergeHtml(tp) {
+  const candidates = templateMergeCandidates(tp);
+  if (!candidates.length) return '';
+  const chosen = templateMergeFields(tp).map((h) => h.defId);
+  return `
+    <fieldset class="tpl-merge">
+      <legend class="tpl-source-label">${t('tpl.merge')}</legend>
+      ${candidates.map((h) => `
+        <label class="checkbox-field">
+          <input type="checkbox" id="tpl-merge-${h.defId}" data-def="${h.defId}" ${chosen.includes(h.defId) ? 'checked' : ''} />
+          ${esc(h.name)}
+        </label>
+      `).join('')}
+      <p class="habit-form-lock-note">${t(chosen.length ? 'tpl.mergeNote' : 'tpl.mergeHint')}</p>
+    </fieldset>
+  `;
+}
+// "Anpassen" baut ein neues Feld im Formular - mit vorhandenen Feldern (übernehmen, ersetzen,
+// hineinnehmen) gibt es das deshalb nicht, sonst gingen diese Angaben still verloren.
+function templateUsesExisting(tp) {
+  return Object.values(tp.sources || {}).some((v) => v !== 'new') || templateMergeFields(tp).length > 0;
 }
 function renderTemplateConfirm(f) {
   const tp = f.template;
@@ -10545,13 +10686,14 @@ function renderTemplateConfirm(f) {
       ` : ''}
       <div class="auth-field">
         <span class="settings-label">${t('tpl.preview')}</span>
-        ${templatePreviewHtml(tpl, tp.names, tp.answers)}
+        ${templatePreviewHtml(tpl, tp.names, tp.answers, templateMergeFields(tp))}
       </div>
+      ${state.habitFormSaving && templateMergeFields(tp).length ? '<p class="habit-form-lock-note" id="tpl-merge-progress" role="status"></p>' : ''}
       <div class="habit-form-actions">
         <button type="button" class="habit-form-cancel" data-action="tpl-back">${t('tpl.back')}</button>
         <button type="button" class="auth-submit" data-action="tpl-create" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t('tpl.create')}</button>
       </div>
-      ${multi ? '' : `<button type="button" class="manage-btn tpl-adjust" data-action="tpl-adjust">${t('tpl.adjust')}</button>`}
+      ${multi || templateUsesExisting(tp) ? '' : `<button type="button" class="manage-btn tpl-adjust" data-action="tpl-adjust">${t('tpl.adjust')}</button>`}
     </div>
   `;
 }
@@ -12730,6 +12872,21 @@ app.addEventListener('click', async (e) => {
     else if (result.followUp) {
       closeHabitForm();
       openTemplateFollowUp(result.followUp);
+    } else if (result.merged) {
+      closeHabitForm();
+      const m = result.merged;
+      state.notice = {
+        type: 'ok',
+        text: tPlain('tpl.merged', { names: result.habits.map((h) => h.name).join(', '), fields: m.names.join(', ') }),
+        action: {
+          label: t('notice.undo'),
+          run: async () => {
+            await undoTemplateMerge(m);
+            state.notice = { type: 'ok', text: tPlain('tpl.mergeUndone') };
+            render();
+          },
+        },
+      };
     } else {
       closeHabitForm();
       state.notice = { type: 'ok', text: tPlain('tpl.created', { names: result.habits.map((h) => h.name).join(', ') }) };
@@ -12987,9 +13144,11 @@ app.addEventListener('change', async (e) => {
   // Berechnetes Feld aus Zahlen: nach jeder Mitglieder-Änderung neu rendern, damit Felder mit anderer
   // Einheit gesperrt bzw. wieder freigegeben werden (siehe computedBody).
   // "Tage seit": anderes Quellfeld -> andere Stufen zur Auswahl.
-  if ((e.target.id === 'tpl-group' || e.target.id?.startsWith('tpl-source-')) && state.habitForm?.template) {
+  if ((e.target.id === 'tpl-group' || e.target.id?.startsWith('tpl-source-') || e.target.id?.startsWith('tpl-merge-')) && state.habitForm?.template) {
+    const id = e.target.id;
     readTemplateFromDom(state.habitForm);
     render();
+    if (id.startsWith('tpl-merge-')) document.getElementById(id)?.focus();
     return;
   }
   if (e.target.id === 'habit-form-since-source' && state.habitForm) {
