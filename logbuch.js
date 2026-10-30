@@ -5151,19 +5151,16 @@ async function handleHabitSave() {
   }
 }
 
-async function handleHabitSaveInner() {
-  const f = state.habitForm;
-  // Muss VOR jedem möglichen frühen Return (Validierungsfehler) passieren — sonst baut
-  // render() das Formular aus dem noch nicht synchronisierten (veralteten) f neu auf und
-  // wirft dabei unbeteiligte, bereits eingegebene Werte weg (wirkte wie zufälliger Reset).
-  syncHabitFormFromDom();
-  const name = (document.getElementById('habit-form-name')?.value || '').trim();
+// Aus einem Formular-Zustand die zu speichernde Definition - nur aus f, nie aus der Seite
+// (das Formular liest syncHabitFormFromDom vorher ein), damit Vorlagen dieselben Felder anlegen
+// wie das Formular, ohne dass es angezeigt wird. -> { name, fields, period, periodReminderDay,
+// reminderTimes, reminderBelow } oder { notice } bei einer ungültigen Eingabe.
+function habitFormDefinition(f) {
+  const name = f.name.trim();
   if (!name) {
-    state.notice = { type: 'error', text: t('habitForm.error.nameRequired') };
-    return;
+    return { notice: { type: 'error', text: t('habitForm.error.nameRequired') } };
   }
 
-  const isInsert = !f.defId;
   // Mehrere Zeiten nur bei Tagesfeldern; Zähler-Zeitraumfelder erinnern gar nicht (siehe
   // habitFormReminderShown). Doppelte Zeiten fallen still weg, sortiert wird erst hier (beim
   // Umsortieren während der Eingabe spränge die gerade bearbeitete Zeile weg).
@@ -5183,12 +5180,10 @@ async function handleHabitSaveInner() {
       : reminderBelow.some((x, i) => i > 0 && x < reminderBelow[i - 1]) ? 'habitForm.error.reminderBelowOrder'
       : null;
     if (error) {
-      state.notice = { type: 'error', text: t(error) };
-      return;
+      return { notice: { type: 'error', text: t(error) } };
     }
   }
 
-  readGoalFromDom(f);
   // Ziel-Quote ergibt bei "Keine Wertung" keinen Sinn (kein Gut/Schlecht zum Stauchen)
   // - das Formularfeld ist dann versteckt (siehe scaleBody), aber f.goal könnte noch einen
   // alten Wert von vor dem Umschalten auf "Keine Wertung" tragen.
@@ -5209,15 +5204,13 @@ async function handleHabitSaveInner() {
       : options.filter((o) => !o.hidden).length < 2 ? 'habitForm.error.multiMin'
       : null;
     if (error) {
-      state.notice = { type: 'error', text: t(error) };
-      return;
+      return { notice: { type: 'error', text: t(error) } };
     }
     fields = { kind: 'multi', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null, options };
   } else if (f.kind === 'computed' && f.computedType === 'duration') {
     const isTimeField = (key) => state.habits.some((h) => h.id === key && isTimeKind(h));
     if (!isTimeField(f.durationFrom) || !isTimeField(f.durationTo) || f.durationFrom === f.durationTo) {
-      state.notice = { type: 'error', text: t('habitForm.error.durationMembers') };
-      return;
+      return { notice: { type: 'error', text: t('habitForm.error.durationMembers') } };
     }
     fields = { kind: 'computed', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: [f.durationFrom, f.durationTo], goal_threshold: null, aggregate: 'duration' };
   } else if (f.kind === 'computed' && f.computedType === 'since') {
@@ -5226,44 +5219,37 @@ async function handleHabitSaveInner() {
     const values = stages ? f.sinceValues.filter((v) => v >= src.min && v <= src.max) : null;
     const atLeast = src && !stages ? Number(String(f.sinceAtLeast).replace(',', '.')) : null;
     if (!src || (stages ? !values.length : !Number.isFinite(atLeast))) {
-      state.notice = { type: 'error', text: t('habitForm.error.sinceSource') };
-      return;
+      return { notice: { type: 'error', text: t('habitForm.error.sinceSource') } };
     }
     fields = { kind: 'computed', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: [src.id], goal_threshold: null, aggregate: 'since',
       since: { values, atLeast, mode: f.sinceMode === 'start' ? 'start' : 'last' } };
   } else if (f.kind === 'number' || f.kind === 'counter') {
-    const unit = (document.getElementById('habit-form-unit')?.value || '').trim();
+    const unit = (f.unit || '').trim();
     if (f.kind === 'counter') {
-      const stepEl = document.getElementById('habit-form-step');
-      const step = Number(String(stepEl ? stepEl.value : f.step).replace(',', '.'));
+      const step = Number(String(f.step).replace(',', '.'));
       if (!Number.isFinite(step) || step <= 0 || step > 1000) {
-        state.notice = { type: 'error', text: t('habitForm.error.counterStep') };
-        return;
+        return { notice: { type: 'error', text: t('habitForm.error.counterStep') } };
       }
       f.step = step;
     }
     // Ziel: "mindestens/höchstens X" - mit Richtung braucht es eine Zahl (bei "mindestens" > 0).
-    const goalEl = document.getElementById('habit-form-numgoal-value');
-    const goalRaw = goalEl ? goalEl.value : f.numberGoalValue;
+    const goalRaw = f.numberGoalValue;
     const target = f.numberGoalDir ? Number(String(goalRaw).replace(',', '.')) : null;
     if (f.numberGoalDir && (!Number.isFinite(target) || target < 0 || (f.numberGoalDir === 'high' && target === 0))) {
-      state.notice = { type: 'error', text: t('habitForm.error.numberGoal') };
-      return;
+      return { notice: { type: 'error', text: t('habitForm.error.numberGoal') } };
     }
     fields = { kind: f.kind, min: null, max: null, labels: null, good: f.numberGoalDir, target, unit: unit || null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
   } else if (f.kind === 'computed') {
-    const memberKeys = [...document.querySelectorAll('[data-member-key]:checked')].map((el) => el.dataset.memberKey);
+    const memberKeys = f.members.filter((key) => state.habits.some((h) => h.id === key));
     if (memberKeys.length < 2) {
-      state.notice = { type: 'error', text: t('habitForm.error.minComputedMembers') };
-      return;
+      return { notice: { type: 'error', text: t('habitForm.error.minComputedMembers') } };
     }
     const isNumber = f.computedType === 'number';
     if (isNumber) {
       // Das Formular sperrt Felder mit anderer Einheit schon - hier nur als letzte Absicherung.
       const units = new Set(memberKeys.map((key) => (state.habits.find((h) => h.id === key)?.unit || '').trim()));
       if (units.size > 1) {
-        state.notice = { type: 'error', text: t('habitForm.error.computedUnitMismatch') };
-        return;
+        return { notice: { type: 'error', text: t('habitForm.error.computedUnitMismatch') } };
       }
     }
     fields = { kind: 'computed', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: memberKeys, goal_threshold: goalThreshold, aggregate: isNumber ? f.aggregate : null };
@@ -5281,12 +5267,10 @@ async function handleHabitSaveInner() {
       // Die Stufenzahl ändert nur "Stufen ändern" (startStepChange) - hier im Formular sind
       // Buttons/Bezeichnungen für so ein Feld also nicht wählbar. Das Formular sperrt beides
       // schon (scaleBody).
-      state.notice = { type: 'error', text: tPlain('habitForm.lockedStepCap', { steps: stepCount, cap: CHOICE_STEP_CAP }) };
-      return;
+      return { notice: { type: 'error', text: tPlain('habitForm.lockedStepCap', { steps: stepCount, cap: CHOICE_STEP_CAP }) } };
     }
     if (f.labelsEnabled && (f.labels.length !== stepCount || f.labels.some((l) => !l.trim()))) {
-      state.notice = { type: 'error', text: t('habitForm.error.fillAllLabels') };
-      return;
+      return { notice: { type: 'error', text: t('habitForm.error.fillAllLabels') } };
     }
     fields = { kind: 'scale', min: original.min, max: original.max, labels: f.labelsEnabled ? f.labels : null, good: f.good, unit: null, display_style: f.displayStyle, slider_show_value: f.sliderShowValue, group_members: null, goal_threshold: goalThreshold };
   } else {
@@ -5294,26 +5278,20 @@ async function handleHabitSaveInner() {
     // wahlweise bei 0 (Schmerz/Stress "0 bis 10", Nutzer-Entscheidung 2026-10-11). Mit
     // eigenen Bezeichnungen sieht man die Zahlen nie - dort immer 1.
     const min = !f.labelsEnabled && f.min === 0 ? 0 : 1;
-    const stepsEl = document.getElementById('habit-form-steps');
-    const steps = Math.round(Number(stepsEl ? stepsEl.value : habitFormStepCount(f)));
+    const steps = Math.round(habitFormStepCount(f));
     const isSlider = f.displayStyle === 'slider';
     const stepCap = habitFormStepCap(f);
     if (!Number.isFinite(steps) || steps < 2 || steps > stepCap) {
-      state.notice = { type: 'error', text: tPlain('habitForm.error.stepsRange', { max: stepCap }) };
-      return;
+      return { notice: { type: 'error', text: tPlain('habitForm.error.stepsRange', { max: stepCap }) } };
     }
     const max = min + steps - 1;
     const displayStyle = isSlider ? 'slider' : 'buttons';
-    const showValueEl = document.getElementById('habit-form-slider-show-value');
-    const sliderShowValue = isSlider ? (showValueEl ? showValueEl.checked : f.sliderShowValue) : true;
+    const sliderShowValue = isSlider ? f.sliderShowValue : true;
     let labels = null;
     if (f.labelsEnabled) {
-      labels = [...document.querySelectorAll('[data-label-index]')]
-        .sort((a, b) => Number(a.dataset.labelIndex) - Number(b.dataset.labelIndex))
-        .map((el) => el.value.trim());
+      labels = resizeLabels(f.labels, steps).map((l) => String(l ?? '').trim());
       if (labels.length !== steps || labels.some((l) => !l)) {
-        state.notice = { type: 'error', text: t('habitForm.error.fillAllLabels') };
-        return;
+        return { notice: { type: 'error', text: t('habitForm.error.fillAllLabels') } };
       }
     }
     fields = { kind: 'scale', min, max, labels, good: f.good, unit: null, display_style: displayStyle, slider_show_value: sliderShowValue, group_members: null, goal_threshold: goalThreshold };
@@ -5325,7 +5303,6 @@ async function handleHabitSaveInner() {
   // Zeitraum-Felder: keine Wiederholung, keine Gruppe, nie "Berechnet" (DB-Check
   // habit_definitions_period_combination_check). Der Erinnerungstag als null, wenn er dem
   // Standard entspricht (Sonntag / letzter Tag / 31.12.) - eine Darstellung für "Standard".
-  readPeriodReminderFromDom(f);
   // Uhrzeiten nur als Tagesfeld - "ins Bett" einmal pro Woche ergibt keinen Sinn. Mehrfachauswahl
   // vorerst auch (ihre Auswertung zählt Tage).
   const period = f.kind === 'computed' || f.kind === 'time' || f.kind === 'multi' ? 'day' : f.period;
@@ -5336,11 +5313,26 @@ async function handleHabitSaveInner() {
   } else {
     const result = formToSchedule(f.schedule);
     if (result.error) {
-      state.notice = { type: 'error', text: t(result.error) };
-      return;
+      return { notice: { type: 'error', text: t(result.error) } };
     }
     fields.schedule = result.schedule;
   }
+
+  return { name, fields, period, periodReminderDay, reminderTimes, reminderBelow };
+}
+
+async function handleHabitSaveInner() {
+  const f = state.habitForm;
+  // Muss VOR jedem möglichen frühen Return (Validierungsfehler) passieren — sonst baut
+  // render() das Formular aus dem noch nicht synchronisierten (veralteten) f neu auf und
+  // wirft dabei unbeteiligte, bereits eingegebene Werte weg (wirkte wie zufälliger Reset).
+  syncHabitFormFromDom();
+  const def = habitFormDefinition(f);
+  if (def.notice) {
+    state.notice = def.notice;
+    return;
+  }
+  const { name, fields, period, periodReminderDay, reminderTimes, reminderBelow } = def;
 
   // Alles Inhaltliche verschlüsselt in enc (siehe habitFromParts), im Klartext nur, was
   // die Erinnerungen brauchen. Immer die vollständige payload - bei gesperrten Feldern
