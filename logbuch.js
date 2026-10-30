@@ -2218,6 +2218,7 @@ const STRINGS = {
     'tutorial.reminders.howInstall': 'So holst du Logbuch auf den Home-Bildschirm',
     'tutorial.field.title': 'Was möchtest du festhalten?',
     'tutorial.field.intro': 'Ein <strong>Feld</strong> ist eine Sache, die du jeden Tag einträgst – zum Beispiel deine Stimmung oder ob du Sport gemacht hast. Leg jetzt dein erstes an; das Formular hier ist dasselbe, mit dem du später weitere Felder anlegst.',
+    'tutorial.field.introTpl': 'Ein <strong>Feld</strong> ist eine Sache, die du jeden Tag einträgst – zum Beispiel deine Stimmung oder ob du Sport gemacht hast. Such dir eine Vorlage aus oder leg ein eigenes Feld an; genauso legst du später weitere an.',
     'tutorial.examples.title': 'Beispiele ansehen',
     'tutorial.examples.intro': 'So sehen Felder später in „Heute“ aus – nur zum Anschauen:',
     'tutorial.examples.mood': 'Stimmung',
@@ -3325,6 +3326,7 @@ const STRINGS = {
     'tutorial.reminders.howInstall': 'How to put Logbuch on your home screen',
     'tutorial.field.title': 'What would you like to track?',
     'tutorial.field.intro': 'A <strong>field</strong> is one thing you enter every day – for example your mood or whether you exercised. Create your first one now; this form is the same one you will use later for more fields.',
+    'tutorial.field.introTpl': 'A <strong>field</strong> is one thing you enter every day – for example your mood or whether you exercised. Pick a template or create your own field; you add more fields the same way later.',
     'tutorial.examples.title': 'See examples',
     'tutorial.examples.intro': 'This is how fields will look in “Today” later – just to look at:',
     'tutorial.examples.mood': 'Mood',
@@ -10579,7 +10581,7 @@ function renderTemplatePicker(f) {
   const card = (action, attrs, title, note) => `<button type="button" class="kind-card tpl-card" data-action="${action}"${attrs}><span class="kind-card-title">${title}</span><span class="kind-card-note">${note}</span></button>`;
   return `
     <div class="habit-form" id="habit-form">
-      <h3 class="form-part-title tpl-question">${t('tpl.question')}</h3>
+      ${f.revealStage !== undefined ? '' : `<h3 class="form-part-title tpl-question">${t('tpl.question')}</h3>`}
       <div class="kind-cards tpl-cards">${card('tpl-custom', '', t('tpl.custom'), t('tpl.customNote'))}</div>
       ${TEMPLATE_TOPICS.map((topic) => `
         <section class="form-part" aria-labelledby="tpl-topic-${topic}">
@@ -10595,6 +10597,7 @@ function renderTemplatePicker(f) {
 // "Hast du so ein Feld schon?": übernehmbare Felder (Einträge bleiben) und alle übrigen zum
 // Ersetzen. Nur, wenn es überhaupt aktive Tagesfelder gibt.
 function templateSourceHtml(tpl, s, tp) {
+  if (state.habitForm?.revealStage !== undefined) return '';
   const slotForm = templateSlotForm(tpl, s, '', {}, tp.answers);
   const active = state.habits.filter((h) => !h.archivedAt && !isPeriodField(h) && (slotForm.kind === 'computed') === (h.kind === 'computed'));
   if (!active.length) return '';
@@ -11078,7 +11081,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // intern 'counter', weil der Server ihn für Erinnerungen unterscheiden muss.
   const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber']]
     .concat(tutorialForm ? [] : [['time', 'habitForm.kindTime']])
-    .concat(!tutorialForm && (featureOn('multi') || f.kind === 'multi') ? [['multi', 'habitForm.kindMulti']] : [])
+    .concat((!tutorialForm && featureOn('multi')) || f.kind === 'multi' ? [['multi', 'habitForm.kindMulti']] : [])
     .concat([['text', 'habitForm.kindText']])
     .concat(computedPossible ? [['computed', 'habitForm.kindComputed']] : []);
   // Zeitraum (Tag/Woche/Monat/Jahr): nicht im Tutorial (das erste Feld ist ein Tagesfeld) und
@@ -11524,16 +11527,16 @@ function renderTutorialReminders() {
   });
 }
 
-// Feld-Schritt: direkt das echte Feld-Formular, Stück für Stück aufgedeckt (siehe
-// renderHabitForm, f.revealStage). Keine Vorlagen/Beispiele zum Antippen (Nutzer: Vorlagen
-// erst sinnvoll, wenn man das Formular einmal selbst durchgegangen ist) - nur Ideen als
-// Text unter dem Namen.
+// Feld-Schritt: mit Schalter 'templates' zuerst die Vorlagen wie bei "Neues Feld"
+// (Nutzer-Entscheidung 2026-10-30: der ganze Ablauf geht von Vorlagen aus); "Eigenes Feld" und
+// "Anpassen" führen ins echte Feld-Formular, Stück für Stück aufgedeckt (siehe renderHabitForm,
+// f.revealStage), mit Ideen als Text unter dem Namen.
 function renderTutorialFieldForm() {
-  if (!state.habitForm) state.habitForm = { ...defaultHabitForm(), revealStage: 1 };
+  if (!state.habitForm) state.habitForm = { ...newHabitForm(), revealStage: 1 };
   return tutorialScreen({
     step: TUTORIAL_STEP_FIELD, icon: 'manage', title: t('tutorial.field.title'),
     body: `
-      <p class="tutorial-text">${t('tutorial.field.intro')}</p>
+      <p class="tutorial-text">${t(state.habitForm.template ? 'tutorial.field.introTpl' : 'tutorial.field.intro')}</p>
       ${whyBox('tutorial.field.whyTitle', 'tutorial.field.whyBody')}
       ${renderHabitForm({ titleInHeader: true })}
       ${tutorialNav({ back: true, skip: true })}
@@ -12890,7 +12893,11 @@ app.addEventListener('click', async (e) => {
     } else {
       closeHabitForm();
       state.notice = { type: 'ok', text: tPlain('tpl.created', { names: result.habits.map((h) => h.name).join(', ') }) };
-      if (state.tutorialStep === TUTORIAL_STEP_FIELD) state.tutorialStep = TUTORIAL_STEP_DONE;
+      if (state.tutorialStep === TUTORIAL_STEP_FIELD) {
+        // "Zurück" von "Geschafft" öffnet das erste angelegte Feld, nicht ein berechnetes am Ende.
+        tutorialLastFieldDefId = result.habits[0].defId;
+        state.tutorialStep = TUTORIAL_STEP_DONE;
+      }
     }
     render();
   } else if (action === 'since-value') {
@@ -13081,7 +13088,7 @@ app.addEventListener('click', async (e) => {
     render();
   } else if (action === 'tutorial-add-more') {
     state.tutorialStep = TUTORIAL_STEP_FIELD;
-    state.habitForm = { ...defaultHabitForm(), revealStage: 1 };
+    state.habitForm = { ...newHabitForm(), revealStage: 1 };
     render();
     document.getElementById('habit-form-name')?.focus();
   } else if (action === 'tutorial-finish') {

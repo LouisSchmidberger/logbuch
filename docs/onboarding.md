@@ -48,10 +48,12 @@ Der Weg vom ersten Öffnen bis zur eingerichteten App, für neue Konten.
   ausgeblendet, auch bei "Noch ein Feld anlegen" mit genug passenden Feldern (Grund nicht
   dokumentiert). Davon getrennt gilt überall: der Typ erscheint erst ab zwei passenden
   Feldern, beim allerersten Feld führte er sonst ins Leere (siehe [felder.md](felder.md)).
-  **Keine Vorlagen/Beispiele zum Antippen** – Vorlagen sind erst sinnvoll, wenn man das
-  Formular einmal selbst durchgegangen ist; nur Ideen als Text unter dem Namen und, zugeklappt,
-  "Beispiele ansehen" (`tutorialExamplesHtml`, Nutzer-Entscheidung 2026-10-28): vier Felder,
-  wie sie in "Heute" aussehen (Skala, Ja/Nein, Zähler, Text), nur als Bild.
+  **Vorlagen zuerst** (Nutzer-Entscheidung 2026-10-30, hinter dem Schalter `templates`): der
+  ganze Ablauf zum Anlegen geht von Vorlagen aus, das Tutorial zeigt deshalb dieselbe Auswahl
+  wie "Neues Feld" (siehe [felder.md](felder.md) → Vorlagen). "Eigenes Feld" und "Anpassen"
+  führen ins aufgedeckte Formular, dort Ideen als Text unter dem Namen und, zugeklappt,
+  "Beispiele ansehen" (`tutorialExamplesHtml`): vier Felder, wie sie in "Heute" aussehen, nur
+  als Bild. Vorhandene Felder einbeziehen gibt es im Tutorial nicht.
 - **"Mehr Einstellungen"** nur noch im Tutorial (Wann/Auswertung/Gruppe zugeklappt); das
   echte Formular ist stattdessen in Abschnitte gegliedert (siehe [felder.md](felder.md)).
 - **Erinnerungen**: bei Schritt für Schritt vorher eine Skizze des Erlaubnis-Dialogs (wie bei
@@ -232,7 +234,9 @@ Tab-Leiste/kein Menü; eine `beforeunload`-Warnung verhindert versehentliches Ve
    noch offen. Noch kein "Überspringen" – das erscheint erst ab dem ersten Feld.
 2. **Erstes Feld** (`renderTutorialFieldForm`): Satz, was ein Feld ist, aufklappbarer Kasten
    "Warum erst mal nur eins?" (wenige Felder sind schnell eingetragen und halten länger durch
-   als ein langer Fragebogen), dann das echte Feld-Formular, Stück für Stück aufgedeckt
+   als ein langer Fragebogen), mit Schalter `templates` erst die Vorlagen (eine Vorlage mit
+   mehreren Teilen legt alle an; "Zurück" von "Geschafft" öffnet den ersten), sonst bzw. bei
+   "Eigenes Feld" das echte Feld-Formular, Stück für Stück aufgedeckt
    (`f.revealStage`: 1 Name mit Ideen als Text darunter → 2 + Feld-Typ → 3 + Einstellungen
    zum Typ, Vorschau, "Mehr Einstellungen" (zu), "Feld anlegen"; Aktion
    `habit-reveal-next`). Ausgefülltes bleibt stehen. Je neu aufgedecktem Teil ein Tipp-Kasten

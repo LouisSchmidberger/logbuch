@@ -374,6 +374,41 @@ Gruppe steht").
   (`GROUP_TIP_MIN_FIELDS`, ausblendbar, `localStorage` `groupTipDismissed`), dazu
   `about.tip.sections`.
 
+## Vorlagen (`FIELD_TEMPLATES`, Schalter `templates`)
+
+Nutzer-Entscheidung 2026-10-30: "Neues Feld" (auch im Tutorial) beginnt mit der Auswahl
+"Was willst du festhalten?" – das volle Formular war für Neulinge die größte Hürde und gibt es
+nur noch über "Eigenes Feld" bzw. "Anpassen". Zwei Arten:
+- **Bausteine** (`blank`): ohne Namen, Beispiele nur als Platzhalter – "Ja oder Nein" passt auch
+  für Kreatin oder Sex, ein fester Name hätte das versteckt. Fragen beim Bestätigen nur, was
+  der Baustein nicht wissen kann (`ask`: "Was ist gut?" bzw. Einheit). "Mehrere ankreuzen" geht
+  direkt ins Formular (`direct`), weil die Optionen dort eingegeben werden.
+- **Fertige Felder**: Einstellungen, die wirklich zur Sache gehören (Stress 0–10 wenig ist gut,
+  Schlaf als Gruppe mit berechneter Dauer, Zyklus mit "Tage seit").
+
+Eine Vorlage = Teile (`slots`, je ein Formular-Zustand) + optional Gruppe; angelegt über
+dieselben Bausteine wie das Formular (`habitFormDefinition`/`persistHabitForm`), damit es nur
+einen Speicherweg gibt. `'@slot'` verweist auf den Schlüssel eines vorher angelegten Teils.
+Namen in der Sprache beim Anlegen, danach normale Felder. Bestätigen zeigt die echten Zeilen
+aus "Heute" (inert). Scheitert ein Teil, bleibt das schon Angelegte stehen.
+
+**Vorhandene Felder einbeziehen** ("Hast du so ein Feld schon?", pro Teil, nicht im Tutorial):
+- **Übernehmen** (`take`): das Feld wird an Ort und Stelle umgebaut, behält Schlüssel und
+  Einträge. Passen Typ und Stufen nicht, öffnet danach "Stufen ändern" bzw. "Typ ändern", schon
+  auf die Vorlage eingestellt – die Zuordnung alter Werte bleibt an dieser einen Stelle
+  (`templateTakeMode`). Optionen einer Mehrfachauswahl werden nie überschrieben (gewählte Ids
+  verlören ihre Bedeutung).
+- **Ersetzen** (`replace`): neues Feld, das alte wird archiviert und bleibt in der Auswertung
+  sichtbar (`archivedInStats`). Auch für passende Felder, damit man bewusst neu beginnen kann.
+- **Ja/Nein-Felder hineinnehmen** (nur Teile vom Typ Mehrfachauswahl): jedes Feld wird eine
+  Option (gleichnamige wird mitbenutzt), pro Tag "Ja" = angekreuzt, "Nein" = eingetragen ohne
+  Kreuz, ohne Antwort = leer (`mergeIntoMulti`). "Ja" ist die obere Stufe, außer die
+  Bezeichnungen stehen andersherum. Die alten Felder werden unverändert archiviert und sind
+  zugleich die Sicherung; Rückgängig nur direkt danach über die Meldung (Nutzer-Entscheidung).
+  Gelingt nicht jeder Tag, wird alles zurückgenommen – halb übernommen hilft niemandem.
+- "Anpassen" gibt es dabei nicht: es baut ein neues Feld im Formular, die Angaben gingen
+  sonst still verloren (`templateUsesExisting`).
+
 ## Feld-Formular: Aufbau und Sichtbarkeit
 
 **Abschnitte nach Thema** (`part()` in `renderHabitForm`, Nutzer-Entscheidung 2026-10-12):

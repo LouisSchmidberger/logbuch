@@ -41,6 +41,9 @@ alle.
 - Ein Schalter im Browser ist kein Schutz: wer technisch versiert ist, kann eine versteckte
   Funktion freischalten. Für Tests egal; für Premium siehe unten.
 
+**Aktuelle Schalter**: `since` (berechnet "Tage seit"), `multi` (Feld-Typ Mehrfachauswahl),
+`templates` (Vorlagen bei "Neues Feld" und im Tutorial).
+
 ## Schalter setzen (Dashboard → SQL)
 
 ```sql
