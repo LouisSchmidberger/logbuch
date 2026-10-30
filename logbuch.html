@@ -1347,11 +1347,12 @@
   }
   .info-tip::after { content: ''; position: absolute; inset: -0.75rem; }
   .info-tip[aria-expanded="true"] { background: var(--ink); color: var(--paper); }
-  /* Sprechblase (openInfoTip): im Fluss unter der Zeile, Spitze unter dem "?". */
+  /* Sprechblase (openInfoTip): schwebt über dem Inhalt (über Dialogen), Spitze zum "?". */
   .info-pop {
-    position: relative; margin: 0.625rem 0 0.75rem; padding: 0.75rem 2.5rem 0.75rem 0.875rem;
+    position: absolute; z-index: 120; box-sizing: border-box; width: min(20rem, calc(100vw - 2rem));
+    padding: 0.75rem 2.5rem 0.75rem 0.875rem;
     background: var(--input-bg); color: var(--ink); border: 1px solid var(--ink); border-radius: 6px;
-    box-shadow: 0 0.25rem 0.75rem var(--shadow); font-size: 0.9375rem; line-height: 1.45; font-weight: 400; font-style: normal;
+    box-shadow: 0 0.5rem 1.5rem var(--shadow); font-size: 0.9375rem; line-height: 1.45;
   }
   /* Fokus nur, damit Screenreader die Erklärung vorlesen - die Blase selbst ist nicht bedienbar. */
   .info-pop:focus, .info-pop:focus-visible { outline: none; }
@@ -1360,6 +1361,7 @@
     width: 0.75rem; height: 0.75rem; background: var(--input-bg);
     border-left: 1px solid var(--ink); border-top: 1px solid var(--ink); transform: rotate(45deg);
   }
+  .info-pop--above::before { top: auto; bottom: -0.4375rem; transform: rotate(225deg); }
   .info-pop p { margin: 0; }
   .info-pop-close {
     position: absolute; top: 0.25rem; right: 0.25rem; width: 2rem; height: 2rem; padding: 0;
@@ -1522,6 +1524,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=963db1b720"></script>
+<script type="module" src="./logbuch.js?v=5fbb00728c"></script>
 </body>
 </html>

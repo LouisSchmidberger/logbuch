@@ -82,11 +82,13 @@ löschen). Erklärungen stehen direkt unter der Einstellung statt hinter einem "
 die eigene Seite: im schmalen Menü-Popover musste alles in sich scrollen (klappte nicht
 zuverlässig) und es gab keinen Platz für Erklärungen.
 
-**"?" mit Erklärung** (`infoTip`, überall gleich): öffnet eine Sprechblase direkt unter der
-Zeile (`openInfoTip`), mit ×, Esc oder Antippen woanders zu; Fokus springt hinein, damit
-Screenreader vorlesen. Im Fluss statt schwebend: nichts wird verdeckt oder am Rand
-abgeschnitten, auch in Dialogen. Vorher klappte ein kleiner blasser Text auf, der unterging
-(Nutzer, 2026-10-30). `render()` schließt eine offene Blase.
+**"?" mit Erklärung** (`infoTip`, überall gleich): öffnet eine schwebende Sprechblase am "?"
+(`openInfoTip`, Nutzer-Entscheidung 2026-10-30): über dem Inhalt, nichts verschiebt sich -
+vorher klappte ein kleiner blasser Text auf, schob das Formular weg und ging trotzdem unter.
+Im Dokument verankert (scrollt mit der Seite), darüber statt darunter, wenn unten kein Platz
+ist. Zu mit ×, Esc, Antippen woanders, Scrollen eines inneren Bereichs (Dialog) und
+`render()`; Fokus springt hinein, damit Screenreader vorlesen. Die Einstellungen behalten
+ihre Erklärungen direkt unter der Einstellung (dort ist Platz, nichts geht unter).
 
 **Unterseiten statt Tab-Swap**: "Felder verwalten", "Über Logbuch", "Feedback geben" und
 "Einstellungen" sind `state.view`-Werte, aber keine Tabs. Betreten über `enterSubpage(view)`

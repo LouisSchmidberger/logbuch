@@ -4016,10 +4016,9 @@ function clearableInputHtml(id, type, value, opts = {}) {
   `;
 }
 
-// "?" mit Erklärung für alles, was nicht dauernd dastehen muss. Öffnet eine Sprechblase direkt
-// unter der Zeile (openInfoTip) - vorher klappte ein kleiner blasser Text auf, der unterging
-// (Nutzer, Hub 1.1). Die Blase steht im Fluss statt darüber zu schweben: nichts wird verdeckt
-// oder am Rand abgeschnitten, auch nicht in Dialogen.
+// "?" mit Erklärung für alles, was nicht dauernd dastehen muss. Öffnet eine schwebende
+// Sprechblase am "?" (openInfoTip), über dem Inhalt - nichts verschiebt sich (Nutzer, Hub 1.1:
+// vorher klappte ein kleiner blasser Text auf, schob das Formular weg und ging trotzdem unter).
 function infoTip(text) {
   return `<button type="button" class="info-tip" data-tip="${esc(text)}" aria-expanded="false" aria-label="${esc(t('ariaLabel.explain'))}">?</button>`;
 }
@@ -4033,26 +4032,36 @@ function closeInfoTip(focusBack = false) {
   btn.removeAttribute('aria-controls');
   if (focusBack && btn.isConnected) btn.focus();
 }
+// Im Dokument verankert (scrollt mit der Seite), unter dem "?" bzw. darüber, wenn unten kein
+// Platz ist; waagerecht innerhalb des Bildschirms.
 function openInfoTip(btn) {
   closeInfoTip();
-  // Hinter die Zeile, zu der das "?" gehört - nie in ein <label> (Antippen der Blase sollte
-  // nicht das Eingabefeld bedienen) oder eine Überschrift.
-  const host = btn.closest('label, h3, legend, .info-tip-host') || btn;
   const el = document.createElement('div');
   el.className = 'info-pop';
   el.id = 'info-pop';
   el.setAttribute('role', 'note');
   el.tabIndex = -1;
   el.innerHTML = `<p>${esc(btn.dataset.tip)}</p><button type="button" class="info-pop-close" aria-label="${esc(t('common.close'))}">×</button>`;
-  host.after(el);
-  // Spitze der Blase unter das "?".
+  document.body.append(el);
   const b = btn.getBoundingClientRect();
-  el.style.setProperty('--arrow-x', `${Math.max(12, b.left + b.width / 2 - el.getBoundingClientRect().left)}px`);
+  const w = el.offsetWidth, h = el.offsetHeight;
+  const margin = 16, gap = 10;
+  const left = Math.min(Math.max(margin, b.left + b.width / 2 - w / 2), window.innerWidth - margin - w);
+  const above = b.bottom + gap + h > window.innerHeight - margin && b.top - gap - h > margin;
+  el.classList.toggle('info-pop--above', above);
+  el.style.left = `${left + window.scrollX}px`;
+  el.style.top = `${(above ? b.top - gap - h : b.bottom + gap) + window.scrollY}px`;
+  el.style.setProperty('--arrow-x', `${b.left + b.width / 2 - left}px`);
   btn.setAttribute('aria-expanded', 'true');
   btn.setAttribute('aria-controls', 'info-pop');
   infoPop = { btn, el };
   el.focus({ preventScroll: true }); // Screenreader lesen die Erklärung gleich vor
 }
+// Scrollt ein Bereich innerhalb der Seite (z. B. ein Dialog), stimmt die Lage nicht mehr: zu.
+document.addEventListener('scroll', (e) => {
+  if (infoPop && e.target !== document && !infoPop.el.contains(e.target)) closeInfoTip();
+}, true);
+window.addEventListener('resize', () => closeInfoTip());
 // Vor allen anderen Klick-Handlern (Erfassungsphase): "?" öffnet/schließt, Antippen woanders
 // schließt die Blase (ohne den Tipp selbst zu schlucken).
 document.addEventListener('click', (e) => {
