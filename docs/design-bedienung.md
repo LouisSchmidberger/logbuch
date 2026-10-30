@@ -54,6 +54,10 @@ einmal sehen), pro Gerät per `localStorage` `textSize`. Grund: Zwei-Finger-Zoom
 wie eine Lupe (seitlich schieben), und in der installierten App fehlt die Browser-Leiste mit
 ihrer Schriftgrößen-Einstellung.
 
+**Falle iOS-Zoom**: Safari zoomt bei Eingabefeldern unter 16px heran und nie wieder heraus –
+dort bekommen alle Felder 16px (`@supports (-webkit-touch-callout: none)`). Bewusst nicht per
+`maximum-scale=1` (sperrt auf Android das Zwei-Finger-Zoomen).
+
 **Knöpfe, Projektwerte**: Hauptaktion ausgefüllt, Nebenaktionen umrandet (`.auth-toggle`,
 `.onb-nav-btn`, `.today-jump`, `.push-toggle`, `.tip-link`); unterstrichen (`.link-btn`) nur
 mitten im Fließtext. Anlass war ein Onboarding-Test mit einer wenig handy-erfahrenen Person,
@@ -357,7 +361,8 @@ das sofort wieder das Auswahl-Menü.
 (`tabindex="0" role="button"`, Enter/Space über einen generalisierten
 `data-action`-Keydown-Dispatch, der einen echten Klick auslöst) und zusätzlich zur Farbe mit
 Streifenmuster (`scorePatternStyle()`, diskrete Stufen, gröber in der Jahres-Ansicht) für
-Rot-Grün-Farbenblinde. Bestätigungs-Modals (Konto löschen, Tutorial überspringen, Tag
+Rot-Grün-Farbenblinde. **Falle**: in schraffierten Zellen die Farbe als `background-color`
+setzen, nicht `background:` (setzt die Schraffur zurück). Bestätigungs-Modals (Konto löschen, Tutorial überspringen, Tag
 zurücksetzen, Ersatzschlüssel neu erzeugen, Abmelden aus dem Menü – beendet die Erinnerungen
 des Geräts und verlangt danach das Passwort) haben `role="dialog"`/Fokus-Trap/Escape/
 Fokus-Rückgabe (`focusModalIfOpen()`/`restoreModalFocus()`/`modalTriggerSelector`,

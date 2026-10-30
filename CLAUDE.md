@@ -27,7 +27,7 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
 | Feldtypen, Skalen/Farben/Scores, berechnete Felder, Gruppen, Feld-Formular, Auswertung | [docs/felder.md](docs/felder.md) |
 | Alles mit DEK/Passwort/Ersatzschlüssel, Entsperren, Login/Logout-Ablauf | [docs/verschluesselung.md](docs/verschluesselung.md) |
 | Push, `send-notifications`, `get_due_notifications`, Erinnerungszeiten, Deep-Links, Zeitzone | [docs/erinnerungen.md](docs/erinnerungen.md) |
-| UI, Navigation, Menü/Einstellungen, "Heute", Notizen, Meldungen, Fokus, Theme, Textgröße | [docs/design-bedienung.md](docs/design-bedienung.md) |
+| UI, Navigation, Menü/Einstellungen, "Heute", Notizen, Meldungen, Fokus, Theme, Textgröße (enthält Fallen: iOS-Zoom, `history.go()`, `<select>`-Fokus, Schraffur) | [docs/design-bedienung.md](docs/design-bedienung.md) |
 | Startseite, Installation, Registrieren, Tutorial, Ersatzschlüssel-Seite, Erklär-Karten | [docs/onboarding.md](docs/onboarding.md) |
 | Texte/`STRINGS`/`t()`, Sprache, Datumsformate | [docs/i18n.md](docs/i18n.md) |
 | Konto löschen, Export, Feedback, Auth/Passwort, E-Mail-Versand, Secrets, Kennzahlen (`ops-stats`) | [docs/datenschutz-sicherheit.md](docs/datenschutz-sicherheit.md) |
@@ -91,9 +91,6 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   Version prüfbar per `npx supabase services`). Abgefangen in `fetchWithJwtFutureRetry`:
   bis zu zwei Wiederholungen nach 1 s/2 s, sicher auch für Schreibzugriffe (PostgREST weist
   sie vor der Ausführung ab).
-- **iOS-Zoom**: Safari zoomt bei Eingabefeldern < 16px heran und nie wieder heraus – dort
-  bekommen alle Felder 16px (`@supports (-webkit-touch-callout: none)`). Bewusst nicht per
-  `maximum-scale=1` (sperrt auf Android das Zwei-Finger-Zoomen).
 - **Zeitplan-Regeln doppelt**: `isScheduledOn`/`isPlannedOn` (JS) und
   `public.habit_scheduled_on` (SQL) müssen synchron bleiben.
 - **`get_due_notifications` läuft über alle Nutzer in einem Rutsch**: neue vom Nutzer
@@ -102,12 +99,6 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
 - **Neue Tabellen** brauchen explizite GRANTs in ihrer Migration (`authenticated` +
   `service_role`, kein `anon`).
 - **PostgREST kappt bei 1000 Zeilen** – Listen seitenweise laden (`fetchAllRows`, Keyset).
-- **`history.go()` feuert ein eigenes `popstate`** – vor jedem selbst ausgelösten
-  `history.go()` `closingLayerViaPopstate` setzen (siehe docs/design-bedienung.md).
-- **`<select>` nach Finger-Bedienung nie per Skript fokussieren** – iOS öffnet sonst sofort
-  wieder das Auswahl-Menü (`focusReopensPicker`).
-- **Schraffierte Zellen**: Farbe als `background-color`, nicht `background:` (setzt die
-  Schraffur zurück).
 - **`authFlowInFlight`** muss VOR dem Supabase-Auth-Aufruf gesetzt werden (Race mit
   `onAuthStateChange`).
 
