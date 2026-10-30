@@ -231,15 +231,16 @@ die es oft nicht gibt ("sonnig/bewölkt/Regen"), und wirkte trotzdem wie eine We
 Ausprägung soll stattdessen die Überarbeitung der Auswertung zeigen (z.B. Verteilung pro
 Stufe).
 Unbewertete Felder fließen **nicht** in `dayOverallScore` ein und sind kein Mitglied
-berechneter Felder (im Formular ausgeschlossen, in `habitScore` defensiv gefiltert) – beides
-baut auf einem Gut/Schlecht-Urteil auf. `goal_threshold` ist dann immer `null` (DB-Check
+berechneter Durchschnitte (im Formular ausgeschlossen, in `habitScore` defensiv gefiltert) – beides
+baut auf einem Gut/Schlecht-Urteil auf. Quelle von "Tage seit" können sie sein (zählt nur). `goal_threshold` ist dann immer `null` (DB-Check
 `habit_definitions_kind_fields_check`, Formular blendet es aus).
 
 ## Berechnete Felder (`kind='computed'`)
 
 Normale Felder (in Gruppen einsortierbar, in der Auswertung ausblendbar), die man nur nicht
-selbst ausfüllen kann. Im Formular der vierte Typ, nur angeboten, wenn es mindestens zwei
-passende Felder gibt (beim ersten Feld im Tutorial führte er sonst ins Leere). Kein Eintrag
+selbst ausfüllen kann. Im Formular der vierte Typ, nur angeboten, wenn es etwas zu berechnen
+gibt (zwei passende Felder bzw. eine Quelle für "Tage seit"; beim ersten Feld im Tutorial
+führte er sonst ins Leere). Kein Eintrag
 in `habit_entries.data`, kein eigener `good`, keine Erinnerungszeit, keine Wiederholung
 (dran, sobald ein Mitglied dran ist). Notizen gehen (liegen ohnehin unter `_notes`).
 
@@ -270,6 +271,24 @@ berechnetes Zahlen-Feld in Stunden (`isDurationComputed`, Einheit `h`, Anzeige "
 als 24 Stunden; ein "von" später am selben Tag (abends wieder ins Bett) zählt erst für den
 nächsten. Gelegentliches (Mittagsschlaf) braucht nur dann Uhrzeiten, wenn man die Zeitpunkte
 selbst wissen will – sonst reicht ein Zahlenfeld mit der Dauer.
+
+**Tage seit** (`aggregate: 'since'`, ein Mitglied = Quellfeld: Skala, Zahl oder Zähler, nur
+Tagesfelder; Nutzer-Entscheidung 2026-10-30): zählt die Tage seit einem passenden Eintrag.
+Gedacht als allgemeiner Baustein ("seit dem letzten Sport", "seit der letzten Migräne") und
+für den Zyklustag – bewusst kein eigener Zyklus-Typ: die Klartext-Spalte `kind` verriete dem
+Betreiber sonst, wer seinen Zyklus trackt, und Phasen/Eisprung schätzt die App nicht
+(Medizinprodukt-Thema; die eigenen Muster soll die Mustersuche zeigen). `h.since` in der
+payload: `values` = zählende Stufen einer Skala mit bis zu `CHOICE_STEP_CAP` Stufen (Pillen
+zum Antippen), sonst `atLeast` ("zählt ab dem Wert"); `mode` `'last'` = seit dem letzten
+passenden Tag (am Tag selbst 0, "heute") oder `'start'` = Tag 1 ist der erste Tag einer Reihe,
+Lücken bis `SINCE_RUN_GAP_DAYS` (7) gehören noch dazu – ein vergessener Tag mitten in der
+Periode beginnt so nicht neu, ein neuer Zyklus (mind. ~3 Wochen) wird sicher erkannt. Fehlende
+Tage zählen als "kein passender Eintrag" (Periode wird meist nur an Periodentagen
+eingetragen). Keine Werte für Tage in der Zukunft. Berechnet einmal je Stand von
+`state.entries` (`sinceDays`, sonst liefe die Jahresansicht je Tag über alle Einträge). In
+der Auswertung nur "zuletzt", kein Ø und keine Anzahl (sagen bei Zähl-Tagen nichts).
+"Stufen ändern" am Quellfeld rechnet die gewählten Stufen mit (`remapSinceStages`, auch
+Rückgängig). Eine Vorlage "Zyklus" (Skala "Periode" + Zyklustag) kommt mit den Vorlagen.
 
 ## Gruppen (`sections`)
 

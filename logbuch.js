@@ -229,6 +229,7 @@ function habitFromParts(row, payload) {
     sliderShowValue: payload.sliderShowValue,
     members: payload.groupMembers,        // nur bei kind === 'computed': Array von Schlüsseln (id) der Mitglieder (payload-Schlüssel heißt historisch groupMembers)
     aggregate: payload.aggregate ?? null, // nur bei berechneten Feldern aus Zahlen: 'sum'|'avg'|'min'|'max' (null = aus Skalen)
+    since: payload.since ?? null,         // nur aggregate 'since': { values, atLeast, mode }, siehe isSinceComputed
     hideInStats: !!payload.hideInStats,   // in Woche/Monat/Jahr/Gesamt ausgeblendet (nur Anzeige, siehe inStats)
     archivedInStats: !!payload.archivedInStats, // archiviert, aber trotzdem in der Auswertung (siehe inStats)
     sectionId: row.section_id ?? null,    // Gruppe (intern "section", Klartext-Spalte, siehe layoutBlocks)
@@ -523,6 +524,55 @@ function isNumberComputed(h) { return h.kind === 'computed' && !!h.aggregate; }
 // Dauer zwischen zwei Uhrzeit-Feldern (aggregate 'duration', Mitglieder [von, bis]): verhält
 // sich wie ein berechnetes Zahlen-Feld in Stunden.
 function isDurationComputed(h) { return h.kind === 'computed' && h.aggregate === 'duration'; }
+// "Tage seit …" (aggregate 'since', genau ein Mitglied = das Quellfeld): zählt die Tage seit
+// einem passenden Eintrag im Quellfeld. h.since = { values, atLeast, mode }: values = die
+// zählenden Stufen einer Skala mit Knöpfen (bis CHOICE_STEP_CAP Stufen), sonst atLeast =
+// zählt ab diesem Wert (Zahl, Zähler, Skala mit Regler). mode 'last' = seit dem letzten
+// passenden Tag (am Tag selbst 0), 'start' = seit dem ersten Tag einer Reihe (Tag 1), wobei
+// Lücken bis SINCE_RUN_GAP_DAYS noch zur Reihe gehören - so wird aus "Periode" der Zyklustag,
+// ohne dass ein vergessener Tag mitten in der Periode neu zu zählen beginnt.
+function isSinceComputed(h) { return h.kind === 'computed' && h.aggregate === 'since'; }
+const SINCE_SOURCE_KINDS = ['scale', 'number', 'counter'];
+const SINCE_RUN_GAP_DAYS = 7;
+function sinceUsesStages(src) { return src.kind === 'scale' && src.max - src.min + 1 <= CHOICE_STEP_CAP; }
+function sinceSourceCandidate(h) { return SINCE_SOURCE_KINDS.includes(h.kind) && !isPeriodField(h); }
+function sinceMatches(h, src, v) {
+  if (typeof v !== 'number') return false;
+  if (sinceUsesStages(src)) return Array.isArray(h.since?.values) && h.since.values.includes(v);
+  return Number.isFinite(h.since?.atLeast) && v >= h.since.atLeast;
+}
+// Passende Tage (Tagesnummern, aufsteigend) samt Beginn ihrer Reihe - einmal je Stand der
+// Einträge berechnet (state.entries wird bei jeder Änderung durch ein neues Objekt ersetzt),
+// sonst liefe die Jahresansicht für jeden Tag erneut über alle Einträge.
+let sinceCache = { entries: null, byHabit: new Map() };
+function sinceDays(h) {
+  if (sinceCache.entries !== state.entries) sinceCache = { entries: state.entries, byHabit: new Map() };
+  const src = computedMemberHabits(h)[0];
+  const cached = sinceCache.byHabit.get(h);
+  if (cached && cached.src === src) return cached;
+  const days = src ? Object.keys(state.entries).filter((k) => sinceMatches(h, src, state.entries[k]?.[src.id])).map(dayIndex).sort((a, b) => a - b) : [];
+  const runStart = [];
+  days.forEach((d, i) => runStart.push(i > 0 && d - days[i - 1] <= SINCE_RUN_GAP_DAYS ? runStart[i - 1] : d));
+  const result = { src, days, runStart };
+  sinceCache.byHabit.set(h, result);
+  return result;
+}
+function sinceComputedDay(h, dateKey) {
+  if (isFutureKey(dateKey)) return { value: null, filled: 0, total: 1 }; // weiter gezählt wird erst, wenn der Tag da ist
+  const { days, runStart } = sinceDays(h);
+  const d = dayIndex(dateKey);
+  let lo = 0, hi = days.length - 1, i = -1; // letzter passender Tag <= d
+  while (lo <= hi) { const mid = (lo + hi) >> 1; if (days[mid] <= d) { i = mid; lo = mid + 1; } else hi = mid - 1; }
+  const value = i < 0 ? null : h.since?.mode === 'start' ? d - runStart[i] + 1 : d - days[i];
+  return { value, filled: value === null ? 0 : 1, total: 1 };
+}
+// Welche Einträge zählen, als Text ("leicht, mittel, stark" bzw. "ab 2").
+function sinceWhichText(h) {
+  const src = computedMemberHabits(h)[0];
+  if (!src) return '–';
+  if (sinceUsesStages(src)) return (h.since?.values || []).map((v) => valueAsText(src, v)).join(', ') || '–';
+  return tPlain('since.atLeast', { n: formatNumber(h.since?.atLeast ?? 0) });
+}
 // Felder mit Gut/Schlecht-Score (Farben, Heatmap, Prozent-Statistik).
 // Zahlen und Zähler mit Ziel ("mindestens/höchstens X", Nutzer-Entscheidung 2026-10-11) sind
 // ebenfalls bewertet - ohne Ziel bleiben sie ein neutraler Verlauf.
@@ -545,17 +595,20 @@ function hasNumericSeries(h) { return isNumberKind(h) || isCounterKind(h) || isN
 // noch keine Daten hat - ein Skala-Mittelwert über ein inzwischen zum Zahlenwert gewordenes
 // Feld ergäbe sonst NaN (und umgekehrt).
 function computedMemberHabits(h) {
+  const members = (h.members || []).map((key) => state.habits.find((x) => x.id === key));
+  if (h.aggregate === 'since') return members.filter((m) => m && sinceSourceCandidate(m)).slice(0, 1);
   const kind = h.aggregate === 'duration' ? 'time' : h.aggregate ? 'number' : 'scale';
-  return (h.members || []).map((key) => state.habits.find((x) => x.id === key)).filter((m) => m && m.kind === kind);
+  return members.filter((m) => m && m.kind === kind);
 }
 // Einheit eines berechneten Zahlen-Felds = die (gemeinsame, im Formular erzwungene) Einheit seiner Mitglieder.
-function computedUnit(h) { return isDurationComputed(h) ? 'h' : computedMemberHabits(h)[0]?.unit || null; }
+function computedUnit(h) { return isDurationComputed(h) ? 'h' : isSinceComputed(h) ? null : computedMemberHabits(h)[0]?.unit || null; }
 // Tageswert eines berechneten Zahlen-Felds aus den an dem Tag eingetragenen Mitgliedern (bei der
 // Summe zählt ein nicht eingetragenes Mitglied also als 0). Ist gar keins eingetragen,
 // gibt es keinen Wert (null) statt 0 - sonst sähe ein vergessener Tag aus wie ein Tag
 // mit echtem Wert 0.
 function numberComputedDay(h, dateKey) {
   if (isDurationComputed(h)) return durationComputedDay(h, dateKey);
+  if (isSinceComputed(h)) return sinceComputedDay(h, dateKey);
   const members = computedMemberHabits(h);
   const day = state.entries[dateKey] || {};
   const values = members.map((m) => day[m.id]).filter((v) => typeof v === 'number');
@@ -984,6 +1037,10 @@ function unwrapClockSeries(series) {
 function formatSeriesValue(h, v) {
   if (isTimeKind(h)) return formatClock(v);
   if (isDurationComputed(h)) return `${formatDuration(v)} h`;
+  if (isSinceComputed(h)) {
+    if (h.since?.mode === 'start') return tPlain('since.dayN', { n: formatNumber(v) });
+    return v === 0 ? tPlain('since.today') : tPlain(v === 1 ? 'since.oneDay' : 'since.days', { n: formatNumber(v) });
+  }
   const unit = isNumberComputed(h) ? computedUnit(h) : h.unit;
   return formatNumber(v) + (unit ? ` ${unit}` : '');
 }
@@ -1572,16 +1629,35 @@ const STRINGS = {
     'computedInfo.avgOf': 'Ø aus {names} ({filled}/{total} heute erfasst)',
     'computedInfo.aggOf': '{agg} aus {names} ({filled}/{total} heute erfasst)',
     'computedInfo.durationOf': 'Dauer von „{from}“ bis „{to}“',
+    'computedInfo.sinceLast': 'seit dem letzten „{name}“ ({which})',
+    'computedInfo.sinceStart': 'seit Beginn von „{name}“ ({which})',
+    'since.today': 'heute',
+    'since.oneDay': '1 Tag',
+    'since.days': '{n} Tage',
+    'since.dayN': 'Tag {n}',
+    'since.atLeast': 'ab {n}',
     'aggregate.sum': 'Summe',
     'aggregate.avg': 'Durchschnitt',
     'aggregate.min': 'Minimum',
     'aggregate.max': 'Maximum',
     'manage.computedAggregate': '{agg} aus: {names}',
     'manage.computedDuration': 'Dauer von {from} bis {to}',
-    'habitForm.computedType': 'Art der Mitglieder',
+    'manage.computedSinceLast': 'Tage seit dem letzten Eintrag in {name}',
+    'manage.computedSinceStart': 'Tage seit Beginn von {name}',
+    'habitForm.computedType': 'Art der Berechnung',
     'habitForm.computedType.scale': 'Skalen',
     'habitForm.computedType.number': 'Zahlenwerte',
     'habitForm.computedType.duration': 'Dauer',
+    'habitForm.computedType.since': 'Tage seit',
+    'habitForm.sinceSource': 'Welches Feld?',
+    'habitForm.sinceValues': 'Welche Einträge zählen?',
+    'habitForm.sinceAtLeast': 'Zählt ab dem Wert',
+    'habitForm.sinceMode': 'Wie zählen?',
+    'habitForm.sinceMode.last': 'Seit dem letzten Mal',
+    'habitForm.sinceMode.start': 'Seit Beginn',
+    'habitForm.sinceNote.last': 'Zeigt, wie viele Tage seit dem letzten passenden Eintrag vergangen sind – am Tag selbst „heute“. Z. B. Tage seit dem letzten Sport.',
+    'habitForm.sinceNote.start': 'Zählt ab dem ersten Tag einer Reihe passender Einträge, dieser Tag ist Tag 1. Lücken bis zu einer Woche gehören noch zur Reihe (z. B. ein vergessener Tag), erst danach beginnt eine neue. So wird z. B. aus einem Feld „Periode“ der Zyklustag.',
+    'habitForm.noSinceCandidates': 'Dafür braucht es ein Feld mit Skala oder Zahl.',
     'habitForm.durationChoose': 'Bitte wählen',
     'habitForm.durationFrom': 'Von (z. B. ins Bett)',
     'habitForm.durationTo': 'Bis (z. B. aufgestanden)',
@@ -1592,6 +1668,7 @@ const STRINGS = {
     'habitForm.noNumberComputedCandidates': 'Noch keine Zahlenwert-Felder vorhanden, die sich zusammenrechnen lassen.',
     'habitForm.error.computedUnitMismatch': 'Die ausgewählten Felder haben unterschiedliche Einheiten.',
     'habitForm.error.durationMembers': 'Bitte zwei verschiedene Uhrzeit-Felder für „Von“ und „Bis“ wählen.',
+    'habitForm.error.sinceSource': 'Bitte ein Feld wählen und festlegen, welche Einträge zählen.',
     'numberBox.last': 'zuletzt: {value} ({date})',
     'timeBox.now': 'Jetzt',
     'timeBox.aria': '{name}: {time} – ändern',
@@ -1658,6 +1735,7 @@ const STRINGS = {
     'stats.legend.common': 'Felder ohne Bewertung zeigen nur, ob etwas eingetragen ist. Das Streifenmuster (abschaltbar in den Einstellungen) zeigt dasselbe wie die Farbe – für alle, die Rot und Grün schlecht unterscheiden.',
     'global.title': 'Gesamt',
     'numberChart.meta': '{last} zuletzt · Ø {avg} · {count}×',
+    'numberChart.metaLast': '{last} zuletzt',
     'numberChart.metaSum': 'Summe {sum} · Ø {avg} pro {per} · {count}×',
     'numberChart.per.day': 'Tag',
     'numberChart.per.week': 'Woche',
@@ -1669,6 +1747,7 @@ const STRINGS = {
     'numberChart.trend.down': 'fallend',
     'numberChart.trend.flat': 'gleichbleibend',
     'numberChart.summary': '{name}: {count} Einträge, zuletzt {last}, Durchschnitt {avg}, Spanne {min} bis {max}, Trend {trend}.',
+    'numberChart.summaryLast': '{name}: zuletzt {last}.',
     'numberChart.withNotes': 'Davon {count} mit Notiz.',
     'habitForm.goalLabel': 'Ziel für die Auswertung: ab wie viel Prozent voll erreicht?',
     'habitForm.goalYesNoLabel': 'Ziel für die Auswertung: an wie vielen von 7 Tagen „{label}“?',
@@ -1877,7 +1956,7 @@ const STRINGS = {
     'habitForm.kindNumberNote': 'Messwert oder Anzahl – z. B. Gewicht, Gläser',
     'habitForm.kindTextNote': 'Ein paar Worte – z. B. Wofür bin ich heute dankbar?',
     'habitForm.kindTimeNote': 'Ein Zeitpunkt – z. B. ins Bett, aufgestanden',
-    'habitForm.kindComputedNote': 'Durchschnitt oder Summe anderer Felder – z. B. Wohlbefinden aus Stimmung und Energie',
+    'habitForm.kindComputedNote': 'Rechnet aus anderen Feldern – z. B. Wohlbefinden aus Stimmung und Energie oder Tage seit dem letzten Sport',
     'habitForm.summary': 'Für Woche, Monat und Jahr zusammenrechnen als',
     'habitForm.summary.avg': 'Durchschnitt',
     'habitForm.summary.sum': 'Summe',
@@ -1958,7 +2037,7 @@ const STRINGS = {
     'habitForm.more': 'Mehr Einstellungen',
     'habitForm.moreSub': 'Tage, Erinnerungszeit, Auswertung – kannst du auch später ändern',
     'habitForm.moreSubPeriod': 'Ziel, Erinnerung und mehr – kannst du auch später ändern',
-    'habitForm.computedExplain': 'Ein berechnetes Feld fasst mehrere Felder zu einem live berechneten Wert zusammen – Skalen als Durchschnitt, Zahlenwerte z. B. als Summe, zwei Uhrzeiten als Dauer dazwischen. Selbst ausfüllen kann man es nicht.',
+    'habitForm.computedExplain': 'Ein berechnetes Feld fasst mehrere Felder zu einem live berechneten Wert zusammen – Skalen als Durchschnitt, Zahlenwerte z. B. als Summe, zwei Uhrzeiten als Dauer dazwischen – oder es zählt die Tage seit einem Eintrag. Selbst ausfüllen kann man es nicht.',
     'common.finish': 'Fertig',
     'common.close': 'Schließen',
     'menu.defaultReminderTime': 'Standard-Erinnerungszeit',
@@ -2534,16 +2613,35 @@ const STRINGS = {
     'computedInfo.avgOf': 'avg. of {names} ({filled}/{total} entered today)',
     'computedInfo.aggOf': '{agg} of {names} ({filled}/{total} entered today)',
     'computedInfo.durationOf': 'Duration from “{from}” to “{to}”',
+    'computedInfo.sinceLast': 'since the last “{name}” ({which})',
+    'computedInfo.sinceStart': 'since the start of “{name}” ({which})',
+    'since.today': 'today',
+    'since.oneDay': '1 day',
+    'since.days': '{n} days',
+    'since.dayN': 'Day {n}',
+    'since.atLeast': 'from {n}',
     'aggregate.sum': 'Sum',
     'aggregate.avg': 'Average',
     'aggregate.min': 'Minimum',
     'aggregate.max': 'Maximum',
     'manage.computedAggregate': '{agg} of: {names}',
     'manage.computedDuration': 'Duration from {from} to {to}',
-    'habitForm.computedType': 'Member type',
+    'manage.computedSinceLast': 'Days since the last entry in {name}',
+    'manage.computedSinceStart': 'Days since the start of {name}',
+    'habitForm.computedType': 'Kind of calculation',
     'habitForm.computedType.scale': 'Scales',
     'habitForm.computedType.number': 'Number values',
     'habitForm.computedType.duration': 'Duration',
+    'habitForm.computedType.since': 'Days since',
+    'habitForm.sinceSource': 'Which field?',
+    'habitForm.sinceValues': 'Which entries count?',
+    'habitForm.sinceAtLeast': 'Counts from the value',
+    'habitForm.sinceMode': 'How to count?',
+    'habitForm.sinceMode.last': 'Since the last time',
+    'habitForm.sinceMode.start': 'Since the start',
+    'habitForm.sinceNote.last': 'Shows how many days have passed since the last matching entry – “today” on the day itself. E.g. days since your last workout.',
+    'habitForm.sinceNote.start': 'Counts from the first day of a run of matching entries; that day is day 1. Gaps of up to a week still belong to the run (e.g. a forgotten day); only after that does a new one start. This is how e.g. a “Period” field gives you the cycle day.',
+    'habitForm.noSinceCandidates': 'This needs a field with a scale or a number.',
     'habitForm.durationChoose': 'Please choose',
     'habitForm.durationFrom': 'From (e.g. went to bed)',
     'habitForm.durationTo': 'To (e.g. got up)',
@@ -2554,6 +2652,7 @@ const STRINGS = {
     'habitForm.noNumberComputedCandidates': 'No number fields available yet that can be combined.',
     'habitForm.error.computedUnitMismatch': 'The selected fields have different units.',
     'habitForm.error.durationMembers': 'Please choose two different time fields for “From” and “To”.',
+    'habitForm.error.sinceSource': 'Please choose a field and which entries count.',
     'numberBox.last': 'last: {value} ({date})',
     'timeBox.now': 'Now',
     'timeBox.aria': '{name}: {time} – change',
@@ -2620,6 +2719,7 @@ const STRINGS = {
     'stats.legend.common': 'Fields without a rating only show whether something was entered. The stripe pattern (can be turned off in the settings) shows the same as the color – for everyone who has trouble telling red and green apart.',
     'global.title': 'Overall',
     'numberChart.meta': 'last: {last} · avg. {avg} · {count}×',
+    'numberChart.metaLast': 'last: {last}',
     'numberChart.metaSum': 'total {sum} · avg. {avg} per {per} · {count}×',
     'numberChart.per.day': 'day',
     'numberChart.per.week': 'week',
@@ -2631,6 +2731,7 @@ const STRINGS = {
     'numberChart.trend.down': 'falling',
     'numberChart.trend.flat': 'steady',
     'numberChart.summary': '{name}: {count} entries, last {last}, average {avg}, range {min} to {max}, trend {trend}.',
+    'numberChart.summaryLast': '{name}: last {last}.',
     'numberChart.withNotes': '{count} of them with a note.',
     'habitForm.goalLabel': 'Goal for the statistics: fully reached from what percentage?',
     'habitForm.goalYesNoLabel': 'Goal for the statistics: on how many of 7 days “{label}”?',
@@ -2839,7 +2940,7 @@ const STRINGS = {
     'habitForm.kindNumberNote': 'Measurement or amount – e.g. weight, glasses',
     'habitForm.kindTextNote': 'A few words – e.g. What am I grateful for today?',
     'habitForm.kindTimeNote': 'A point in time – e.g. went to bed, got up',
-    'habitForm.kindComputedNote': 'Average or total of other fields – e.g. wellbeing from mood and energy',
+    'habitForm.kindComputedNote': 'Calculates from other fields – e.g. wellbeing from mood and energy, or days since your last workout',
     'habitForm.summary': 'For week, month and year, add up as',
     'habitForm.summary.avg': 'Average',
     'habitForm.summary.sum': 'Total',
@@ -2920,7 +3021,7 @@ const STRINGS = {
     'habitForm.more': 'More settings',
     'habitForm.moreSub': 'Days, reminder time, statistics – you can also change these later',
     'habitForm.moreSubPeriod': 'Goal, reminder and more – you can change these later',
-    'habitForm.computedExplain': 'A calculated field combines multiple fields into one live-calculated value – scales as an average, number fields e.g. as a sum, two times as the duration between them. You cannot fill it in yourself.',
+    'habitForm.computedExplain': 'A calculated field combines multiple fields into one live-calculated value – scales as an average, number fields e.g. as a sum, two times as the duration between them – or it counts the days since an entry. You cannot fill it in yourself.',
     'common.finish': 'Done',
     'common.close': 'Close',
     'menu.defaultReminderTime': 'Default reminder time',
@@ -3891,7 +3992,7 @@ async function repadOldEntries() {
 }
 
 const SUPPORTED_KINDS = ['scale', 'number', 'counter', 'computed', 'text', 'time'];
-const SUPPORTED_AGGREGATES = [null, 'sum', 'avg', 'min', 'max', 'duration'];
+const SUPPORTED_AGGREGATES = [null, 'sum', 'avg', 'min', 'max', 'duration', 'since'];
 function isSupportedHabit(h) {
   return SUPPORTED_KINDS.includes(h.kind) && (h.kind !== 'computed' || SUPPORTED_AGGREGATES.includes(h.aggregate));
 }
@@ -4775,6 +4876,7 @@ function defaultHabitForm() {
     numberGoalDir: null, numberGoalValue: '', // Zahl/Zähler: Ziel 'high' = mindestens, 'low' = höchstens
     summary: 'avg', // Zahlen: in Woche/Monat/Jahr als Durchschnitt oder Summe
     durationFrom: null, durationTo: null, // nur berechnet "Dauer": Schlüssel der beiden Uhrzeit-Felder
+    sinceSource: null, sinceValues: [], sinceAtLeast: '1', sinceMode: 'last', // nur berechnet "Tage seit" (siehe isSinceComputed)
   };
 }
 
@@ -4805,7 +4907,7 @@ function formToSchedule(fs) {
 }
 // Zahlen-Felder (auch berechnete aus Zahlen): in Woche/Monat/Jahr als Durchschnitt oder Summe.
 function habitFormSummable(f) {
-  return f.kind === 'number' || f.kind === 'counter' || (f.kind === 'computed' && f.computedType !== 'scale');
+  return f.kind === 'number' || f.kind === 'counter' || (f.kind === 'computed' && f.computedType !== 'scale' && f.computedType !== 'since');
 }
 
 function habitToForm(h) {
@@ -4829,8 +4931,12 @@ function habitToForm(h) {
     displayStyle,
     sliderShowValue: h.sliderShowValue ?? true,
     members: h.kind === 'computed' ? [...(h.members || [])] : [],
-    computedType: h.aggregate === 'duration' ? 'duration' : h.aggregate ? 'number' : 'scale',
-    aggregate: h.aggregate && h.aggregate !== 'duration' ? h.aggregate : 'sum',
+    computedType: h.aggregate === 'duration' || h.aggregate === 'since' ? h.aggregate : h.aggregate ? 'number' : 'scale',
+    aggregate: h.aggregate && h.aggregate !== 'duration' && h.aggregate !== 'since' ? h.aggregate : 'sum',
+    sinceSource: h.aggregate === 'since' ? h.members?.[0] ?? null : null,
+    sinceValues: h.aggregate === 'since' ? [...(h.since?.values || [])].sort((a, b) => a - b) : [],
+    sinceAtLeast: h.aggregate === 'since' && Number.isFinite(h.since?.atLeast) ? String(h.since.atLeast) : '1',
+    sinceMode: h.aggregate === 'since' && h.since?.mode === 'start' ? 'start' : 'last',
     durationFrom: h.aggregate === 'duration' ? h.members?.[0] ?? null : null,
     durationTo: h.aggregate === 'duration' ? h.members?.[1] ?? null : null,
     showInStats: !h.hideInStats,
@@ -4908,6 +5014,10 @@ function syncHabitFormFromDom() {
     if (fromEl) f.durationFrom = fromEl.value || null;
     const toEl = document.getElementById('habit-form-duration-to');
     if (toEl) f.durationTo = toEl.value || null;
+    const sinceSourceEl = document.getElementById('habit-form-since-source');
+    if (sinceSourceEl) f.sinceSource = sinceSourceEl.value || null;
+    const sinceAtLeastEl = document.getElementById('habit-form-since-atleast');
+    if (sinceAtLeastEl) f.sinceAtLeast = sinceAtLeastEl.value;
     document.querySelectorAll('[data-member-key]').forEach((el) => {
       const slug = el.dataset.memberKey;
       if (el.checked) { if (!f.members.includes(slug)) f.members.push(slug); }
@@ -5021,6 +5131,17 @@ async function handleHabitSaveInner() {
       return;
     }
     fields = { kind: 'computed', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: [f.durationFrom, f.durationTo], goal_threshold: null, aggregate: 'duration' };
+  } else if (f.kind === 'computed' && f.computedType === 'since') {
+    const src = state.habits.find((h) => h.id === f.sinceSource && sinceSourceCandidate(h));
+    const stages = src && sinceUsesStages(src);
+    const values = stages ? f.sinceValues.filter((v) => v >= src.min && v <= src.max) : null;
+    const atLeast = src && !stages ? Number(String(f.sinceAtLeast).replace(',', '.')) : null;
+    if (!src || (stages ? !values.length : !Number.isFinite(atLeast))) {
+      state.notice = { type: 'error', text: t('habitForm.error.sinceSource') };
+      return;
+    }
+    fields = { kind: 'computed', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: [src.id], goal_threshold: null, aggregate: 'since',
+      since: { values, atLeast, mode: f.sinceMode === 'start' ? 'start' : 'last' } };
   } else if (f.kind === 'number' || f.kind === 'counter') {
     const unit = (document.getElementById('habit-form-unit')?.value || '').trim();
     if (f.kind === 'counter') {
@@ -5148,6 +5269,7 @@ async function handleHabitSaveInner() {
     groupMembers: fields.group_members,
     goalThreshold: fields.goal_threshold,
     aggregate: fields.aggregate ?? null,
+    since: fields.since ?? undefined,
     hideInStats: !f.showInStats,
     step: f.kind === 'counter' ? f.step : undefined,
     target: fields.target ?? undefined,
@@ -5324,6 +5446,28 @@ function stepChangeUndoable(h) {
     return (day[h.id] ?? null) === expected;
   });
 }
+// Nach "Stufen ändern" einer Skala: die zählenden Stufen der "Tage seit"-Felder, die auf ihr
+// aufbauen, auf die neuen Stufen umrechnen (Rückgängig: die alten Stufen, die auf eine
+// gewählte neue abgebildet wurden). Wechselt die Skala zwischen Knöpfen und Regler, gilt
+// "ab Wert" mit der kleinsten gewählten Stufe bzw. umgekehrt alle Stufen ab diesem Wert.
+async function remapSinceStages(sourceId, sc, undo) {
+  const src = state.habits.find((x) => x.id === sourceId);
+  if (!src) return;
+  for (const h of state.habits.filter((x) => isSinceComputed(x) && x.members?.[0] === sourceId)) {
+    const before = undo ? sc.to : sc.from;
+    const oldValues = Array.isArray(h.since?.values) ? h.since.values
+      : Array.from({ length: before.max - before.min + 1 }, (_, i) => before.min + i).filter((v) => v >= (h.since?.atLeast ?? Infinity));
+    let values;
+    if (undo) {
+      values = [];
+      for (let v = sc.from.min; v <= sc.from.max; v++) if (oldValues.includes(stepChangeMapValue(sc, v))) values.push(v);
+    } else {
+      values = [...new Set(oldValues.map((v) => stepChangeMapValue(sc, v)).filter((v) => v !== null))].sort((a, b) => a - b);
+    }
+    const since = sinceUsesStages(src) ? { ...h.since, values, atLeast: null } : { ...h.since, values: null, atLeast: values.length ? values[0] : src.max + 1 };
+    await updateHabitPayload(h, { since });
+  }
+}
 async function markStepChange(h, stepChange) {
   if (stepChangeStarting.has(h.defId) || stepChangeRunning.has(h.defId)) return false; // zweiter Tipp
   stepChangeStarting.add(h.defId);
@@ -5412,6 +5556,7 @@ async function runStepChange(defId) {
     h = state.habits.find((x) => x.defId === defId);
     if (!h) return false;
     const ok = await updateHabitPayload(h, { ...(undo ? sc.from : sc.to), stepChange: undo ? null : { ...sc, state: 'done' } });
+    if (ok && !isTypeChange(sc)) await remapSinceStages(h.id, sc, undo);
     // Typwechsel von/zu Zähler: den Erinnerungs-Stand von heute neu schreiben (wie beim Speichern des Formulars).
     const today = formatKey(new Date());
     if (ok && (isTypeChange(sc) || isCounterKind(h)) && state.entries[today]) saveDay(today);
@@ -6334,7 +6479,7 @@ async function updateHabitPayload(habit, changes) {
     key: next.id, name: next.name, unit: next.unit ?? null, min: next.min ?? null, max: next.max ?? null,
     labels: next.labels ?? null, good: next.good ?? null, displayStyle: next.displayStyle ?? 'buttons',
     sliderShowValue: next.sliderShowValue ?? true, groupMembers: next.members ?? null,
-    goalThreshold: next.goalThreshold ?? null, aggregate: next.aggregate ?? null,
+    goalThreshold: next.goalThreshold ?? null, aggregate: next.aggregate ?? null, since: next.since ?? undefined,
     hideInStats: !!next.hideInStats, archivedInStats: !!next.archivedInStats,
     // Ohne diese gingen Ziel/Schritt/Summe einer Zahl bzw. eines Zählers hier still verloren.
     step: isCounterKind(next) ? next.step : undefined, target: next.target ?? undefined,
@@ -6836,7 +6981,7 @@ async function handleExportData() {
         return {
           ...rest, slug: p.key, name: p.name, unit: p.unit, min: p.min, max: p.max, labels: p.labels,
           good: p.good, display_style: p.displayStyle, slider_show_value: p.sliderShowValue,
-          group_members: p.groupMembers, goal_threshold: p.goalThreshold, aggregate: p.aggregate ?? null,
+          group_members: p.groupMembers, goal_threshold: p.goalThreshold, aggregate: p.aggregate ?? null, since: p.since ?? null,
           hide_in_stats: !!p.hideInStats, archived_in_stats: !!p.archivedInStats,
         };
       } catch {
@@ -8042,6 +8187,13 @@ function renderComputedInfo(habit, dateKey) {
     return `
       <div class="computed-readout computed-readout--number">${value !== null ? esc(formatSeriesValue(habit, value)) : '–'}</div>
       <span class="manage-meta">${t('computedInfo.durationOf', { from: from?.name || '–', to: to?.name || '–' })}</span>
+    `;
+  }
+  if (isSinceComputed(habit)) {
+    const { value } = numberComputedDay(habit, dateKey);
+    return `
+      <div class="computed-readout computed-readout--number">${value !== null ? esc(formatSeriesValue(habit, value)) : '–'}</div>
+      <span class="manage-meta">${t(habit.since?.mode === 'start' ? 'computedInfo.sinceStart' : 'computedInfo.sinceLast', { name: members[0]?.name || '–', which: sinceWhichText(habit) })}</span>
     `;
   }
   if (isNumberComputed(habit)) {
@@ -9533,7 +9685,9 @@ function renderNumberChart(habit, dateKeys, interactive) {
   const head = `
     <div class="number-chart-head">
       <span class="habit-name">${statsFieldName(habit, 'chart')}</span>
-      ${stats ? `<span class="number-chart-meta">${habit.summary === 'sum'
+      ${stats ? `<span class="number-chart-meta">${isSinceComputed(habit)
+        ? t('numberChart.metaLast', { last: fmt(stats.last) }) // Ø oder Anzahl von Zähl-Tagen sagen nichts
+        : habit.summary === 'sum'
         ? t('numberChart.metaSum', { sum: fmt(stats.sum, true), avg: fmt(stats.avg, true), per: t('numberChart.per.' + (habit.period || 'day')), count: stats.count })
         : t('numberChart.meta', { last: fmt(stats.last), avg: fmt(stats.avg, true), count: stats.count })}${hasNumberGoal(habit) ? ` · ${esc(numberGoalText(habit))}` : ''}</span>` : ''}
     </div>
@@ -9585,7 +9739,7 @@ function renderNumberChart(habit, dateKeys, interactive) {
     }).join('')
     : '';
   const trend = trendDirection(stats.series, range);
-  const summary = t('numberChart.summary', {
+  const summary = isSinceComputed(habit) ? t('numberChart.summaryLast', { name: habit.name, last: fmt(stats.last) }) : t('numberChart.summary', {
     name: habit.name,
     count: stats.count,
     last: fmt(stats.last),
@@ -9819,7 +9973,43 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     ${durationSelect('habit-form-duration-to', 'habitForm.durationTo', f.durationTo)}
     <p class="habit-form-lock-note">${t('habitForm.durationNote')}</p>
   ` : `<p class="habit-form-lock-note">${t('habitForm.noDurationCandidates')}</p>`;
-  const computedTypes = [['scale', 'habitForm.computedType.scale'], ['number', 'habitForm.computedType.number'], ['duration', 'habitForm.computedType.duration']];
+  // "Tage seit": ein Quellfeld (Skala, Zahl, Zähler; archivierte nur, wenn schon gewählt), dazu
+  // welche Einträge zählen - bei Skalen mit Knöpfen die Stufen zum Antippen (mehrere, deshalb
+  // Pillen), sonst "zählt ab dem Wert".
+  const isSinceForm = f.computedType === 'since';
+  const sinceCandidates = state.habits.filter((h) => h.defId !== f.defId && sinceSourceCandidate(h) && (!h.archivedAt || h.id === f.sinceSource));
+  const sinceSrc = sinceCandidates.find((h) => h.id === f.sinceSource) || null;
+  const sinceStages = sinceSrc && sinceUsesStages(sinceSrc) ? Array.from({ length: sinceSrc.max - sinceSrc.min + 1 }, (_, i) => sinceSrc.min + i) : null;
+  const sinceBody = sinceCandidates.length ? `
+    <div class="auth-field">
+      <label for="habit-form-since-source">${t('habitForm.sinceSource')}</label>
+      <select id="habit-form-since-source">
+        <option value="">${t('habitForm.durationChoose')}</option>
+        ${sinceCandidates.map((h) => `<option value="${esc(h.id)}" ${h.id === f.sinceSource ? 'selected' : ''}>${esc(h.name)}${h.archivedAt ? ` (${t('common.archived')})` : ''}</option>`).join('')}
+      </select>
+    </div>
+    ${sinceSrc ? (sinceStages ? `
+      <div class="auth-field">
+        <label id="habit-form-since-values-label">${t('habitForm.sinceValues')}</label>
+        <div class="pill-group" role="group" aria-labelledby="habit-form-since-values-label">
+          ${sinceStages.map((v) => `<button type="button" class="pill-toggle${f.sinceValues.includes(v) ? ' pill-toggle--active' : ''}" data-action="since-value" data-value="${v}" aria-pressed="${f.sinceValues.includes(v)}">${esc(valueAsText(sinceSrc, v))}</button>`).join('')}
+        </div>
+      </div>
+    ` : `
+      <div class="auth-field">
+        <label for="habit-form-since-atleast">${t('habitForm.sinceAtLeast')}</label>
+        <input type="number" id="habit-form-since-atleast" inputmode="decimal" step="any" value="${esc(f.sinceAtLeast)}" />
+      </div>
+    `) : ''}
+    <div class="auth-field">
+      <label id="habit-form-since-mode-label">${t('habitForm.sinceMode')}</label>
+      <div class="pill-group seg seg--stack" role="group" aria-labelledby="habit-form-since-mode-label">
+        ${['last', 'start'].map((m) => `<button type="button" class="pill-toggle${f.sinceMode === m ? ' pill-toggle--active' : ''}" data-action="since-mode" data-mode="${m}" aria-pressed="${f.sinceMode === m}">${t('habitForm.sinceMode.' + m)}</button>`).join('')}
+      </div>
+    </div>
+    <p class="habit-form-lock-note">${t('habitForm.sinceNote.' + f.sinceMode)}</p>
+  ` : `<p class="habit-form-lock-note">${t('habitForm.noSinceCandidates')}</p>`;
+  const computedTypes = [['scale', 'habitForm.computedType.scale'], ['number', 'habitForm.computedType.number'], ['duration', 'habitForm.computedType.duration'], ['since', 'habitForm.computedType.since']];
   const computedBody = `
     <p class="habit-form-lock-note">${t('habitForm.computedExplain')}</p>
     <div class="auth-field">
@@ -9828,7 +10018,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         ${computedTypes.map(([type, key]) => `<button type="button" class="pill-toggle${f.computedType === type ? ' pill-toggle--active' : ''}" data-action="computed-type" data-type="${type}" aria-pressed="${f.computedType === type}">${t(key)}</button>`).join('')}
       </div>
     </div>
-    ${isDurationForm ? durationBody : `
+    ${isSinceForm ? sinceBody : isDurationForm ? durationBody : `
     ${isNumberComputedForm ? `
       <div class="auth-field">
         <label for="habit-form-computed-aggregate">${t('habitForm.aggregate')}</label>
@@ -9961,7 +10151,8 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const computedPossible = isComputed || (!tutorialForm && (false
     || others.filter((h) => h.kind === 'scale' && !isNeutralScale(h)).length >= 2
     || others.filter((h) => h.kind === 'number').length >= 2
-    || others.filter(isTimeKind).length >= 2));
+    || others.filter(isTimeKind).length >= 2
+    || others.some(sinceSourceCandidate)));
   // Zähler ist für Nutzer eine Art, eine Zahl einzutragen ("hochzählen"), kein eigener Typ -
   // intern 'counter', weil der Server ihn für Erinnerungen unterscheiden muss.
   const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber']]
@@ -10168,6 +10359,8 @@ function renderManage() {
             : h.kind === 'computed'
               ? `<span class="manage-meta"><span class="manage-tag">${t('manage.computedTag')}</span> ${isDurationComputed(h)
                   ? t('manage.computedDuration', { from: state.habits.find((x) => x.id === h.members?.[0])?.name || '–', to: state.habits.find((x) => x.id === h.members?.[1])?.name || '–' })
+                  : isSinceComputed(h)
+                  ? t(h.since?.mode === 'start' ? 'manage.computedSinceStart' : 'manage.computedSinceLast', { name: computedMemberHabits(h)[0]?.name || '–' })
                   : isNumberComputed(h)
                   ? t('manage.computedAggregate', { agg: t('aggregate.' + h.aggregate), names: computedMemberHabits(h).map((m) => m.name).join(', ') || '–' })
                   : t('manage.computedMembers', { names: computedMemberHabits(h).map((m) => m.name).join(', ') || '–' })}${h.hideInStats && !h.archivedAt ? ' · ' + t('manage.hiddenInStats') : ''}</span>`
@@ -11693,11 +11886,23 @@ app.addEventListener('click', async (e) => {
       f.members = f.members.filter((key) => {
         const h = state.habits.find((x) => x.id === key);
         // "Dauer" wählt seine zwei Felder über eigene Auswahllisten (durationFrom/To).
-        return h && f.computedType !== 'duration' && (f.computedType === 'number' ? h.kind === 'number' : h.kind === 'scale');
+        return h && f.computedType !== 'duration' && f.computedType !== 'since' && (f.computedType === 'number' ? h.kind === 'number' : h.kind === 'scale');
       });
     }
     render();
     document.querySelector(`[data-action="computed-type"][data-type="${el.dataset.type}"]`)?.focus();
+  } else if (action === 'since-value') {
+    syncHabitFormFromDom();
+    const f = state.habitForm;
+    const v = Number(el.dataset.value);
+    f.sinceValues = f.sinceValues.includes(v) ? f.sinceValues.filter((x) => x !== v) : [...f.sinceValues, v].sort((a, b) => a - b);
+    render();
+    document.querySelector(`[data-action="since-value"][data-value="${v}"]`)?.focus();
+  } else if (action === 'since-mode') {
+    syncHabitFormFromDom();
+    state.habitForm.sinceMode = el.dataset.mode === 'start' ? 'start' : 'last';
+    render();
+    document.querySelector(`[data-action="since-mode"][data-mode="${el.dataset.mode}"]`)?.focus();
   } else if (action === 'habit-reminder-add') {
     syncHabitFormFromDom();
     const f = state.habitForm;
@@ -11936,6 +12141,15 @@ app.addEventListener('change', async (e) => {
   }
   // Berechnetes Feld aus Zahlen: nach jeder Mitglieder-Änderung neu rendern, damit Felder mit anderer
   // Einheit gesperrt bzw. wieder freigegeben werden (siehe computedBody).
+  // "Tage seit": anderes Quellfeld -> andere Stufen zur Auswahl.
+  if (e.target.id === 'habit-form-since-source' && state.habitForm) {
+    syncHabitFormFromDom();
+    state.habitForm.sinceValues = [];
+    render();
+    const select = document.getElementById('habit-form-since-source');
+    if (select && !focusReopensPicker(select)) select.focus();
+    return;
+  }
   const memberBox = e.target.closest?.('[data-member-key]');
   if (memberBox && state.habitForm?.computedType === 'number') {
     syncHabitFormFromDom();
