@@ -27,6 +27,7 @@ const HOOK = `
   internals: {
     sinceComputedDay, durationComputedDay, numberComputedDay, formatSeriesValue, isScheduledOn, isFutureKey,
     timeValueOn, featureVisible, remapSince, stepChangeMapValue, parseDateKey, formatKey, addDays,
+    multiOptionCounts,
   },
 }));
 `;

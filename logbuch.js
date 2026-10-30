@@ -230,6 +230,7 @@ function habitFromParts(row, payload) {
     members: payload.groupMembers,        // nur bei kind === 'computed': Array von Schlüsseln (id) der Mitglieder (payload-Schlüssel heißt historisch groupMembers)
     aggregate: payload.aggregate ?? null, // nur bei berechneten Feldern aus Zahlen: 'sum'|'avg'|'min'|'max' (null = aus Skalen)
     since: payload.since ?? null,         // nur aggregate 'since': { values, atLeast, mode }, siehe isSinceComputed
+    options: Array.isArray(payload.options) ? payload.options : null, // nur kind 'multi', siehe isMultiKind
     hideInStats: !!payload.hideInStats,   // in Woche/Monat/Jahr/Gesamt ausgeblendet (nur Anzeige, siehe inStats)
     archivedInStats: !!payload.archivedInStats, // archiviert, aber trotzdem in der Auswertung (siehe inStats)
     sectionId: row.section_id ?? null,    // Gruppe (intern "section", Klartext-Spalte, siehe layoutBlocks)
@@ -675,6 +676,22 @@ function isTextKind(h) { return h.kind === 'text'; }
 // Wanduhr-Zeit über Tagesnummern: eine Dauer über die Nacht der Zeitumstellung liegt eine
 // Stunde daneben (bewusst hingenommen).
 function isTimeKind(h) { return h.kind === 'time'; }
+// Mehrfachauswahl (kind 'multi'): mehrere Optionen pro Tag ankreuzen, z.B. was heute war. Wert =
+// Array der Options-Ids (stabil, damit Umbenennen nichts verschiebt), [] = "nichts davon" (zählt
+// als eingetragen). h.options = [{ id, label, hidden }]: schon gewählte Optionen lassen sich nicht
+// entfernen, nur ausblenden - dann nicht mehr in "Heute" (außer am Tag, an dem sie gewählt ist),
+// in der Auswertung weiter, solange sie im Zeitraum vorkommt. Keine Bewertung, nur Tagesfelder.
+function isMultiKind(h) { return h.kind === 'multi'; }
+const MULTI_MAX_OPTIONS = 20;
+function multiValue(h, dateKey) {
+  const v = state.entries[dateKey]?.[h.id];
+  return Array.isArray(v) ? v : null;
+}
+function multiOptionUsed(habitId, optionId) {
+  return Object.values(state.entries).some((day) => Array.isArray(day?.[habitId]) && day[habitId].includes(optionId));
+}
+function newMultiOptionId() { return crypto.randomUUID().slice(0, 8); }
+function emptyMultiOptions() { return [{ id: newMultiOptionId(), label: '' }, { id: newMultiOptionId(), label: '' }]; }
 const MINUTES_PER_DAY = 1440;
 function dayIndex(dateKey) {
   const [y, m, d] = dateKey.split('-').map(Number);
@@ -1989,6 +2006,21 @@ const STRINGS = {
     'todayIntro.done': 'Verstanden',
     'habitForm.textNote': 'Für Fragen wie „Wofür bin ich heute dankbar?“: in „Heute“ steht dafür ein Textfeld, das automatisch speichert. Fließt nicht in die Auswertung ein, erscheint dort aber als Liste zum Nachlesen.',
     'habitForm.timeNote': 'In „Heute“ tippst du auf das Feld und wählst die Uhrzeit. Ist es noch leer, steht dort schon die aktuelle; mit „+5 min“ usw. kommst du etwas später an, z. B. wenn du das Handy schon weglegst. Liegt die Uhrzeit nach Mitternacht, steht der Wochentag dahinter. Zwei Uhrzeiten ergeben mit einem berechneten Feld „Dauer“ z. B. deine Schlafdauer.',
+    'habitForm.kindMulti': 'Mehrfachauswahl',
+    'habitForm.kindMultiNote': 'Mehrere ankreuzen – z. B. was heute war: Sport, Streit, Kaffee',
+    'habitForm.multiNote': 'In „Heute“ tippst du alle Optionen an, die zutreffen – oder „nichts davon“. In der Auswertung bekommt jede Option eine eigene Zeile.',
+    'habitForm.multiOptions': 'Optionen',
+    'habitForm.multiOptionAria': 'Option {n}',
+    'habitForm.multiAdd': '+ Option',
+    'habitForm.multiRemove': 'Option {n} entfernen',
+    'habitForm.multiHide': 'Ausblenden',
+    'habitForm.multiShow': 'Einblenden',
+    'habitForm.multiUsedNote': 'Optionen, die du schon gewählt hast, kannst du umbenennen oder ausblenden, aber nicht entfernen – sonst fehlten sie in deinen bisherigen Einträgen. Ausgeblendete stehen nicht mehr in „Heute“, in der Auswertung aber weiter.',
+    'habitForm.lockedNoteMulti': 'Für dieses Feld gibt es bereits Einträge – der Typ ist deshalb fest.',
+    'habitForm.error.multiEmpty': 'Bitte jede Option ausfüllen oder entfernen.',
+    'habitForm.error.multiDuplicate': 'Zwei Optionen heißen gleich.',
+    'habitForm.error.multiMin': 'Es braucht mindestens zwei Optionen, die nicht ausgeblendet sind.',
+    'today.multiNone': 'nichts davon',
     'textReview.countOne': '1 Eintrag',
     'textReview.countMany': '{count} Einträge',
     'common.saving': 'Wird gespeichert …',
@@ -2973,6 +3005,21 @@ const STRINGS = {
     'todayIntro.done': 'Got it',
     'habitForm.textNote': 'For questions like “What am I grateful for today?”: “Today” shows a text box for it that saves automatically. Not part of the statistics, but shown there as a list to read back.',
     'habitForm.timeNote': 'In “Today” you tap the field and pick the time. If it’s still empty, the current time is already set; “+5 min” etc. move it a bit later, e.g. when you’re putting your phone away already. If the time is after midnight, the weekday shows next to it. Two times plus a calculated “Duration” field give you e.g. how long you slept.',
+    'habitForm.kindMulti': 'Multiple choice',
+    'habitForm.kindMultiNote': 'Tick several – e.g. what happened today: workout, argument, coffee',
+    'habitForm.multiNote': 'In “Today” you tap every option that applies – or “none of these”. In the evaluation, each option gets its own row.',
+    'habitForm.multiOptions': 'Options',
+    'habitForm.multiOptionAria': 'Option {n}',
+    'habitForm.multiAdd': '+ Option',
+    'habitForm.multiRemove': 'Remove option {n}',
+    'habitForm.multiHide': 'Hide',
+    'habitForm.multiShow': 'Show',
+    'habitForm.multiUsedNote': 'Options you have already chosen can be renamed or hidden, but not removed – otherwise they would be missing from your previous entries. Hidden ones no longer appear in “Today”, but still do in the evaluation.',
+    'habitForm.lockedNoteMulti': 'This field already has entries – so its type is fixed.',
+    'habitForm.error.multiEmpty': 'Please fill in or remove every option.',
+    'habitForm.error.multiDuplicate': 'Two options have the same name.',
+    'habitForm.error.multiMin': 'You need at least two options that are not hidden.',
+    'today.multiNone': 'none of these',
     'textReview.countOne': '1 entry',
     'textReview.countMany': '{count} entries',
     'common.saving': 'Saving…',
@@ -3992,7 +4039,7 @@ async function repadOldEntries() {
   }
 }
 
-const SUPPORTED_KINDS = ['scale', 'number', 'counter', 'computed', 'text', 'time'];
+const SUPPORTED_KINDS = ['scale', 'number', 'counter', 'computed', 'text', 'time', 'multi'];
 const SUPPORTED_AGGREGATES = [null, 'sum', 'avg', 'min', 'max', 'duration', 'since'];
 function isSupportedHabit(h) {
   return SUPPORTED_KINDS.includes(h.kind) && (h.kind !== 'computed' || SUPPORTED_AGGREGATES.includes(h.aggregate));
@@ -4900,6 +4947,7 @@ function defaultHabitForm() {
     summary: 'avg', // Zahlen: in Woche/Monat/Jahr als Durchschnitt oder Summe
     durationFrom: null, durationTo: null, // nur berechnet "Dauer": Schlüssel der beiden Uhrzeit-Felder
     sinceSource: null, sinceValues: [], sinceAtLeast: '1', sinceMode: 'last', // nur berechnet "Tage seit" (siehe isSinceComputed)
+    multiOptions: emptyMultiOptions(), // nur Mehrfachauswahl: [{ id, label, hidden }]
   };
 }
 
@@ -4978,6 +5026,7 @@ function habitToForm(h) {
     numberGoalDir: isNumberKind(h) || isCounterKind(h) ? h.good || null : null,
     numberGoalValue: Number.isFinite(h.target) ? String(h.target) : '',
     summary: h.summary,
+    multiOptions: isMultiKind(h) ? (h.options || []).map((o) => ({ ...o })) : emptyMultiOptions(),
   };
 }
 
@@ -5030,6 +5079,11 @@ function syncHabitFormFromDom() {
       });
     }
     readGoalFromDom(f);
+  } else if (f.kind === 'multi') {
+    f.multiOptions.forEach((o) => {
+      const el = document.getElementById(`habit-form-multi-option-${o.id}`);
+      if (el) o.label = el.value;
+    });
   } else if (f.kind === 'computed') {
     const aggregateEl = document.getElementById('habit-form-computed-aggregate');
     if (aggregateEl) f.aggregate = aggregateEl.value;
@@ -5147,6 +5201,18 @@ async function handleHabitSaveInner() {
     fields = { kind: 'text', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
   } else if (f.kind === 'time') {
     fields = { kind: 'time', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
+  } else if (f.kind === 'multi') {
+    const options = f.multiOptions.map((o) => ({ id: o.id, label: o.label.trim().slice(0, 40), ...(o.hidden ? { hidden: true } : {}) }));
+    const names = options.map((o) => o.label.toLocaleLowerCase());
+    const error = options.some((o) => !o.label) ? 'habitForm.error.multiEmpty'
+      : new Set(names).size !== names.length ? 'habitForm.error.multiDuplicate'
+      : options.filter((o) => !o.hidden).length < 2 ? 'habitForm.error.multiMin'
+      : null;
+    if (error) {
+      state.notice = { type: 'error', text: t(error) };
+      return;
+    }
+    fields = { kind: 'multi', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null, options };
   } else if (f.kind === 'computed' && f.computedType === 'duration') {
     const isTimeField = (key) => state.habits.some((h) => h.id === key && isTimeKind(h));
     if (!isTimeField(f.durationFrom) || !isTimeField(f.durationTo) || f.durationFrom === f.durationTo) {
@@ -5260,8 +5326,9 @@ async function handleHabitSaveInner() {
   // habit_definitions_period_combination_check). Der Erinnerungstag als null, wenn er dem
   // Standard entspricht (Sonntag / letzter Tag / 31.12.) - eine Darstellung für "Standard".
   readPeriodReminderFromDom(f);
-  // Uhrzeiten nur als Tagesfeld - "ins Bett" einmal pro Woche ergibt keinen Sinn.
-  const period = f.kind === 'computed' || f.kind === 'time' ? 'day' : f.period;
+  // Uhrzeiten nur als Tagesfeld - "ins Bett" einmal pro Woche ergibt keinen Sinn. Mehrfachauswahl
+  // vorerst auch (ihre Auswertung zählt Tage).
+  const period = f.kind === 'computed' || f.kind === 'time' || f.kind === 'multi' ? 'day' : f.period;
   const periodReminderDay = period === 'day' || f.periodReminderDay === null || f.periodReminderDay === PERIOD_REMINDER_DEFAULT[period]
     ? null : f.periodReminderDay;
   if (f.kind === 'computed' || period !== 'day') {
@@ -5293,6 +5360,7 @@ async function handleHabitSaveInner() {
     goalThreshold: fields.goal_threshold,
     aggregate: fields.aggregate ?? null,
     since: fields.since ?? undefined,
+    options: fields.options ?? undefined,
     hideInStats: !f.showInStats,
     step: f.kind === 'counter' ? f.step : undefined,
     target: fields.target ?? undefined,
@@ -5838,7 +5906,7 @@ function typeChangeBlocker(h) {
   return state.habits.find((x) => x.kind === 'computed' && (x.members || []).includes(h.id)) ?? null;
 }
 function kindLabel(kind) {
-  return tPlain({ scale: 'habitForm.kindScale', number: 'habitForm.kindNumber', text: 'habitForm.kindText', counter: 'habitForm.kindCounter', time: 'habitForm.kindTime' }[kind] ?? 'habitForm.kindText');
+  return tPlain({ scale: 'habitForm.kindScale', number: 'habitForm.kindNumber', text: 'habitForm.kindText', counter: 'habitForm.kindCounter', time: 'habitForm.kindTime', multi: 'habitForm.kindMulti' }[kind] ?? 'habitForm.kindText');
 }
 function usedValueRange(h) {
   const used = usedStepValues(h);
@@ -6505,7 +6573,7 @@ async function updateHabitPayload(habit, changes) {
     key: next.id, name: next.name, unit: next.unit ?? null, min: next.min ?? null, max: next.max ?? null,
     labels: next.labels ?? null, good: next.good ?? null, displayStyle: next.displayStyle ?? 'buttons',
     sliderShowValue: next.sliderShowValue ?? true, groupMembers: next.members ?? null,
-    goalThreshold: next.goalThreshold ?? null, aggregate: next.aggregate ?? null, since: next.since ?? undefined,
+    goalThreshold: next.goalThreshold ?? null, aggregate: next.aggregate ?? null, since: next.since ?? undefined, options: next.options ?? undefined,
     hideInStats: !!next.hideInStats, archivedInStats: !!next.archivedInStats,
     // Ohne diese gingen Ziel/Schritt/Summe einer Zahl bzw. eines Zählers hier still verloren.
     step: isCounterKind(next) ? next.step : undefined, target: next.target ?? undefined,
@@ -6652,6 +6720,30 @@ function handleSelect(dateKey, habitId, value) {
     delete day[habitId];
     offerUndoRemoval(dateKey, habitId, value);
   } else day[habitId] = value;
+  state.entries = { ...state.entries, [dateKey]: day };
+  haptic();
+  render();
+  saveDay(dateKey);
+}
+
+// Mehrfachauswahl: optionId = Option an-/abwählen, null = "nichts davon" (nochmal = wieder leer).
+// Wird die letzte Option abgewählt, ist das Feld wieder offen (wie das Abwählen einer Stufe);
+// "nichts davon" ist eine bewusste Angabe und steht deshalb für sich.
+function handleMultiToggle(dateKey, habitId, optionId) {
+  dateKey = entryKeyFor(habitId, dateKey);
+  const day = { ...(state.entries[dateKey] || {}) };
+  const prev = Array.isArray(day[habitId]) ? day[habitId] : null;
+  let next;
+  if (optionId === null) next = prev?.length === 0 ? null : [];
+  else {
+    next = prev?.includes(optionId) ? prev.filter((x) => x !== optionId) : [...(prev || []), optionId];
+    if (!next.length) next = null;
+  }
+  if (next) day[habitId] = next;
+  else {
+    delete day[habitId];
+    if (prev) offerUndoRemoval(dateKey, habitId, prev);
+  }
   state.entries = { ...state.entries, [dateKey]: day };
   haptic();
   render();
@@ -8805,6 +8897,7 @@ function renderTodayHabitRow(h, dateKey, dayEntry, { trackOpen = false } = {}) {
   if (isNumberKind(h)) return renderNumberBox(h, dateKey, dayEntry, marker);
   if (isTextKind(h)) return renderTextBox(h, dayEntry, marker);
   if (isTimeKind(h)) return renderTimeBox(h, dateKey, dayEntry, marker);
+  if (isMultiKind(h)) return renderMultiRow(h, dateKey, dayEntry, marker);
   if (h.kind === 'computed') return `
     <div class="habit-row habit-row--computed">
       ${renderRowHead(h, esc(h.name))}
@@ -8825,6 +8918,25 @@ function renderTodayHabitRow(h, dateKey, dayEntry, { trackOpen = false } = {}) {
     <div class="habit-row habit-row--buttons">
       ${renderRowHead(h, esc(h.name) + marker)}
       <div class="habit-options" role="group" aria-label="${esc(h.name)}">${renderHabitOptions(h, dayEntry[h.id])}</div>
+      ${renderNote(dateKey, h.id, noteLabel(h))}
+      ${renderRowMenuPanel(h)}
+    </div>
+  `;
+}
+
+// Mehrfachauswahl: jede Option ein Knopf zum An-/Abwählen, dahinter "nichts davon" (= eingetragen,
+// aber keine Option). Gewählt in der neutralen Auswahl-Farbe - es gibt keine Bewertung.
+function renderMultiRow(h, dateKey, dayEntry, marker) {
+  const value = Array.isArray(dayEntry[h.id]) ? dayEntry[h.id] : null;
+  const shown = (h.options || []).filter((o) => !o.hidden || value?.includes(o.id));
+  const pill = (action, attrs, label, selected, extraClass = '') => `<button type="button" class="opt-btn opt-btn--text${extraClass}${selected ? ' opt-btn--selected' : ''}"${selected ? ` style="background:${NEUTRAL_SELECTED};border-color:${NEUTRAL_SELECTED};color:${NEUTRAL_SELECTED_TEXT};"` : ''} data-action="${action}" data-habit="${h.id}"${attrs} aria-pressed="${selected}">${label}</button>`;
+  return `
+    <div class="habit-row habit-row--buttons habit-row--multi">
+      ${renderRowHead(h, esc(h.name) + marker)}
+      <div class="habit-options" role="group" aria-label="${esc(h.name)}">
+        ${shown.map((o) => pill('multi-toggle', ` data-option="${esc(o.id)}"`, esc(o.label), !!value?.includes(o.id))).join('')}
+        ${pill('multi-none', '', t('today.multiNone'), value?.length === 0, ' opt-btn--none')}
+      </div>
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
     </div>
@@ -9073,6 +9185,7 @@ function renderWeek() {
     (h) => inStats(h) && (!h.archivedAt || habitVisibleInRange(h, dayKeys))
   );
   const weekRow = (h) => {
+    if (isMultiKind(h)) return multiWeekRows(h, dayKeys, days);
     const scores = dayKeys.map((k) => habitScore(h, k));
     const valid = scores.filter((s) => s !== null);
     const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
@@ -9098,7 +9211,7 @@ function renderWeek() {
       </div>
     `;
   };
-  const rows = renderBySection(visibleHabits.filter(isScoredKind), 'stats', (list) => list.map(weekRow).join(''));
+  const rows = renderBySection(visibleHabits.filter(inFieldStatsList), 'stats', (list) => list.map(weekRow).join(''));
 
   return `
     <div class="day-nav">
@@ -9140,7 +9253,6 @@ function renderMonth() {
   const visibleHabits = state.habits.filter(
     (h) => inStats(h) && (!h.archivedAt || habitVisibleInRange(h, cellKeys))
   );
-  const monthStats = computeHabitStats(visibleHabits.filter(isScoredKind), cellKeys);
 
   return `
     <div class="day-nav">
@@ -9158,7 +9270,7 @@ function renderMonth() {
         return `<div class="month-cell${hasNote ? ' has-note' : ''}" ${openDayAttrs(d)} style="background:${scoreColor(s)};${scorePatternStyle(s)}" aria-label="${esc(dayCellAriaLabel(d, s) + (hasNote ? t('ariaLabel.withNote') : ''))}"><span class="month-cell-num"${s !== null && s !== undefined ? ` style="color:${textOnScore(scoreColor(s))};background-color:${scoreColor(s)}"` : ''}>${d.getDate()}</span></div>`;
       }).join('')}
     </div>
-    <div class="month-stats">${renderBySection(monthStats.map((st) => st.habit), 'stats', (list) => renderStatsRows(monthStats.filter((st) => list.includes(st.habit))))}</div>
+    <div class="month-stats">${renderFieldStatsList(visibleHabits, cellKeys)}</div>
     ${renderStatsLegend('stats')}
     ${renderNumberCharts(visibleHabits, cellKeys, true)}
     ${renderTextReviews(visibleHabits, cellKeys)}
@@ -9188,7 +9300,6 @@ function renderYear() {
   const visibleHabits = state.habits.filter(
     (h) => inStats(h) && (!h.archivedAt || habitVisibleInRange(h, yearKeys))
   );
-  const yearStats = computeHabitStats(visibleHabits.filter(isScoredKind), yearKeys);
 
   return `
     <div class="day-nav">
@@ -9198,7 +9309,7 @@ function renderYear() {
     </div>
     ${!hasAnyEntries() ? renderStatsEmpty() : `
     <div class="year-grid">${monthsGrid}</div>
-    <div class="month-stats">${renderBySection(yearStats.map((st) => st.habit), 'stats', (list) => renderStatsRows(yearStats.filter((st) => list.includes(st.habit))))}</div>
+    <div class="month-stats">${renderFieldStatsList(visibleHabits, yearKeys)}</div>
     ${renderStatsLegend('stats')}
     ${renderNumberCharts(visibleHabits, yearKeys)}
     ${renderTextReviews(visibleHabits, yearKeys)}
@@ -9219,7 +9330,6 @@ function dayHasDayValues(day) {
 function renderGlobal() {
   const dateKeys = Object.keys(state.entries).filter((k) => dayHasDayValues(state.entries[k])).sort();
   const statsHabits = state.habits.filter(inStats);
-  const stats = computeHabitStats(statsHabits.filter(isScoredKind), dateKeys);
   const rangeNote = dateKeys.length
     ? t('global.rangeNote', { since: formatDMY(dateKeys[0]), count: dateKeys.length })
     : t('global.noEntries');
@@ -9230,7 +9340,7 @@ function renderGlobal() {
     </div>
     ${!dateKeys.length ? renderStatsEmpty() : `
     <p class="manage-meta" style="margin: -8px 0 14px;">${rangeNote}</p>
-    <div class="month-stats">${renderBySection(stats.map((st) => st.habit), 'stats', (list) => renderStatsRows(stats.filter((st) => list.includes(st.habit))))}</div>
+    <div class="month-stats">${renderFieldStatsList(statsHabits, dateKeys)}</div>
     ${renderStatsLegend('stats')}
     ${renderNumberCharts(statsHabits, dateKeys)}
     ${renderTextReviews(statsHabits, dateKeys)}
@@ -9665,6 +9775,65 @@ function habitAvgLong(h, avg, count, hits = 0, numAvg = null) {
   }
   return Math.round(avg * 100) + '%';
 }
+// Mehrfachauswahl in der Auswertung (Nutzer-Idee 2026-10-30): das Feld als eigene Zeile, darunter
+// je Option eine Unterzeile wie ein Ja/Nein-Feld - eingetragen wird gesammelt, ausgewertet jede
+// Option für sich. "an n von m Tagen": m = Tage, an denen das Feld eingetragen war (auch "nichts
+// davon"). Ausgeblendete Optionen nur, solange sie im Zeitraum vorkommen.
+function multiOptionCounts(h, dateKeys) {
+  const entered = dateKeys.filter((k) => multiValue(h, k) !== null);
+  const options = (h.options || []).filter((o) => !o.hidden || entered.some((k) => multiValue(h, k).includes(o.id)));
+  return { entered: entered.length, options: options.map((o) => ({ option: o, n: entered.filter((k) => multiValue(h, k).includes(o.id)).length })) };
+}
+function multiWeekRows(h, dayKeys, days) {
+  const values = dayKeys.map((k) => multiValue(h, k));
+  const cellAttrs = (i) => (isFutureKey(dayKeys[i]) ? '' : `data-action="open-day" data-date="${dayKeys[i]}" data-focus-habit="${h.id}"`);
+  const { entered, options } = multiOptionCounts(h, dayKeys);
+  // Kopfzeile: wie viele Optionen am Tag gewählt waren (0 = "nichts davon").
+  const head = `
+    <div class="grid-row">
+      <div class="grid-label">${statsFieldName(h, 'grid')}</div>
+      ${values.map((v, i) => `<div class="grid-cell grid-cell--count${getNote(dayKeys[i], h.id) ? ' has-note' : ''}${v === null && !isPlannedOn(h, days[i]) ? ' grid-cell--unplanned' : ''}" ${cellAttrs(i)} aria-hidden="true">${v === null ? '' : v.length}</div>`).join('')}
+      <div class="grid-cell grid-cell--avg grid-cell--blank"></div>
+    </div>
+  `;
+  return head + options.map(({ option, n }) => {
+    const long = `${option.label}: ${tPlain('stats.yesNoDays', { n, total: entered })}`;
+    return `
+      <div class="grid-row grid-row--sub">
+        <div class="grid-label grid-label--sub">${esc(option.label)}</div>
+        ${values.map((v, i) => `<div class="grid-cell" ${cellAttrs(i)}${v?.includes(option.id) ? ` style="background-color:${NEUTRAL_FILL}"` : ''} aria-hidden="true"></div>`).join('')}
+        ${entered
+          ? `<button type="button" class="grid-cell grid-cell--avg grid-cell--plain" data-action="avg-info" data-text="${esc(long)}" aria-label="${esc(long)}">${n}/${entered}</button>`
+          : '<div class="grid-cell grid-cell--avg grid-cell--plain">–</div>'}
+      </div>
+    `;
+  }).join('');
+}
+function renderMultiStatsRows(h, dateKeys) {
+  const { entered, options } = multiOptionCounts(h, dateKeys);
+  return `
+    <div class="month-stat-row">
+      <span class="habit-name">${statsFieldName(h, 'rows')}</span>
+      <span class="month-stat-value">${entered ? `<span class="month-stat-count">${entered}×</span>` : '<span class="month-stat-count">–</span>'}</span>
+    </div>
+    ${entered ? options.map(({ option, n }) => `
+      <div class="month-stat-row month-stat-row--sub">
+        <span class="habit-name">${esc(option.label)}</span>
+        <span class="month-stat-value">${esc(tPlain('stats.yesNoDays', { n, total: entered }))}</span>
+      </div>
+    `).join('') : ''}
+  `;
+}
+// Liste pro Feld in Monat/Jahr/Gesamt: bewertete Felder mit Durchschnitt, Mehrfachauswahl mit
+// ihren Unterzeilen - in der Reihenfolge der Verwaltung, nach Gruppen.
+function inFieldStatsList(h) { return isScoredKind(h) || isMultiKind(h); }
+function renderFieldStatsList(habits, dateKeys) {
+  const listed = habits.filter(inFieldStatsList);
+  const stats = computeHabitStats(listed.filter(isScoredKind), dateKeys);
+  return renderBySection(listed, 'stats', (list) => list.map((h) => (isMultiKind(h)
+    ? renderMultiStatsRows(h, dateKeys)
+    : renderStatsRows(stats.filter((st) => st.habit === h)))).join(''));
+}
 function renderStatsRows(stats) {
   return stats.map(({ habit, avg, count, hits, numAvg }) => `
     <div class="month-stat-row">
@@ -10089,6 +10258,31 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     </div>
   `;
 
+  // Optionen der Mehrfachauswahl: schon gewählte nur umbenennen/ausblenden (siehe isMultiKind).
+  const multiKey = f.defId ? state.habits.find((h) => h.defId === f.defId)?.id : null;
+  const multiAnyUsed = !!multiKey && f.multiOptions.some((o) => multiOptionUsed(multiKey, o.id));
+  const multiBody = f.kind !== 'multi' ? '' : `
+    <p class="habit-form-lock-note">${t('habitForm.multiNote')}</p>
+    <div class="auth-field">
+      <span class="settings-label" id="habit-form-multi-label">${t('habitForm.multiOptions')}</span>
+      <ul class="multi-option-list" aria-labelledby="habit-form-multi-label">
+        ${f.multiOptions.map((o, i) => {
+          const used = !!multiKey && multiOptionUsed(multiKey, o.id);
+          const n = i + 1;
+          return `
+          <li class="multi-option-row${o.hidden ? ' multi-option-row--hidden' : ''}">
+            <input type="text" id="habit-form-multi-option-${o.id}" value="${esc(o.label)}" maxlength="40" aria-label="${esc(tPlain('habitForm.multiOptionAria', { n }))}" />
+            ${used
+              ? `<button type="button" class="manage-btn" data-action="multi-option-hide" data-option="${o.id}" aria-pressed="${!!o.hidden}">${t(o.hidden ? 'habitForm.multiShow' : 'habitForm.multiHide')}</button>`
+              : `<button type="button" class="manage-btn" data-action="multi-option-remove" data-option="${o.id}" aria-label="${esc(tPlain('habitForm.multiRemove', { n }))}">×</button>`}
+          </li>`;
+        }).join('')}
+      </ul>
+      ${f.multiOptions.length < MULTI_MAX_OPTIONS ? `<button type="button" class="manage-btn" data-action="multi-option-add">${t('habitForm.multiAdd')}</button>` : ''}
+      ${multiAnyUsed ? `<p class="habit-form-lock-note">${t('habitForm.multiUsedNote')}</p>` : ''}
+    </div>
+  `;
+
   // Bis zu MAX_REMINDER_TIMES Zeiten bei Tagesfeldern, bei Zeitraum-Feldern eine.
   const times = f.reminderTimes.length ? f.reminderTimes : [state.userSettings.defaultReminderMinute];
   const maxTimes = f.period === 'day' ? MAX_REMINDER_TIMES : 1;
@@ -10185,14 +10379,16 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // intern 'counter', weil der Server ihn für Erinnerungen unterscheiden muss.
   const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber']]
     .concat(tutorialForm ? [] : [['time', 'habitForm.kindTime']])
+    .concat(!tutorialForm && (featureOn('multi') || f.kind === 'multi') ? [['multi', 'habitForm.kindMulti']] : [])
     .concat([['text', 'habitForm.kindText']])
     .concat(computedPossible ? [['computed', 'habitForm.kindComputed']] : []);
   // Zeitraum (Tag/Woche/Monat/Jahr): nicht im Tutorial (das erste Feld ist ein Tagesfeld) und
   // nicht bei "Berechnet". Mit Daten gesperrt - die Werte stünden sonst am falschen Tag.
   const isTime = f.kind === 'time';
-  const isPeriod = !isComputed && !isTime && f.period !== 'day';
+  const isMulti = f.kind === 'multi';
+  const isPeriod = !isComputed && !isTime && !isMulti && f.period !== 'day';
   const isCounter = f.kind === 'counter';
-  const periodField = tutorialForm || isComputed || isTime ? '' : `
+  const periodField = tutorialForm || isComputed || isTime || isMulti ? '' : `
     <div class="auth-field">
       <label id="habit-form-period-label">${t('habitForm.period')}</label>
       <div class="pill-group seg" role="group" aria-labelledby="habit-form-period-label">
@@ -10221,7 +10417,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
       <p class="habit-form-lock-note">${t(f.summary === 'sum' ? 'habitForm.summary.noteSum' : 'habitForm.summary.noteAvg')}</p>
     </div>
   ` : '';
-  const entryBody = isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : isTime ? timeBody
+  const entryBody = isComputed ? computedBody : f.kind === 'scale' ? scaleBody : f.kind === 'text' ? textBody : isTime ? timeBody : isMulti ? multiBody
     : f.kind === 'counter' ? counterBody : entryModeField + entryPreview + numberBody;
   const whenBody = isComputed ? '' : `
     ${periodField}
@@ -10260,7 +10456,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   return `
     <div class="habit-form" id="habit-form">
       ${titleInHeader ? '' : `<h2>${t(habitFormTitleKey(f))}</h2>`}
-      ${f.locked ? `<p class="habit-form-lock-note">${t(f.kind === 'text' ? 'habitForm.lockedNoteText' : 'habitForm.lockedNote')}</p>` : ''}
+      ${f.locked ? `<p class="habit-form-lock-note">${t(f.kind === 'text' ? 'habitForm.lockedNoteText' : f.kind === 'multi' ? 'habitForm.lockedNoteMulti' : 'habitForm.lockedNote')}</p>` : ''}
       ${part('what', `
         <div class="auth-field">
           <label for="habit-form-name">${t('habitForm.name')}</label>
@@ -11629,6 +11825,8 @@ app.addEventListener('click', async (e) => {
     const dateKey = formatKey(state.currentDate);
     const value = JSON.parse(el.dataset.value);
     handleSelect(dateKey, el.dataset.habit, value);
+  } else if (action === 'multi-toggle' || action === 'multi-none') {
+    handleMultiToggle(formatKey(state.currentDate), el.dataset.habit, action === 'multi-none' ? null : el.dataset.option);
   } else if (action === 'reset-day-arm') {
     // Das Menü ist nach dem Dialog zu - der Fokus kehrt deshalb auf dessen ⋮ zurück.
     modalTriggerSelector = `.row-menu-trigger[data-menu="${DAY_MENU_KEY}"]`;
@@ -11919,6 +12117,22 @@ app.addEventListener('click', async (e) => {
     }
     render();
     document.querySelector(`[data-action="computed-type"][data-type="${el.dataset.type}"]`)?.focus();
+  } else if (action === 'multi-option-add') {
+    syncHabitFormFromDom();
+    const option = { id: newMultiOptionId(), label: '' };
+    state.habitForm.multiOptions.push(option);
+    render();
+    document.getElementById(`habit-form-multi-option-${option.id}`)?.focus();
+  } else if (action === 'multi-option-remove') {
+    syncHabitFormFromDom();
+    state.habitForm.multiOptions = state.habitForm.multiOptions.filter((o) => o.id !== el.dataset.option);
+    render();
+    app.querySelector('[data-action="multi-option-add"]')?.focus();
+  } else if (action === 'multi-option-hide') {
+    syncHabitFormFromDom();
+    const option = state.habitForm.multiOptions.find((o) => o.id === el.dataset.option);
+    if (option) option.hidden = !option.hidden;
+    render();
   } else if (action === 'since-value') {
     syncHabitFormFromDom();
     const f = state.habitForm;

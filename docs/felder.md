@@ -17,6 +17,7 @@ in der verschlüsselten payload heißt die Mitgliederliste `groupMembers` (Klart
   seiner Mitglieder.
 - `kind='text'`: freie Text-Antwort.
 - `kind='time'` ("Uhrzeit"): ein Zeitpunkt pro Tag, siehe unten.
+- `kind='multi'` ("Mehrfachauswahl"): mehrere Optionen pro Tag ankreuzen, siehe unten.
 
 **Neuer Typ oder neue Berechnungsart** → in `SUPPORTED_KINDS`/`SUPPORTED_AGGREGATES`
 aufnehmen. Eine App-Version, die ihn nicht kennt (live, während er auf der Beta mit derselben
@@ -82,6 +83,28 @@ stehen also an zwei verschiedenen Tagen. Die Dauer ist ein berechnetes Feld (unt
   liegt, damit Ø 23:30/0:30 = 0:00 ist und nicht 12:00.
 - Gerechnet wird mit Wanduhr-Zeit über Tagesnummern (`dayIndex`): eine Dauer über die Nacht der
   Zeitumstellung liegt eine Stunde daneben (bewusst hingenommen).
+
+### Mehrfachauswahl (`kind='multi'`)
+
+Nutzer-Entscheidung 2026-10-30: früh gebaut, weil sie prägt, wie man einträgt (eine Zeile
+"Was war heute?" statt vieler Ja/Nein-Felder) – gedacht für Auslöser/Ereignisse zum Antippen,
+später Grundlage der Mustersuche. Hinter dem Schalter `multi` (docs/freigabe.md).
+
+- **Optionen** verschlüsselt in `options: [{ id, label, hidden }]`. **Wert** = Array der
+  Options-Ids (stabil: Umbenennen verschiebt nichts), `[]` = "nichts davon" – zählt als
+  eingetragen (bewusste Angabe, nicht dasselbe wie leer). Die letzte Option abwählen = wieder
+  leer (wie eine Stufe abwählen, mit "Rückgängig").
+- **Schon gewählte Optionen** (`multiOptionUsed`) lassen sich nur umbenennen oder ausblenden,
+  nicht entfernen. Ausgeblendete stehen in "Heute" nur an Tagen, an denen sie gewählt sind
+  (damit man sie abwählen kann), in der Auswertung, solange sie im Zeitraum vorkommen.
+- Nur Tagesfelder, nicht im Tutorial, kein "Typ ändern", keine Bewertung (gewählt in der
+  neutralen Auswahl-Farbe), Erinnerung wie ein normales Feld (leer = fehlt). 2 bis
+  `MULTI_MAX_OPTIONS` (20) Optionen, mind. zwei nicht ausgeblendet, Namen eindeutig.
+- **Auswertung** (Nutzer-Idee 2026-10-30, statt einer eigenen Zusammenfassung): das Feld als
+  eigene Zeile, darunter je Option eine Unterzeile wie ein Ja/Nein-Feld – in der Woche die
+  Kopfzeile mit der Zahl gewählter Optionen pro Tag, Unterzeilen mit gefüllten Zellen und
+  "n/m"; in Monat/Jahr/Gesamt "an n von m Tagen" (`multiOptionCounts`, m = eingetragene Tage
+  inkl. "nichts davon"). Gewichtung pro Option (gut/schlecht) gibt es bewusst noch nicht.
 
 ## Darstellung von Skalen (`display_style`)
 

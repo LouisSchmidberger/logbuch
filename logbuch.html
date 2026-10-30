@@ -861,9 +861,15 @@
   .grid-col-header--avg { font-family: 'Fraunces', serif; font-style: italic; color: var(--ink); cursor: default; }
   .grid-cell { height: 1.5rem; margin: 1px; border-radius: 2px; border: 1px solid var(--line); cursor: pointer; }
   .grid-cell--blank { border-color: transparent; }
+  /* Mehrfachauswahl (multiWeekRows): Kopfzeile mit der Zahl gewählter Optionen, Unterzeilen je
+     Option eingerückt; deren Ø-Zelle (grid-cell--plain, unten) ohne Score-Farbe, in normaler Schrift. */
+  .grid-cell--count { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+  .grid-scroll .grid-label--sub { padding-left: 0.75rem; color: color-mix(in srgb, var(--ink) 80%, var(--paper)); }
+  .grid-scroll .section-content .grid-label--sub { padding-left: 1.8125rem; }
   .grid-cell--avg { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--on-score); font-weight: 600; cursor: default; }
   /* Ø-Zelle als Knopf (Antippen zeigt den Wert ausgeschrieben, siehe habitAvgLong). */
   button.grid-cell--avg { font-family: inherit; padding: 0; cursor: pointer; font-variant-numeric: tabular-nums; }
+  .grid-cell--avg.grid-cell--plain { color: var(--ink); font-weight: 400; background: transparent; }
   /* Mini-Skala (avgMiniScale): Linie über ~3/4 der Zelle, Punkt an der Stelle des Ø, in
      Feldrichtung. In der Textfarbe (Woche: textOnScore der Zelle, Listen: Farbe des Werts). */
   .avg-scale { position: relative; width: 70%; height: 2px; border-radius: 1px; background: color-mix(in srgb, currentColor 55%, transparent); }
@@ -896,6 +902,14 @@
   .month-stat-row .habit-name { min-width: auto; }
   .month-stat-value { font-weight: 600; text-align: right; }
   .month-stat-count { font-weight: 400; color: var(--sand); }
+  .month-stat-row--sub { padding-left: 1rem; font-size: 0.8125rem; }
+  /* Mehrfachauswahl in "Heute": "nichts davon" gestrichelt, damit es nicht wie eine Option aussieht. */
+  .opt-btn--none:not(.opt-btn--selected) { border-style: dashed; color: color-mix(in srgb, var(--ink) 75%, var(--paper)); }
+  /* Optionen im Feld-Formular: Eingabefeld + Knopf (× bzw. Aus-/Einblenden) je Zeile. */
+  .multi-option-list { list-style: none; margin: 0 0 0.5rem; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+  .multi-option-row { display: flex; gap: 0.5rem; align-items: center; }
+  .multi-option-row input { flex: 1; min-width: 0; }
+  .multi-option-row--hidden input { opacity: 0.6; }
 
   .year-grid { display: flex; flex-direction: column; gap: 3px; margin-bottom: 20px; }
   .year-month { display: flex; align-items: center; gap: 6px; }
@@ -1471,6 +1485,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=e86273ca00"></script>
+<script type="module" src="./logbuch.js?v=a4bebe4e4a"></script>
 </body>
 </html>

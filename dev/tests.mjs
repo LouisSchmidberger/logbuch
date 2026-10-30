@@ -82,6 +82,14 @@ try {
       eq('0:30 heute, eingetragen auf gestern = 1470', f.timeValueOn('2026-10-29', new Date(2026, 9, 30, 0, 30)), 1470);
       eq('Zukunft erkannt', [f.isFutureKey(day(1)), f.isFutureKey(day(0))], [true, false]);
 
+      // --- Mehrfachauswahl: je Option "an n von m Tagen", m = eingetragene Tage (auch "nichts davon") ---
+      const multi = { id: 'm', kind: 'multi', options: [{ id: 'a', label: 'Sport' }, { id: 'b', label: 'Streit' }, { id: 'c', label: 'alt', hidden: true }, { id: 'd', label: 'alt2', hidden: true }] };
+      state.habits = [multi];
+      state.entries = { [day(-3)]: { m: ['a', 'b'] }, [day(-2)]: { m: [] }, [day(-1)]: { m: ['a', 'c'] }, [day(0)]: {} };
+      const mc = f.multiOptionCounts(multi, [-3, -2, -1, 0].map(day));
+      eq('Mehrfachauswahl: eingetragene Tage inkl. "nichts davon"', mc.entered, 3);
+      eq('Mehrfachauswahl: je Option, ausgeblendete nur mit Vorkommen', mc.options.map((o) => [o.option.id, o.n]), [['a', 2], ['b', 1], ['c', 1]]);
+
       // --- Schalter ---------------------------------------------------------------
       const g = [null, 'tester', 'owner'];
       eq('Stufe off', g.map((x) => f.featureVisible('off', x)), [false, false, false]);
