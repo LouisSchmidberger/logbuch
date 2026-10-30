@@ -2094,6 +2094,42 @@ const STRINGS = {
     'tpl.events.friends': 'Freunde getroffen',
     'tpl.events.argument': 'Streit',
     'tpl.events.alcohol': 'Alkohol',
+    'tpl.events.outside': 'Draußen gewesen',
+    'tpl.events.screen': 'Viel Bildschirm',
+    'tpl.sleepQuality.name': 'Schlafqualität',
+    'tpl.energy.name': 'Energie',
+    'tpl.body.name': 'Körperliche Beschwerden',
+    'tpl.headache.name': 'Kopfschmerzen',
+    'tpl.caffeine.name': 'Koffein',
+    'tpl.cigarettes.name': 'Zigaretten',
+    'tpl.grateful.name': 'Wofür bin ich dankbar?',
+    'pkg.intro': 'Damit du nicht bei null anfängst: ein Startpaket mit Feldern, die bei vielen etwas zeigen. Es ist nur ein Vorschlag – nimm heraus, was nicht zu dir passt, und nimm dazu, was dich interessiert. Ändern, umbenennen und ergänzen kannst du alles jederzeit.',
+    'pkg.group.sleep': 'Schlaf',
+    'pkg.group.feeling': 'Befinden',
+    'pkg.group.influences': 'Einflüsse',
+    'pkg.group.other': 'Sonstiges',
+    'pkg.item.sleep': 'Ins Bett, Aufgestanden und die Schlafdauer daraus',
+    'pkg.item.sleepQuality': '1 bis 5',
+    'pkg.item.mood': '1 bis 5',
+    'pkg.item.energy': '1 bis 5',
+    'pkg.item.stress': '0 bis 10, wenig ist gut',
+    'pkg.item.body': 'keine bis stark',
+    'pkg.item.headache': 'keine bis stark',
+    'pkg.item.events': 'Sport, draußen gewesen, Freunde getroffen, Streit, Alkohol, viel Bildschirm – zum Antippen',
+    'pkg.item.water': 'Gläser hochzählen, Ziel mindestens 8',
+    'pkg.item.caffeine': 'Tassen hochzählen',
+    'pkg.item.meds': 'Ja oder Nein, mit Erinnerung',
+    'pkg.item.cigarettes': 'Hochzählen',
+    'pkg.item.cycle': 'Periode und der Zyklustag daraus',
+    'pkg.item.weight': 'in kg',
+    'pkg.item.grateful': 'Ein paar Worte',
+    'pkg.ideasTitle': 'Was spielt bei dir noch eine Rolle?',
+    'pkg.ideas': 'Vielleicht Zeit mit Tieren, Musik, das Wetter, Arbeit oder freie Tage, Meditation, Zeit am Handy … Du kennst dich am besten. Nimm dir ruhig einen Moment und überleg, was dich ausmacht – eigene Felder legst du jetzt oder jederzeit später an.',
+    'pkg.create': 'Diese {count} Felder anlegen',
+    'pkg.createOne': 'Dieses Feld anlegen',
+    'pkg.single': 'Lieber einzeln auswählen',
+    'pkg.backTitle': 'Startpaket',
+    'pkg.backNote': 'Zurück zur Auswahl mit Häkchen',
     'tpl.yes': 'Ja',
     'tpl.no': 'Nein',
     'tpl.strength.none': 'keine',
@@ -2225,6 +2261,7 @@ const STRINGS = {
     'tutorial.reminders.howInstall': 'So holst du Logbuch auf den Home-Bildschirm',
     'tutorial.field.title': 'Was möchtest du festhalten?',
     'tutorial.field.intro': 'Ein <strong>Feld</strong> ist eine Sache, die du jeden Tag einträgst – zum Beispiel deine Stimmung oder ob du Sport gemacht hast. Leg jetzt dein erstes an; das Formular hier ist dasselbe, mit dem du später weitere Felder anlegst.',
+    'tutorial.field.introPkg': 'Ein <strong>Feld</strong> ist eine Sache, die du jeden Tag einträgst. Je mehr zusammenkommt, desto eher siehst du später, was womit zusammenhängt – etwa wie Schlaf, Stress und Stimmung einander beeinflussen.',
     'tutorial.field.introTpl': 'Ein <strong>Feld</strong> ist eine Sache, die du jeden Tag einträgst – zum Beispiel deine Stimmung oder ob du Sport gemacht hast. Such dir eine Vorlage aus oder leg ein eigenes Feld an; genauso legst du später weitere an.',
     'tutorial.examples.title': 'Beispiele ansehen',
     'tutorial.examples.intro': 'So sehen Felder später in „Heute“ aus – nur zum Anschauen:',
@@ -2253,7 +2290,7 @@ const STRINGS = {
     'tutorial.form.create': 'Feld anlegen',
     'tutorial.done.title': 'Dein erstes Feld steht.',
     'tutorial.done.titleMore': 'Deine {count} Felder stehen.',
-    'tutorial.done.body': 'Du kannst noch ein, zwei weitere anlegen oder es erst mal dabei lassen. <strong>Tipp: lieber klein anfangen und später erweitern.</strong>',
+    'tutorial.done.body': 'Probier es ein paar Tage aus und mach es zu deinem: Was nicht passt, änderst oder archivierst du, was fehlt, legst du dazu – gern auch Eigenes, das nur dich betrifft. <strong>Je mehr zusammenkommt, desto eher siehst du, was womit zusammenhängt.</strong>',
     'tutorial.done.start': 'Weiter',
     'tutorial.done.addMore': 'Noch ein Feld anlegen',
     'installGate.title': 'Erst mal ein Zuhause für Logbuch',
@@ -3207,6 +3244,42 @@ const STRINGS = {
     'tpl.events.friends': 'Met friends',
     'tpl.events.argument': 'Argument',
     'tpl.events.alcohol': 'Alcohol',
+    'tpl.events.outside': 'Went outside',
+    'tpl.events.screen': 'Lots of screen time',
+    'tpl.sleepQuality.name': 'Sleep quality',
+    'tpl.energy.name': 'Energy',
+    'tpl.body.name': 'Physical complaints',
+    'tpl.headache.name': 'Headache',
+    'tpl.caffeine.name': 'Caffeine',
+    'tpl.cigarettes.name': 'Cigarettes',
+    'tpl.grateful.name': 'What am I grateful for?',
+    'pkg.intro': 'So you don’t start from scratch: a starter set of fields that tell many people something. It’s only a suggestion – take out what doesn’t fit you and add what interests you. You can change, rename and extend everything anytime.',
+    'pkg.group.sleep': 'Sleep',
+    'pkg.group.feeling': 'How you feel',
+    'pkg.group.influences': 'Influences',
+    'pkg.group.other': 'Other',
+    'pkg.item.sleep': 'Bedtime, got up and the sleep duration from them',
+    'pkg.item.sleepQuality': '1 to 5',
+    'pkg.item.mood': '1 to 5',
+    'pkg.item.energy': '1 to 5',
+    'pkg.item.stress': '0 to 10, less is good',
+    'pkg.item.body': 'none to strong',
+    'pkg.item.headache': 'none to strong',
+    'pkg.item.events': 'Sports, went outside, met friends, argument, alcohol, lots of screen time – to tap',
+    'pkg.item.water': 'Count glasses, goal at least 8',
+    'pkg.item.caffeine': 'Count cups',
+    'pkg.item.meds': 'Yes or no, with a reminder',
+    'pkg.item.cigarettes': 'Count up',
+    'pkg.item.cycle': 'Period and the cycle day from it',
+    'pkg.item.weight': 'in kg',
+    'pkg.item.grateful': 'A few words',
+    'pkg.ideasTitle': 'What else matters for you?',
+    'pkg.ideas': 'Maybe time with animals, music, the weather, work or days off, meditation, time on your phone … You know yourself best. Take a moment to think about what makes you you – you can add your own fields now or anytime later.',
+    'pkg.create': 'Create these {count} fields',
+    'pkg.createOne': 'Create this field',
+    'pkg.single': 'Rather pick one by one',
+    'pkg.backTitle': 'Starter set',
+    'pkg.backNote': 'Back to the list with checkboxes',
     'tpl.yes': 'Yes',
     'tpl.no': 'No',
     'tpl.strength.none': 'none',
@@ -3338,6 +3411,7 @@ const STRINGS = {
     'tutorial.reminders.howInstall': 'How to put Logbuch on your home screen',
     'tutorial.field.title': 'What would you like to track?',
     'tutorial.field.intro': 'A <strong>field</strong> is one thing you enter every day – for example your mood or whether you exercised. Create your first one now; this form is the same one you will use later for more fields.',
+    'tutorial.field.introPkg': 'A <strong>field</strong> is one thing you enter every day. The more comes together, the sooner you see later what is connected – for example how sleep, stress and mood affect each other.',
     'tutorial.field.introTpl': 'A <strong>field</strong> is one thing you enter every day – for example your mood or whether you exercised. Pick a template or create your own field; you add more fields the same way later.',
     'tutorial.examples.title': 'See examples',
     'tutorial.examples.intro': 'This is how fields will look in “Today” later – just to look at:',
@@ -3366,7 +3440,7 @@ const STRINGS = {
     'tutorial.form.create': 'Create field',
     'tutorial.done.title': 'Your first field is set.',
     'tutorial.done.titleMore': 'Your {count} fields are set.',
-    'tutorial.done.body': 'You can add one or two more or leave it at that for now. <strong>Tip: better start small and expand later.</strong>',
+    'tutorial.done.body': 'Try it for a few days and make it yours: change or archive what doesn’t fit, add what’s missing – including things that only matter to you. <strong>The more comes together, the sooner you see what is connected.</strong>',
     'tutorial.done.start': 'Continue',
     'tutorial.done.addMore': 'Add another field',
     'installGate.title': 'First, a home for Logbuch',
@@ -10350,9 +10424,99 @@ const FIELD_TEMPLATES = [
     { slot: 'period', form: () => ({ kind: 'scale', max: 4, good: null, labelsEnabled: true, labels: STRENGTH_LABELS() }) },
     { slot: 'day', form: () => ({ kind: 'computed', computedType: 'since', sinceSource: '@period', sinceValues: [2, 3, 4], sinceMode: 'start' }) },
   ] },
-  { id: 'events', topic: 'ready', slots: [{ slot: 'main', form: () => ({ kind: 'multi', multiOptions: ['sport', 'friends', 'argument', 'alcohol'].map((k) => ({ id: newMultiOptionId(), label: t('tpl.events.' + k) })) }) }] },
+  { id: 'events', topic: 'ready', slots: [{ slot: 'main', form: () => ({ kind: 'multi', multiOptions: ['sport', 'outside', 'friends', 'argument', 'alcohol', 'screen'].map((k) => ({ id: newMultiOptionId(), label: t('tpl.events.' + k) })) }) }] },
 ];
 const TEMPLATE_TOPICS = ['blocks', 'ready'];
+// Startpaket (Nutzer-Entscheidung 2026-10-30): im Tutorial zuerst ein ausgereifter Satz Felder zum
+// An-/Abwählen, statt dass Neulinge selbst verantworten, alles anzulegen - Logbuch lebt davon, dass
+// vieles zusammenkommt (CLAUDE.md "Kern"). Nur eine Vorauswahl: die Texte ermutigen ausdrücklich,
+// anzupassen und Eigenes anzulegen. Ein Eintrag verweist auf eine Vorlage (tpl) oder hat eigene
+// Teile (Namen dann unter tpl.<id>.*). Gruppen außer 'other' werden als Gruppe angelegt.
+const PACKAGE_GROUPS = [
+  { id: 'sleep', items: [
+    { id: 'sleep', tpl: 'sleep', on: true },
+    { id: 'sleepQuality', on: true, slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 5, good: 'high' }) }] },
+  ] },
+  { id: 'feeling', items: [
+    { id: 'mood', tpl: 'mood', on: true },
+    { id: 'energy', on: true, slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 5, good: 'high' }) }] },
+    { id: 'stress', tpl: 'stress', on: true },
+    { id: 'body', on: true, slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 4, good: 'low', labelsEnabled: true, labels: STRENGTH_LABELS() }) }] },
+    { id: 'headache', on: false, slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 4, good: 'low', labelsEnabled: true, labels: STRENGTH_LABELS() }) }] },
+  ] },
+  { id: 'influences', items: [
+    { id: 'events', tpl: 'events', on: true },
+    { id: 'water', tpl: 'water', on: true },
+    { id: 'caffeine', on: false, slots: [{ slot: 'main', form: () => ({ kind: 'counter' }) }] },
+    { id: 'meds', tpl: 'meds', on: false },
+    { id: 'cigarettes', on: false, slots: [{ slot: 'main', form: () => ({ kind: 'counter' }) }] },
+  ] },
+  { id: 'other', items: [
+    { id: 'cycle', tpl: 'cycle', on: false },
+    { id: 'weight', tpl: 'weight', on: false },
+    { id: 'grateful', on: false, slots: [{ slot: 'main', form: () => ({ kind: 'text' }) }] },
+  ] },
+];
+function packageItemTemplate(item) { return item.tpl ? templateById(item.tpl) : { id: item.id, slots: item.slots }; }
+function packageDefaultChoice() {
+  return Object.fromEntries(PACKAGE_GROUPS.flatMap((g) => g.items.map((it) => [it.id, it.on])));
+}
+function packageFieldCount(chosen) {
+  return PACKAGE_GROUPS.flatMap((g) => g.items).filter((it) => chosen[it.id]).reduce((n, it) => n + packageItemTemplate(it).slots.length, 0);
+}
+// Legt die gewählten Einträge an, je Gruppe erst die Gruppe. Scheitert etwas, bleibt das schon
+// Angelegte stehen (normale Felder, wie bei Vorlagen).
+async function createStarterPackage(chosen) {
+  const habits = [];
+  for (const g of PACKAGE_GROUPS) {
+    const items = g.items.filter((it) => chosen[it.id]);
+    if (!items.length) continue;
+    let sectionId = null;
+    if (g.id !== 'other') {
+      const sec = await insertSection(tPlain('pkg.group.' + g.id), 'done');
+      if (sec.notice) return sec;
+      sectionId = sec.id;
+    }
+    for (const it of items) {
+      const tpl = packageItemTemplate(it);
+      const refs = {};
+      for (const slot of tpl.slots) {
+        const form = { ...templateSlotForm(tpl, slot, templateSlotName(tpl, slot.slot), refs), sectionId };
+        const def = habitFormDefinition(form);
+        if (def.notice) return def;
+        const result = await persistHabitForm(form, def);
+        if (result.notice) return result;
+        refs[slot.slot] = result.habit.id;
+        habits.push(result.habit);
+      }
+    }
+  }
+  return { habits };
+}
+function renderStarterPackage(f) {
+  const chosen = f.packageChosen;
+  const count = packageFieldCount(chosen);
+  return `
+    <div class="habit-form" id="habit-form">
+      <p class="pkg-intro">${t('pkg.intro')}</p>
+      ${PACKAGE_GROUPS.map((g) => `
+        <fieldset class="pkg-group">
+          <legend class="form-part-title">${t('pkg.group.' + g.id)}</legend>
+          ${g.items.map((it) => `
+            <label class="checkbox-field pkg-item">
+              <input type="checkbox" id="pkg-item-${it.id}" ${chosen[it.id] ? 'checked' : ''} ${state.habitFormSaving ? 'disabled' : ''} />
+              <span><span class="pkg-item-name">${t(`tpl.${it.tpl || it.id}.name`)}</span>
+              <span class="pkg-item-note">${t('pkg.item.' + it.id)}</span></span>
+            </label>
+          `).join('')}
+        </fieldset>
+      `).join('')}
+      <div class="form-tip">${icon('tip')}<div><p><strong>${t('pkg.ideasTitle')}</strong> ${t('pkg.ideas')}</p></div></div>
+      <button type="button" class="auth-submit" data-action="pkg-create" ${state.habitFormSaving || !count ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t(count === 1 ? 'pkg.createOne' : 'pkg.create', { count })}</button>
+      <button type="button" class="auth-toggle" data-action="pkg-single" ${state.habitFormSaving ? 'disabled' : ''}>${t('pkg.single')}</button>
+    </div>
+  `;
+}
 function templateById(id) { return FIELD_TEMPLATES.find((x) => x.id === id); }
 function templateSlotName(tpl, slot) { return tPlain(tpl.slots.length > 1 ? `tpl.${tpl.id}.${slot}` : `tpl.${tpl.id}.name`); }
 // Formular-Zustand eines Teils; refs = { slot: Schlüssel } der schon angelegten Teile.
@@ -10653,7 +10817,7 @@ function renderTemplatePicker(f) {
   return `
     <div class="habit-form" id="habit-form">
       ${f.revealStage !== undefined ? '' : `<h3 class="form-part-title tpl-question">${t('tpl.question')}</h3>`}
-      <div class="kind-cards tpl-cards">${card('tpl-custom', '', t('tpl.custom'), t('tpl.customNote'))}</div>
+      <div class="kind-cards tpl-cards">${f.packageChosen ? card('tpl-package', '', t('pkg.backTitle'), t('pkg.backNote')) : ''}${card('tpl-custom', '', t('tpl.custom'), t('tpl.customNote'))}</div>
       ${TEMPLATE_TOPICS.map((topic) => `
         <section class="form-part" aria-labelledby="tpl-topic-${topic}">
           <h3 class="form-part-title" id="tpl-topic-${topic}">${t('tpl.topic.' + topic)}</h3>
@@ -10780,6 +10944,7 @@ function habitFormTitleKey(f) {
 }
 function renderHabitForm({ titleInHeader = false } = {}) {
   const f = state.habitForm;
+  if (f.template?.stage === 'package') return renderStarterPackage(f);
   if (f.template?.stage === 'pick') return renderTemplatePicker(f);
   if (f.template?.stage === 'confirm') return renderTemplateConfirm(f);
   const defaultReminderMinute = state.userSettings.defaultReminderMinute;
@@ -11617,12 +11782,16 @@ function renderTutorialReminders() {
 // (Nutzer-Entscheidung 2026-10-30: der ganze Ablauf geht von Vorlagen aus); "Eigenes Feld" und
 // "Anpassen" führen ins echte Feld-Formular, Stück für Stück aufgedeckt (siehe renderHabitForm,
 // f.revealStage), mit Ideen als Text unter dem Namen.
+function tutorialStartForm() {
+  if (!featureOn('templates') || activeHabits().length) return { ...newHabitForm(), revealStage: 1 };
+  return { ...defaultHabitForm(), revealStage: 1, packageChosen: packageDefaultChoice(), template: { stage: 'package' } };
+}
 function renderTutorialFieldForm() {
-  if (!state.habitForm) state.habitForm = { ...newHabitForm(), revealStage: 1 };
+  if (!state.habitForm) state.habitForm = tutorialStartForm();
   return tutorialScreen({
     step: TUTORIAL_STEP_FIELD, icon: 'manage', title: t('tutorial.field.title'),
     body: `
-      <p class="tutorial-text">${t(state.habitForm.template ? 'tutorial.field.introTpl' : 'tutorial.field.intro')}</p>
+      <p class="tutorial-text">${t(state.habitForm.template?.stage === 'package' ? 'tutorial.field.introPkg' : state.habitForm.template ? 'tutorial.field.introTpl' : 'tutorial.field.intro')}</p>
       ${renderHabitForm({ titleInHeader: true })}
       ${tutorialNav({ back: true, skip: true })}
     `,
@@ -12937,6 +13106,29 @@ app.addEventListener('click', async (e) => {
     readTemplateFromDom(state.habitForm);
     state.habitForm.template.answers.good = el.dataset.good || null;
     render();
+  } else if (action === 'pkg-single') {
+    state.habitForm.template = { stage: 'pick' };
+    render();
+    window.scrollTo(0, 0);
+  } else if (action === 'tpl-package') {
+    state.habitForm.template = { stage: 'package' };
+    render();
+    window.scrollTo(0, 0);
+  } else if (action === 'pkg-create') {
+    if (state.habitFormSaving) return;
+    state.habitFormSaving = true;
+    render();
+    let result;
+    try { result = await createStarterPackage(state.habitForm.packageChosen); } finally { state.habitFormSaving = false; }
+    if (result.notice) state.notice = result.notice;
+    else {
+      closeHabitForm();
+      if (state.tutorialStep === TUTORIAL_STEP_FIELD) {
+        tutorialLastFieldDefId = result.habits[0]?.defId ?? null;
+        state.tutorialStep = TUTORIAL_STEP_DONE;
+      }
+    }
+    render();
   } else if (action === 'tpl-custom') {
     delete state.habitForm.template;
     render();
@@ -13237,6 +13429,13 @@ app.addEventListener('change', async (e) => {
   // Berechnetes Feld aus Zahlen: nach jeder Mitglieder-Änderung neu rendern, damit Felder mit anderer
   // Einheit gesperrt bzw. wieder freigegeben werden (siehe computedBody).
   // "Tage seit": anderes Quellfeld -> andere Stufen zur Auswahl.
+  if (e.target.id?.startsWith('pkg-item-') && state.habitForm?.packageChosen) {
+    const id = e.target.id;
+    state.habitForm.packageChosen[id.slice('pkg-item-'.length)] = e.target.checked;
+    render();
+    document.getElementById(id)?.focus();
+    return;
+  }
   if ((e.target.id === 'tpl-group' || e.target.id?.startsWith('tpl-source-') || e.target.id?.startsWith('tpl-merge-')) && state.habitForm?.template) {
     const id = e.target.id;
     readTemplateFromDom(state.habitForm);

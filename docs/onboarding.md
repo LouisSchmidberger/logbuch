@@ -48,9 +48,9 @@ Der Weg vom ersten Öffnen bis zur eingerichteten App, für neue Konten.
   ausgeblendet, auch bei "Noch ein Feld anlegen" mit genug passenden Feldern (Grund nicht
   dokumentiert). Davon getrennt gilt überall: der Typ erscheint erst ab zwei passenden
   Feldern, beim allerersten Feld führte er sonst ins Leere (siehe [felder.md](felder.md)).
-  **Vorlagen zuerst** (Nutzer-Entscheidung 2026-10-30, hinter dem Schalter `templates`): der
-  ganze Ablauf zum Anlegen geht von Vorlagen aus, das Tutorial zeigt deshalb dieselbe Auswahl
-  wie "Neues Feld" (siehe [felder.md](felder.md) → Vorlagen). "Eigenes Feld" und "Anpassen"
+  **Startpaket und Vorlagen zuerst** (Nutzer-Entscheidung 2026-10-30, hinter dem Schalter
+  `templates`): der ganze Ablauf zum Anlegen geht von Vorlagen aus, das Tutorial beginnt mit dem
+  Startpaket und zeigt danach dieselbe Auswahl wie "Neues Feld" (siehe [felder.md](felder.md) → Vorlagen). "Eigenes Feld" und "Anpassen"
   führen ins aufgedeckte Formular, dort Ideen als Text unter dem Namen und, zugeklappt,
   "Beispiele ansehen" (`tutorialExamplesHtml`): vier Felder, wie sie in "Heute" aussehen, nur
   als Bild. Vorhandene Felder einbeziehen gibt es im Tutorial nicht.
@@ -232,7 +232,14 @@ Tab-Leiste/kein Menü; eine `beforeunload`-Warnung verhindert versehentliches Ve
 1. **Hallo** (`renderTutorialHello`): was Logbuch ist + drei Versprechen mit Symbol (privat ·
    ohne Druck · deins). Platz für einen persönlichen Satz des Nutzers ist vorgesehen, Inhalt
    noch offen. Noch kein "Überspringen" – das erscheint erst ab dem ersten Feld.
-2. **Erstes Feld** (`renderTutorialFieldForm`): Satz, was ein Feld ist, mit Schalter `templates` erst die Vorlagen (eine Vorlage mit
+2. **Erstes Feld** (`renderTutorialFieldForm`): Satz, was ein Feld ist (je mehr zusammenkommt,
+   desto eher sieht man Zusammenhänge), mit Schalter `templates` zuerst das **Startpaket**
+   (`PACKAGE_GROUPS`, Nutzer-Entscheidung 2026-10-30): ein ausgereifter Satz Felder in Gruppen
+   (Schlaf, Befinden, Einflüsse, Sonstiges) zum An-/Abwählen, statt dass Neulinge selbst
+   verantworten, alles anzulegen. Die Texte sagen ausdrücklich: nur ein Vorschlag, anpassen,
+   Eigenes überlegen und anlegen (Kasten "Was spielt bei dir noch eine Rolle?") – nichts
+   vorschreiben, nur anregen. "Lieber einzeln auswählen" führt zu den Vorlagen (mit Karte
+   zurück zum Paket). Sonst bzw. bei "Noch ein Feld anlegen" mit Schalter `templates` erst die Vorlagen (eine Vorlage mit
    mehreren Teilen legt alle an; "Zurück" von "Geschafft" öffnet den ersten), sonst bzw. bei
    "Eigenes Feld" das echte Feld-Formular, Stück für Stück aufgedeckt
    (`f.revealStage`: 1 Name mit Ideen als Text darunter → 2 + Feld-Typ → 3 + Einstellungen
