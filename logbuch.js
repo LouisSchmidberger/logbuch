@@ -2021,6 +2021,76 @@ const STRINGS = {
     'habitForm.error.multiDuplicate': 'Zwei Optionen heißen gleich.',
     'habitForm.error.multiMin': 'Es braucht mindestens zwei Optionen, die nicht ausgeblendet sind.',
     'today.multiNone': 'nichts davon',
+    'tpl.question': 'Was willst du festhalten?',
+    'tpl.custom': 'Eigenes Feld',
+    'tpl.customNote': 'Alles selbst einstellen: Typ, Stufen, Bewertung, Tage',
+    'tpl.topic.feeling': 'Befinden',
+    'tpl.topic.habits': 'Gewohnheiten',
+    'tpl.topic.body': 'Körper',
+    'tpl.topic.journal': 'Tagebuch',
+    'tpl.mood.name': 'Stimmung',
+    'tpl.mood.note': 'Wie geht es dir? 1 bis 5',
+    'tpl.mood.explain': 'Eine Skala von 1 bis 5, hohe Werte sind gut. Du tippst einmal am Tag an, wie es dir geht.',
+    'tpl.energy.name': 'Energie',
+    'tpl.energy.note': 'Wie viel Kraft hattest du? 1 bis 5',
+    'tpl.energy.explain': 'Eine Skala von 1 bis 5, hohe Werte sind gut.',
+    'tpl.stress.name': 'Stress',
+    'tpl.stress.note': '0 bis 10, wenig ist gut',
+    'tpl.stress.explain': 'Ein Schieberegler von 0 bis 10, niedrige Werte sind gut.',
+    'tpl.pain.name': 'Schmerzen',
+    'tpl.pain.note': 'keine, leicht, mittel, stark',
+    'tpl.pain.explain': 'Vier Stufen von „keine“ bis „stark“, wenig ist gut. Z. B. für Kopf- oder Rückenschmerzen – benenne das Feld einfach um.',
+    'tpl.sport.name': 'Sport gemacht?',
+    'tpl.sport.note': 'Ja oder Nein',
+    'tpl.sport.explain': 'Ja oder Nein, „Ja“ ist gut. Passt für alles, was du einfach gemacht hast oder nicht.',
+    'tpl.water.name': 'Gläser Wasser',
+    'tpl.water.note': 'Hochzählen, Ziel mindestens 8',
+    'tpl.water.explain': 'Ein Zähler: jedes Glas ein Tipp auf „+“. Das Ziel von mindestens 8 kannst du später ändern.',
+    'tpl.smoking.name': 'Zigaretten',
+    'tpl.smoking.note': 'Hochzählen',
+    'tpl.smoking.explain': 'Ein Zähler: jede Zigarette ein Tipp auf „+“. Ein Tag ohne Eintrag zählt als 0.',
+    'tpl.meds.name': 'Medikament genommen?',
+    'tpl.meds.note': 'Ja oder Nein, mit Erinnerung',
+    'tpl.meds.explain': 'Ja oder Nein, mit einer eigenen Erinnerung zur Standardzeit – die Uhrzeit änderst du über „Bearbeiten“.',
+    'tpl.weight.name': 'Gewicht',
+    'tpl.weight.note': 'Messwert in kg',
+    'tpl.weight.explain': 'Eine Zahl in kg. In der Auswertung siehst du den Verlauf.',
+    'tpl.sleep.name': 'Schlaf',
+    'tpl.sleep.note': 'Ins Bett, aufgestanden und die Schlafdauer daraus',
+    'tpl.sleep.explain': 'Zwei Uhrzeiten und die Schlafdauer, die Logbuch daraus rechnet. Die Bettzeit trägst du abends ein, die Aufstehzeit am Morgen.',
+    'tpl.sleep.bed': 'Ins Bett',
+    'tpl.sleep.up': 'Aufgestanden',
+    'tpl.sleep.duration': 'Schlafdauer',
+    'tpl.cycle.name': 'Zyklus',
+    'tpl.cycle.note': 'Periode und der Zyklustag daraus',
+    'tpl.cycle.explain': 'Die Stärke der Periode (keine bis stark, ohne Wertung) und der Zyklustag, den Logbuch daraus zählt: Tag 1 ist der erste Tag mit Periode.',
+    'tpl.cycle.period': 'Periode',
+    'tpl.cycle.day': 'Zyklustag',
+    'tpl.grateful.name': 'Dankbar für',
+    'tpl.grateful.note': 'Ein paar Worte',
+    'tpl.grateful.explain': 'Ein Textfeld für ein paar Worte am Tag.',
+    'tpl.events.name': 'Was war heute?',
+    'tpl.events.note': 'Mehrere ankreuzen: Sport, Freunde, Streit …',
+    'tpl.events.explain': 'Eine Mehrfachauswahl: du tippst alles an, was heute war. Die Optionen änderst und ergänzt du über „Anpassen“ oder später über „Bearbeiten“.',
+    'tpl.events.sport': 'Sport',
+    'tpl.events.friends': 'Freunde getroffen',
+    'tpl.events.argument': 'Streit',
+    'tpl.events.alcohol': 'Alkohol',
+    'tpl.yes': 'Ja',
+    'tpl.no': 'Nein',
+    'tpl.strength.none': 'keine',
+    'tpl.strength.light': 'leicht',
+    'tpl.strength.medium': 'mittel',
+    'tpl.strength.strong': 'stark',
+    'tpl.nameOf': 'Name für „{what}“',
+    'tpl.groupNew': 'Neue Gruppe',
+    'tpl.groupName': 'Name der neuen Gruppe',
+    'tpl.preview': 'So sieht es in „Heute“ aus',
+    'tpl.computedNote': 'Dazu berechnet: {names}',
+    'tpl.back': 'Andere Vorlage',
+    'tpl.create': 'Anlegen',
+    'tpl.adjust': 'Anpassen',
+    'tpl.created': 'Angelegt: {names}',
     'textReview.countOne': '1 Eintrag',
     'textReview.countMany': '{count} Einträge',
     'common.saving': 'Wird gespeichert …',
@@ -3020,6 +3090,76 @@ const STRINGS = {
     'habitForm.error.multiDuplicate': 'Two options have the same name.',
     'habitForm.error.multiMin': 'You need at least two options that are not hidden.',
     'today.multiNone': 'none of these',
+    'tpl.question': 'What do you want to keep track of?',
+    'tpl.custom': 'Your own field',
+    'tpl.customNote': 'Set everything yourself: type, steps, rating, days',
+    'tpl.topic.feeling': 'Wellbeing',
+    'tpl.topic.habits': 'Habits',
+    'tpl.topic.body': 'Body',
+    'tpl.topic.journal': 'Journal',
+    'tpl.mood.name': 'Mood',
+    'tpl.mood.note': 'How are you? 1 to 5',
+    'tpl.mood.explain': 'A scale from 1 to 5, high values are good. Once a day you tap how you are.',
+    'tpl.energy.name': 'Energy',
+    'tpl.energy.note': 'How much strength did you have? 1 to 5',
+    'tpl.energy.explain': 'A scale from 1 to 5, high values are good.',
+    'tpl.stress.name': 'Stress',
+    'tpl.stress.note': '0 to 10, less is good',
+    'tpl.stress.explain': 'A slider from 0 to 10, low values are good.',
+    'tpl.pain.name': 'Pain',
+    'tpl.pain.note': 'none, light, medium, strong',
+    'tpl.pain.explain': 'Four steps from “none” to “strong”, less is good. E.g. for headaches or back pain – just rename the field.',
+    'tpl.sport.name': 'Did sports?',
+    'tpl.sport.note': 'Yes or No',
+    'tpl.sport.explain': 'Yes or No, “Yes” is good. Fits anything you simply did or didn’t do.',
+    'tpl.water.name': 'Glasses of water',
+    'tpl.water.note': 'Count up, goal at least 8',
+    'tpl.water.explain': 'A counter: one tap on “+” per glass. You can change the goal of at least 8 later.',
+    'tpl.smoking.name': 'Cigarettes',
+    'tpl.smoking.note': 'Count up',
+    'tpl.smoking.explain': 'A counter: one tap on “+” per cigarette. A day without entry counts as 0.',
+    'tpl.meds.name': 'Took medication?',
+    'tpl.meds.note': 'Yes or No, with a reminder',
+    'tpl.meds.explain': 'Yes or No, with its own reminder at the default time – change the time via “Edit”.',
+    'tpl.weight.name': 'Weight',
+    'tpl.weight.note': 'Measurement in kg',
+    'tpl.weight.explain': 'A number in kg. The evaluation shows its course.',
+    'tpl.sleep.name': 'Sleep',
+    'tpl.sleep.note': 'Went to bed, got up and how long you slept',
+    'tpl.sleep.explain': 'Two times and the sleep duration Logbuch calculates from them. Enter bedtime in the evening and the time you got up in the morning.',
+    'tpl.sleep.bed': 'Went to bed',
+    'tpl.sleep.up': 'Got up',
+    'tpl.sleep.duration': 'Sleep duration',
+    'tpl.cycle.name': 'Cycle',
+    'tpl.cycle.note': 'Period and the cycle day from it',
+    'tpl.cycle.explain': 'How strong your period is (none to strong, without rating) and the cycle day Logbuch counts from it: day 1 is the first day with period.',
+    'tpl.cycle.period': 'Period',
+    'tpl.cycle.day': 'Cycle day',
+    'tpl.grateful.name': 'Grateful for',
+    'tpl.grateful.note': 'A few words',
+    'tpl.grateful.explain': 'A text field for a few words a day.',
+    'tpl.events.name': 'What happened today?',
+    'tpl.events.note': 'Tick several: sports, friends, argument …',
+    'tpl.events.explain': 'A multiple choice: you tap everything that happened today. Change and add options via “Adjust” or later via “Edit”.',
+    'tpl.events.sport': 'Sports',
+    'tpl.events.friends': 'Met friends',
+    'tpl.events.argument': 'Argument',
+    'tpl.events.alcohol': 'Alcohol',
+    'tpl.yes': 'Yes',
+    'tpl.no': 'No',
+    'tpl.strength.none': 'none',
+    'tpl.strength.light': 'light',
+    'tpl.strength.medium': 'medium',
+    'tpl.strength.strong': 'strong',
+    'tpl.nameOf': 'Name for “{what}”',
+    'tpl.groupNew': 'New group',
+    'tpl.groupName': 'Name of the new group',
+    'tpl.preview': 'How it looks in “Today”',
+    'tpl.computedNote': 'Calculated from it: {names}',
+    'tpl.back': 'Other template',
+    'tpl.create': 'Create',
+    'tpl.adjust': 'Adjust',
+    'tpl.created': 'Created: {names}',
     'textReview.countOne': '1 entry',
     'textReview.countMany': '{count} entries',
     'common.saving': 'Saving…',
@@ -4928,6 +5068,10 @@ function clampHabitFormSteps(f) {
 // verschobenen Zahlenbereichs. Bereits bestehende (ggf. historisch andere) Felder
 // behalten beim Bearbeiten ihr echtes min (siehe habitToForm) - nur Von/Bis sind bei
 // vorhandenen Daten ohnehin gesperrt (Tier 3, siehe CLAUDE.md).
+// "Neues Feld": mit Schalter zuerst die Vorlagen (siehe FIELD_TEMPLATES).
+function newHabitForm() {
+  return featureOn('templates') ? { ...defaultHabitForm(), template: { stage: 'pick' } } : defaultHabitForm();
+}
 function defaultHabitForm() {
   return {
     defId: null, locked: false, kind: 'scale',
@@ -5332,13 +5476,24 @@ async function handleHabitSaveInner() {
     state.notice = def.notice;
     return;
   }
-  const { name, fields, period, periodReminderDay, reminderTimes, reminderBelow } = def;
+  const result = await persistHabitForm(f, def);
+  if (result.notice) {
+    state.notice = result.notice;
+    return;
+  }
+  closeHabitForm();
+  // Im Tutorial (Schritt 2, erstes Feld) gilt jedes erfolgreich angelegte (oder über
+  // "Zurück" nochmal bearbeitete) Feld als Abschluss des Schritts – automatischer Sprung zu
+  // "Geschafft", kein zusätzlicher Klick.
+  if (state.tutorialStep === TUTORIAL_STEP_FIELD) state.tutorialStep = TUTORIAL_STEP_DONE;
+}
 
-  // Alles Inhaltliche verschlüsselt in enc (siehe habitFromParts), im Klartext nur, was
-  // die Erinnerungen brauchen. Immer die vollständige payload - bei gesperrten Feldern
-  // enthält fields schon die unveränderten Original-Werte für min/max.
-  const key = f.defId ? state.habits.find((h) => h.defId === f.defId).id : newHabitKey();
-  const payload = {
+// Alles Inhaltliche verschlüsselt in enc (siehe habitFromParts), im Klartext nur, was
+// die Erinnerungen brauchen. Immer die vollständige payload - bei gesperrten Feldern
+// enthält fields schon die unveränderten Original-Werte für min/max.
+function habitPayloadFromDefinition(f, def, key) {
+  const { name, fields, reminderBelow } = def;
+  return {
     key,
     name,
     unit: fields.unit,
@@ -5362,6 +5517,13 @@ async function handleHabitSaveInner() {
     reminderBelow,
     stepChange: f.kind === 'scale' && f.defId ? state.habits.find((h) => h.defId === f.defId)?.stepChange ?? undefined : undefined,
   };
+}
+// Speichert ein Formular (neu oder geändert) -> { habit } oder { notice }. Gemeinsam für das
+// Formular und die Vorlagen (createFromTemplate).
+async function persistHabitForm(f, def) {
+  const { fields, period, periodReminderDay, reminderTimes } = def;
+  const key = f.defId ? state.habits.find((h) => h.defId === f.defId).id : newHabitKey();
+  const payload = habitPayloadFromDefinition(f, def, key);
   const sectionId = period === 'day' && state.sections.some((sec) => sec.id === f.sectionId) ? f.sectionId : null;
   const row = {
     kind: fields.kind,
@@ -5377,35 +5539,27 @@ async function handleHabitSaveInner() {
   // Neues oder in eine andere Gruppe verschobenes Feld: ans Ende seines Behälters.
   const original = f.defId ? state.habits.find((h) => h.defId === f.defId) : null;
   if (!original || (original.sectionId || null) !== sectionId) row.sort_order = containerMaxSortOrder(sectionId) + 1;
+  let habit;
   if (f.defId) {
     const { data, error } = await supabase.from('habit_definitions').update(row).eq('id', f.defId).select().single();
-    if (error) {
-      state.notice = errorNotice('notice.saveFailed', error.message);
-      return;
-    }
+    if (error) return { notice: errorNotice('notice.saveFailed', error.message) };
     const idx = state.habits.findIndex((h) => h.defId === f.defId);
     state.habits[idx] = habitFromParts(data, payload);
+    habit = state.habits[idx];
   } else {
     const { data, error } = await supabase.from('habit_definitions')
       .insert({ user_id: state.session.user.id, ...row })
       .select().single();
-    if (error) {
-      state.notice = errorNotice('notice.createFailed', error.message);
-      return;
-    }
-    state.habits = [...state.habits, habitFromParts(data, payload)];
+    if (error) return { notice: errorNotice('notice.createFailed', error.message) };
+    habit = habitFromParts(data, payload);
+    state.habits = [...state.habits, habit];
     if (state.tutorialStep === TUTORIAL_STEP_FIELD) tutorialLastFieldDefId = data.id;
   }
   saveFieldNamesForPush();
   // Ziel oder Zeiten eines Zählers geändert: den Erinnerungs-Stand von heute neu schreiben.
   const today = formatKey(new Date());
   if (fields.kind === 'counter' && state.entries[today]) saveDay(today);
-
-  closeHabitForm();
-  // Im Tutorial (Schritt 2, erstes Feld) gilt jedes erfolgreich angelegte (oder über
-  // "Zurück" nochmal bearbeitete) Feld als Abschluss des Schritts – automatischer Sprung zu
-  // "Geschafft", kein zusätzlicher Klick.
-  if (state.tutorialStep === TUTORIAL_STEP_FIELD) state.tutorialStep = TUTORIAL_STEP_DONE;
+  return { habit };
 }
 
 // Beim Reaktivieren kommt das Feld ans Ende seines Bereichs (seiner Gruppe bzw. der
@@ -6192,6 +6346,17 @@ function readSectionFormFromDom() {
   const reminderTime = readTimeInput('section-form-reminder-time');
   if (reminderTime !== null) sf.reminderMinute = reminderTime;
 }
+// Neue Gruppe ans Ende der obersten Ebene -> { id } oder { notice }.
+async function insertSection(name, collapse, reminderMinute = null) {
+  const enc = await encryptData(currentDek, { name, collapse });
+  const sortOrder = containerMaxSortOrder(null) + 1;
+  const { data, error } = await supabase.from('habit_sections')
+    .insert({ user_id: state.session.user.id, enc, sort_order: sortOrder, reminder_minute: reminderMinute })
+    .select().single();
+  if (error) return { notice: errorNotice('notice.createFailed', error.message) };
+  state.sections = [...state.sections, { id: data.id, name, collapse, sortOrder, reminderMinute }];
+  return { id: data.id };
+}
 async function saveSectionForm() {
   const sf = state.sectionForm;
   if (!sf) return;
@@ -6215,17 +6380,13 @@ async function saveSectionForm() {
     }
     state.sections = state.sections.map((sec) => (sec.id === id ? { ...sec, name, collapse, reminderMinute } : sec));
   } else {
-    const sortOrder = containerMaxSortOrder(null) + 1;
-    const { data, error } = await supabase.from('habit_sections')
-      .insert({ user_id: state.session.user.id, enc, sort_order: sortOrder, reminder_minute: reminderMinute })
-      .select().single();
-    if (error) {
-      state.notice = errorNotice('notice.createFailed', error.message);
+    const created = await insertSection(name, collapse, reminderMinute);
+    if (created.notice) {
+      state.notice = created.notice;
       render();
       return;
     }
-    id = data.id;
-    state.sections = [...state.sections, { id, name, collapse, sortOrder, reminderMinute }];
+    id = created.id;
   }
   saveFieldNamesForPush();
   // Mitgliedschaft abgleichen: neu angekreuzte Felder ans Ende der Gruppe (in der
@@ -9996,6 +10157,186 @@ function renderTextReviews(habits, dateKeys, labelFor = formatDMY) {
   return `<div class="month-stats">${renderBySection(withEntries, 'stats', (list) => list.map(renderOne).join(''))}</div>`;
 }
 
+// --- Vorlagen (Nutzer-Entscheidung 2026-10-30) -------------------------------------------
+// "Neues Feld" beginnt mit "Was willst du festhalten?": fertige Felder zum Antippen, das volle
+// Formular nur noch für "Eigenes Feld" bzw. "Anpassen" - das Formular war für Neulinge die
+// größte Hürde. Eine Vorlage besteht aus Teilen (slots) und optional einer Gruppe; jeder Teil
+// ist ein Formular-Zustand (Überschreibungen von defaultHabitForm), angelegt über dieselben
+// Bausteine wie das Formular (habitFormDefinition/persistHabitForm). '@slot' in einem Teil
+// verweist auf den Schlüssel eines anderen Teils derselben Vorlage (berechnete Felder) - die
+// Teile stehen deshalb in der Reihenfolge, in der sie angelegt werden. Namen und Bezeichnungen
+// in der Sprache beim Anlegen (tpl.*), danach normale Felder. Hinter dem Schalter 'templates'.
+const YES_NO = () => [t('tpl.no'), t('tpl.yes')];
+const STRENGTH_LABELS = () => ['none', 'light', 'medium', 'strong'].map((k) => t('tpl.strength.' + k));
+const FIELD_TEMPLATES = [
+  { id: 'mood', topic: 'feeling', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 5, good: 'high' }) }] },
+  { id: 'energy', topic: 'feeling', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 5, good: 'high' }) }] },
+  { id: 'stress', topic: 'feeling', slots: [{ slot: 'main', form: () => ({ kind: 'scale', min: 0, max: 10, good: 'low', displayStyle: 'slider' }) }] },
+  { id: 'pain', topic: 'feeling', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 4, good: 'low', labelsEnabled: true, labels: STRENGTH_LABELS() }) }] },
+  { id: 'sport', topic: 'habits', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 2, good: 'high', labelsEnabled: true, labels: YES_NO() }) }] },
+  { id: 'water', topic: 'habits', slots: [{ slot: 'main', form: () => ({ kind: 'counter', numberGoalDir: 'high', numberGoalValue: '8' }) }] },
+  { id: 'smoking', topic: 'habits', slots: [{ slot: 'main', form: () => ({ kind: 'counter' }) }] },
+  { id: 'meds', topic: 'habits', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 2, good: 'high', labelsEnabled: true, labels: YES_NO(), reminderEnabled: true }) }] },
+  { id: 'weight', topic: 'body', slots: [{ slot: 'main', form: () => ({ kind: 'number', unit: 'kg' }) }] },
+  { id: 'sleep', topic: 'body', group: true, slots: [
+    { slot: 'bed', form: () => ({ kind: 'time' }) },
+    { slot: 'up', form: () => ({ kind: 'time' }) },
+    { slot: 'duration', form: () => ({ kind: 'computed', computedType: 'duration', durationFrom: '@bed', durationTo: '@up' }) },
+  ] },
+  { id: 'cycle', topic: 'body', slots: [
+    { slot: 'period', form: () => ({ kind: 'scale', max: 4, good: null, labelsEnabled: true, labels: STRENGTH_LABELS() }) },
+    { slot: 'day', form: () => ({ kind: 'computed', computedType: 'since', sinceSource: '@period', sinceValues: [2, 3, 4], sinceMode: 'start' }) },
+  ] },
+  { id: 'grateful', topic: 'journal', slots: [{ slot: 'main', form: () => ({ kind: 'text' }) }] },
+  { id: 'events', topic: 'journal', slots: [{ slot: 'main', form: () => ({ kind: 'multi', multiOptions: ['sport', 'friends', 'argument', 'alcohol'].map((k) => ({ id: newMultiOptionId(), label: t('tpl.events.' + k) })) }) }] },
+];
+const TEMPLATE_TOPICS = ['feeling', 'habits', 'body', 'journal'];
+function templateById(id) { return FIELD_TEMPLATES.find((x) => x.id === id); }
+function templateSlotName(tpl, slot) { return tPlain(tpl.slots.length > 1 ? `tpl.${tpl.id}.${slot}` : `tpl.${tpl.id}.name`); }
+// Formular-Zustand eines Teils; refs = { slot: Schlüssel } der schon angelegten Teile.
+function templateSlotForm(tpl, s, name, refs = {}) {
+  const ref = (v) => (typeof v === 'string' && v.startsWith('@') ? refs[v.slice(1)] ?? null : v);
+  const form = { ...defaultHabitForm(), ...Object.fromEntries(Object.entries(s.form()).map(([k, v]) => [k, ref(v)])), name };
+  if (form.labelsEnabled) form.labels = resizeLabels(form.labels, form.max - form.min + 1);
+  return form;
+}
+function startTemplateConfirm(f, id) {
+  const tpl = templateById(id);
+  const sameName = tpl.group ? state.sections.find((sec) => sec.name.trim().toLocaleLowerCase() === tPlain(`tpl.${id}.name`).toLocaleLowerCase()) : null;
+  f.template = {
+    stage: 'confirm', id,
+    names: Object.fromEntries(tpl.slots.map((s) => [s.slot, templateSlotName(tpl, s.slot)])),
+    groupName: tPlain(`tpl.${id}.name`),
+    group: sameName ? sameName.id : tpl.group ? 'new' : (f.sectionId || 'none'),
+  };
+}
+function readTemplateFromDom(f) {
+  const tp = f.template;
+  if (tp?.stage !== 'confirm') return;
+  for (const slot of Object.keys(tp.names)) {
+    const el = document.getElementById(`tpl-name-${slot}`);
+    if (el) tp.names[slot] = el.value;
+  }
+  const groupEl = document.getElementById('tpl-group');
+  if (groupEl) tp.group = groupEl.value;
+  const groupNameEl = document.getElementById('tpl-group-name');
+  if (groupNameEl) tp.groupName = groupNameEl.value;
+}
+// "Anpassen" (nur Vorlagen mit einem Teil): weiter im vollen Formular, schon ausgefüllt.
+function adjustTemplate(f) {
+  readTemplateFromDom(f);
+  const tpl = templateById(f.template.id);
+  const form = templateSlotForm(tpl, tpl.slots[0], f.template.names[tpl.slots[0].slot]);
+  const sectionId = f.template.group !== 'none' && f.template.group !== 'new' ? f.template.group : f.sectionId;
+  delete f.template;
+  Object.assign(f, form, { sectionId, returnToTab: f.returnToTab, revealStage: f.revealStage });
+  if (f.revealStage !== undefined) f.revealStage = 3;
+}
+// Anlegen: erst die Gruppe, dann die Teile in ihrer Reihenfolge. Scheitert ein Teil, bleibt das
+// schon Angelegte stehen (normale Felder, einzeln zu bearbeiten oder zu archivieren).
+async function createFromTemplate(f) {
+  readTemplateFromDom(f);
+  const tp = f.template;
+  const tpl = templateById(tp.id);
+  const names = tpl.slots.map((s) => (tp.names[s.slot] || '').trim());
+  if (names.some((n) => !n)) return { notice: { type: 'error', text: t('habitForm.error.nameRequired') } };
+  let sectionId = null;
+  if (tp.group === 'new') {
+    if (!tp.groupName.trim()) return { notice: { type: 'error', text: t('manage.error.sectionNameRequired') } };
+    const created = await insertSection(tp.groupName.trim(), 'done');
+    if (created.notice) return created;
+    sectionId = created.id;
+  } else if (tp.group !== 'none' && state.sections.some((sec) => sec.id === tp.group)) sectionId = tp.group;
+  const refs = {};
+  const habits = [];
+  for (const [i, s] of tpl.slots.entries()) {
+    const form = { ...templateSlotForm(tpl, s, names[i], refs), sectionId };
+    const def = habitFormDefinition(form);
+    if (def.notice) return def;
+    const result = await persistHabitForm(form, def);
+    if (result.notice) return result;
+    refs[s.slot] = result.habit.id;
+    habits.push(result.habit);
+  }
+  return { habits };
+}
+// Vorschau: die Zeilen wie in "Heute", aber inert (nicht antippbar, nichts wird gespeichert).
+// Berechnete Teile nur als Text - ihr Wert hängt an den noch nicht angelegten Feldern.
+function templatePreviewHtml(tpl, names) {
+  const rows = [];
+  const computed = [];
+  for (const s of tpl.slots) {
+    const form = templateSlotForm(tpl, s, names[s.slot] || templateSlotName(tpl, s.slot), {});
+    if (form.kind === 'computed') { computed.push(form.name); continue; }
+    const def = habitFormDefinition({ ...form, sinceSource: null });
+    if (def.notice) continue;
+    const h = habitFromParts({ id: `tpl-${s.slot}`, kind: def.fields.kind, schedule: null, reminder_minute: null, period: 'day', created_at: new Date().toISOString() },
+      habitPayloadFromDefinition(form, def, `tpl-preview-${s.slot}`));
+    rows.push(renderTodayHabitRow(h, formatKey(new Date()), {}));
+  }
+  return `
+    <div class="field-preview tpl-preview" inert aria-hidden="true">${rows.join('')}</div>
+    ${computed.length ? `<p class="habit-form-lock-note">${t('tpl.computedNote', { names: computed.join(', ') })}</p>` : ''}
+  `;
+}
+function renderTemplatePicker(f) {
+  const card = (action, attrs, title, note) => `<button type="button" class="kind-card tpl-card" data-action="${action}"${attrs}><span class="kind-card-title">${title}</span><span class="kind-card-note">${note}</span></button>`;
+  return `
+    <div class="habit-form" id="habit-form">
+      <h3 class="form-part-title tpl-question">${t('tpl.question')}</h3>
+      <div class="kind-cards tpl-cards">${card('tpl-custom', '', t('tpl.custom'), t('tpl.customNote'))}</div>
+      ${TEMPLATE_TOPICS.map((topic) => `
+        <section class="form-part" aria-labelledby="tpl-topic-${topic}">
+          <h3 class="form-part-title" id="tpl-topic-${topic}">${t('tpl.topic.' + topic)}</h3>
+          <div class="kind-cards tpl-cards">
+            ${FIELD_TEMPLATES.filter((x) => x.topic === topic).map((x) => card('tpl-pick', ` data-template="${x.id}"`, t(`tpl.${x.id}.name`), t(`tpl.${x.id}.note`))).join('')}
+          </div>
+        </section>
+      `).join('')}
+    </div>
+  `;
+}
+function renderTemplateConfirm(f) {
+  const tp = f.template;
+  const tpl = templateById(tp.id);
+  const multi = tpl.slots.length > 1;
+  const groupOptions = [
+    ...(tpl.group ? [['new', tPlain('tpl.groupNew')]] : []),
+    ['none', tPlain('habitForm.sectionNone')],
+    ...[...state.sections].sort((a, b) => a.sortOrder - b.sortOrder).map((sec) => [sec.id, sec.name]),
+  ];
+  return `
+    <div class="habit-form" id="habit-form">
+      <h3 class="form-part-title">${t(`tpl.${tpl.id}.name`)}</h3>
+      <p class="habit-form-lock-note">${t(`tpl.${tpl.id}.explain`)}</p>
+      ${tpl.slots.map((s) => `
+        <div class="auth-field">
+          <label for="tpl-name-${s.slot}">${multi ? t('tpl.nameOf', { what: templateSlotName(tpl, s.slot) }) : t('habitForm.name')}</label>
+          <input type="text" id="tpl-name-${s.slot}" value="${esc(tp.names[s.slot])}" maxlength="40" />
+        </div>
+      `).join('')}
+      ${groupOptions.length > 1 ? `
+        <div class="auth-field">
+          <label for="tpl-group">${t('habitForm.part.group')}</label>
+          <select id="tpl-group" data-action="tpl-group">
+            ${groupOptions.map(([v, label]) => `<option value="${esc(v)}" ${tp.group === v ? 'selected' : ''}>${esc(label)}</option>`).join('')}
+          </select>
+          ${tp.group === 'new' ? `<input type="text" id="tpl-group-name" class="tpl-group-name" value="${esc(tp.groupName)}" maxlength="40" aria-label="${esc(tPlain('tpl.groupName'))}" />` : ''}
+        </div>
+      ` : ''}
+      <div class="auth-field">
+        <span class="settings-label">${t('tpl.preview')}</span>
+        ${templatePreviewHtml(tpl, tp.names)}
+      </div>
+      <div class="habit-form-actions">
+        <button type="button" class="habit-form-cancel" data-action="tpl-back">${t('tpl.back')}</button>
+        <button type="button" class="auth-submit" data-action="tpl-create" ${state.habitFormSaving ? 'disabled' : ''}>${state.habitFormSaving ? t('common.saving') : t('tpl.create')}</button>
+      </div>
+      ${multi ? '' : `<button type="button" class="manage-btn tpl-adjust" data-action="tpl-adjust">${t('tpl.adjust')}</button>`}
+    </div>
+  `;
+}
+
 // --- Rendering: Felder-Verwaltung -------------------------------------------
 // Titel des Formulars - in der Verwaltung steht er im Seitenkopf (titleInHeader),
 // im Tutorial als eigene Überschrift im Formular.
@@ -10004,6 +10345,8 @@ function habitFormTitleKey(f) {
 }
 function renderHabitForm({ titleInHeader = false } = {}) {
   const f = state.habitForm;
+  if (f.template?.stage === 'pick') return renderTemplatePicker(f);
+  if (f.template?.stage === 'confirm') return renderTemplateConfirm(f);
   const defaultReminderMinute = state.userSettings.defaultReminderMinute;
 
   const goalField = goalControlHtml(f);
@@ -11882,7 +12225,7 @@ app.addEventListener('click', async (e) => {
     disablePush();
   } else if (action === 'today-new-field') {
     enterSubpage('manage');
-    openHabitForm({ ...defaultHabitForm(), returnToTab: true });
+    openHabitForm({ ...newHabitForm(), returnToTab: true });
   } else if (action === 'row-menu') {
     if (state.rowMenu === el.dataset.menu) closeRowMenu();
     else openRowMenu(el.dataset.menu);
@@ -11905,7 +12248,7 @@ app.addEventListener('click', async (e) => {
       render();
     }
   } else if (action === 'habit-new') {
-    openHabitForm(defaultHabitForm());
+    openHabitForm(newHabitForm());
   } else if (action === 'group-new') {
     openSectionForm(null);
   } else if (action === 'section-edit') {
@@ -12127,6 +12470,38 @@ app.addEventListener('click', async (e) => {
     syncHabitFormFromDom();
     const option = state.habitForm.multiOptions.find((o) => o.id === el.dataset.option);
     if (option) option.hidden = !option.hidden;
+    render();
+  } else if (action === 'tpl-pick') {
+    startTemplateConfirm(state.habitForm, el.dataset.template);
+    render();
+    window.scrollTo(0, 0);
+    document.getElementById(`tpl-name-${templateById(el.dataset.template).slots[0].slot}`)?.focus({ preventScroll: true });
+  } else if (action === 'tpl-custom') {
+    delete state.habitForm.template;
+    render();
+    window.scrollTo(0, 0);
+    document.getElementById('habit-form-name')?.focus();
+  } else if (action === 'tpl-back') {
+    state.habitForm.template = { stage: 'pick' };
+    render();
+    window.scrollTo(0, 0);
+  } else if (action === 'tpl-adjust') {
+    adjustTemplate(state.habitForm);
+    render();
+    window.scrollTo(0, 0);
+  } else if (action === 'tpl-create') {
+    if (state.habitFormSaving) return;
+    readTemplateFromDom(state.habitForm);
+    state.habitFormSaving = true;
+    render();
+    let result;
+    try { result = await createFromTemplate(state.habitForm); } finally { state.habitFormSaving = false; }
+    if (result.notice) state.notice = result.notice;
+    else {
+      closeHabitForm();
+      state.notice = { type: 'ok', text: tPlain('tpl.created', { names: result.habits.map((h) => h.name).join(', ') }) };
+      if (state.tutorialStep === TUTORIAL_STEP_FIELD) state.tutorialStep = TUTORIAL_STEP_DONE;
+    }
     render();
   } else if (action === 'since-value') {
     syncHabitFormFromDom();
@@ -12379,6 +12754,11 @@ app.addEventListener('change', async (e) => {
   // Berechnetes Feld aus Zahlen: nach jeder Mitglieder-Änderung neu rendern, damit Felder mit anderer
   // Einheit gesperrt bzw. wieder freigegeben werden (siehe computedBody).
   // "Tage seit": anderes Quellfeld -> andere Stufen zur Auswahl.
+  if (e.target.id === 'tpl-group' && state.habitForm?.template) {
+    readTemplateFromDom(state.habitForm);
+    render();
+    return;
+  }
   if (e.target.id === 'habit-form-since-source' && state.habitForm) {
     syncHabitFormFromDom();
     state.habitForm.sinceValues = [];
