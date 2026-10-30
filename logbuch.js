@@ -696,6 +696,16 @@ function parseDateKey(key) {
 // der Übersicht enden bei heute. Uhrzeiten nach Mitternacht auf der heutigen Seite bleiben.
 function isFutureKey(dateKey) { return dateKey > formatKey(new Date()); }
 function isPastKey(dateKey) { return dateKey < formatKey(new Date()); }
+// Steht die Ansicht schon beim laufenden Tag/Woche/Monat/Jahr? Dann geht es nicht weiter.
+function atCurrentPeriod(view = state.view) {
+  const now = new Date();
+  if (view === 'today') return !isPastKey(formatKey(state.currentDate));
+  if (view === 'week') return formatKey(startOfWeek(state.weekAnchor)) >= formatKey(startOfWeek(now));
+  if (view === 'month') return state.monthAnchor.getFullYear() * 12 + state.monthAnchor.getMonth() >= now.getFullYear() * 12 + now.getMonth();
+  if (view === 'year') return state.yearAnchor >= now.getFullYear();
+  return false;
+}
+const nextPeriodDisabled = (view) => (atCurrentPeriod(view) ? ' aria-disabled="true"' : '');
 // Zellen der Übersicht, die einen Tag öffnen - zukünftige sind keine Knöpfe.
 function openDayAttrs(d) {
   const key = formatKey(d);
@@ -1594,7 +1604,6 @@ const STRINGS = {
     'timePicker.nextDay': 'nach Mitternacht ({day})',
     'timePicker.clear': 'Uhrzeit löschen',
     'timePicker.apply': 'Übernehmen',
-    'timePicker.invalid': 'Bitte eine gültige Uhrzeit eingeben, z. B. {example}.',
     'today.jumpToday': 'Zu heute springen',
     'today.pickDate': 'Datum wählen',
     'today.noFields': 'Noch keine Felder angelegt.',
@@ -2557,7 +2566,6 @@ const STRINGS = {
     'timePicker.nextDay': 'after midnight ({day})',
     'timePicker.clear': 'Delete time',
     'timePicker.apply': 'Set',
-    'timePicker.invalid': 'Please enter a valid time, e.g. {example}.',
     'today.jumpToday': 'Jump to today',
     'today.pickDate': 'Choose date',
     'today.noFields': 'No fields created yet.',
@@ -3472,9 +3480,10 @@ function localeTag() {
   return currentLocale === 'en' ? 'en-US' : 'de-DE';
 }
 const dtfCache = new Map();
-// Sprache der App + Region des Geräts ("en" + "DE" -> en-DE): ob die Uhr 12 oder 24 Stunden
-// zeigt, hängt an der Region, nicht an der Sprache - ein englisch eingestelltes Handy in
-// Deutschland zeigt 24 Stunden. Ohne erkennbare Region wie localeTag().
+// Sprache der App + Region des Geräts ("en" + "GB" -> en-GB): Datums-Schreibweise und 12 oder
+// 24 Stunden hängen an der Region, nicht an der Sprache - in England 30/10/2026 statt der
+// US-Schreibweise, ein englisch eingestelltes Handy in Deutschland zeigt 24 Stunden. Ohne
+// erkennbare Region wie localeTag().
 function regionTag() {
   try {
     const region = new Intl.Locale(navigator.language).maximize().region;
@@ -3500,8 +3509,9 @@ function clockUses12h() {
   return clock12hCache.get(tag);
 }
 function dtf(options) {
-  const key = localeTag() + JSON.stringify(options);
-  if (!dtfCache.has(key)) dtfCache.set(key, new Intl.DateTimeFormat(localeTag(), options));
+  const tag = regionTag();
+  const key = tag + JSON.stringify(options);
+  if (!dtfCache.has(key)) dtfCache.set(key, new Intl.DateTimeFormat(tag, options));
   return dtfCache.get(key);
 }
 function weekdayShort(date) { return dtf({ weekday: 'short' }).format(date); }
@@ -8319,7 +8329,15 @@ function timePickerHtml(p) {
   const twelve = clockUses12h();
   const field = !!p.dateKey;
   const day = field ? parseDateKey(p.dateKey) : null;
-  const numInput = (id, label) => `<input id="${id}" class="tp-num" type="text" inputmode="numeric" autocomplete="off" maxlength="2" aria-label="${esc(label)}" aria-describedby="tp-error" />`;
+  const pad = (v) => String(v).padStart(2, '0');
+  const hours = twelve ? [12, ...Array.from({ length: 11 }, (_, i) => i + 1)] : Array.from({ length: 24 }, (_, i) => i);
+  const minutes = Array.from({ length: 60 / p.step }, (_, i) => i * p.step);
+  // Werte dreimal hintereinander: man dreht immer im mittleren Drittel und kommt so über 59 -> 00
+  // hinweg weiter (wheelSettled springt danach unsichtbar zurück in die Mitte).
+  const wheel = (id, label, values, fmt) => `
+    <div class="tp-wheel" id="${id}" role="spinbutton" tabindex="0" aria-label="${esc(label)}">
+      ${[...values, ...values, ...values].map((v) => `<div class="tp-item" data-v="${v}" aria-hidden="true">${fmt(v)}</div>`).join('')}
+    </div>`;
   const seg = (labelId, label, buttons, hiddenLabel) => `
     <span class="settings-label tp-label${hiddenLabel ? ' visually-hidden' : ''}" id="${labelId}">${label}</span>
     <div class="pill-group seg" role="group" aria-labelledby="${labelId}">${buttons}</div>`;
@@ -8327,12 +8345,10 @@ function timePickerHtml(p) {
   return `
     <h2 id="time-picker-title">${esc(p.title)}</h2>
     <div class="tp-clock">
-      ${numInput('tp-hour', t('time.hour'))}
+      ${wheel('tp-hour', t('time.hour'), hours, twelve ? String : pad)}
       <span class="tp-sep" aria-hidden="true">:</span>
-      ${p.step === 1 ? numInput('tp-minute', t('time.minute')) : '<span class="tp-num tp-num--fixed" id="tp-minute-shown" aria-hidden="true"></span>'}
+      ${wheel('tp-minute', t('time.minute'), minutes, pad)}
     </div>
-    ${p.step !== 1 ? seg('tp-minute-label', t('time.minute'), Array.from({ length: 60 / p.step }, (_, i) => i * p.step)
-      .map((m) => pill('minute', `data-minute="${m}"`, String(m).padStart(2, '0'))).join('')) : ''}
     ${twelve ? seg('tp-ampm-label', t('time.label'), pill('ampm', 'data-pm="0"', 'AM') + pill('ampm', 'data-pm="1"', 'PM'), true) : ''}
     ${field ? `<div class="tp-quick">
       ${p.nowAllowed ? `<button type="button" class="manage-btn" data-tp="now">${t('timeBox.now')}</button>` : ''}
@@ -8341,7 +8357,6 @@ function timePickerHtml(p) {
     ${seg('tp-day-label', t('timePicker.dayLabel'),
       pill('day', 'data-offset="0"', esc(tPlain('timePicker.sameDay', { day: weekdayLong(day) })))
       + pill('day', 'data-offset="1"', esc(tPlain('timePicker.nextDay', { day: weekdayShort(addDays(day, 1)) }))))}` : ''}
-    <p class="tp-error" id="tp-error" aria-live="polite"></p>
     ${p.onClear ? `<button type="button" class="manage-btn manage-btn--danger tp-clear" data-tp="clear">${t('timePicker.clear')}</button>` : ''}
     <div class="habit-form-actions">
       <button type="button" class="habit-form-cancel" data-tp="cancel">${t('common.cancel')}</button>
@@ -8350,69 +8365,79 @@ function timePickerHtml(p) {
   `;
 }
 
-// Schreibt timePicker.value in die Anzeige. typing: das gerade getippte Feld nicht
-// überschreiben (sonst springt der Cursor), nur Tag und AM/PM nachziehen.
-function syncTimePicker(typing = false) {
+// Drehräder für Stunde und Minute (wie am iPhone, Nutzer-Entscheidung 2026-10-30): Wischen
+// mit einem Finger statt Tippen, keine Tastatur, sieht auf jedem Gerät gleich aus. Ein Rad ist
+// eine senkrecht scrollende Liste mit Einrasten (scroll-snap); das Element in der Mitte ist
+// der Wert. Für Tastatur/Screenreader ist es ein role="spinbutton" (↑ ↓, Bild ↑ ↓, Pos1/Ende,
+// Ziffern tippen).
+const wheelSize = (w) => w.children.length / 3; // Anzahl verschiedener Werte
+function wheelIndex(w) {
+  const itemH = w.firstElementChild.offsetHeight;
+  return Math.max(0, Math.min(w.children.length - 1, Math.round(w.scrollTop / itemH)));
+}
+function markWheel(w, idx) {
+  [...w.children].forEach((el, i) => el.classList.toggle('tp-item--on', i === idx));
+  const item = w.children[idx];
+  w.setAttribute('aria-valuenow', item.dataset.v);
+  w.setAttribute('aria-valuetext', item.textContent);
+}
+function setWheel(w, idx, smooth = false) {
+  const behavior = smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'instant';
+  w.scrollTo({ top: idx * w.firstElementChild.offsetHeight, behavior });
+  markWheel(w, idx);
+}
+// Index (im mittleren Drittel) des Werts, der v am nächsten ist (Erinnerungen: nur 00/15/30/45).
+function wheelIndexOf(w, v) {
+  const n = wheelSize(w);
+  let best = 0;
+  for (let i = 1; i < n; i++) if (Math.abs(Number(w.children[i].dataset.v) - v) < Math.abs(Number(w.children[best].dataset.v) - v)) best = i;
+  return n + best;
+}
+// Rad steht: Wert übernehmen, dann ohne sichtbaren Sprung zurück ins mittlere Drittel.
+function wheelSettled(w) {
+  timePickerWheelChanged();
+  const n = wheelSize(w), idx = wheelIndex(w);
+  if (idx < n || idx >= 2 * n) setWheel(w, n + (idx % n));
+}
+
+// Schreibt timePicker.value in Räder und Knöpfe.
+function syncTimePicker(smooth = false) {
   const p = timePicker;
   const dlg = document.getElementById('time-picker');
   if (!p || !dlg) return;
   const clock = p.value % MINUTES_PER_DAY;
   const h = Math.floor(clock / 60), m = clock % 60;
-  const twelve = clockUses12h();
-  if (!typing) {
-    dlg.querySelector('#tp-hour').value = twelve ? String(h % 12 || 12) : String(h).padStart(2, '0');
-    const minuteEl = dlg.querySelector('#tp-minute');
-    if (minuteEl) minuteEl.value = String(m).padStart(2, '0');
-  }
-  const shown = dlg.querySelector('#tp-minute-shown');
-  if (shown) shown.textContent = String(m).padStart(2, '0');
+  const hw = dlg.querySelector('#tp-hour'), mw = dlg.querySelector('#tp-minute');
+  setWheel(hw, wheelIndexOf(hw, clockUses12h() ? h % 12 || 12 : h), smooth);
+  setWheel(mw, wheelIndexOf(mw, m), smooth);
   const press = (sel, on) => dlg.querySelectorAll(sel).forEach((b) => {
     const active = on(b);
     b.classList.toggle('pill-toggle--active', active);
     b.setAttribute('aria-pressed', String(active));
   });
-  press('[data-tp="minute"]', (b) => Number(b.dataset.minute) === m);
   press('[data-tp="ampm"]', (b) => (b.dataset.pm === '1') === (h >= 12));
   press('[data-tp="day"]', (b) => Number(b.dataset.offset) === timeDayOffset(p.value));
 }
 
-// Uhrzeit aus den Eingabefeldern (Minuten ab Mitternacht), null wenn ungültig.
-function readTimePickerInputs() {
-  const p = timePicker;
-  const dlg = document.getElementById('time-picker');
-  if (!p || !dlg) return null; // schon geschlossen (focusout beim Entfernen)
-  const hs = dlg.querySelector('#tp-hour').value.trim();
-  const minuteEl = dlg.querySelector('#tp-minute');
-  if (!/^\d{1,2}$/.test(hs)) return null;
-  let h = Number(hs);
-  if (clockUses12h()) {
-    if (h < 1 || h > 12) return null;
-    h = (h % 12) + (p.value % MINUTES_PER_DAY >= 720 ? 12 : 0);
-  } else if (h > 23) return null;
-  let m = p.value % 60;
-  if (minuteEl) {
-    if (!/^\d{1,2}$/.test(minuteEl.value.trim())) return null;
-    m = Number(minuteEl.value.trim());
-    if (m > 59) return null;
-  }
-  return h * 60 + m;
-}
-
-// Getippt: Wert übernehmen. Auf der Seite von gestern bekommt die Uhrzeit den spätesten
+// Rad gedreht: Uhrzeit übernehmen. Auf der Seite von gestern bekommt sie den spätesten
 // Zeitpunkt, der nicht in der Zukunft liegt (um 0:40 wird 0:10 zu heute Nacht, 23:45 zu
 // gestern Abend) - solange man den Tag nicht selbst gewählt hat.
-function timePickerTyped() {
+function timePickerWheelChanged() {
   const p = timePicker;
-  const clock = readTimePickerInputs();
-  if (clock === null) return;
+  const dlg = document.getElementById('time-picker');
+  if (!p || !dlg) return;
+  const hw = dlg.querySelector('#tp-hour'), mw = dlg.querySelector('#tp-minute');
+  let h = Number(hw.children[wheelIndex(hw)].dataset.v);
+  if (clockUses12h()) h = (h % 12) + (p.value % MINUTES_PER_DAY >= 720 ? 12 : 0);
+  const clock = h * 60 + Number(mw.children[wheelIndex(mw)].dataset.v);
+  if (clock === p.value % MINUTES_PER_DAY) return; // eigenes Setzen (syncTimePicker) - nichts zu tun
   let offset = timeDayOffset(p.value);
   if (p.autoDay && !p.dayTouched) {
     const now = new Date();
     offset = clock <= now.getHours() * 60 + now.getMinutes() ? 1 : 0;
   }
   p.value = offset * MINUTES_PER_DAY + clock;
-  document.getElementById('tp-error').textContent = '';
-  syncTimePicker(true);
+  syncTimePicker();
 }
 
 function openTimePicker(p) {
@@ -8425,40 +8450,57 @@ function openTimePicker(p) {
   dlg.innerHTML = timePickerHtml(timePicker);
   document.body.appendChild(dlg);
   dlg.addEventListener('click', onTimePickerClick);
-  dlg.addEventListener('input', (e) => {
-    if (!e.target.classList.contains('tp-num')) return;
-    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 2);
-    timePickerTyped();
-    // Stunde fertig (zwei Ziffern oder eine, nach der keine zweite mehr passt): weiter zur Minute.
-    const v = e.target.value;
-    if (e.target.id === 'tp-hour' && (v.length === 2 || Number(v) > (clockUses12h() ? 1 : 2))) dlg.querySelector('#tp-minute')?.focus();
+  // Beim Drehen sofort die Mitte hervorheben, den Wert erst übernehmen, wenn das Rad steht.
+  const settle = new Map();
+  dlg.querySelectorAll('.tp-wheel').forEach((w) => {
+    w.addEventListener('scroll', () => {
+      markWheel(w, wheelIndex(w));
+      clearTimeout(settle.get(w));
+      settle.set(w, setTimeout(() => wheelSettled(w), 120));
+    }, { passive: true });
   });
-  dlg.addEventListener('focusin', (e) => { if (e.target.classList.contains('tp-num')) e.target.select(); });
-  dlg.addEventListener('focusout', (e) => { if (e.target.classList.contains('tp-num') && readTimePickerInputs() !== null) syncTimePicker(); });
+  let typed = '', typedAt = 0;
   dlg.addEventListener('keydown', (e) => {
-    if (!e.target.classList.contains('tp-num')) return;
-    if (e.key === 'Enter') { e.preventDefault(); applyTimePicker(); return; }
-    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    const w = e.target.closest('.tp-wheel');
+    if (!w) return;
+    const n = wheelSize(w), i = wheelIndex(w) % n; // i: Position innerhalb der Werte
+    let next = null;
+    if (e.key === 'ArrowUp') next = (i + 1) % n;
+    else if (e.key === 'ArrowDown') next = (i - 1 + n) % n;
+    else if (e.key === 'PageUp') next = Math.min(n - 1, i + 5);
+    else if (e.key === 'PageDown') next = Math.max(0, i - 5);
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = n - 1;
+    else if (/^\d$/.test(e.key)) {
+      // Ziffern tippen (am PC): "2", "3" = 23; nach einer Sekunde Pause beginnt es neu.
+      typed = Date.now() - typedAt < 1000 ? (typed + e.key).slice(-2) : e.key;
+      typedAt = Date.now();
+      const hit = [...w.children].slice(0, n).findIndex((el) => Number(el.dataset.v) === Number(typed));
+      if (hit >= 0) next = hit;
+    } else if (e.key === 'Enter') { e.preventDefault(); applyTimePicker(); return; }
+    if (next === null) return;
     e.preventDefault();
-    // Hoch/runter: Stunde bzw. Minute um 1, im Kreis innerhalb des Tages.
-    const p = timePicker;
-    const base = timeDayOffset(p.value) * MINUTES_PER_DAY;
-    const step = (e.target.id === 'tp-hour' ? 60 : 1) * (e.key === 'ArrowUp' ? 1 : -1);
-    p.value = base + (((p.value - base + step) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
-    syncTimePicker();
-    e.target.select();
+    setWheel(w, n + next);
+    timePickerWheelChanged();
   });
   dlg.addEventListener('cancel', (e) => { e.preventDefault(); closeTimePicker(); });
-  syncTimePicker();
   dlg.showModal();
+  syncTimePicker(); // erst nach showModal: vorher haben die Räder keine Höhe
   dlg.querySelector('[data-tp="cancel"]').focus(); // wie alle Dialoge: Anfangsfokus auf "Abbrechen"
   syncLayerHistory();
 }
 
 function onTimePickerClick(e) {
-  const btn = e.target.closest('[data-tp]');
   const p = timePicker;
-  if (!btn || !p) return;
+  if (!p) return;
+  const item = e.target.closest('.tp-item');
+  if (item) { // Zahl im Rad angetippt: in die Mitte drehen
+    const w = item.parentElement;
+    setWheel(w, [...w.children].indexOf(item), true);
+    return;
+  }
+  const btn = e.target.closest('[data-tp]');
+  if (!btn) return;
   const tp = btn.dataset.tp;
   const clock = p.value % MINUTES_PER_DAY;
   const base = timeDayOffset(p.value) * MINUTES_PER_DAY;
@@ -8474,20 +8516,15 @@ function onTimePickerClick(e) {
   else if (tp === 'add') p.value = Math.min(p.value + Number(btn.dataset.n), TIME_PICKER_MAX);
   else if (tp === 'day') { p.value = Number(btn.dataset.offset) * MINUTES_PER_DAY + clock; p.dayTouched = true; }
   else if (tp === 'ampm') p.value = base + (clock % 720) + (btn.dataset.pm === '1' ? 720 : 0);
-  else if (tp === 'minute') p.value = base + clock - (clock % 60) + Number(btn.dataset.minute);
-  document.getElementById('tp-error').textContent = '';
-  syncTimePicker();
+  syncTimePicker(tp === 'now' || tp === 'add');
 }
 
 function applyTimePicker() {
   const p = timePicker;
-  const clock = readTimePickerInputs();
-  if (clock === null) {
-    document.getElementById('tp-error').textContent = tPlain('timePicker.invalid', { example: formatClock(23 * 60 + 45) });
-    document.getElementById('tp-hour').focus();
-    return;
-  }
-  const value = timeDayOffset(p.value) * MINUTES_PER_DAY + clock;
+  if (!p) return;
+  // Ein Rad, das noch ausläuft, zählt mit dem Stand, auf dem es gerade steht.
+  timePickerWheelChanged();
+  const value = timePicker.value;
   closeTimePicker({ focus: false });
   p.onPick(value);
   document.getElementById(p.triggerId)?.focus({ preventScroll: true });
@@ -8649,7 +8686,6 @@ function renderTodayDayNav() {
   // aus, so sieht man auf einen Blick, welcher gerade gezeigt wird.
   const dayOffset = Math.round((startOfDay(state.currentDate) - startOfDay(new Date())) / 86400000);
   const relativeDay = { 0: t('day.today'), [-1]: t('day.yesterday') }[dayOffset] || '';
-  const atToday = !isPastKey(dateKey);
   return `
     <div class="day-nav">
       <button type="button" class="nav-btn" data-action="nav-day" data-dir="-1" aria-label="${esc(t('ariaLabel.prevDay'))}">‹</button>
@@ -8658,7 +8694,7 @@ function renderTodayDayNav() {
         <span class="day-date day-date-pick">${relativeDay ? `<span class="day-relative">${relativeDay}</span> · ` : ''}${longDate(state.currentDate)}<input type="date" id="day-date-input" class="day-date-input" data-action="pick-date" value="${dateKey}" max="${formatKey(new Date())}" aria-label="${esc(t('today.pickDate'))}" /></span>
         <span class="day-status">${dayStatusHtml(dayEntry)}</span>
       </div>
-      <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" aria-label="${esc(t('ariaLabel.nextDay'))}"${atToday ? ' aria-disabled="true"' : ''}>›</button>
+      <button type="button" class="nav-btn" data-action="nav-day" data-dir="1" aria-label="${esc(t('ariaLabel.nextDay'))}"${nextPeriodDisabled('today')}>›</button>
       ${renderDayMenuPanel()}
     </div>
   `;
@@ -8834,7 +8870,7 @@ function renderWeek() {
     <div class="day-nav">
       <button type="button" class="nav-btn" data-action="nav-week" data-dir="-1" aria-label="${esc(t('ariaLabel.prevWeek'))}">‹</button>
       <div class="day-label"><span class="day-date">${days[0].getDate()}. ${monthName(days[0])} – ${days[6].getDate()}. ${monthName(days[6])}</span></div>
-      <button type="button" class="nav-btn" data-action="nav-week" data-dir="1" aria-label="${esc(t('ariaLabel.nextWeek'))}">›</button>
+      <button type="button" class="nav-btn" data-action="nav-week" data-dir="1" aria-label="${esc(t('ariaLabel.nextWeek'))}"${nextPeriodDisabled('week')}>›</button>
     </div>
     ${!hasAnyEntries() ? renderStatsEmpty() : `
     <div class="grid-scroll">
@@ -8876,7 +8912,7 @@ function renderMonth() {
     <div class="day-nav">
       <button type="button" class="nav-btn" data-action="nav-month" data-dir="-1" aria-label="${esc(t('ariaLabel.prevMonth'))}">‹</button>
       <div class="day-label"><span class="day-date">${monthName(first)} ${year}</span></div>
-      <button type="button" class="nav-btn" data-action="nav-month" data-dir="1" aria-label="${esc(t('ariaLabel.nextMonth'))}">›</button>
+      <button type="button" class="nav-btn" data-action="nav-month" data-dir="1" aria-label="${esc(t('ariaLabel.nextMonth'))}"${nextPeriodDisabled('month')}>›</button>
     </div>
     ${!hasAnyEntries() ? renderStatsEmpty() : `
     <div class="month-grid">
@@ -8924,7 +8960,7 @@ function renderYear() {
     <div class="day-nav">
       <button type="button" class="nav-btn" data-action="nav-year" data-dir="-1" aria-label="${esc(t('ariaLabel.prevYear'))}">‹</button>
       <div class="day-label"><span class="day-date">${year}</span></div>
-      <button type="button" class="nav-btn" data-action="nav-year" data-dir="1" aria-label="${esc(t('ariaLabel.nextYear'))}">›</button>
+      <button type="button" class="nav-btn" data-action="nav-year" data-dir="1" aria-label="${esc(t('ariaLabel.nextYear'))}"${nextPeriodDisabled('year')}>›</button>
     </div>
     ${!hasAnyEntries() ? renderStatsEmpty() : `
     <div class="year-grid">${monthsGrid}</div>
@@ -12321,8 +12357,8 @@ app.addEventListener('touchend', (e) => {
 // zum Verwechseln ähnlich.
 let pendingPeriodSlide = 0;
 function shiftPeriod(dir) {
+  if (dir > 0 && atCurrentPeriod()) return; // Zukunft gesperrt, siehe isFutureKey
   if (state.view === 'today') {
-    if (dir > 0 && !isPastKey(formatKey(state.currentDate))) return; // Zukunft gesperrt, siehe isFutureKey
     state.currentDate = addDays(state.currentDate, dir);
   } else if (state.view === 'week') {
     state.weekAnchor = addDays(state.weekAnchor, dir * 7);

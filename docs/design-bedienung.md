@@ -272,8 +272,9 @@ Am PC öffnet ein Klick sie per `showPicker()`, sonst nur das kleine Symbol im F
 Einstellung): › bleibt bei heute stehen (`aria-disabled`, behält so den Fokus), Wischen und
 `shiftPeriod` ebenso, die Datumsauswahl hat `max` (und macht aus einem trotzdem gewählten
 späteren Tag heute), zukünftige Zellen der Übersicht sind keine Knöpfe (`openDayAttrs`,
-`isFutureKey`). Die Übersicht selbst blättert weiter in die Zukunft. Uhrzeiten nach Mitternacht
-auf der heutigen Seite bleiben möglich.
+`isFutureKey`). Woche/Monat/Jahr enden ebenso beim laufenden Zeitraum (`atCurrentPeriod`, ›
+mit `aria-disabled`); dessen restliche Tage stehen leer da. Uhrzeiten nach Mitternacht auf der
+heutigen Seite bleiben möglich.
 
 **Tastatur am Computer** (`keydown` auf `document`, greift auch ohne Fokus): ← → wie Wischen
 (nicht in Eingabefeldern, nicht bei offenem Menü/Dialog), Strg/⌘+Enter klickt den
@@ -283,7 +284,11 @@ Versehen aus). Erklärt im Tipp "Tastatur am Computer" in "Über Logbuch".
 
 **Uhrzeit-Auswahl** (`openTimePicker`, Uhrzeit-Felder und alle Erinnerungszeiten): eigenes
 Fenster statt der Auswahl des Geräts (die von Android schnitt bei großer Schrift ihren
-Bestätigen-Knopf ab, kennt kein "Jetzt" und passt nicht zur App). Als `<dialog>` außerhalb von
+Bestätigen-Knopf ab, kennt kein "Jetzt" und passt nicht zur App). Stunde und Minute als
+Drehräder wie am iPhone (eine Wischbewegung je Wert, keine Tastatur, auf allen Geräten gleich;
+zum Tippen war es umständlich): `scroll-snap`-Listen, die Werte dreimal hintereinander, damit
+man über 59 → 00 weiterdrehen kann (`wheelSettled` springt danach ins mittlere Drittel); für
+Tastatur/Screenreader `role="spinbutton"` mit ↑ ↓, Bild ↑ ↓, Pos1/Ende und Ziffern. Als `<dialog>` außerhalb von
 `#app`, nicht als Modal im State: `render()` ersetzt `#app` komplett, ein Formular dahinter
 verlöre seinen ungespeicherten Stand. `showModal()` bringt Fokus-Sperre und Escape mit; eine
 eigene Ebene in `currentLayerCount`, Android-Zurück schließt sie ohne `render()`. 12 oder 24

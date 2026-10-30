@@ -71,8 +71,8 @@ stehen also an zwei verschiedenen Tagen. Die Dauer ist ein berechnetes Feld (unt
   Mitternacht steht der Wochentag dahinter ("0:30 · Fr") – eine 0:30 kann früh an diesem Tag
   oder spät in der Nacht danach meinen, für die Dauer 24 Stunden Unterschied.
 - **Eingabe über die eigene Uhrzeit-Auswahl** (`openTimePicker`, Nutzer-Entscheidung
-  2026-10-30, auch für Erinnerungszeiten, siehe design-bedienung.md): Stunde und Minute zum
-  Tippen, "Jetzt" und "+5/+15/+60 min" (addieren sich), "Welcher Tag?" (dieser / nach
+  2026-10-30, auch für Erinnerungszeiten, siehe design-bedienung.md): Drehräder für Stunde
+  und Minute, "Jetzt" und "+5/+15/+60 min" (addieren sich), "Welcher Tag?" (dieser / nach
   Mitternacht), "Uhrzeit löschen". Leer startet sie bei jetzt (`timeValueOn`: gestern um 0:30 =
   1470) – heute und gestern; an älteren Tagen ohne "Jetzt". Auf der Seite von gestern bekommt
   eine getippte Uhrzeit den spätesten Zeitpunkt, der nicht in der Zukunft liegt (um 0:40: 0:10
