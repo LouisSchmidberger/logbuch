@@ -30,6 +30,8 @@ const HOOK = `
     multiOptionCounts,
     // Texte: fehlende Schlüssel (dynamisch gebaute wie tutorial.form.tip.<Typ>) und de/en gleich
     STRINGS, SUPPORTED_KINDS, FIELD_TEMPLATES, PACKAGE_GROUPS,
+    // Vorlagen: übernehmen, zusammenführen
+    templateTakeMode, templateSlotForm, templateById, yesValueOf, isYesNoField, mergedMultiOptions, packageFieldCount, packageDefaultChoice,
   },
 }));
 `;

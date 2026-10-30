@@ -2170,6 +2170,7 @@ const STRINGS = {
     'tpl.mergeUndone': 'Rückgängig gemacht – die alten Felder sind wieder da.',
     'tpl.error.mergeTooMany': 'Höchstens {max} Optionen – nimm weniger Felder hinein.',
     'tpl.error.merge': 'Nicht alle Einträge ließen sich übernehmen. Es wurde nichts geändert – versuch es bitte nochmal.',
+    'tpl.error.mergeArchive': 'Deine Einträge sind übernommen, aber {fields} ließ sich nicht archivieren. Archiviere es bitte selbst über „Felder verwalten“, sonst steht es doppelt da.',
     'tpl.followUp.steps': 'Fast fertig: stell jetzt noch die Stufen von „{name}“ um.',
     'tpl.followUp.type': 'Fast fertig: wandle „{name}“ jetzt noch in den neuen Typ um.',
     'textReview.countOne': '1 Eintrag',
@@ -3330,6 +3331,7 @@ const STRINGS = {
     'tpl.mergeUndone': 'Undone – the old fields are back.',
     'tpl.error.mergeTooMany': 'At most {max} options – add fewer fields.',
     'tpl.error.merge': 'Not all entries could be moved. Nothing was changed – please try again.',
+    'tpl.error.mergeArchive': 'Your entries were moved, but {fields} could not be archived. Please archive it yourself under “Manage fields”, otherwise it shows up twice.',
     'tpl.followUp.steps': 'Almost done: now change the steps of “{name}”.',
     'tpl.followUp.type': 'Almost done: now convert “{name}” to its new type.',
     'textReview.countOne': '1 entry',
@@ -5820,6 +5822,19 @@ function canConvertToCounter(f) {
 async function convertHabitToCounter(defId) {
   const h = state.habits.find((x) => x.defId === defId);
   if (!h) return;
+  const result = await convertToCounterRow(h);
+  if (result.notice) {
+    state.notice = result.notice;
+    render();
+    return;
+  }
+  closeHabitForm();
+  state.notice = { type: 'ok', text: tPlain('habitForm.convertDone', { name: h.name }) };
+  render();
+}
+// Der eigentliche Umbau (auch für Vorlagen, takeIntoTemplate): Ziel übernehmen, Erinnerungszeiten
+// leeren (Zähler erinnern über eigene Zeiten mit "unter"), leer = 0 erst ab heute.
+async function convertToCounterRow(h) {
   // Ziel übernehmen: aus einer Skala mit Bewertung wird "mindestens/höchstens" der Wert, ab dem
   // sie voll erreicht war (z.B. Zähne 0-2, hohe Werte gut -> mindestens 2).
   let good = null, target = null;
@@ -5839,17 +5854,12 @@ async function convertHabitToCounter(defId) {
   };
   const { data, error } = await supabase.from('habit_definitions')
     .update({ kind: 'counter', reminder_minute: null, reminder_minutes: null, enc: await encryptData(currentDek, payload), ...DEF_PLAINTEXT_CLEARED })
-    .eq('id', defId).select().single();
-  if (error) {
-    state.notice = errorNotice('notice.saveFailed', error.message);
-    render();
-    return;
-  }
-  state.habits = state.habits.map((x) => (x.defId === defId ? habitFromParts(data, payload) : x));
+    .eq('id', h.defId).select().single();
+  if (error) return { notice: errorNotice('notice.saveFailed', error.message) };
+  const habit = habitFromParts(data, payload);
+  state.habits = state.habits.map((x) => (x.defId === h.defId ? habit : x));
   saveFieldNamesForPush();
-  closeHabitForm();
-  state.notice = { type: 'ok', text: tPlain('habitForm.convertDone', { name: h.name }) };
-  render();
+  return { habit };
 }
 
 // --- Stufen ändern (Skala mit Einträgen) -------------------------------------
@@ -5991,13 +6001,16 @@ async function rewriteDays(dateKeys, transform, onProgress = () => {}) {
   const worker = async () => {
     while (queue.length) {
       const dateKey = queue.shift();
-      const before = state.entries[dateKey] || {};
-      const changed = transform(before, dateKey);
+      const before = state.entries[dateKey];
+      const changed = transform(before || {}, dateKey);
       state.entries = { ...state.entries, [dateKey]: changed };
       if (await saveDay(dateKey)) done++;
       else {
         failed++;
-        if (state.entries[dateKey] === changed) state.entries = { ...state.entries, [dateKey]: before };
+        if (state.entries[dateKey] === changed) {
+          const { [dateKey]: _, ...rest } = state.entries;
+          state.entries = before === undefined ? rest : { ...state.entries, [dateKey]: before };
+        }
       }
       onProgress(done + failed, dateKeys.length);
     }
@@ -10648,18 +10661,18 @@ function templateTakeOverlay(slotForm, mode) {
 // Nur die Schlüssel, die der Teil selbst setzt (nicht die Vorgaben von defaultHabitForm).
 function templateSlotOverrideKeys(slotForm) { return slotForm.__keys || {}; }
 async function takeIntoTemplate(h, slotForm, mode, sectionId) {
+  // Zahl -> Zähler über denselben Umbau wie "In Zähler umwandeln", danach wie ein passendes Feld.
+  if (mode === 'counter') {
+    const converted = await convertToCounterRow(h);
+    if (converted.notice) return converted;
+    h = converted.habit;
+  }
   const f = { ...habitToForm(h), ...templateTakeOverlay(slotForm, mode), name: slotForm.name, sectionId };
-  if (mode === 'counter') { f.kind = 'counter'; f.step = 1; }
   const def = habitFormDefinition(f);
   if (def.notice) return def;
   const result = await persistHabitForm(f, def);
   if (result.notice) return result;
-  let habit = result.habit;
-  if (mode === 'counter' && !habit.counterSince) {
-    await updateHabitPayload(habit, { counterSince: formatKey(new Date()) });
-    habit = state.habits.find((x) => x.defId === habit.defId);
-  }
-  return { habit, followUp: mode === 'steps' || mode === 'type' ? { defId: habit.defId, mode, target: slotForm } : null };
+  return { habit: result.habit, followUp: mode === 'steps' || mode === 'type' ? { defId: result.habit.defId, mode, target: slotForm } : null };
 }
 // Nach dem Anlegen: "Stufen ändern" bzw. "Typ ändern" des übernommenen Felds öffnen, schon auf
 // die Vorlage eingestellt (Stufenzahl, Bezeichnungen bzw. Ziel-Typ).
@@ -10813,6 +10826,7 @@ async function createFromTemplate(f) {
       for (const h of mergeFields) {
         const entry = await archiveIntoStats(h.defId);
         if (entry) merged.archived.push(entry);
+        else merged.notArchived = [...(merged.notArchived || []), h.name];
       }
     }
     if (how === 'replace' && old) {
@@ -13190,8 +13204,10 @@ app.addEventListener('click', async (e) => {
       closeHabitForm();
       const m = result.merged;
       state.notice = {
-        type: 'ok',
-        text: tPlain('tpl.merged', { names: result.habits.map((h) => h.name).join(', '), fields: m.names.join(', ') }),
+        type: m.notArchived ? 'error' : 'ok',
+        text: m.notArchived
+          ? tPlain('tpl.error.mergeArchive', { fields: m.notArchived.join(', ') })
+          : tPlain('tpl.merged', { names: result.habits.map((h) => h.name).join(', '), fields: m.names.join(', ') }),
         action: {
           label: t('notice.undo'),
           run: async () => {

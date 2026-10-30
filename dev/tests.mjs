@@ -98,6 +98,30 @@ try {
       eq('Stufe all', g.map((x) => f.featureVisible('all', x)), [true, true, true]);
       eq('unbekannter Schalter ist aus', f.featureVisible(undefined, 'owner'), false);
 
+      // --- Vorlagen: übernehmen -------------------------------------------------
+      const slot = (id, i = 0) => { const tpl = f.templateById(id); return f.templateSlotForm(tpl, tpl.slots[i], 'x'); };
+      const scale = (min, max, extra = {}) => ({ kind: 'scale', min, max, labels: null, period: 'day', ...extra });
+      eq('übernehmen: Skala gleiche Stufen', f.templateTakeMode(slot('mood'), scale(1, 5)), 'same');
+      eq('übernehmen: Skala andere Stufen', f.templateTakeMode(slot('mood'), scale(1, 10)), 'steps');
+      eq('übernehmen: freier Regler behält Bereich', f.templateTakeMode(slot('stress'), scale(1, 10)), 'same');
+      eq('übernehmen: Regler mit Bezeichnungen -> Stufen', f.templateTakeMode(slot('stress'), scale(1, 4, { labels: ['a', 'b', 'c', 'd'] })), 'steps');
+      eq('übernehmen: Zahl -> Zähler', f.templateTakeMode(slot('water'), { kind: 'number', period: 'day' }), 'counter');
+      eq('übernehmen: Zeitraum-Feld nie', f.templateTakeMode(slot('mood'), scale(1, 5, { period: 'week' })), null);
+      eq('übernehmen: archiviert nie', f.templateTakeMode(slot('mood'), scale(1, 5, { archivedAt: '2026-01-01' })), null);
+      eq('übernehmen: Dauer nur aus Dauer', f.templateTakeMode(slot('sleep', 2), { kind: 'computed', aggregate: 'avg', period: 'day' }), null);
+      eq('übernehmen: Uhrzeit aus Uhrzeit', f.templateTakeMode(slot('sleep', 0), { kind: 'time', period: 'day' }), 'same');
+      // --- Vorlagen: zusammenführen ---------------------------------------------
+      eq('zusammenführen: Ja oben', f.yesValueOf(scale(1, 2, { labels: ['Nein', 'Ja'] })), 2);
+      eq('zusammenführen: Ja vorn', f.yesValueOf(scale(0, 1, { labels: ['Ja', 'Nein'] })), 0);
+      eq('zusammenführen: ohne Bezeichnungen oben', f.yesValueOf(scale(1, 2)), 2);
+      eq('zusammenführen: nur zwei Stufen', [f.isYesNoField(scale(1, 2)), f.isYesNoField(scale(1, 3))], [true, false]);
+      const merged = f.mergedMultiOptions([{ id: 'a', label: 'Sport' }, { id: 'b', label: 'Streit', hidden: true }],
+        [{ defId: 'd1', name: 'sport?' }, { defId: 'd2', name: 'Kreatin?' }, { defId: 'd3', name: 'Streit' }]);
+      eq('zusammenführen: gleichnamige Option mitbenutzt', [merged.idOf.get('d1'), merged.idOf.get('d3')], ['a', 'b']);
+      eq('zusammenführen: neue Option ohne Fragezeichen', merged.options.map((o) => o.label), ['Sport', 'Streit', 'Kreatin']);
+      eq('zusammenführen: ausgeblendete wieder sichtbar', merged.options[1].hidden, undefined);
+      eq('Startpaket: vorausgewählt 11 Felder', f.packageFieldCount(f.packageDefaultChoice()), 11);
+
       // --- Texte --------------------------------------------------------------
       // Gleiche Schlüssel in derselben Reihenfolge (CLAUDE.md), und die dynamisch gebauten gibt es.
       eq('Texte: de und en gleiche Schlüssel', Object.keys(f.STRINGS.en), Object.keys(f.STRINGS.de));
