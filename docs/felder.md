@@ -74,9 +74,9 @@ stehen also an zwei verschiedenen Tagen. Die Dauer ist ein berechnetes Feld (unt
   2026-10-30, auch für Erinnerungszeiten, siehe design-bedienung.md): Drehräder für Stunde
   und Minute, "Jetzt" und "+5/+15/+60 min" (addieren sich), "Welcher Tag?" (dieser / nach
   Mitternacht), "Uhrzeit löschen". Leer startet sie bei jetzt (`timeValueOn`: gestern um 0:30 =
-  1470) – heute und gestern; an älteren Tagen ohne "Jetzt". Auf der Seite von gestern bekommt
-  eine getippte Uhrzeit den spätesten Zeitpunkt, der nicht in der Zukunft liegt (um 0:40: 0:10
-  → heute Nacht, 23:45 → gestern Abend), bis man den Tag selbst wählt; sonst behält sie ihren Tag.
+  1470) – heute und gestern; an älteren Tagen ohne "Jetzt". Die Räder sind eine durchgehende
+  Zeitachse: über 23 Uhr hinaus gedreht wird es "nach Mitternacht", zurück vor 0 Uhr wieder
+  dieser Tag (früher als 0:00 dieses Tages und später als 23:59 des nächsten geht nicht).
 - **Auswertung**: Verlauf wie bei Zahlen (`hasNumericSeries`). Uhrzeiten liegen auf einem Kreis
   – `unwrapClockSeries` legt jeden Wert auf die Seite des Kreis-Mittels, auf der er näher
   liegt, damit Ø 23:30/0:30 = 0:00 ist und nicht 12:00.

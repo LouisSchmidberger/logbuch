@@ -8319,8 +8319,7 @@ function renderTimeBox(h, dateKey, dayEntry, marker = '') {
 // ungespeicherten Stand. showModal() sperrt die Seite dahinter, hält den Tab-Fokus im
 // Fenster und meldet Escape ('cancel'); Android-Zurück über currentLayerCount/popstate.
 // timePicker: { title, value (Minuten; bei Uhrzeit-Feldern ab 1440 = nach Mitternacht),
-// dateKey (nur Uhrzeit-Felder), step (1 oder 15), nowAllowed, autoDay, dayTouched,
-// triggerId, onPick(v), onClear }.
+// dateKey (nur Uhrzeit-Felder), step (1 oder 15), nowAllowed, triggerId, onPick(v), onClear }.
 let timePicker = null;
 const TIME_PICKER_STEPS = [5, 15, 60];
 const TIME_PICKER_MAX = 2 * MINUTES_PER_DAY - 1; // höchstens 23:59 am nächsten Tag
@@ -8368,12 +8367,18 @@ function timePickerHtml(p) {
 // Drehräder für Stunde und Minute (wie am iPhone, Nutzer-Entscheidung 2026-10-30): Wischen
 // mit einem Finger statt Tippen, keine Tastatur, sieht auf jedem Gerät gleich aus. Ein Rad ist
 // eine senkrecht scrollende Liste mit Einrasten (scroll-snap); das Element in der Mitte ist
-// der Wert. Für Tastatur/Screenreader ist es ein role="spinbutton" (↑ ↓, Bild ↑ ↓, Pos1/Ende,
-// Ziffern tippen).
+// der Wert. Für Tastatur/Screenreader ist es ein role="spinbutton" (↑ ↓, Bild ↑ ↓, Ziffern).
+// Die Räder sind eine durchgehende Zeitachse: jede Zeile weiter ist eine Stunde bzw. Minute
+// später - über 59 hinaus geht die Stunde weiter, über 23 hinaus der Tag (nach Mitternacht).
+// Gerechnet wird deshalb mit der Strecke, um die ein Rad bewegt wurde (w._idx = Zeile, für die
+// timePicker.value zuletzt galt), nicht mit der Zahl, auf der es steht.
 const wheelSize = (w) => w.children.length / 3; // Anzahl verschiedener Werte
+// Echte, oft krumme Zeilenhöhe (bei größerer Schrift z.B. 49,5 px): mit dem gerundeten
+// offsetHeight lag das Minutenrad nach 100 Zeilen eine ganze Zeile daneben.
+const wheelItemHeight = (w) => w.firstElementChild.getBoundingClientRect().height;
+const wheelUnit = (w) => (w.id === 'tp-hour' ? 60 : timePicker.step);
 function wheelIndex(w) {
-  const itemH = w.firstElementChild.offsetHeight;
-  return Math.max(0, Math.min(w.children.length - 1, Math.round(w.scrollTop / itemH)));
+  return Math.max(0, Math.min(w.children.length - 1, Math.round(w.scrollTop / wheelItemHeight(w))));
 }
 function markWheel(w, idx) {
   [...w.children].forEach((el, i) => el.classList.toggle('tp-item--on', i === idx));
@@ -8381,64 +8386,60 @@ function markWheel(w, idx) {
   w.setAttribute('aria-valuenow', item.dataset.v);
   w.setAttribute('aria-valuetext', item.textContent);
 }
-// Dreht das Rad auf idx. w._target hält fest, wohin: Zwischenstände unterwegs zählen nicht
-// (wheelSettled). apply: danach den Wert übernehmen (angetippte Zahl), sonst ist er schon
-// in timePicker.value (Jetzt, +15 min, Öffnen).
-function setWheel(w, idx, smooth = false, apply = false) {
+// Dreht das Rad auf Zeile idx (die App, nicht der Nutzer). w._target: wohin es unterwegs ist -
+// Zwischenstände zählen nicht (wheelSettled).
+function setWheel(w, idx, smooth = false) {
   const behavior = smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'instant';
-  w._target = { idx, apply };
-  w.scrollTo({ top: idx * w.firstElementChild.offsetHeight, behavior });
+  w._idx = idx;
+  w._target = idx;
+  w.scrollTo({ top: idx * wheelItemHeight(w), behavior });
   markWheel(w, idx);
 }
-// Index (im mittleren Drittel) des Werts, der v am nächsten ist (Erinnerungen: nur 00/15/30/45).
+// Zeile (im mittleren Drittel) des Werts, der v am nächsten ist (Erinnerungen: nur 00/15/30/45).
 function wheelIndexOf(w, v) {
   const n = wheelSize(w);
   let best = 0;
   for (let i = 1; i < n; i++) if (Math.abs(Number(w.children[i].dataset.v) - v) < Math.abs(Number(w.children[best].dataset.v) - v)) best = i;
   return n + best;
 }
-// Rad steht. Hat die App es gedreht: falls es (Einrasten, ältere Browser) nicht ganz
-// angekommen ist, hinsetzen. Hat der Nutzer es gedreht: seinen Wert übernehmen. Danach ohne
-// sichtbaren Sprung zurück ins mittlere Drittel.
+// Uhrzeit um minutes verschieben. Uhrzeit-Felder: zwischen 0:00 dieses Tages und 23:59 des
+// nächsten. Erinnerungszeiten (ohne Tag): im Kreis.
+function shiftTimePicker(minutes, smooth) {
+  const p = timePicker;
+  p.value = p.dateKey
+    ? Math.max(0, Math.min(TIME_PICKER_MAX, p.value + minutes))
+    : (((p.value + minutes) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  syncTimePicker(smooth);
+}
+// Rad steht. Hat die App es gedreht und es ist nicht ganz angekommen (Einrasten): hinsetzen.
+// Hat der Nutzer es gedreht: um die gedrehte Strecke verschieben. Danach ohne sichtbaren Sprung
+// zurück ins mittlere Drittel.
 function wheelSettled(w) {
-  const n = wheelSize(w);
-  const target = w._target;
-  if (target) {
-    if (wheelIndex(w) % n !== target.idx % n) { setWheel(w, target.idx, false, target.apply); return; }
+  const n = wheelSize(w), idx = wheelIndex(w);
+  if (w._target !== null) {
+    if (idx !== w._target) { setWheel(w, w._target); return; }
     w._target = null;
-    if (target.apply) timePickerWheelChanged(w);
-  } else {
-    timePickerWheelChanged(w);
+  } else if (idx !== w._idx) {
+    shiftTimePicker((idx - w._idx) * wheelUnit(w), true);
+    return; // syncTimePicker hat das Rad neu gesetzt, dessen Ankunft kommt hier wieder vorbei
   }
-  const idx = wheelIndex(w);
-  if (idx < n || idx >= 2 * n) { setWheel(w, n + (idx % n)); w._target = null; }
+  if (idx < n || idx >= 2 * n) setWheel(w, n + (idx % n));
 }
 
-// Schreibt timePicker.value in Räder und Knöpfe.
+// Schreibt timePicker.value in Räder und Knöpfe. Jedes Rad nimmt den kürzesten Weg zu seinem
+// Wert (von 23 auf 0 eine Zeile weiter, nicht 23 zurück); steht es schon dort, rührt es sich nicht.
 function syncTimePicker(smooth = false) {
   const p = timePicker;
   const dlg = document.getElementById('time-picker');
   if (!p || !dlg) return;
   const clock = p.value % MINUTES_PER_DAY;
   const h = Math.floor(clock / 60), m = clock % 60;
-  const hw = dlg.querySelector('#tp-hour'), mw = dlg.querySelector('#tp-minute');
-  // Beim sichtbaren Drehen (Jetzt, +60 min) den kürzesten Weg nehmen: von 23 auf 0 eine Zeile
-  // weiter statt 23 zurück.
-  const nearest = (w, idx) => {
-    if (!smooth) return idx;
-    const n = wheelSize(w), cur = wheelIndex(w);
-    return [idx - n, idx, idx + n].reduce((a, b) => (Math.abs(b - cur) < Math.abs(a - cur) ? b : a));
+  const place = (w, idx) => {
+    const n = wheelSize(w), cur = wheelIndex(w); // wo es gerade wirklich steht
+    setWheel(w, [idx - n, idx, idx + n].reduce((a, b) => (Math.abs(b - cur) < Math.abs(a - cur) ? b : a)), smooth);
   };
-  setWheel(hw, nearest(hw, wheelIndexOf(hw, clockUses12h() ? h % 12 || 12 : h)), smooth);
-  setWheel(mw, nearest(mw, wheelIndexOf(mw, m)), smooth);
-  syncTimePickerButtons();
-}
-// AM/PM und Tag nach timePicker.value.
-function syncTimePickerButtons() {
-  const p = timePicker;
-  const dlg = document.getElementById('time-picker');
-  if (!p || !dlg) return;
-  const h = Math.floor((p.value % MINUTES_PER_DAY) / 60);
+  place(dlg.querySelector('#tp-hour'), wheelIndexOf(dlg.querySelector('#tp-hour'), clockUses12h() ? h % 12 || 12 : h));
+  place(dlg.querySelector('#tp-minute'), wheelIndexOf(dlg.querySelector('#tp-minute'), m));
   const press = (sel, on) => dlg.querySelectorAll(sel).forEach((b) => {
     const active = on(b);
     b.classList.toggle('pill-toggle--active', active);
@@ -8448,30 +8449,9 @@ function syncTimePickerButtons() {
   press('[data-tp="day"]', (b) => Number(b.dataset.offset) === timeDayOffset(p.value));
 }
 
-// Rad gedreht: Uhrzeit übernehmen. Auf der Seite von gestern bekommt sie den spätesten
-// Zeitpunkt, der nicht in der Zukunft liegt (um 0:40 wird 0:10 zu heute Nacht, 23:45 zu
-// gestern Abend) - solange man den Tag nicht selbst gewählt hat.
-function timePickerWheelChanged(w) {
-  const p = timePicker;
-  if (!p || !document.getElementById('time-picker')) return;
-  const v = Number(w.children[wheelIndex(w)].dataset.v);
-  const old = p.value % MINUTES_PER_DAY;
-  let clock;
-  if (w.id === 'tp-hour') clock = ((clockUses12h() ? (v % 12) + (old >= 720 ? 12 : 0) : v) * 60) + (old % 60);
-  else clock = old - (old % 60) + v;
-  if (clock === old) return;
-  let offset = timeDayOffset(p.value);
-  if (p.autoDay && !p.dayTouched) {
-    const now = new Date();
-    offset = clock <= now.getHours() * 60 + now.getMinutes() ? 1 : 0;
-  }
-  p.value = offset * MINUTES_PER_DAY + clock;
-  syncTimePickerButtons();
-}
-
 function openTimePicker(p) {
   if (timePicker) return;
-  timePicker = { dayTouched: false, ...p };
+  timePicker = { ...p };
   const dlg = document.createElement('dialog');
   dlg.id = 'time-picker';
   dlg.className = 'time-picker';
@@ -8480,8 +8460,10 @@ function openTimePicker(p) {
   document.body.appendChild(dlg);
   dlg.addEventListener('click', onTimePickerClick);
   // Beim Drehen sofort die Mitte hervorheben, den Wert erst übernehmen, wenn das Rad steht.
+  // Greift der Nutzer ins Rad, gilt eine laufende Drehung der App nicht mehr.
   const settle = new Map();
   dlg.querySelectorAll('.tp-wheel').forEach((w) => {
+    w._target = null;
     const grab = () => { w._target = null; };
     w.addEventListener('pointerdown', grab, { passive: true });
     w.addEventListener('touchstart', grab, { passive: true });
@@ -8496,26 +8478,21 @@ function openTimePicker(p) {
   dlg.addEventListener('keydown', (e) => {
     const w = e.target.closest('.tp-wheel');
     if (!w) return;
-    const n = wheelSize(w), i = wheelIndex(w) % n; // i: Position innerhalb der Werte
-    let next = null;
-    if (e.key === 'ArrowUp') next = (i + 1) % n;
-    else if (e.key === 'ArrowDown') next = (i - 1 + n) % n;
-    else if (e.key === 'PageUp') next = Math.min(n - 1, i + 5);
-    else if (e.key === 'PageDown') next = Math.max(0, i - 5);
-    else if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = n - 1;
-    else if (/^\d$/.test(e.key)) {
-      // Ziffern tippen (am PC): "2", "3" = 23; nach einer Sekunde Pause beginnt es neu.
-      typed = Date.now() - typedAt < 1000 ? (typed + e.key).slice(-2) : e.key;
-      typedAt = Date.now();
-      const hit = [...w.children].slice(0, n).findIndex((el) => Number(el.dataset.v) === Number(typed));
-      if (hit >= 0) next = hit;
-    } else if (e.key === 'Enter') { e.preventDefault(); applyTimePicker(); return; }
-    if (next === null) return;
+    const step = { ArrowUp: 1, ArrowDown: -1, PageUp: 5, PageDown: -5 }[e.key];
+    if (step) { e.preventDefault(); shiftTimePicker(step * wheelUnit(w)); return; }
+    if (e.key === 'Enter') { e.preventDefault(); applyTimePicker(); return; }
+    if (!/^\d$/.test(e.key)) return;
+    // Ziffern tippen (am PC): "2", "3" = 23; nach einer Sekunde Pause beginnt es neu. Setzt nur
+    // die Stunde bzw. Minute, der Tag bleibt.
     e.preventDefault();
-    setWheel(w, n + next, false, true);
-    w._target = null;
-    timePickerWheelChanged(w);
+    typed = Date.now() - typedAt < 1000 ? (typed + e.key).slice(-2) : e.key;
+    typedAt = Date.now();
+    const v = Number(typed);
+    const p = timePicker, clock = p.value % MINUTES_PER_DAY, base = p.value - clock;
+    if (w.id === 'tp-hour') {
+      const h = clockUses12h() ? (v >= 1 && v <= 12 ? (v % 12) + (clock >= 720 ? 12 : 0) : null) : (v <= 23 ? v : null);
+      if (h !== null) { p.value = base + h * 60 + (clock % 60); syncTimePicker(); }
+    } else if (v <= 59 && v % p.step === 0) { p.value = base + clock - (clock % 60) + v; syncTimePicker(); }
   });
   dlg.addEventListener('cancel', (e) => { e.preventDefault(); closeTimePicker(); });
   dlg.showModal();
@@ -8528,9 +8505,9 @@ function onTimePickerClick(e) {
   const p = timePicker;
   if (!p) return;
   const item = e.target.closest('.tp-item');
-  if (item) { // Zahl im Rad angetippt: in die Mitte drehen
+  if (item) { // blasse Nachbarzahl angetippt: um so viele Zeilen weiter
     const w = item.parentElement;
-    setWheel(w, [...w.children].indexOf(item), true, true);
+    shiftTimePicker(([...w.children].indexOf(item) - w._idx) * wheelUnit(w), true);
     return;
   }
   const btn = e.target.closest('[data-tp]');
@@ -8546,19 +8523,21 @@ function onTimePickerClick(e) {
     document.getElementById(p.triggerId)?.focus({ preventScroll: true });
     return;
   }
-  if (tp === 'now') p.value = timeValueOn(p.dateKey, new Date());
-  else if (tp === 'add') p.value = Math.min(p.value + Number(btn.dataset.n), TIME_PICKER_MAX);
-  else if (tp === 'day') { p.value = Number(btn.dataset.offset) * MINUTES_PER_DAY + clock; p.dayTouched = true; }
+  if (tp === 'now') { p.value = timeValueOn(p.dateKey, new Date()); syncTimePicker(true); return; }
+  if (tp === 'add') { shiftTimePicker(Number(btn.dataset.n), true); return; }
+  if (tp === 'day') p.value = Number(btn.dataset.offset) * MINUTES_PER_DAY + clock;
   else if (tp === 'ampm') p.value = base + (clock % 720) + (btn.dataset.pm === '1' ? 720 : 0);
-  syncTimePicker(tp === 'now' || tp === 'add');
+  syncTimePicker();
 }
 
 function applyTimePicker() {
   const p = timePicker;
   if (!p) return;
   // Ein Rad, das der Nutzer gerade noch auslaufen lässt, zählt mit dem Stand, auf dem es steht.
-  document.querySelectorAll('#time-picker .tp-wheel').forEach((w) => { if (!w._target) timePickerWheelChanged(w); });
-  const value = timePicker.value;
+  document.querySelectorAll('#time-picker .tp-wheel').forEach((w) => {
+    if (w._target === null && wheelIndex(w) !== w._idx) shiftTimePicker((wheelIndex(w) - w._idx) * wheelUnit(w));
+  });
+  const value = p.value;
   closeTimePicker({ focus: false });
   p.onPick(value);
   document.getElementById(p.triggerId)?.focus({ preventScroll: true });
@@ -11421,7 +11400,7 @@ app.addEventListener('click', async (e) => {
     const old = state.entries[dateKey]?.[h.id];
     const has = typeof old === 'number';
     openTimePicker({
-      title: h.name, dateKey, step: 1, nowAllowed, autoDay: yesterday, triggerId: el.id,
+      title: h.name, dateKey, step: 1, nowAllowed, triggerId: el.id,
       value: has ? old : nowAllowed ? timeValueOn(dateKey, now) : now.getHours() * 60 + now.getMinutes(),
       onPick: (v) => handleSetValue(dateKey, h.id, v),
       onClear: has ? () => { handleClearValue(dateKey, h.id); flushDaySave(dateKey); } : null,

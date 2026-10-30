@@ -288,10 +288,13 @@ Bestätigen-Knopf ab, kennt kein "Jetzt" und passt nicht zur App). Stunde und Mi
 Drehräder wie am iPhone (eine Wischbewegung je Wert, keine Tastatur, auf allen Geräten gleich;
 zum Tippen war es umständlich): `scroll-snap`-Listen, die Werte dreimal hintereinander, damit
 man über 59 → 00 weiterdrehen kann (`wheelSettled` springt danach ins mittlere Drittel); für
-Tastatur/Screenreader `role="spinbutton"` mit ↑ ↓, Bild ↑ ↓, Pos1/Ende und Ziffern. Dreht die
-App ein Rad (Jetzt, +15 min, angetippte Zahl), merkt es sich das Ziel (`w._target`): Zwischenstände
-unterwegs zählen nicht, und ein vom Nutzer gedrehtes Rad ändert nur seinen eigenen Teil der
-Uhrzeit – sonst las das zuerst stehende Rad die Stunde des noch drehenden ab (falsche Zeit). Als `<dialog>` außerhalb von
+Tastatur/Screenreader `role="spinbutton"` mit ↑ ↓, Bild ↑ ↓ und Ziffern. Die Räder sind eine
+durchgehende Zeitachse: gerechnet wird mit der gedrehten Strecke (`w._idx` → neue Zeile, mal 60
+bzw. 1/15 Minuten, `shiftTimePicker`), so schaltet die Minute über 59 die Stunde weiter und die
+Stunde über 23 den Tag. Dreht die App ein Rad (Jetzt, +15 min), zählen Zwischenstände nicht
+(`w._target`) – sonst las das zuerst stehende Rad die Stunde des noch drehenden ab. Zeilenhöhe
+immer aus `getBoundingClientRect` (krumm bei größerer Schrift; mit dem gerundeten `offsetHeight`
+lag das Minutenrad eine Zeile neben dem Wert). Als `<dialog>` außerhalb von
 `#app`, nicht als Modal im State: `render()` ersetzt `#app` komplett, ein Formular dahinter
 verlöre seinen ungespeicherten Stand. `showModal()` bringt Fokus-Sperre und Escape mit; eine
 eigene Ebene in `currentLayerCount`, Android-Zurück schließt sie ohne `render()`. 12 oder 24
