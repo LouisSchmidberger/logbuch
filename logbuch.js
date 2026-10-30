@@ -8328,14 +8328,9 @@ function timePickerHtml(p) {
   const twelve = clockUses12h();
   const field = !!p.dateKey;
   const day = field ? parseDateKey(p.dateKey) : null;
-  const pad = (v) => String(v).padStart(2, '0');
-  const hours = twelve ? [12, ...Array.from({ length: 11 }, (_, i) => i + 1)] : Array.from({ length: 24 }, (_, i) => i);
-  const minutes = Array.from({ length: 60 / p.step }, (_, i) => i * p.step);
-  // Werte dreimal hintereinander: man dreht immer im mittleren Drittel und kommt so über 59 -> 00
-  // hinweg weiter (wheelSettled springt danach unsichtbar zurück in die Mitte).
-  const wheel = (id, label, values, fmt) => `
+  const wheel = (id, label) => `
     <div class="tp-wheel" id="${id}" role="spinbutton" tabindex="0" aria-label="${esc(label)}">
-      ${[...values, ...values, ...values].map((v) => `<div class="tp-item" data-v="${v}" aria-hidden="true">${fmt(v)}</div>`).join('')}
+      ${'<div class="tp-item" aria-hidden="true"></div>'.repeat(WHEEL_ROWS)}
     </div>`;
   const seg = (labelId, label, buttons, hiddenLabel) => `
     <span class="settings-label tp-label${hiddenLabel ? ' visually-hidden' : ''}" id="${labelId}">${label}</span>
@@ -8344,9 +8339,9 @@ function timePickerHtml(p) {
   return `
     <h2 id="time-picker-title">${esc(p.title)}</h2>
     <div class="tp-clock">
-      ${wheel('tp-hour', t('time.hour'), hours, twelve ? String : pad)}
+      ${wheel('tp-hour', t('time.hour'))}
       <span class="tp-sep" aria-hidden="true">:</span>
-      ${wheel('tp-minute', t('time.minute'), minutes, pad)}
+      ${wheel('tp-minute', t('time.minute'))}
     </div>
     ${twelve ? seg('tp-ampm-label', t('time.label'), pill('ampm', 'data-pm="0"', 'AM') + pill('ampm', 'data-pm="1"', 'PM'), true) : ''}
     ${field ? `<div class="tp-quick">
@@ -8365,81 +8360,143 @@ function timePickerHtml(p) {
 }
 
 // Drehräder für Stunde und Minute (wie am iPhone, Nutzer-Entscheidung 2026-10-30): Wischen
-// mit einem Finger statt Tippen, keine Tastatur, sieht auf jedem Gerät gleich aus. Ein Rad ist
-// eine senkrecht scrollende Liste mit Einrasten (scroll-snap); das Element in der Mitte ist
-// der Wert. Für Tastatur/Screenreader ist es ein role="spinbutton" (↑ ↓, Bild ↑ ↓, Ziffern).
-// Die Räder sind eine durchgehende Zeitachse: jede Zeile weiter ist eine Stunde bzw. Minute
-// später - über 59 hinaus geht die Stunde weiter, über 23 hinaus der Tag (nach Mitternacht).
-// Gerechnet wird deshalb mit der Strecke, um die ein Rad bewegt wurde (w._idx = Zeile, für die
-// timePicker.value zuletzt galt), nicht mit der Zahl, auf der es steht.
-const wheelSize = (w) => w.children.length / 3; // Anzahl verschiedener Werte
-// Echte, oft krumme Zeilenhöhe (bei größerer Schrift z.B. 49,5 px): mit dem gerundeten
-// offsetHeight lag das Minutenrad nach 100 Zeilen eine ganze Zeile daneben.
-const wheelItemHeight = (w) => w.firstElementChild.getBoundingClientRect().height;
+// mit einem Finger statt Tippen, keine Tastatur, sieht auf jedem Gerät gleich aus.
+// Eigene Wischsteuerung (Pointer-Events, gezeichnet per transform) statt einer scrollenden
+// Liste: mit Browser-Scrollen + Einrasten war das Rad nicht endlos (eine Liste hat ein Ende),
+// der Schwung je Gerät verschieden und oft viel zu weit, und die krummen Zeilenhöhen bei
+// größerer Schrift verschoben die Anzeige gegen den Wert.
+// Ein Rad ist eine durchgehende Zeitachse ab timePicker.value: Zeile r zeigt die Stunde bzw.
+// Minute von value + r Stunden/Minuten (Erinnerungen: r * 15 Minuten). Über 59 hinaus geht so
+// die Stunde weiter, über 23 hinaus der Tag. w._c = Stand des Rads in Zeilen (beim Ziehen
+// krumm); steht es, wird value um die gedrehten Zeilen verschoben und w._c wieder 0.
+// Für Tastatur/Screenreader ist es ein role="spinbutton" (↑ ↓, Bild ↑ ↓, Ziffern).
+const WHEEL_ROWS = 8; // gezeichnete Zeilen: drei sichtbare und Vorrat zum Drehen
 const wheelUnit = (w) => (w.id === 'tp-hour' ? 60 : timePicker.step);
-function wheelIndex(w) {
-  return Math.max(0, Math.min(w.children.length - 1, Math.round(w.scrollTop / wheelItemHeight(w))));
+const wheelRowHeight = (w) => w.getBoundingClientRect().height / 3;
+function wheelLabel(w, v) {
+  const clock = ((v % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  if (w.id === 'tp-minute') return String(clock % 60).padStart(2, '0');
+  const h = Math.floor(clock / 60);
+  return clockUses12h() ? String(h % 12 || 12) : String(h).padStart(2, '0');
 }
-function markWheel(w, idx) {
-  [...w.children].forEach((el, i) => el.classList.toggle('tp-item--on', i === idx));
-  const item = w.children[idx];
-  w.setAttribute('aria-valuenow', item.dataset.v);
-  w.setAttribute('aria-valuetext', item.textContent);
+// Erlaubte Zeilen: Uhrzeit-Felder von 0:00 dieses Tages bis 23:59 des nächsten,
+// Erinnerungszeiten (ohne Tag) im Kreis.
+function clampWheelRow(w, r) {
+  const p = timePicker, u = wheelUnit(w);
+  if (!p.dateKey) return r;
+  return Math.max(Math.ceil(-p.value / u), Math.min(Math.floor((TIME_PICKER_MAX - p.value) / u), r));
 }
-// Dreht das Rad auf Zeile idx (die App, nicht der Nutzer). w._target: wohin es unterwegs ist -
-// Zwischenstände zählen nicht (wheelSettled).
-function setWheel(w, idx, smooth = false) {
-  const behavior = smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'instant';
-  w._idx = idx;
-  w._target = idx;
-  w.scrollTo({ top: idx * wheelItemHeight(w), behavior });
-  markWheel(w, idx);
+function drawWheel(w) {
+  const p = timePicker, c = w._c || 0, h = wheelRowHeight(w), u = wheelUnit(w);
+  const first = Math.floor(c) - 3;
+  [...w.children].forEach((el, i) => {
+    const r = first + i;
+    el.style.transform = `translateY(${(r - c) * h}px)`;
+    el.textContent = wheelLabel(w, p.value + r * u);
+    el.classList.toggle('tp-item--on', Math.abs(r - c) < 0.5);
+  });
+  w.setAttribute('aria-valuetext', wheelLabel(w, p.value + Math.round(c) * u));
 }
-// Zeile (im mittleren Drittel) des Werts, der v am nächsten ist (Erinnerungen: nur 00/15/30/45).
-function wheelIndexOf(w, v) {
-  const n = wheelSize(w);
-  let best = 0;
-  for (let i = 1; i < n; i++) if (Math.abs(Number(w.children[i].dataset.v) - v) < Math.abs(Number(w.children[best].dataset.v) - v)) best = i;
-  return n + best;
-}
-// Uhrzeit um minutes verschieben. Uhrzeit-Felder: zwischen 0:00 dieses Tages und 23:59 des
-// nächsten. Erinnerungszeiten (ohne Tag): im Kreis.
-function shiftTimePicker(minutes, smooth) {
+// Rad steht auf Zeile r: Uhrzeit um r Zeilen verschieben, Rad zurück auf 0.
+function commitWheel(w, r) {
   const p = timePicker;
-  p.value = p.dateKey
-    ? Math.max(0, Math.min(TIME_PICKER_MAX, p.value + minutes))
-    : (((p.value + minutes) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
-  syncTimePicker(smooth);
+  if (!p) return;
+  const v = p.value + Math.round(r) * wheelUnit(w);
+  p.value = p.dateKey ? Math.max(0, Math.min(TIME_PICKER_MAX, v)) : ((v % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  w._c = 0;
+  syncTimePicker();
 }
-// Rad steht. Hat die App es gedreht und es ist nicht ganz angekommen (Einrasten): hinsetzen.
-// Hat der Nutzer es gedreht: um die gedrehte Strecke verschieben. Danach ohne sichtbaren Sprung
-// zurück ins mittlere Drittel.
-function wheelSettled(w) {
-  const n = wheelSize(w), idx = wheelIndex(w);
-  if (w._target !== null) {
-    if (idx !== w._target) { setWheel(w, w._target); return; }
+// Rad auf Zeile target drehen, danach übernehmen. Mehrere Anstöße hintereinander (Mausrad,
+// zweimal "+15") laufen in einer Bewegung weiter.
+function animateWheel(w, target, ms) {
+  cancelAnimationFrame(w._anim);
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) ms = 0;
+  const from = w._c || 0, t0 = performance.now();
+  w._target = target;
+  const step = (now) => {
+    const k = ms ? Math.min(1, (now - t0) / ms) : 1;
+    w._c = from + (target - from) * (1 - Math.pow(1 - k, 3));
+    drawWheel(w);
+    if (k < 1) { w._anim = requestAnimationFrame(step); return; }
+    w._anim = null;
     w._target = null;
-  } else if (idx !== w._idx) {
-    shiftTimePicker((idx - w._idx) * wheelUnit(w), true);
-    return; // syncTimePicker hat das Rad neu gesetzt, dessen Ankunft kommt hier wieder vorbei
-  }
-  if (idx < n || idx >= 2 * n) setWheel(w, n + (idx % n));
+    commitWheel(w, target);
+  };
+  w._anim = requestAnimationFrame(step);
+}
+// Wohin das Rad gerade will (läuft eine Drehung, ihr Ziel).
+const wheelAim = (w) => (w._target ?? Math.round(w._c || 0));
+// Laufende Drehung sofort zu Ende bringen (vor "Übernehmen", "Jetzt" usw.).
+function finishWheel(w) {
+  if (w._anim == null) return;
+  cancelAnimationFrame(w._anim);
+  w._anim = null;
+  const target = w._target;
+  w._target = null;
+  commitWheel(w, target);
 }
 
-// Schreibt timePicker.value in Räder und Knöpfe. Jedes Rad nimmt den kürzesten Weg zu seinem
-// Wert (von 23 auf 0 eine Zeile weiter, nicht 23 zurück); steht es schon dort, rührt es sich nicht.
-function syncTimePicker(smooth = false) {
+function attachWheel(w) {
+  let drag = null;
+  w.addEventListener('pointerdown', (e) => {
+    cancelAnimationFrame(w._anim); // ins drehende Rad greifen hält es an
+    w._anim = null;
+    w._target = null;
+    w.setPointerCapture(e.pointerId);
+    drag = { y0: e.clientY, c0: w._c || 0, moved: false, samples: [[e.timeStamp, e.clientY]] };
+  });
+  w.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dy = e.clientY - drag.y0;
+    if (Math.abs(dy) > 4) drag.moved = true;
+    // Über das Ende (0:00 / 23:59 am nächsten Tag) hinaus nur ein Stück, dann federt es zurück.
+    const c = drag.c0 - dy / wheelRowHeight(w);
+    w._c = Math.max(clampWheelRow(w, -1e6) - 0.4, Math.min(clampWheelRow(w, 1e6) + 0.4, c));
+    drawWheel(w);
+    drag.samples.push([e.timeStamp, e.clientY]);
+    if (drag.samples.length > 6) drag.samples.shift();
+  });
+  const end = (e) => {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    const h = wheelRowHeight(w), c = w._c || 0;
+    if (!d.moved) { // Tipp auf eine blasse Nachbarzahl: dorthin drehen
+      const rect = w.getBoundingClientRect();
+      const r = Math.round((e.clientY - (rect.top + rect.height / 2)) / h);
+      animateWheel(w, clampWheelRow(w, Math.round(c) + r), 220);
+      return;
+    }
+    // Schwung aus den letzten ~100 ms, gebremst und gedeckelt: ein schneller Wisch dreht
+    // höchstens ein paar Dutzend Zeilen weiter, nicht ins Unendliche.
+    const recent = d.samples.filter(([t]) => e.timeStamp - t < 100);
+    const [t1, y1] = recent[0] || [e.timeStamp, e.clientY];
+    const velocity = (e.clientY - y1) / Math.max(16, e.timeStamp - t1) / h; // Zeilen pro ms
+    const fling = Math.max(-20, Math.min(20, -velocity * 180));
+    const target = clampWheelRow(w, Math.round(c + fling));
+    animateWheel(w, target, Math.min(800, 160 + Math.abs(target - c) * 35));
+  };
+  w.addEventListener('pointerup', end);
+  w.addEventListener('pointercancel', end);
+  // Mausrad / Touchpad: je Raste eine Zeile.
+  let wheelAcc = 0;
+  w.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    wheelAcc += e.deltaMode === 0 ? e.deltaY / 40 : e.deltaY;
+    const rows = Math.trunc(wheelAcc);
+    if (!rows) return;
+    wheelAcc -= rows;
+    animateWheel(w, clampWheelRow(w, wheelAim(w) + rows), 140);
+  }, { passive: false });
+}
+
+// Schreibt timePicker.value in Räder und Knöpfe.
+function syncTimePicker() {
   const p = timePicker;
   const dlg = document.getElementById('time-picker');
   if (!p || !dlg) return;
-  const clock = p.value % MINUTES_PER_DAY;
-  const h = Math.floor(clock / 60), m = clock % 60;
-  const place = (w, idx) => {
-    const n = wheelSize(w), cur = wheelIndex(w); // wo es gerade wirklich steht
-    setWheel(w, [idx - n, idx, idx + n].reduce((a, b) => (Math.abs(b - cur) < Math.abs(a - cur) ? b : a)), smooth);
-  };
-  place(dlg.querySelector('#tp-hour'), wheelIndexOf(dlg.querySelector('#tp-hour'), clockUses12h() ? h % 12 || 12 : h));
-  place(dlg.querySelector('#tp-minute'), wheelIndexOf(dlg.querySelector('#tp-minute'), m));
+  dlg.querySelectorAll('.tp-wheel').forEach((w) => { if (w._anim == null) drawWheel(w); });
+  const h = Math.floor((p.value % MINUTES_PER_DAY) / 60);
   const press = (sel, on) => dlg.querySelectorAll(sel).forEach((b) => {
     const active = on(b);
     b.classList.toggle('pill-toggle--active', active);
@@ -8448,6 +8505,7 @@ function syncTimePicker(smooth = false) {
   press('[data-tp="ampm"]', (b) => (b.dataset.pm === '1') === (h >= 12));
   press('[data-tp="day"]', (b) => Number(b.dataset.offset) === timeDayOffset(p.value));
 }
+const finishWheels = () => document.querySelectorAll('#time-picker .tp-wheel').forEach(finishWheel);
 
 function openTimePicker(p) {
   if (timePicker) return;
@@ -8459,40 +8517,28 @@ function openTimePicker(p) {
   dlg.innerHTML = timePickerHtml(timePicker);
   document.body.appendChild(dlg);
   dlg.addEventListener('click', onTimePickerClick);
-  // Beim Drehen sofort die Mitte hervorheben, den Wert erst übernehmen, wenn das Rad steht.
-  // Greift der Nutzer ins Rad, gilt eine laufende Drehung der App nicht mehr.
-  const settle = new Map();
-  dlg.querySelectorAll('.tp-wheel').forEach((w) => {
-    w._target = null;
-    const grab = () => { w._target = null; };
-    w.addEventListener('pointerdown', grab, { passive: true });
-    w.addEventListener('touchstart', grab, { passive: true });
-    w.addEventListener('wheel', grab, { passive: true });
-    w.addEventListener('scroll', () => {
-      markWheel(w, wheelIndex(w));
-      clearTimeout(settle.get(w));
-      settle.set(w, setTimeout(() => wheelSettled(w), 120));
-    }, { passive: true });
-  });
+  dlg.querySelectorAll('.tp-wheel').forEach(attachWheel);
   let typed = '', typedAt = 0;
   dlg.addEventListener('keydown', (e) => {
     const w = e.target.closest('.tp-wheel');
     if (!w) return;
-    const step = { ArrowUp: 1, ArrowDown: -1, PageUp: 5, PageDown: -5 }[e.key];
-    if (step) { e.preventDefault(); shiftTimePicker(step * wheelUnit(w)); return; }
+    const rows = { ArrowUp: 1, ArrowDown: -1, PageUp: 5, PageDown: -5 }[e.key];
+    if (rows) { e.preventDefault(); animateWheel(w, clampWheelRow(w, wheelAim(w) + rows), 120); return; }
     if (e.key === 'Enter') { e.preventDefault(); applyTimePicker(); return; }
     if (!/^\d$/.test(e.key)) return;
     // Ziffern tippen (am PC): "2", "3" = 23; nach einer Sekunde Pause beginnt es neu. Setzt nur
     // die Stunde bzw. Minute, der Tag bleibt.
     e.preventDefault();
+    finishWheels();
     typed = Date.now() - typedAt < 1000 ? (typed + e.key).slice(-2) : e.key;
     typedAt = Date.now();
     const v = Number(typed);
-    const p = timePicker, clock = p.value % MINUTES_PER_DAY, base = p.value - clock;
+    const clock = timePicker.value % MINUTES_PER_DAY, base = timePicker.value - clock;
     if (w.id === 'tp-hour') {
-      const h = clockUses12h() ? (v >= 1 && v <= 12 ? (v % 12) + (clock >= 720 ? 12 : 0) : null) : (v <= 23 ? v : null);
-      if (h !== null) { p.value = base + h * 60 + (clock % 60); syncTimePicker(); }
-    } else if (v <= 59 && v % p.step === 0) { p.value = base + clock - (clock % 60) + v; syncTimePicker(); }
+      const hh = clockUses12h() ? (v >= 1 && v <= 12 ? (v % 12) + (clock >= 720 ? 12 : 0) : null) : (v <= 23 ? v : null);
+      if (hh !== null) timePicker.value = base + hh * 60 + (clock % 60);
+    } else if (v <= 59 && v % timePicker.step === 0) timePicker.value = base + clock - (clock % 60) + v;
+    syncTimePicker();
   });
   dlg.addEventListener('cancel', (e) => { e.preventDefault(); closeTimePicker(); });
   dlg.showModal();
@@ -8503,18 +8549,9 @@ function openTimePicker(p) {
 
 function onTimePickerClick(e) {
   const p = timePicker;
-  if (!p) return;
-  const item = e.target.closest('.tp-item');
-  if (item) { // blasse Nachbarzahl angetippt: um so viele Zeilen weiter
-    const w = item.parentElement;
-    shiftTimePicker(([...w.children].indexOf(item) - w._idx) * wheelUnit(w), true);
-    return;
-  }
   const btn = e.target.closest('[data-tp]');
-  if (!btn) return;
+  if (!p || !btn) return;
   const tp = btn.dataset.tp;
-  const clock = p.value % MINUTES_PER_DAY;
-  const base = timeDayOffset(p.value) * MINUTES_PER_DAY;
   if (tp === 'cancel') { closeTimePicker(); return; }
   if (tp === 'apply') { applyTimePicker(); return; }
   if (tp === 'clear') {
@@ -8523,9 +8560,17 @@ function onTimePickerClick(e) {
     document.getElementById(p.triggerId)?.focus({ preventScroll: true });
     return;
   }
-  if (tp === 'now') { p.value = timeValueOn(p.dateKey, new Date()); syncTimePicker(true); return; }
-  if (tp === 'add') { shiftTimePicker(Number(btn.dataset.n), true); return; }
-  if (tp === 'day') p.value = Number(btn.dataset.offset) * MINUTES_PER_DAY + clock;
+  if (tp === 'add') { // +5/+15 dreht die Minuten, +60 die Stunde
+    const n = Number(btn.dataset.n);
+    const w = document.getElementById(n % 60 === 0 ? 'tp-hour' : 'tp-minute');
+    animateWheel(w, clampWheelRow(w, wheelAim(w) + n / wheelUnit(w)), 320);
+    return;
+  }
+  finishWheels();
+  const clock = p.value % MINUTES_PER_DAY;
+  const base = timeDayOffset(p.value) * MINUTES_PER_DAY;
+  if (tp === 'now') p.value = timeValueOn(p.dateKey, new Date());
+  else if (tp === 'day') p.value = Number(btn.dataset.offset) * MINUTES_PER_DAY + clock;
   else if (tp === 'ampm') p.value = base + (clock % 720) + (btn.dataset.pm === '1' ? 720 : 0);
   syncTimePicker();
 }
@@ -8533,10 +8578,7 @@ function onTimePickerClick(e) {
 function applyTimePicker() {
   const p = timePicker;
   if (!p) return;
-  // Ein Rad, das der Nutzer gerade noch auslaufen lässt, zählt mit dem Stand, auf dem es steht.
-  document.querySelectorAll('#time-picker .tp-wheel').forEach((w) => {
-    if (w._target === null && wheelIndex(w) !== w._idx) shiftTimePicker((wheelIndex(w) - w._idx) * wheelUnit(w));
-  });
+  finishWheels(); // ein noch drehendes Rad zählt mit seinem Ziel
   const value = p.value;
   closeTimePicker({ focus: false });
   p.onPick(value);

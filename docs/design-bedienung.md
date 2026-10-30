@@ -286,15 +286,18 @@ Versehen aus). Erklärt im Tipp "Tastatur am Computer" in "Über Logbuch".
 Fenster statt der Auswahl des Geräts (die von Android schnitt bei großer Schrift ihren
 Bestätigen-Knopf ab, kennt kein "Jetzt" und passt nicht zur App). Stunde und Minute als
 Drehräder wie am iPhone (eine Wischbewegung je Wert, keine Tastatur, auf allen Geräten gleich;
-zum Tippen war es umständlich): `scroll-snap`-Listen, die Werte dreimal hintereinander, damit
-man über 59 → 00 weiterdrehen kann (`wheelSettled` springt danach ins mittlere Drittel); für
-Tastatur/Screenreader `role="spinbutton"` mit ↑ ↓, Bild ↑ ↓ und Ziffern. Die Räder sind eine
-durchgehende Zeitachse: gerechnet wird mit der gedrehten Strecke (`w._idx` → neue Zeile, mal 60
-bzw. 1/15 Minuten, `shiftTimePicker`), so schaltet die Minute über 59 die Stunde weiter und die
-Stunde über 23 den Tag. Dreht die App ein Rad (Jetzt, +15 min), zählen Zwischenstände nicht
-(`w._target`) – sonst las das zuerst stehende Rad die Stunde des noch drehenden ab. Zeilenhöhe
-immer aus `getBoundingClientRect` (krumm bei größerer Schrift; mit dem gerundeten `offsetHeight`
-lag das Minutenrad eine Zeile neben dem Wert). Als `<dialog>` außerhalb von
+zum Tippen war es umständlich). Eigene Wischsteuerung (Pointer-Events, Zeilen per `transform`
+gezeichnet, `drawWheel`) statt scrollender Liste mit `scroll-snap`: die war nicht endlos (eine
+Liste hat ein Ende, ein schneller Wisch lief hinein), ihr Schwung je Gerät verschieden und oft
+viel zu weit, und krumme Zeilenhöhen bei größerer Schrift verschoben Anzeige gegen Wert. Ein Rad
+ist eine durchgehende Zeitachse ab `timePicker.value` (Zeile r = value + r Stunden/Minuten),
+daher endlos, und die Minute schaltet über 59 die Stunde weiter, die Stunde über 23 den Tag.
+`w._c` = Stand in Zeilen; steht das Rad, verschiebt `commitWheel` den Wert und setzt `w._c` auf
+0. Schwung selbst gerechnet und gedeckelt (höchstens 20 Zeilen je Wisch); Tipp auf eine
+Nachbarzahl dreht dorthin; Mausrad eine Zeile je Raste; "+N min" dreht das Rad sichtbar.
+Uhrzeit-Felder hören bei 0:00 dieses Tages und 23:59 des nächsten auf (`clampWheelRow`),
+Erinnerungen laufen im Kreis. Für Tastatur/Screenreader `role="spinbutton"` mit ↑ ↓, Bild ↑ ↓
+und Ziffern. Als `<dialog>` außerhalb von
 `#app`, nicht als Modal im State: `render()` ersetzt `#app` komplett, ein Formular dahinter
 verlöre seinen ungespeicherten Stand. `showModal()` bringt Fokus-Sperre und Escape mit; eine
 eigene Ebene in `currentLayerCount`, Android-Zurück schließt sie ohne `render()`. 12 oder 24
