@@ -2024,31 +2024,52 @@ const STRINGS = {
     'tpl.question': 'Was willst du festhalten?',
     'tpl.custom': 'Eigenes Feld',
     'tpl.customNote': 'Alles selbst einstellen: Typ, Stufen, Bewertung, Tage',
-    'tpl.topic.feeling': 'Befinden',
-    'tpl.topic.habits': 'Gewohnheiten',
-    'tpl.topic.body': 'Körper',
-    'tpl.topic.journal': 'Tagebuch',
+    'tpl.topic.blocks': 'Bausteine',
+    'tpl.topic.ready': 'Fertige Felder',
+    'tpl.goodQuestion': 'Was ist gut?',
+    'tpl.yesno.name': 'Ja oder Nein',
+    'tpl.yesno.note': 'z. B. Sport gemacht?, Kreatin genommen?, Sex gehabt?',
+    'tpl.yesno.explain': 'Zwei Knöpfe, Ja und Nein – für alles, was du gemacht hast oder nicht.',
+    'tpl.yesno.placeholder': 'z. B. Sport gemacht?',
+    'tpl.yesno.goodHigh': '„Ja“ ist gut',
+    'tpl.yesno.goodLow': '„Nein“ ist gut',
+    'tpl.strength.name': 'Wie stark?',
+    'tpl.strength.note': 'keine bis stark – z. B. Schmerzen, Übelkeit',
+    'tpl.strength.explain': 'Vier Stufen: keine, leicht, mittel, stark.',
+    'tpl.strength.placeholder': 'z. B. Kopfschmerzen',
+    'tpl.strength.goodHigh': 'Viel ist gut',
+    'tpl.strength.goodLow': 'Wenig ist gut',
+    'tpl.scale5.name': 'Skala 1 bis 5',
+    'tpl.scale5.note': 'z. B. Schlafqualität, Konzentration, Energie',
+    'tpl.scale5.explain': 'Fünf Knöpfe von 1 bis 5, hohe Werte sind gut.',
+    'tpl.scale5.placeholder': 'z. B. Schlafqualität',
+    'tpl.count.name': 'Hochzählen',
+    'tpl.count.note': 'z. B. Kaffee, Zigaretten, Pausen',
+    'tpl.count.explain': 'Ein Zähler mit „+“ und „−“. Ein Tag ohne Eintrag zählt als 0.',
+    'tpl.count.placeholder': 'z. B. Tassen Kaffee',
+    'tpl.number.name': 'Zahl',
+    'tpl.number.note': 'Ein Messwert – z. B. Schritte, Puls',
+    'tpl.number.explain': 'Eine Zahl, die du eintippst, auf Wunsch mit Einheit. In der Auswertung siehst du den Verlauf.',
+    'tpl.number.placeholder': 'z. B. Schritte',
+    'tpl.time.name': 'Uhrzeit',
+    'tpl.time.note': 'Ein Zeitpunkt – z. B. letzter Kaffee',
+    'tpl.time.explain': 'Ein Zeitpunkt am Tag, gewählt mit Drehrädern.',
+    'tpl.time.placeholder': 'z. B. Letzter Kaffee',
+    'tpl.text.name': 'Ein paar Worte',
+    'tpl.text.note': 'z. B. Wofür bist du dankbar?',
+    'tpl.text.explain': 'Ein Textfeld für ein paar Worte am Tag.',
+    'tpl.text.placeholder': 'z. B. Dankbar für',
+    'tpl.multi.name': 'Mehrere ankreuzen',
+    'tpl.multi.note': 'Eigene Optionen – z. B. Auslöser, Symptome',
     'tpl.mood.name': 'Stimmung',
     'tpl.mood.note': 'Wie geht es dir? 1 bis 5',
     'tpl.mood.explain': 'Eine Skala von 1 bis 5, hohe Werte sind gut. Du tippst einmal am Tag an, wie es dir geht.',
-    'tpl.energy.name': 'Energie',
-    'tpl.energy.note': 'Wie viel Kraft hattest du? 1 bis 5',
-    'tpl.energy.explain': 'Eine Skala von 1 bis 5, hohe Werte sind gut.',
     'tpl.stress.name': 'Stress',
     'tpl.stress.note': '0 bis 10, wenig ist gut',
     'tpl.stress.explain': 'Ein Schieberegler von 0 bis 10, niedrige Werte sind gut.',
-    'tpl.pain.name': 'Schmerzen',
-    'tpl.pain.note': 'keine, leicht, mittel, stark',
-    'tpl.pain.explain': 'Vier Stufen von „keine“ bis „stark“, wenig ist gut. Z. B. für Kopf- oder Rückenschmerzen – benenne das Feld einfach um.',
-    'tpl.sport.name': 'Sport gemacht?',
-    'tpl.sport.note': 'Ja oder Nein',
-    'tpl.sport.explain': 'Ja oder Nein, „Ja“ ist gut. Passt für alles, was du einfach gemacht hast oder nicht.',
     'tpl.water.name': 'Gläser Wasser',
     'tpl.water.note': 'Hochzählen, Ziel mindestens 8',
     'tpl.water.explain': 'Ein Zähler: jedes Glas ein Tipp auf „+“. Das Ziel von mindestens 8 kannst du später ändern.',
-    'tpl.smoking.name': 'Zigaretten',
-    'tpl.smoking.note': 'Hochzählen',
-    'tpl.smoking.explain': 'Ein Zähler: jede Zigarette ein Tipp auf „+“. Ein Tag ohne Eintrag zählt als 0.',
     'tpl.meds.name': 'Medikament genommen?',
     'tpl.meds.note': 'Ja oder Nein, mit Erinnerung',
     'tpl.meds.explain': 'Ja oder Nein, mit einer eigenen Erinnerung zur Standardzeit – die Uhrzeit änderst du über „Bearbeiten“.',
@@ -2066,9 +2087,6 @@ const STRINGS = {
     'tpl.cycle.explain': 'Die Stärke der Periode (keine bis stark, ohne Wertung) und der Zyklustag, den Logbuch daraus zählt: Tag 1 ist der erste Tag mit Periode.',
     'tpl.cycle.period': 'Periode',
     'tpl.cycle.day': 'Zyklustag',
-    'tpl.grateful.name': 'Dankbar für',
-    'tpl.grateful.note': 'Ein paar Worte',
-    'tpl.grateful.explain': 'Ein Textfeld für ein paar Worte am Tag.',
     'tpl.events.name': 'Was war heute?',
     'tpl.events.note': 'Mehrere ankreuzen: Sport, Freunde, Streit …',
     'tpl.events.explain': 'Eine Mehrfachauswahl: du tippst alles an, was heute war. Die Optionen änderst und ergänzt du über „Anpassen“ oder später über „Bearbeiten“.',
@@ -3093,31 +3111,52 @@ const STRINGS = {
     'tpl.question': 'What do you want to keep track of?',
     'tpl.custom': 'Your own field',
     'tpl.customNote': 'Set everything yourself: type, steps, rating, days',
-    'tpl.topic.feeling': 'Wellbeing',
-    'tpl.topic.habits': 'Habits',
-    'tpl.topic.body': 'Body',
-    'tpl.topic.journal': 'Journal',
+    'tpl.topic.blocks': 'Building blocks',
+    'tpl.topic.ready': 'Ready-made fields',
+    'tpl.goodQuestion': 'What is good?',
+    'tpl.yesno.name': 'Yes or No',
+    'tpl.yesno.note': 'e.g. Did sports?, Took creatine?, Had sex?',
+    'tpl.yesno.explain': 'Two buttons, Yes and No – for anything you did or didn’t do.',
+    'tpl.yesno.placeholder': 'e.g. Did sports?',
+    'tpl.yesno.goodHigh': '“Yes” is good',
+    'tpl.yesno.goodLow': '“No” is good',
+    'tpl.strength.name': 'How strong?',
+    'tpl.strength.note': 'none to strong – e.g. pain, nausea',
+    'tpl.strength.explain': 'Four steps: none, light, medium, strong.',
+    'tpl.strength.placeholder': 'e.g. Headache',
+    'tpl.strength.goodHigh': 'More is good',
+    'tpl.strength.goodLow': 'Less is good',
+    'tpl.scale5.name': 'Scale 1 to 5',
+    'tpl.scale5.note': 'e.g. sleep quality, focus, energy',
+    'tpl.scale5.explain': 'Five buttons from 1 to 5, high values are good.',
+    'tpl.scale5.placeholder': 'e.g. Sleep quality',
+    'tpl.count.name': 'Count up',
+    'tpl.count.note': 'e.g. coffee, cigarettes, breaks',
+    'tpl.count.explain': 'A counter with “+” and “−”. A day without entry counts as 0.',
+    'tpl.count.placeholder': 'e.g. Cups of coffee',
+    'tpl.number.name': 'Number',
+    'tpl.number.note': 'A measurement – e.g. steps, pulse',
+    'tpl.number.explain': 'A number you type in, with a unit if you like. The evaluation shows its course.',
+    'tpl.number.placeholder': 'e.g. Steps',
+    'tpl.time.name': 'Time',
+    'tpl.time.note': 'A point in time – e.g. last coffee',
+    'tpl.time.explain': 'A point in time during the day, picked with wheels.',
+    'tpl.time.placeholder': 'e.g. Last coffee',
+    'tpl.text.name': 'A few words',
+    'tpl.text.note': 'e.g. What are you grateful for?',
+    'tpl.text.explain': 'A text field for a few words a day.',
+    'tpl.text.placeholder': 'e.g. Grateful for',
+    'tpl.multi.name': 'Tick several',
+    'tpl.multi.note': 'Your own options – e.g. triggers, symptoms',
     'tpl.mood.name': 'Mood',
     'tpl.mood.note': 'How are you? 1 to 5',
     'tpl.mood.explain': 'A scale from 1 to 5, high values are good. Once a day you tap how you are.',
-    'tpl.energy.name': 'Energy',
-    'tpl.energy.note': 'How much strength did you have? 1 to 5',
-    'tpl.energy.explain': 'A scale from 1 to 5, high values are good.',
     'tpl.stress.name': 'Stress',
     'tpl.stress.note': '0 to 10, less is good',
     'tpl.stress.explain': 'A slider from 0 to 10, low values are good.',
-    'tpl.pain.name': 'Pain',
-    'tpl.pain.note': 'none, light, medium, strong',
-    'tpl.pain.explain': 'Four steps from “none” to “strong”, less is good. E.g. for headaches or back pain – just rename the field.',
-    'tpl.sport.name': 'Did sports?',
-    'tpl.sport.note': 'Yes or No',
-    'tpl.sport.explain': 'Yes or No, “Yes” is good. Fits anything you simply did or didn’t do.',
     'tpl.water.name': 'Glasses of water',
     'tpl.water.note': 'Count up, goal at least 8',
     'tpl.water.explain': 'A counter: one tap on “+” per glass. You can change the goal of at least 8 later.',
-    'tpl.smoking.name': 'Cigarettes',
-    'tpl.smoking.note': 'Count up',
-    'tpl.smoking.explain': 'A counter: one tap on “+” per cigarette. A day without entry counts as 0.',
     'tpl.meds.name': 'Took medication?',
     'tpl.meds.note': 'Yes or No, with a reminder',
     'tpl.meds.explain': 'Yes or No, with its own reminder at the default time – change the time via “Edit”.',
@@ -3135,9 +3174,6 @@ const STRINGS = {
     'tpl.cycle.explain': 'How strong your period is (none to strong, without rating) and the cycle day Logbuch counts from it: day 1 is the first day with period.',
     'tpl.cycle.period': 'Period',
     'tpl.cycle.day': 'Cycle day',
-    'tpl.grateful.name': 'Grateful for',
-    'tpl.grateful.note': 'A few words',
-    'tpl.grateful.explain': 'A text field for a few words a day.',
     'tpl.events.name': 'What happened today?',
     'tpl.events.note': 'Tick several: sports, friends, argument …',
     'tpl.events.explain': 'A multiple choice: you tap everything that happened today. Change and add options via “Adjust” or later via “Edit”.',
@@ -10168,44 +10204,56 @@ function renderTextReviews(habits, dateKeys, labelFor = formatDMY) {
 // in der Sprache beim Anlegen (tpl.*), danach normale Felder. Hinter dem Schalter 'templates'.
 const YES_NO = () => [t('tpl.no'), t('tpl.yes')];
 const STRENGTH_LABELS = () => ['none', 'light', 'medium', 'strong'].map((k) => t('tpl.strength.' + k));
+// Bausteine (blank: ohne Namen, Beispiele als Platzhalter - Nutzer-Entscheidung 2026-10-30: viele
+// Vorlagen passen zu vielem, "Ja oder Nein" eben auch für Kreatin) und fertige Felder, deren
+// Einstellungen wirklich zur Sache gehören. ask: was der Bestätigen-Schritt zusätzlich fragt
+// ('good' = was ist gut, 'unit'). direct: gleich ins Formular (die Optionen einer Mehrfachauswahl
+// gibt man dort ein).
 const FIELD_TEMPLATES = [
-  { id: 'mood', topic: 'feeling', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 5, good: 'high' }) }] },
-  { id: 'energy', topic: 'feeling', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 5, good: 'high' }) }] },
-  { id: 'stress', topic: 'feeling', slots: [{ slot: 'main', form: () => ({ kind: 'scale', min: 0, max: 10, good: 'low', displayStyle: 'slider' }) }] },
-  { id: 'pain', topic: 'feeling', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 4, good: 'low', labelsEnabled: true, labels: STRENGTH_LABELS() }) }] },
-  { id: 'sport', topic: 'habits', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 2, good: 'high', labelsEnabled: true, labels: YES_NO() }) }] },
-  { id: 'water', topic: 'habits', slots: [{ slot: 'main', form: () => ({ kind: 'counter', numberGoalDir: 'high', numberGoalValue: '8' }) }] },
-  { id: 'smoking', topic: 'habits', slots: [{ slot: 'main', form: () => ({ kind: 'counter' }) }] },
-  { id: 'meds', topic: 'habits', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 2, good: 'high', labelsEnabled: true, labels: YES_NO(), reminderEnabled: true }) }] },
-  { id: 'weight', topic: 'body', slots: [{ slot: 'main', form: () => ({ kind: 'number', unit: 'kg' }) }] },
-  { id: 'sleep', topic: 'body', group: true, slots: [
+  { id: 'yesno', topic: 'blocks', blank: true, ask: ['good'], slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 2, good: 'high', labelsEnabled: true, labels: YES_NO() }) }] },
+  { id: 'strength', topic: 'blocks', blank: true, ask: ['good'], slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 4, good: 'low', labelsEnabled: true, labels: STRENGTH_LABELS() }) }] },
+  { id: 'scale5', topic: 'blocks', blank: true, slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 5, good: 'high' }) }] },
+  { id: 'count', topic: 'blocks', blank: true, slots: [{ slot: 'main', form: () => ({ kind: 'counter' }) }] },
+  { id: 'number', topic: 'blocks', blank: true, ask: ['unit'], slots: [{ slot: 'main', form: () => ({ kind: 'number' }) }] },
+  { id: 'time', topic: 'blocks', blank: true, slots: [{ slot: 'main', form: () => ({ kind: 'time' }) }] },
+  { id: 'text', topic: 'blocks', blank: true, slots: [{ slot: 'main', form: () => ({ kind: 'text' }) }] },
+  { id: 'multi', topic: 'blocks', blank: true, direct: true, slots: [{ slot: 'main', form: () => ({ kind: 'multi' }) }] },
+  { id: 'mood', topic: 'ready', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 5, good: 'high' }) }] },
+  { id: 'stress', topic: 'ready', slots: [{ slot: 'main', form: () => ({ kind: 'scale', min: 0, max: 10, good: 'low', displayStyle: 'slider' }) }] },
+  { id: 'water', topic: 'ready', slots: [{ slot: 'main', form: () => ({ kind: 'counter', numberGoalDir: 'high', numberGoalValue: '8' }) }] },
+  { id: 'meds', topic: 'ready', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 2, good: 'high', labelsEnabled: true, labels: YES_NO(), reminderEnabled: true }) }] },
+  { id: 'weight', topic: 'ready', slots: [{ slot: 'main', form: () => ({ kind: 'number', unit: 'kg' }) }] },
+  { id: 'sleep', topic: 'ready', group: true, slots: [
     { slot: 'bed', form: () => ({ kind: 'time' }) },
     { slot: 'up', form: () => ({ kind: 'time' }) },
     { slot: 'duration', form: () => ({ kind: 'computed', computedType: 'duration', durationFrom: '@bed', durationTo: '@up' }) },
   ] },
-  { id: 'cycle', topic: 'body', slots: [
+  { id: 'cycle', topic: 'ready', slots: [
     { slot: 'period', form: () => ({ kind: 'scale', max: 4, good: null, labelsEnabled: true, labels: STRENGTH_LABELS() }) },
     { slot: 'day', form: () => ({ kind: 'computed', computedType: 'since', sinceSource: '@period', sinceValues: [2, 3, 4], sinceMode: 'start' }) },
   ] },
-  { id: 'grateful', topic: 'journal', slots: [{ slot: 'main', form: () => ({ kind: 'text' }) }] },
-  { id: 'events', topic: 'journal', slots: [{ slot: 'main', form: () => ({ kind: 'multi', multiOptions: ['sport', 'friends', 'argument', 'alcohol'].map((k) => ({ id: newMultiOptionId(), label: t('tpl.events.' + k) })) }) }] },
+  { id: 'events', topic: 'ready', slots: [{ slot: 'main', form: () => ({ kind: 'multi', multiOptions: ['sport', 'friends', 'argument', 'alcohol'].map((k) => ({ id: newMultiOptionId(), label: t('tpl.events.' + k) })) }) }] },
 ];
-const TEMPLATE_TOPICS = ['feeling', 'habits', 'body', 'journal'];
+const TEMPLATE_TOPICS = ['blocks', 'ready'];
 function templateById(id) { return FIELD_TEMPLATES.find((x) => x.id === id); }
 function templateSlotName(tpl, slot) { return tPlain(tpl.slots.length > 1 ? `tpl.${tpl.id}.${slot}` : `tpl.${tpl.id}.name`); }
 // Formular-Zustand eines Teils; refs = { slot: Schlüssel } der schon angelegten Teile.
-function templateSlotForm(tpl, s, name, refs = {}) {
+function templateSlotForm(tpl, s, name, refs = {}, answers = {}) {
   const ref = (v) => (typeof v === 'string' && v.startsWith('@') ? refs[v.slice(1)] ?? null : v);
   const form = { ...defaultHabitForm(), ...Object.fromEntries(Object.entries(s.form()).map(([k, v]) => [k, ref(v)])), name };
+  if ('good' in answers) form.good = answers.good;
+  if ('unit' in answers) form.unit = answers.unit;
   if (form.labelsEnabled) form.labels = resizeLabels(form.labels, form.max - form.min + 1);
   return form;
 }
 function startTemplateConfirm(f, id) {
   const tpl = templateById(id);
   const sameName = tpl.group ? state.sections.find((sec) => sec.name.trim().toLocaleLowerCase() === tPlain(`tpl.${id}.name`).toLocaleLowerCase()) : null;
+  const first = tpl.slots[0].form();
   f.template = {
     stage: 'confirm', id,
-    names: Object.fromEntries(tpl.slots.map((s) => [s.slot, templateSlotName(tpl, s.slot)])),
+    names: Object.fromEntries(tpl.slots.map((s) => [s.slot, tpl.blank ? '' : templateSlotName(tpl, s.slot)])),
+    answers: { ...(tpl.ask?.includes('good') ? { good: first.good } : {}), ...(tpl.ask?.includes('unit') ? { unit: '' } : {}) },
     groupName: tPlain(`tpl.${id}.name`),
     group: sameName ? sameName.id : tpl.group ? 'new' : (f.sectionId || 'none'),
   };
@@ -10221,12 +10269,14 @@ function readTemplateFromDom(f) {
   if (groupEl) tp.group = groupEl.value;
   const groupNameEl = document.getElementById('tpl-group-name');
   if (groupNameEl) tp.groupName = groupNameEl.value;
+  const unitEl = document.getElementById('tpl-unit');
+  if (unitEl) tp.answers.unit = unitEl.value;
 }
 // "Anpassen" (nur Vorlagen mit einem Teil): weiter im vollen Formular, schon ausgefüllt.
 function adjustTemplate(f) {
   readTemplateFromDom(f);
   const tpl = templateById(f.template.id);
-  const form = templateSlotForm(tpl, tpl.slots[0], f.template.names[tpl.slots[0].slot]);
+  const form = templateSlotForm(tpl, tpl.slots[0], f.template.names[tpl.slots[0].slot], {}, f.template.answers);
   const sectionId = f.template.group !== 'none' && f.template.group !== 'new' ? f.template.group : f.sectionId;
   delete f.template;
   Object.assign(f, form, { sectionId, returnToTab: f.returnToTab, revealStage: f.revealStage });
@@ -10250,7 +10300,7 @@ async function createFromTemplate(f) {
   const refs = {};
   const habits = [];
   for (const [i, s] of tpl.slots.entries()) {
-    const form = { ...templateSlotForm(tpl, s, names[i], refs), sectionId };
+    const form = { ...templateSlotForm(tpl, s, names[i], refs, tp.answers), sectionId };
     const def = habitFormDefinition(form);
     if (def.notice) return def;
     const result = await persistHabitForm(form, def);
@@ -10262,11 +10312,11 @@ async function createFromTemplate(f) {
 }
 // Vorschau: die Zeilen wie in "Heute", aber inert (nicht antippbar, nichts wird gespeichert).
 // Berechnete Teile nur als Text - ihr Wert hängt an den noch nicht angelegten Feldern.
-function templatePreviewHtml(tpl, names) {
+function templatePreviewHtml(tpl, names, answers = {}) {
   const rows = [];
   const computed = [];
   for (const s of tpl.slots) {
-    const form = templateSlotForm(tpl, s, names[s.slot] || templateSlotName(tpl, s.slot), {});
+    const form = templateSlotForm(tpl, s, names[s.slot] || templateSlotName(tpl, s.slot), {}, answers);
     if (form.kind === 'computed') { computed.push(form.name); continue; }
     const def = habitFormDefinition({ ...form, sinceSource: null });
     if (def.notice) continue;
@@ -10312,9 +10362,23 @@ function renderTemplateConfirm(f) {
       ${tpl.slots.map((s) => `
         <div class="auth-field">
           <label for="tpl-name-${s.slot}">${multi ? t('tpl.nameOf', { what: templateSlotName(tpl, s.slot) }) : t('habitForm.name')}</label>
-          <input type="text" id="tpl-name-${s.slot}" value="${esc(tp.names[s.slot])}" maxlength="40" />
+          <input type="text" id="tpl-name-${s.slot}" value="${esc(tp.names[s.slot])}" maxlength="40"${tpl.blank ? ` placeholder="${esc(tPlain(`tpl.${tpl.id}.placeholder`))}"` : ''} />
         </div>
       `).join('')}
+      ${'good' in tp.answers ? `
+        <div class="auth-field">
+          <label id="tpl-good-label">${t('tpl.goodQuestion')}</label>
+          <div class="pill-group seg seg--stack" role="group" aria-labelledby="tpl-good-label">
+            ${[['high', `tpl.${tpl.id}.goodHigh`], ['low', `tpl.${tpl.id}.goodLow`], ['', 'habitForm.noValuation']].map(([g, key]) => `<button type="button" class="pill-toggle${(tp.answers.good || '') === g ? ' pill-toggle--active' : ''}" data-action="tpl-good" data-good="${g}" aria-pressed="${(tp.answers.good || '') === g}">${t(key)}</button>`).join('')}
+          </div>
+        </div>
+      ` : ''}
+      ${'unit' in tp.answers ? `
+        <div class="auth-field">
+          <label for="tpl-unit">${t('habitForm.unit')}</label>
+          <input type="text" id="tpl-unit" value="${esc(tp.answers.unit)}" maxlength="10" placeholder="${esc(t('habitForm.unitPlaceholder'))}" />
+        </div>
+      ` : ''}
       ${groupOptions.length > 1 ? `
         <div class="auth-field">
           <label for="tpl-group">${t('habitForm.part.group')}</label>
@@ -10326,7 +10390,7 @@ function renderTemplateConfirm(f) {
       ` : ''}
       <div class="auth-field">
         <span class="settings-label">${t('tpl.preview')}</span>
-        ${templatePreviewHtml(tpl, tp.names)}
+        ${templatePreviewHtml(tpl, tp.names, tp.answers)}
       </div>
       <div class="habit-form-actions">
         <button type="button" class="habit-form-cancel" data-action="tpl-back">${t('tpl.back')}</button>
@@ -12473,9 +12537,20 @@ app.addEventListener('click', async (e) => {
     render();
   } else if (action === 'tpl-pick') {
     startTemplateConfirm(state.habitForm, el.dataset.template);
+    if (templateById(el.dataset.template).direct) {
+      adjustTemplate(state.habitForm);
+      render();
+      window.scrollTo(0, 0);
+      document.getElementById('habit-form-name')?.focus();
+      return;
+    }
     render();
     window.scrollTo(0, 0);
     document.getElementById(`tpl-name-${templateById(el.dataset.template).slots[0].slot}`)?.focus({ preventScroll: true });
+  } else if (action === 'tpl-good') {
+    readTemplateFromDom(state.habitForm);
+    state.habitForm.template.answers.good = el.dataset.good || null;
+    render();
   } else if (action === 'tpl-custom') {
     delete state.habitForm.template;
     render();
