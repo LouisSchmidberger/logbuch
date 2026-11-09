@@ -41,9 +41,7 @@ alle.
 - Ein Schalter im Browser ist kein Schutz: wer technisch versiert ist, kann eine versteckte
   Funktion freischalten. Für Tests egal; für Premium siehe unten.
 
-**Aktuelle Schalter**: `since` (berechnet "Tage seit"), `multi` (Feld-Typ Mehrfachauswahl),
-`templates` (Vorlagen bei "Neues Feld" und im Tutorial). Alle drei seit 2026-10-30 auf `all`;
-nach ein paar ruhigen Tagen aus dem Code nehmen, dann die Zeilen löschen.
+**Aktuelle Schalter**: keine.
 
 ## Schalter setzen (Dashboard → SQL)
 

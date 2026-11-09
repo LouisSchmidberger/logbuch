@@ -88,7 +88,7 @@ stehen also an zwei verschiedenen Tagen. Die Dauer ist ein berechnetes Feld (unt
 
 Nutzer-Entscheidung 2026-10-30: früh gebaut, weil sie prägt, wie man einträgt (eine Zeile
 "Was war heute?" statt vieler Ja/Nein-Felder) – gedacht für Auslöser/Ereignisse zum Antippen,
-später Grundlage der Mustersuche. Hinter dem Schalter `multi` (docs/freigabe.md).
+später Grundlage der Mustersuche.
 
 - **Optionen** verschlüsselt in `options: [{ id, label, hidden }]`. **Wert** = Array der
   Options-Ids (stabil: Umbenennen verschiebt nichts), `[]` = "nichts davon" – zählt als
@@ -312,7 +312,6 @@ eingetragen). Keine Werte für Tage in der Zukunft. Berechnet einmal je Stand vo
 der Auswertung nur "zuletzt", kein Ø und keine Anzahl (sagen bei Zähl-Tagen nichts).
 "Stufen ändern" am Quellfeld rechnet die gewählten Stufen mit (`remapSinceStages`, auch
 Rückgängig). Eine Vorlage "Zyklus" (Skala "Periode" + Zyklustag) kommt mit den Vorlagen.
-Im Formular nur mit Schalter `since` (docs/freigabe.md).
 
 ## Gruppen (`sections`)
 
@@ -374,7 +373,7 @@ Gruppe steht").
   (`GROUP_TIP_MIN_FIELDS`, ausblendbar, `localStorage` `groupTipDismissed`), dazu
   `about.tip.sections`.
 
-## Vorlagen (`FIELD_TEMPLATES`, Schalter `templates`)
+## Vorlagen (`FIELD_TEMPLATES`)
 
 Nutzer-Entscheidung 2026-10-30: "Neues Feld" (auch im Tutorial) beginnt mit der Auswahl
 "Was willst du festhalten?" – das volle Formular war für Neulinge die größte Hürde und gibt es

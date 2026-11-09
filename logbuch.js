@@ -5313,9 +5313,9 @@ function clampHabitFormSteps(f) {
 // verschobenen Zahlenbereichs. Bereits bestehende (ggf. historisch andere) Felder
 // behalten beim Bearbeiten ihr echtes min (siehe habitToForm) - nur Von/Bis sind bei
 // vorhandenen Daten ohnehin gesperrt (Tier 3, siehe CLAUDE.md).
-// "Neues Feld": mit Schalter zuerst die Vorlagen (siehe FIELD_TEMPLATES).
+// "Neues Feld": zuerst die Vorlagen (siehe FIELD_TEMPLATES).
 function newHabitForm() {
-  return featureOn('templates') ? { ...defaultHabitForm(), template: { stage: 'pick' } } : defaultHabitForm();
+  return { ...defaultHabitForm(), template: { stage: 'pick' } };
 }
 function defaultHabitForm() {
   return {
@@ -10452,7 +10452,7 @@ function renderTextReviews(habits, dateKeys, labelFor = formatDMY) {
 // Bausteine wie das Formular (habitFormDefinition/persistHabitForm). '@slot' in einem Teil
 // verweist auf den Schlüssel eines anderen Teils derselben Vorlage (berechnete Felder) - die
 // Teile stehen deshalb in der Reihenfolge, in der sie angelegt werden. Namen und Bezeichnungen
-// in der Sprache beim Anlegen (tpl.*), danach normale Felder. Hinter dem Schalter 'templates'.
+// in der Sprache beim Anlegen (tpl.*), danach normale Felder.
 // placeLast: der Teil wird abends eingetragen ("Ins Bett") und kommt deshalb nach ganz unten statt in
 // die Gruppe der Vorlage (Nutzer-Entscheidung 2026-10-30: in "Heute" nach Tageszeit sortiert).
 const YES_NO = () => [t('tpl.no'), t('tpl.yes')];
@@ -11226,8 +11226,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     </div>
     <p class="habit-form-lock-note">${t('habitForm.sinceNote.' + f.sinceMode)}</p>
   ` : `<p class="habit-form-lock-note">${t('habitForm.noSinceCandidates')}</p>`;
-  const computedTypes = [['scale', 'habitForm.computedType.scale'], ['number', 'habitForm.computedType.number'], ['duration', 'habitForm.computedType.duration']]
-    .concat(featureOn('since') || isSinceForm ? [['since', 'habitForm.computedType.since']] : []);
+  const computedTypes = [['scale', 'habitForm.computedType.scale'], ['number', 'habitForm.computedType.number'], ['duration', 'habitForm.computedType.duration'], ['since', 'habitForm.computedType.since']];
   const computedBody = `
     <div class="auth-field">
       <label id="habit-form-computed-type-label">${t('habitForm.computedType')}</label>
@@ -11395,12 +11394,12 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     || others.filter((h) => h.kind === 'scale' && !isNeutralScale(h)).length >= 2
     || others.filter((h) => h.kind === 'number').length >= 2
     || others.filter(isTimeKind).length >= 2
-    || (featureOn('since') && others.some(sinceSourceCandidate))));
+    || others.some(sinceSourceCandidate)));
   // Zähler ist für Nutzer eine Art, eine Zahl einzutragen ("hochzählen"), kein eigener Typ -
   // intern 'counter', weil der Server ihn für Erinnerungen unterscheiden muss.
   const kinds = [['scale', 'habitForm.kindScale'], ['number', 'habitForm.kindNumber']]
     .concat(tutorialForm ? [] : [['time', 'habitForm.kindTime']])
-    .concat((!tutorialForm && featureOn('multi')) || f.kind === 'multi' ? [['multi', 'habitForm.kindMulti']] : [])
+    .concat(!tutorialForm || f.kind === 'multi' ? [['multi', 'habitForm.kindMulti']] : [])
     .concat([['text', 'habitForm.kindText']])
     .concat(computedPossible ? [['computed', 'habitForm.kindComputed']] : []);
   // Zeitraum (Tag/Woche/Monat/Jahr): nicht im Tutorial (das erste Feld ist ein Tagesfeld) und
@@ -11851,12 +11850,12 @@ function renderTutorialReminders() {
   });
 }
 
-// Feld-Schritt: mit Schalter 'templates' zuerst die Vorlagen wie bei "Neues Feld"
+// Feld-Schritt: zuerst die Vorlagen wie bei "Neues Feld"
 // (Nutzer-Entscheidung 2026-10-30: der ganze Ablauf geht von Vorlagen aus); "Eigenes Feld" und
 // "Anpassen" führen ins echte Feld-Formular, Stück für Stück aufgedeckt (siehe renderHabitForm,
 // f.revealStage), mit Ideen als Text unter dem Namen.
 function tutorialStartForm() {
-  if (!featureOn('templates') || activeHabits().length) return { ...newHabitForm(), revealStage: 1 };
+  if (activeHabits().length) return { ...newHabitForm(), revealStage: 1 };
   return { ...defaultHabitForm(), revealStage: 1, packageChosen: packageDefaultChoice(), template: { stage: 'package' } };
 }
 function renderTutorialFieldForm() {

@@ -48,8 +48,7 @@ Der Weg vom ersten Öffnen bis zur eingerichteten App, für neue Konten.
   ausgeblendet, auch bei "Noch ein Feld anlegen" mit genug passenden Feldern (Grund nicht
   dokumentiert). Davon getrennt gilt überall: der Typ erscheint erst ab zwei passenden
   Feldern, beim allerersten Feld führte er sonst ins Leere (siehe [felder.md](felder.md)).
-  **Startpaket und Vorlagen zuerst** (Nutzer-Entscheidung 2026-10-30, hinter dem Schalter
-  `templates`): der ganze Ablauf zum Anlegen geht von Vorlagen aus, das Tutorial beginnt mit dem
+  **Startpaket und Vorlagen zuerst** (Nutzer-Entscheidung 2026-10-30): der ganze Ablauf zum Anlegen geht von Vorlagen aus, das Tutorial beginnt mit dem
   Startpaket und zeigt danach dieselbe Auswahl wie "Neues Feld" (siehe [felder.md](felder.md) → Vorlagen). "Eigenes Feld" und "Anpassen"
   führen ins aufgedeckte Formular, dort Ideen als Text unter dem Namen und, zugeklappt,
   "Beispiele ansehen" (`tutorialExamplesHtml`): vier Felder, wie sie in "Heute" aussehen, nur
@@ -233,7 +232,7 @@ Tab-Leiste/kein Menü; eine `beforeunload`-Warnung verhindert versehentliches Ve
    ohne Druck · deins). Platz für einen persönlichen Satz des Nutzers ist vorgesehen, Inhalt
    noch offen. Noch kein "Überspringen" – das erscheint erst ab dem ersten Feld.
 2. **Erstes Feld** (`renderTutorialFieldForm`): Satz, was ein Feld ist (je mehr zusammenkommt,
-   desto eher sieht man Zusammenhänge), mit Schalter `templates` zuerst das **Startpaket**
+   desto eher sieht man Zusammenhänge), zuerst das **Startpaket**
    (`PACKAGE_GROUPS`, Nutzer-Entscheidung 2026-10-30): ein ausgereifter Satz Felder in Gruppen
    nach Tageszeit des Eintragens (Morgens, Befinden, Einflüsse, Sonstiges ohne Gruppe, "Ins Bett"
    allein in "Abends" ganz unten) zum An-/Abwählen. Sport und Alkohol als eigene Ja/Nein-Felder
@@ -241,8 +240,8 @@ Tab-Leiste/kein Menü; eine `beforeunload`-Warnung verhindert versehentliches Ve
    verantworten, alles anzulegen. Die Texte sagen ausdrücklich: nur ein Vorschlag, anpassen,
    Eigenes überlegen und anlegen (Kasten "Was spielt bei dir noch eine Rolle?") – nichts
    vorschreiben, nur anregen. "Lieber einzeln auswählen" führt zu den Vorlagen (mit Karte
-   zurück zum Paket). Sonst bzw. bei "Noch ein Feld anlegen" mit Schalter `templates` erst die Vorlagen (eine Vorlage mit
-   mehreren Teilen legt alle an; "Zurück" von "Geschafft" öffnet den ersten), sonst bzw. bei
+   zurück zum Paket). Bei "Noch ein Feld anlegen" erst die Vorlagen (eine Vorlage mit
+   mehreren Teilen legt alle an; "Zurück" von "Geschafft" öffnet den ersten), bei
    "Eigenes Feld" das echte Feld-Formular, Stück für Stück aufgedeckt
    (`f.revealStage`: 1 Name mit Ideen als Text darunter → 2 + Feld-Typ → 3 + Einstellungen
    zum Typ, Vorschau, "Mehr Einstellungen" (zu), "Feld anlegen"; Aktion
