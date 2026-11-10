@@ -7,7 +7,7 @@
 // Start: node dev/server.mjs [port]   (Standard 5180, nur auf 127.0.0.1 erreichbar)
 
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -20,24 +20,22 @@ const TYPES = {
   '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.woff': 'font/woff', '.ico': 'image/x-icon',
 };
 
-const HOOK = `
-;import('./dev/preview-hook.js').then((m) => m.install({
-  state, render, saveDayNow, encryptData, DEF_PLAINTEXT_CLEARED, supabase, dek: () => currentDek,
-  // für dev/tests.mjs (reine Rechenlogik)
-  internals: {
-    sinceComputedDay, durationComputedDay, numberComputedDay, formatSeriesValue, isScheduledOn, isFutureKey,
-    timeValueOn, featureVisible, remapSince, stepChangeMapValue, parseDateKey, formatKey, addDays,
-    multiOptionCounts,
-    // Texte: fehlende Schlüssel (dynamisch gebaute wie tutorial.form.tip.<Typ>) und de/en gleich
-    STRINGS, SUPPORTED_KINDS, FIELD_TEMPLATES, PACKAGE_GROUPS,
-    // Vorlagen: übernehmen, zusammenführen
-    templateTakeMode, templateSlotForm, templateById, yesValueOf, isYesNoField, mergedMultiOptions, packageFieldCount, packageDefaultChoice,
-    templateWithExtras, isOpenToday, sectionDoneOn, isOptionalAllowed, fieldMoveStep,
-    startOfWeekWith, weekMoveTarget, weekLastIso, periodStartWith,
-    goalFromPayload, goalScore, weekGoalWeeks, parseNumberGoal,
-  },
+// Vorschau-Haken, angehängt an logbuch.js: lädt alle Module unter js/ und reicht ihre Exporte an
+// dev/preview-hook.js weiter (live, damit z.B. currentDek nach dem Entsperren stimmt). Was
+// dev/tests.mjs prüft, muss deshalb im jeweiligen Modul exportiert sein.
+async function hook() {
+  const mods = (await readdir(join(ROOT, 'js'))).filter((f) => f.endsWith('.js')).sort();
+  return `
+${mods.map((f, i) => `import * as __m${i} from './js/${f}';`).join('\n')}
+const __mods = [${mods.map((_, i) => '__m' + i).join(', ')}];
+const __get = (n) => { for (const m of __mods) if (n in m) return m[n]; return undefined; };
+import('./dev/preview-hook.js').then((m) => m.install({
+  state: __get('state'), render: __get('render'), saveDayNow: __get('saveDayNow'), encryptData: __get('encryptData'),
+  DEF_PLAINTEXT_CLEARED: __get('DEF_PLAINTEXT_CLEARED'), supabase: __get('supabase'), dek: () => __get('currentDek'),
+  internals: new Proxy({}, { get: (_, n) => __get(n) }), // für dev/tests.mjs (reine Rechenlogik)
 }));
 `;
+}
 
 createServer(async (req, res) => {
   try {
@@ -47,7 +45,10 @@ createServer(async (req, res) => {
     if (file !== ROOT && !file.startsWith(ROOT + sep)) { res.writeHead(403).end(); return; }
     if (/^\/vendor\/supabase-js-[^/]+\.js$/.test(path)) file = join(ROOT, 'dev', 'mock-supabase.js');
     let body = await readFile(file);
-    if (path === '/logbuch.js') body = Buffer.concat([body, Buffer.from(HOOK)]);
+    // Kennungen fürs Cache-Busting weg: sonst wären ./js/x.js und ./js/x.js?v=… zwei verschiedene
+    // Module (doppelter Zustand), und der Haken unten bräuchte die aktuelle Kennung.
+    if (/\.m?js$/.test(path)) body = Buffer.from(body.toString('utf8').replace(/\.js\?v=[0-9a-z]+/g, '.js'));
+    if (path === '/logbuch.js') body = Buffer.concat([body, Buffer.from(await hook())]);
     res.writeHead(200, {
       'Content-Type': TYPES[extname(file)] || 'application/octet-stream',
       'Cache-Control': 'no-store', // jede Änderung sofort sichtbar

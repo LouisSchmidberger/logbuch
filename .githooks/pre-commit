@@ -1,13 +1,16 @@
 #!/bin/sh
-# Cache-Busting: logbuch.html lädt logbuch.js als "logbuch.js?v=<kennung>". Die Kennung
-# ist der Anfang des Git-Hashes der (gestagten) logbuch.js - ändert sich die Datei, ändert
-# sich die Adresse, und ein Browser mit neuer logbuch.html holt garantiert auch die neue
-# logbuch.js statt einer bis zu 10 Minuten alten aus dem Zwischenspeicher (GitHub Pages:
-# max-age=600). Aktiv über "git config core.hooksPath .githooks" (einmal pro Klon).
+# Cache-Busting: logbuch.html lädt logbuch.js als "logbuch.js?v=<kennung>", und jedes Modul
+# lädt die anderen als "./x.js?v=<kennung>" - überall dieselbe Kennung. Sie ist ein Hash über
+# alle (gestagten) Skripte ohne ihre Kennungen; ändert sich irgendein Modul, ändern sich alle
+# Adressen, und ein Browser holt garantiert den neuen Stand statt einer Mischung aus neuen und
+# bis zu 10 Minuten alten Dateien aus dem Zwischenspeicher (GitHub Pages: max-age=600).
+# Eine Kennung für alle statt einer je Datei, weil sich die Module gegenseitig importieren
+# (eine Kennung je Datei hinge im Kreis von sich selbst ab).
+# Aktiv über "git config core.hooksPath .githooks" (einmal pro Klon).
 #
-# Geändert wird die gestagte logbuch.html direkt im Index (nicht per "git add"), damit
-# nicht gestagte Änderungen an ihr nicht versehentlich mit in den Commit rutschen; die
-# Arbeitskopie bekommt dieselbe Ersetzung.
+# Geändert werden die gestagten Dateien direkt im Index (nicht per "git add"), damit nicht
+# gestagte Änderungen nicht versehentlich mit in den Commit rutschen; die Arbeitskopie bekommt
+# dieselbe Ersetzung.
 set -e
 
 # Linter (siehe eslint.config.js): nur wenn die Werkzeuge installiert sind (npm install im
@@ -16,20 +19,28 @@ if [ -x node_modules/.bin/eslint ]; then
   node_modules/.bin/eslint . || { echo "pre-commit: Linter meldet Fehler (npm run lint)." >&2; exit 1; }
 fi
 
-version=$(git rev-parse :logbuch.js | cut -c1-10)
-pattern='logbuch\.js?v=[0-9a-f]*'
-replacement="logbuch.js?v=$version"
+scripts="logbuch.js $(git ls-files --cached 'js/*.js' | tr '\n' ' ')"
+# Adressen der Form ".js?v=…" und ".css?v=…" (logbuch.css hängt an derselben Kennung)
+pattern='\.\(js\|css\)?v=[0-9a-z]*'
 
-staged_html=$(git show :logbuch.html)
-if ! printf '%s\n' "$staged_html" | grep -q "$pattern"; then
-  echo "pre-commit: in logbuch.html fehlt 'logbuch.js?v=...' - Cache-Busting nicht möglich." >&2
-  exit 1
-fi
-if printf '%s\n' "$staged_html" | grep -q "$replacement\""; then
-  exit 0
-fi
-blob=$(printf '%s\n' "$staged_html" | sed "s/$pattern/$replacement/" | git hash-object -w --stdin)
-git update-index --cacheinfo "100644,$blob,logbuch.html"
-sed -i "s/$pattern/$replacement/" logbuch.html
-echo "pre-commit: logbuch.js-Version in logbuch.html auf $version gesetzt."
+for needed in 'logbuch.js?v=' 'logbuch.css?v='; do
+  if ! git show :logbuch.html | grep -qF "$needed"; then
+    echo "pre-commit: in logbuch.html fehlt '$needed...' - Cache-Busting nicht möglich." >&2
+    exit 1
+  fi
+done
 
+version=$(for f in $scripts logbuch.css; do git show ":$f" | sed "s/$pattern/.\1?v=/g"; done | git hash-object --stdin | cut -c1-10)
+
+changed=0
+for f in logbuch.html $scripts; do
+  staged=$(git show ":$f")
+  updated=$(printf '%s\n' "$staged" | sed "s/$pattern/.\1?v=$version/g")
+  [ "$updated" = "$staged" ] && continue
+  blob=$(printf '%s\n' "$updated" | git hash-object -w --stdin)
+  git update-index --cacheinfo "100644,$blob,$f"
+  sed -i "s/$pattern/.\1?v=$version/g" "$f"
+  changed=1
+done
+[ "$changed" = 1 ] && echo "pre-commit: Skript-Kennung auf $version gesetzt."
+exit 0

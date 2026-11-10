@@ -31,14 +31,15 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
 | Startseite, Installation, Registrieren, Tutorial, Ersatzschlüssel-Seite, Erklär-Karten | [docs/onboarding.md](docs/onboarding.md) |
 | Texte/`STRINGS`/`t()`, Sprache, Datumsformate | [docs/i18n.md](docs/i18n.md) |
 | Konto löschen, Export, Feedback, Auth/Passwort, E-Mail-Versand, Secrets, Kennzahlen (`ops-stats`) | [docs/datenschutz-sicherheit.md](docs/datenschutz-sicherheit.md) |
-| Lokale Vorschau, Screenshots, automatische Tests, `dev/` (nachgebautes Supabase) | [dev/README.md](dev/README.md) |
+| Aufbau des Codes in Module, `runtime`, `init…()`, neue Module/Imports | [docs/module.md](docs/module.md) |
+| Lokale Vorschau, Screenshots, automatische Tests, CI, `dev/` (nachgebautes Supabase) | [dev/README.md](dev/README.md) |
 | Neue Funktion freigeben, Schalter (`featureOn`), Tester, Premium | [docs/freigabe.md](docs/freigabe.md) |
 
 ## Stack und Hosting
 
-- **Frontend**: `logbuch.html` (Markup + CSS) und `logbuch.js` (die ganze App-Logik, als
-  ES-Modul), Vanilla JS, kein Framework, kein Build-Step. Getrennt statt einer Datei, damit
-  die Content-Security-Policy (`<meta>` in `logbuch.html`) Inline-Skripte komplett verbieten
+- **Frontend**: `logbuch.html` (Markup), `logbuch.css`, `logbuch.js` (Einstieg) und ES-Module
+  unter `js/` (App-Logik, eins je Bereich, docs/module.md), Vanilla JS, kein Framework, kein
+  Build-Step. Skripte in eigenen Dateien statt im HTML, damit die Content-Security-Policy (`<meta>` in `logbuch.html`) Inline-Skripte komplett verbieten
   kann (`script-src 'self'`): eingeschleuster Code liefe nicht, und `connect-src` lässt
   Daten nur zum eigenen Supabase-Projekt. **Neue externe Quellen müssen in die CSP.**
 - **Keine Drittanbieter zur Laufzeit**: `supabase-js` liegt in fester Version unter
@@ -50,8 +51,8 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   Auth (E-Mail/Passwort), Edge Functions `send-notifications`, `delete-account`,
   `submit-feedback`, `ops-stats` (Kennzahlen für den Hub); pg_cron für Erinnerungen und Aufräum-Jobs. Resend als SMTP und für
   Feedback-Mails.
-- **Hosting**: GitHub Pages, statisch. `logbuch.html`, `logbuch.js`, `sw.js`, `vendor/`,
-  `fonts/` müssen im selben Wurzelverzeichnis des gehosteten Pfads liegen.
+- **Hosting**: GitHub Pages, statisch. `logbuch.html`, `logbuch.css`, `logbuch.js`, `js/`, `sw.js`,
+  `vendor/`, `fonts/` müssen im selben Wurzelverzeichnis des gehosteten Pfads liegen.
 
 ## Konventionen
 
@@ -80,7 +81,8 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
 
 ## Bekannte Fallstricke
 
-- **Cache-Busting** über `logbuch.js?v=<Kennung>`, gesetzt vom Hook `.githooks/pre-commit`.
+- **Cache-Busting** über `?v=<Kennung>` an allen Skript- und CSS-Adressen, auch in jedem
+  `import` (neue mit `?v=0` schreiben), gesetzt vom Hook `.githooks/pre-commit`.
   **Pro Klon einmal nötig: `git config core.hooksPath .githooks`** (Hintergrund: docs/freigabe.md).
 - **"JWT issued at future" (PGRST303)** fängt `fetchWithJwtFutureRetry` ab – nicht entfernen
   (Hintergrund: docs/datenschutz-sicherheit.md, Anmeldung).
@@ -101,7 +103,8 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   dev/README.md) Screenshots machen, bevor live geht. Neue Tabelle/Spalte/Supabase-Aufruf →
   `dev/mock-supabase.js` nachziehen.
 - **Rechenlogik geändert** → `node dev/tests.mjs` vor dem Commit, neue Logik bekommt dort einen
-  Fall. **Neue Funktion für Nutzer** → ob sie einen Schalter
+  Fall. Regel, die es in JS und SQL gibt → Fälle in `dev/sync-tests.mjs`. Nach jedem Push die CI
+  ansehen (`gh run list`); rot = vor allem anderen beheben. **Neue Funktion für Nutzer** → ob sie einen Schalter
   bekommt und auf welcher Stufe sie startet, entscheidet der Nutzer pro Funktion – beim Klären
   der Aufgabe fragen (Nutzer-Entscheidung 2026-11-10; docs/freigabe.md).
 - **Mobil zuerst**: die Nutzer sind mit großem Abstand auf Handy und Tablet (Android/iOS).
@@ -109,7 +112,7 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   PC muss funktionieren, gibt aber nicht die Richtung vor.
 - **Texte in beiden Sprachen**: neue Strings immer über `STRINGS`/`t()` in `de` UND `en`,
   in identischer Key-Reihenfolge.
-- **`CHANGELOG`** in `logbuch.js` ("Was ist neu"): ein Eintrag pro Live-Gang für alles aus der
+- **`CHANGELOG`** in `js/about-view.js` ("Was ist neu"): ein Eintrag pro Live-Gang für alles aus der
   Sitzung (de + en), Datum des Live-Gangs; den obersten erweitern, solange er nicht live ist.
   Zwei Stufen: `short` = eine einfache Zeile pro Neuerung fürs Fenster beim Start (für
   jemanden, der die App kaum kennt), `de`/`en` = ausführlicher für "Über Logbuch". Nur Begriffe, die man in der App sieht oder aus dem Alltag kennt, und beschreiben, was man

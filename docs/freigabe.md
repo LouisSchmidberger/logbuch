@@ -19,8 +19,10 @@ alle.
 
 ## Deployment-Schritte
 
-1. `logbuch.html`, `logbuch.js`, `sw.js`, `vendor/`, `fonts/` → GitHub Pages (Root).
-2. `supabase functions deploy <name>` (Code unter `supabase/functions/<name>/index.ts`).
+1. `logbuch.html`, `logbuch.css`, `logbuch.js`, `js/`, `sw.js`, `vendor/`, `fonts/` → GitHub Pages (Root).
+2. `supabase functions deploy <name>` (Code unter `supabase/functions/<name>/index.ts`). Ob eine
+   Function ein Supabase-Login verlangt (`verify_jwt`), steht je Function in `supabase/config.toml`;
+   der Deploy liest es von dort. Paket-Versionen in den Functions immer fest (`npm:paket@x.y.z`).
 3. Schema-Änderungen nur über Migrationen (`supabase/migrations/`):
    `supabase migration new <name>`, dann `supabase db push --remote` gegen das Live-Projekt
    (ohne `--remote` zielt die CLI auf eine lokale Datenbank; vorher `--dry-run` zeigt, was ginge). Nach Dashboard-Änderungen am Schema (Ausnahme)
@@ -30,11 +32,14 @@ alle.
    `config push`); nach Dashboard-Änderungen `supabase config pull --force`.
 
 **Cache-Busting**: GitHub Pages lässt Browser Dateien 10 Min. zwischenspeichern – eine neue
-`logbuch.html` könnte auf eine alte `logbuch.js` treffen. Die HTML lädt deshalb
-`logbuch.js?v=<Kennung>`; die Kennung setzt der Hook `.githooks/pre-commit` bei jedem Commit.
+`logbuch.html` könnte auf alte Skripte treffen oder neue Module auf alte. Alle Adressen tragen
+deshalb dieselbe Kennung (`logbuch.js?v=…`, `logbuch.css?v=…`, `./x.js?v=…` in jedem
+`import`): ein Hash über alle Skripte und das CSS, gesetzt vom Hook `.githooks/pre-commit` bei
+jedem Commit. Eine Kennung für alle statt einer je Datei, weil sich die Module gegenseitig
+importieren. Neue `import`-Zeilen mit `?v=0` schreiben, der Hook ersetzt die Kennung.
 Pro Klon einmal nötig: `git config core.hooksPath .githooks` (sonst bleibt die Kennung stehen).
-Der umgekehrte Fall (alte HTML + neue JS) ist nur teilweise abgedeckt, vollständig nur mit
-Build-Schritt.
+Der umgekehrte Fall (alte HTML aus dem Zwischenspeicher) lädt den alten Stand vollständig und
+in sich stimmig.
 
 ## Im Code
 

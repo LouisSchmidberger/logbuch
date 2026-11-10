@@ -12,8 +12,9 @@ Ausliefern** (die Dateien im Repo bleiben unverändert):
   Tabellen mit Standardwerten/Schlüsseln/"nur eigene Zeilen", die zwei Edge Functions),
   gespeichert in localStorage von `localhost`. Mails landen im Vorschau-Postfach
   (`/dev/postfach.html`).
-- `logbuch.js` bekommt eine Zeile angehängt, die `preview-hook.js` mit einigen inneren
-  Funktionen der App lädt (`window.__logbuchPreview`). Darüber legen die Beispieldaten
+- `logbuch.js` bekommt ein paar Zeilen angehängt, die alle Module unter `js/` laden und ihre
+  Exporte an `preview-hook.js` reichen (`window.__logbuchPreview`). Die `?v=`-Kennungen
+  entfernt der Server dabei, damit jedes Modul nur einmal geladen wird. Darüber legen die Beispieldaten
   denselben Weg zurück wie echte Eingaben, mit gleicher Verschlüsselung und gleichem Format.
 
 Diese Trennung ist eine bewusste Entscheidung: Die Vorschau lässt sich auf der Live-URL nicht
@@ -21,7 +22,7 @@ einschalten, weil es dort diesen Server nicht gibt. Der Ordner `dev/` wird zwar 
 veröffentlicht, bewirkt ohne den Server aber nichts. Ein Vorschau-Schalter in der App selbst
 wurde verworfen, weil damit Testcode in der Live-App läge.
 
-**Wenn logbuch.js eine neue Tabelle, Spalte mit Standardwert, einen neuen Abfrage-Baustein
+**Wenn die App eine neue Tabelle, Spalte mit Standardwert, einen neuen Abfrage-Baustein
 oder einen neuen Auth-Aufruf bekommt:** in `mock-supabase.js` nachziehen. Sonst weicht die
 Vorschau still ab oder bricht mit "nicht nachgebaut" ab.
 
@@ -54,9 +55,19 @@ Eigene Abläufe ohne neues Skript: `node dev/shoot.mjs <Schritte>`, zum Beispiel
 
 **Automatische Tests** der Rechenlogik (Tage seit, Dauer, Zeitpläne, Schalter …):
 `node dev/tests.mjs` bei laufendem Server, Ausgabe je Fall `ok`/`FEHLER`, Exit-Code 1 bei
-Fehlern. Sie laufen im echten `logbuch.js`: der Server reicht die getesteten Funktionen über
-`internals` im Vorschau-Haken (`dev/server.mjs`) durch - eine neue getestete Funktion dort
-aufnehmen.
+Fehlern. Sie laufen im echten App-Code: `internals` im Vorschau-Haken (`dev/server.mjs`)
+liefert jeden Export der Module unter `js/` - eine neue getestete Funktion muss in ihrem Modul
+exportiert sein.
+
+**Abgleich JS <-> SQL** (`node dev/sync-tests.mjs`): rechnet Regeln, die es in der App und in
+der Datenbank gibt (Zeitplan, Zeitraum-Start), für Hunderte Fälle auf beiden Seiten und meldet
+jeden Unterschied. Braucht den Vorschau-Server und eine lokale Datenbank aus allen Migrationen
+(`npx supabase db start`, braucht Docker Desktop). Neue doppelte Regel -> dort Fälle ergänzen.
+
+**CI** (`.github/workflows/ci.yml`): bei jedem Push auf GitHub laufen Linter, Tests, eine
+Wegwerf-Datenbank aus allen Migrationen, der Abgleich und die Typprüfung der Edge Functions.
+Ergebnis im Reiter "Actions" des Repos; ein Fehler kommt zusätzlich per Mail. Linter lokal:
+`npm run lint` (läuft auch im pre-commit-Hook).
 
 Von Hand im Browser: Server starten, `http://localhost:5180/` öffnen. In der Konsole
 `await __logbuchPreview.resetAll()` (alles frisch) oder nach dem Anmelden

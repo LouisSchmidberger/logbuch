@@ -207,10 +207,12 @@ anderes zu, ungültige Pläne gelten als dran. Alle 7 Wochentage werden als `nul
 von täglich).
 
 **Zwei Implementierungen derselben Regel, die synchron bleiben müssen**:
-`isScheduledOn`/`isPlannedOn` in `logbuch.js` und `public.habit_scheduled_on(schedule,
+`isScheduledOn`/`isPlannedOn` in `js/dates.js` und `public.habit_scheduled_on(schedule,
 date)` (plpgsql, aktuelle Fassung in Migration `20261028160925_schedule_interval`). Der Tagesabstand in JS
 rechnet über lokale Mitternacht mit `Math.round(…/86400000)`, damit Sommer-/Winterzeit
-(23/25-Stunden-Tage) nicht um einen Tag verschiebt.
+(23/25-Stunden-Tage) nicht um einen Tag verschiebt. Ob beide dasselbe ergeben, prüft
+`dev/sync-tests.mjs` (in der CI bei jedem Push, ebenso für den Zeitraum-Start
+`periodStartWith`/`habit_period_start`).
 
 Bewusst **nicht** unterstützt: Kalender-Regeln wie "jeder erste Montag im Monat" (Nutzer:
 unübersichtlich und eher irrelevant). Häufigkeiten ohne feste Tage ("3x pro Woche") regelt

@@ -172,18 +172,18 @@ Konten, neue in 7 Tagen, aktiv in 7/30 Tagen (über `entry_date` – die Speiche
 bewusst nicht), Felder je aktivem Konto, Konten mit Push-Abo. Verlauf: pg_cron schreibt jede
 Nacht den Vortag nach `ops_daily_stats` (nur `service_role`). Der Hub ruft die Edge Function
 `ops-stats` mit eigenem Token ab, nicht mit dem Service-Key (der öffnete die ganze Datenbank
-samt E-Mail-Adressen). Deploy ohne JWT-Prüfung: `supabase functions deploy ops-stats
---no-verify-jwt`.
+samt E-Mail-Adressen). Ohne JWT-Prüfung (`verify_jwt = false` in `supabase/config.toml`, das ein Deploy von dort
+übernimmt).
 
 ## Secrets
 
-- `VAPID_PUBLIC_KEY` steht im Klartext in `logbuch.js` – beabsichtigt, öffentliche
+- `VAPID_PUBLIC_KEY` steht im Klartext in `js/config.js` – beabsichtigt, öffentliche
   Push-Keys sind dafür gedacht.
 - `VAPID_PRIVATE_KEY` liegt **ausschließlich** als Supabase Function Secret (`supabase
   secrets set ...`). Beim Rotieren: neuen Key generieren, Secret updaten, öffentlichen Key in
-  `logbuch.js` UND im Push-Subscribe-Flow der Nutzer neu abgleichen (alte Subscriptions
+  `js/config.js` UND im Push-Subscribe-Flow der Nutzer neu abgleichen (alte Subscriptions
   werden mit neuem Key ungültig).
-- `SUPABASE_ANON_KEY` (publishable) ist unkritisch öffentlich, liegt in `logbuch.js` und im
+- `SUPABASE_ANON_KEY` (publishable) ist unkritisch öffentlich, liegt in `js/config.js` und im
   Vault (`publishable_key`, für den Cron-Aufruf).
 - `RESEND_FEEDBACK_KEY` (Function Secret): eigener Resend-Key nur für `submit-feedback`
   ("Sending access"), getrennt vom SMTP-Key, damit er sich unabhängig sperren lässt.
