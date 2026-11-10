@@ -37,6 +37,7 @@ const TABLES = {
     defaults: () => ({
       default_reminder_minute: 1320, created_at: now(), onboarding_completed: false, locale: 'de',
       summary_notifications: true, timezone: 'Europe/Berlin', last_seen_changelog: null,
+      week_start: 1, week_start_pending: null,
     }),
   },
   user_encryption: {

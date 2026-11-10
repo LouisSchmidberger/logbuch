@@ -151,6 +151,17 @@ try {
       eq('ganz oben geht nicht weiter', mv('a', 'up'), null);
       state.sections = savedSections;
 
+      // --- Wochenbeginn (synchron mit public.habit_period_start / habit_week_last_isodow) ---
+      const wk = (key, iso) => f.formatKey(f.startOfWeekWith(f.parseDateKey(key), iso));
+      eq('Woche ab Montag', ['2026-11-09', '2026-11-12', '2026-11-15'].map((k) => wk(k, 1)), ['2026-11-09', '2026-11-09', '2026-11-09']);
+      eq('Woche ab Sonntag', ['2026-11-08', '2026-11-14', '2026-11-15'].map((k) => wk(k, 7)), ['2026-11-08', '2026-11-08', '2026-11-15']);
+      eq('Woche ab Samstag', ['2026-11-07', '2026-11-13', '2026-11-14'].map((k) => wk(k, 6)), ['2026-11-07', '2026-11-07', '2026-11-14']);
+      eq('letzter Tag der Woche', [1, 7, 6].map((i) => f.weekLastIso(i)), [7, 6, 5]);
+      eq('Umzug Mo -> So: Woche mit dem mittleren Tag', f.weekMoveTarget('2026-11-09', 7), '2026-11-08');
+      eq('Umzug So -> Mo', f.weekMoveTarget('2026-11-08', 1), '2026-11-09');
+      eq('Umzug Mo -> Sa', f.weekMoveTarget('2026-11-09', 6), '2026-11-07');
+      eq('Umzug Sa -> So', f.weekMoveTarget('2026-11-07', 7), '2026-11-08');
+
       // --- Texte --------------------------------------------------------------
       // Gleiche Schlüssel in derselben Reihenfolge (CLAUDE.md), und die dynamisch gebauten gibt es.
       eq('Texte: de und en gleiche Schlüssel', Object.keys(f.STRINGS.en), Object.keys(f.STRINGS.de));

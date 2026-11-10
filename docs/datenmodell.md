@@ -106,17 +106,30 @@ Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `reminder
 
 `period` = `'day'` (Standard, alle bisherigen Felder) | `'week'` | `'month'` | `'year'`. Ein
 Zeitraum-Feld hat **einen Wert pro Zeitraum**, an jedem Tag darin setzbar, gespeichert im
-Eintrag des **ersten Tags des Zeitraums** (Montag, Monatserster, 1.1.) unter dem
+Eintrag des **ersten Tags des Zeitraums** (erster Tag der Woche, Monatserster, 1.1.) unter dem
 Feldschlüssel – bewusst keine eigene Tabelle: Verschlüsselung, `saveDay`/`mergeDay`, Export
 und Löschen funktionieren so unverändert. Erster Tag: `periodStart` (JS) und
-`public.habit_period_start` (SQL) – **synchron halten**. Zeitraum-Felder haben keine
+`public.habit_period_start` (SQL, mit Wochenbeginn) – **synchron halten**. Zeitraum-Felder haben keine
 Wiederholung, sind nie "Berechnet" und in keiner Gruppe (DB-Check
 `habit_definitions_period_combination_check`). `period_reminder_day`: Tag der Erinnerung im
-Zeitraum, `null` = Standard (Woche: ISO-Wochentag 1–7, Std. 7 = Sonntag; Monat: 1–31 oder
+Zeitraum, `null` = Standard (Woche: ISO-Wochentag 1–7, Std. letzter Tag der Woche; Monat: 1–31 oder
 -1 = letzter, Std. letzter; Jahr: MMTT, Std. 1231; ein Tag, den es im Monat nicht gibt, gilt
 als Monatsletzter), DB-Check `habit_definitions_period_check`. Beides Klartext, weil
 `get_due_notifications` es braucht (Entscheidung 2026-10-11, wie `schedule`). Erinnerung
 siehe [erinnerungen.md](erinnerungen.md).
+
+**Wochenbeginn** (`user_settings.week_start`, ISO 1 Montag / 7 Sonntag / 6 Samstag, Std. 1;
+Nutzer-Entscheidung 2026-11-10, Schalter `weekstart`): Woche, Monatskalender, Reihenfolge der
+Wochentags-Knöpfe und Wochenfelder folgen ihm; gespeicherte Wochentage (`schedule.days`, 0 =
+Montag) bleiben Montag-basiert. Beim Registrieren aus der Region vorausgewählt
+(`regionWeekStart`, ohne Intl-Wochendaten Montag). **Umstellen zieht Wochen-Einträge um**
+(`runWeekStartChange`): jede alte Woche in die neue mit ihrem mittleren Tag; erst
+`week_start_pending` setzen, dann alle Ziele schreiben, dann die alten Stellen leeren, erst am
+Ende `week_start` – ein abgebrochener Umzug läuft beim nächsten Laden weiter
+(`resumeWeekStartChange`). SQL: `habit_period_start`/`habit_period_reminder_due` mit
+Wochenbeginn als 3./4. Parameter, `habit_week_last_isodow`; die Fassungen ohne bleiben für
+ältere App-Versionen. Die alte Live-Version kennt den Wochenbeginn nicht: wer ihn ändert, sieht
+dort Wochenfelder in der Montags-Einteilung leer.
 
 ## `habit_sections` – Gruppen
 
@@ -138,7 +151,7 @@ Erinnerungen des Geräts (siehe [erinnerungen.md](erinnerungen.md)).
 
 `default_reminder_minute` (0–1439, 15-Min.-Raster, Default 1320 = 22:00),
 `onboarding_completed` (Default `false`, steuert das Tutorial), `summary_notifications`
-(Default `true`, Wochen-/Monatsübersicht), `timezone` (IANA, Default `'Europe/Berlin'`,
+(Default `true`, Wochen-/Monatsübersicht), `week_start`/`week_start_pending` (siehe Zeitraum-Felder), `timezone` (IANA, Default `'Europe/Berlin'`,
 per Trigger gegen `pg_timezone_names` validiert, folgt still dem Gerät), `locale`
 (`de`/`en`, Default `de`). Die Zeile wird bei Registrierung automatisch angelegt (Trigger
 `on_auth_user_created_seed_settings`).

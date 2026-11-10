@@ -33,6 +33,7 @@ const HOOK = `
     // Vorlagen: übernehmen, zusammenführen
     templateTakeMode, templateSlotForm, templateById, yesValueOf, isYesNoField, mergedMultiOptions, packageFieldCount, packageDefaultChoice,
     templateWithExtras, isOpenToday, sectionDoneOn, isOptionalAllowed, fieldMoveStep,
+    startOfWeekWith, weekMoveTarget, weekLastIso,
   },
 }));
 `;

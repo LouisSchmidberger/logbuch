@@ -745,7 +745,7 @@ function scheduleSummary(schedule) {
   if (schedule?.type === 'interval') return t('schedule.summary.everyDays', { n: schedule.every });
   if (schedule?.type !== 'weekly') return '';
   const names = mondayFirstWeekdayShortNames();
-  return schedule.days.map((d) => names[d]).join(', ');
+  return weekdayOrder().filter((d) => schedule.days.includes(d)).map((d) => names[d]).join(', ');
 }
 
 // --- Datum-Helfer ----------------------------------------------------------
@@ -782,7 +782,19 @@ function openDayAttrs(d) {
   const key = formatKey(d);
   return isFutureKey(key) ? 'role="img"' : `data-action="open-day" data-date="${key}" tabindex="0" role="button"`;
 }
-function startOfWeek(date) { const d = startOfDay(date); const off = (d.getDay() + 6) % 7; d.setDate(d.getDate() - off); return d; }
+// Wochenbeginn (G2, Nutzer-Entscheidung 2026-11-10): ISO-Wochentag des ersten Tags, 1 Montag
+// (Standard), 7 Sonntag, 6 Samstag - aus user_settings.week_start, gesetzt in loadUserSettings.
+// Eigene Variable statt state, weil startOfWeek schon beim Anlegen von state gebraucht wird.
+// Gespeicherte Wochentage (schedule.days, 0 = Montag) bleiben Montag-basiert; nur Anzeige-
+// Reihenfolge und Zeiträume folgen dem Wochenbeginn.
+const WEEK_STARTS = [1, 7, 6];
+let weekStartIso = 1;
+function startOfWeekWith(date, iso) { const d = startOfDay(date); const off = (d.getDay() - (iso % 7) + 7) % 7; d.setDate(d.getDate() - off); return d; }
+function startOfWeek(date) { return startOfWeekWith(date, weekStartIso); }
+// Letzter Tag der Woche als ISO-Wochentag (Gegenstück zu public.habit_week_last_isodow).
+function weekLastIso(iso = weekStartIso) { return ((iso + 5) % 7) + 1; }
+// Wochentage (0 = Montag) in Anzeige-Reihenfolge ab dem Wochenbeginn.
+function weekdayOrder() { return Array.from({ length: 7 }, (_, i) => (weekStartIso - 1 + i) % 7); }
 // Zeitraum-Felder (period 'week'/'month'/'year', siehe docs/datenmodell.md): ein Wert pro
 // Zeitraum, gespeichert im Eintrag des ersten Tags des Zeitraums. Gegenstück zu
 // public.habit_period_start (SQL) - synchron halten.
@@ -2260,7 +2272,7 @@ const STRINGS = {
     'time.hour': 'Stunde',
     'time.minute': 'Minute',
     'menu.summaryNotifications': 'Wochen- und Monatsübersicht ankündigen',
-    'menu.summaryNotificationsExplain': 'Sonntags bzw. am letzten Tag des Monats kommt zur Standard-Erinnerungszeit eine Benachrichtigung, dass deine Wochen- bzw. Monatsübersicht bereit ist – aber nur, wenn du im jeweiligen Zeitraum mindestens einen Tag eingetragen hast. Ein Tipp darauf öffnet direkt die passende Übersicht.',
+    'menu.summaryNotificationsExplain': 'Am letzten Tag der Woche bzw. des Monats kommt zur Standard-Erinnerungszeit eine Benachrichtigung, dass deine Wochen- bzw. Monatsübersicht bereit ist – aber nur, wenn du im jeweiligen Zeitraum mindestens einen Tag eingetragen hast. Ein Tipp darauf öffnet direkt die passende Übersicht.',
     'tutorial.skip': 'Tutorial überspringen',
     'tutorial.navLabel': 'Tutorial-Navigation',
     'tutorial.skipConfirm.title': 'Tutorial überspringen?',
@@ -2430,6 +2442,12 @@ const STRINGS = {
     'push.blocked.still': 'Mitteilungen sind noch blockiert. Erlaube sie zuerst wie beschrieben und versuch es dann nochmal.',
     'tutorial.reminders.blocked': 'Kein Problem – du kannst auch ohne Erinnerungen weitermachen. Falls du es dir anders überlegst:',
     'menu.language': 'Sprache',
+    'settings.weekStart': 'Woche beginnt am',
+    'settings.weekStartNote': 'Gilt für die Wochenansicht, den Monatskalender, Felder „einmal pro Woche“ und die Wochenübersicht. Was du schon in Wochen-Felder eingetragen hast, zieht mit in die neue Einteilung.',
+    'settings.weekStartRunning': 'Wochen-Einträge werden umgestellt …',
+    'settings.weekStartProgress': 'Wochen-Einträge werden umgestellt … {done} von {total}',
+    'settings.weekStartDone': 'Wochenbeginn umgestellt',
+    'settings.weekStartFailed': 'Das Umstellen ist nicht ganz durchgelaufen, vermutlich war die Verbindung kurz weg. Es geht beim nächsten Öffnen von Logbuch von selbst weiter.',
     'theme.label': 'Darstellung',
     'theme.system': 'System',
     'theme.light': 'Hell',
@@ -3442,7 +3460,7 @@ const STRINGS = {
     'time.hour': 'Hour',
     'time.minute': 'Minute',
     'menu.summaryNotifications': 'Announce weekly and monthly summary',
-    'menu.summaryNotificationsExplain': 'On Sundays and on the last day of the month, you get a notification at your default reminder time that your weekly or monthly summary is ready – but only if you have entered at least one day in that period. Tapping it opens the matching summary directly.',
+    'menu.summaryNotificationsExplain': 'On the last day of the week and of the month, you get a notification at your default reminder time that your weekly or monthly summary is ready – but only if you have entered at least one day in that period. Tapping it opens the matching summary directly.',
     'tutorial.skip': 'Skip tutorial',
     'tutorial.navLabel': 'Tutorial navigation',
     'tutorial.skipConfirm.title': 'Skip tutorial?',
@@ -3612,6 +3630,12 @@ const STRINGS = {
     'push.blocked.still': 'Notifications are still blocked. Allow them first as described, then try again.',
     'tutorial.reminders.blocked': 'No problem – you can continue without reminders. In case you change your mind:',
     'menu.language': 'Language',
+    'settings.weekStart': 'Week starts on',
+    'settings.weekStartNote': 'Applies to the week view, the month calendar, “once a week” fields and the weekly summary. What you have already entered in weekly fields moves along into the new layout.',
+    'settings.weekStartRunning': 'Moving weekly entries …',
+    'settings.weekStartProgress': 'Moving weekly entries … {done} of {total}',
+    'settings.weekStartDone': 'Start of week changed',
+    'settings.weekStartFailed': 'The change did not fully go through, probably the connection dropped for a moment. It will continue by itself the next time you open Logbuch.',
     'theme.label': 'Appearance',
     'theme.system': 'System',
     'theme.light': 'Light',
@@ -4550,7 +4574,7 @@ function clearFeatureAccess() { featureStages = {}; accessGroup = null; }
 
 async function loadUserSettings() {
   const { data, error } = await supabase.from('user_settings')
-    .select('default_reminder_minute, onboarding_completed, locale, summary_notifications, timezone, last_seen_changelog').maybeSingle();
+    .select('default_reminder_minute, onboarding_completed, locale, summary_notifications, timezone, last_seen_changelog, week_start, week_start_pending').maybeSingle();
   if (error) {
     state.notice = errorNotice('notice.loadSettingsError', error.message);
     return;
@@ -4562,7 +4586,10 @@ async function loadUserSettings() {
     summaryNotifications: data ? data.summary_notifications : true,
     timezone: data ? data.timezone : 'Europe/Berlin',
     lastSeenChangelog: data ? data.last_seen_changelog : null,
+    weekStart: WEEK_STARTS.includes(data?.week_start) ? data.week_start : 1,
+    weekStartPending: WEEK_STARTS.includes(data?.week_start_pending) ? data.week_start_pending : null,
   };
+  applyWeekStart(state.userSettings.weekStart);
   // Nach einem Update einmal "Was ist neu" - nicht für neue Konten (die setzen beim Abschluss
   // des Tutorials den neuesten Eintrag als gesehen, saveOnboardingCompleted).
   state.whatsNew = !!data && data.onboarding_completed && unseenChangelog().length > 0;
@@ -4611,6 +4638,113 @@ async function saveDefaultReminderMinute(minutes) {
     state.notice = errorNotice('notice.saveFailed', error.message);
     render();
   }
+}
+
+function applyWeekStart(iso) {
+  const anchorWasCurrent = formatKey(startOfWeek(state.weekAnchor)) === formatKey(startOfWeek(new Date()));
+  weekStartIso = iso;
+  // Die Woche, auf der man stand, in der neuen Einteilung: die mit ihrem mittleren Tag.
+  state.weekAnchor = anchorWasCurrent ? startOfWeek(new Date()) : startOfWeek(addDays(state.weekAnchor, 3));
+}
+// Wochenbeginn der Region (beim Registrieren vorausgewählt): Intl kennt ihn nicht überall
+// (getWeekInfo fehlt z. B. in Firefox) - dann Montag. Nur die angebotenen Tage.
+function regionWeekStart() {
+  try {
+    const loc = new Intl.Locale(navigator.language).maximize();
+    const first = (loc.getWeekInfo?.() || loc.weekInfo)?.firstDay;
+    return WEEK_STARTS.includes(first) ? first : 1;
+  } catch { return 1; }
+}
+// Neues Konto, noch nichts eingetragen: Wochenbeginn der Region übernehmen (kein Umzug nötig).
+async function presetWeekStartForNewAccount() {
+  if (!featureOn('weekstart') || state.userSettings.onboardingCompleted || Object.keys(state.entries).length) return;
+  const iso = regionWeekStart();
+  if (iso === state.userSettings.weekStart) return;
+  const { error } = await supabase.from('user_settings').upsert({ user_id: state.session.user.id, week_start: iso }, { onConflict: 'user_id' });
+  if (error) return; // dann eben Montag, in den Einstellungen änderbar
+  state.userSettings = { ...state.userSettings, weekStart: iso };
+  applyWeekStart(iso);
+  render();
+}
+
+// Wochen-Einträge umziehen: Werte, Notizen und Sicherungen (_prev) von Wochenfeldern stehen
+// unter dem ersten Tag ihrer Woche. Jede Woche der alten Einteilung geht in die neue Woche,
+// die ihren mittleren Tag enthält (die mit den meisten gemeinsamen Tagen). Erst alle Ziele
+// schreiben, dann die alten Stellen leeren - bricht es ab, holt ein neuer Lauf das nach (die
+// alten Stellen gewinnen, week_start_pending bleibt bis zum Ende gesetzt).
+function weekMoveTarget(dateKey, newIso) { return formatKey(startOfWeekWith(addDays(parseDateKey(dateKey), 3), newIso)); }
+function weekStartMoves(oldIso, newIso) {
+  const fields = state.habits.filter((h) => h.period === 'week').map((h) => h.id);
+  const has = (day, id) => day[id] !== undefined || day[NOTES_KEY]?.[id] !== undefined || day[PREV_KEY]?.[id] !== undefined;
+  const moves = []; // { from, to, ids }
+  for (const [key, day] of Object.entries(state.entries)) {
+    if (parseDateKey(key).getDay() !== oldIso % 7) continue;
+    const ids = fields.filter((id) => has(day || {}, id));
+    if (ids.length) moves.push({ from: key, to: weekMoveTarget(key, newIso), ids });
+  }
+  return moves;
+}
+const weekStartChange = { running: false, done: 0, total: 0 };
+async function runWeekStartChange(newIso) {
+  if (weekStartChange.running) return;
+  const oldIso = state.userSettings.weekStart;
+  const uid = state.session.user.id;
+  weekStartChange.running = true;
+  render();
+  try {
+    if (newIso !== oldIso) {
+      const mark = await supabase.from('user_settings').upsert({ user_id: uid, week_start_pending: newIso }, { onConflict: 'user_id' });
+      if (mark.error) { state.notice = errorNotice('notice.saveFailed', mark.error.message); return; }
+      state.userSettings = { ...state.userSettings, weekStartPending: newIso };
+      const moves = weekStartMoves(oldIso, newIso);
+      const byTarget = new Map();
+      for (const m of moves) byTarget.set(m.to, [...(byTarget.get(m.to) || []), m]);
+      weekStartChange.total = moves.length * 2;
+      weekStartChange.done = 0;
+      const progress = (done) => {
+        const el = document.getElementById('week-start-progress');
+        if (el) el.textContent = tPlain('settings.weekStartProgress', { done: Math.min(done, weekStartChange.total), total: weekStartChange.total });
+      };
+      const put = await rewriteDays([...byTarget.keys()], (day, key) => {
+        const next = { ...day, [NOTES_KEY]: { ...(day[NOTES_KEY] || {}) }, [PREV_KEY]: { ...(day[PREV_KEY] || {}) } };
+        for (const m of byTarget.get(key)) {
+          const src = state.entries[m.from] || {};
+          for (const id of m.ids) {
+            if (src[id] !== undefined) next[id] = src[id];
+            if (src[NOTES_KEY]?.[id] !== undefined) next[NOTES_KEY][id] = src[NOTES_KEY][id];
+            if (src[PREV_KEY]?.[id] !== undefined) next[PREV_KEY][id] = src[PREV_KEY][id];
+          }
+        }
+        if (!Object.keys(next[NOTES_KEY]).length) delete next[NOTES_KEY];
+        if (!Object.keys(next[PREV_KEY]).length) delete next[PREV_KEY];
+        return next;
+      }, (done) => progress(done));
+      if (put.failed) { state.notice = { type: 'error', text: t('settings.weekStartFailed') }; return; }
+      const fromIds = new Map(moves.map((m) => [m.from, m.ids]));
+      const clear = await rewriteDays([...fromIds.keys()], (day, key) => {
+        const next = { ...day, [NOTES_KEY]: { ...(day[NOTES_KEY] || {}) }, [PREV_KEY]: { ...(day[PREV_KEY] || {}) } };
+        for (const id of fromIds.get(key)) { delete next[id]; delete next[NOTES_KEY][id]; delete next[PREV_KEY][id]; }
+        if (!Object.keys(next[NOTES_KEY]).length) delete next[NOTES_KEY];
+        if (!Object.keys(next[PREV_KEY]).length) delete next[PREV_KEY];
+        return next;
+      }, (done) => progress(byTarget.size + done));
+      if (clear.failed) { state.notice = { type: 'error', text: t('settings.weekStartFailed') }; return; }
+    }
+    // Die Marke erst am Ende: ab hier gilt der neue Wochenbeginn.
+    const fin = await supabase.from('user_settings').upsert({ user_id: uid, week_start: newIso, week_start_pending: null }, { onConflict: 'user_id' });
+    if (fin.error) { state.notice = errorNotice('notice.saveFailed', fin.error.message); return; }
+    state.userSettings = { ...state.userSettings, weekStart: newIso, weekStartPending: null };
+    applyWeekStart(newIso);
+    if (newIso !== oldIso) state.notice = { type: 'ok', text: t('settings.weekStartDone') };
+  } finally {
+    weekStartChange.running = false;
+    render();
+  }
+}
+// Beim Laden: ein abgebrochener Umzug läuft weiter.
+function resumeWeekStartChange() {
+  const pending = state.userSettings.weekStartPending;
+  if (pending !== null) runWeekStartChange(pending);
 }
 
 async function saveSummaryNotifications(enabled) {
@@ -5164,16 +5298,16 @@ function resizeLabels(labels, newLength, defaultForIndex) {
 // Aktuelle Stufenzahl eines Skala-Formulars, abgeleitet aus Darstellung + Bereich -
 // einzige Quelle dafür, sowohl für die Bezeichnungs-Liste als auch die Live-Vorschau.
 // Erinnerungstag eines Zeitraum-Felds (habit_definitions.period_reminder_day): Woche ISO-
-// Wochentag 1-7, Monat 1-31 oder -1 = letzter Tag, Jahr MMTT. Standard: Sonntag / letzter
-// Tag / 31.12. (gespeichert als null).
-const PERIOD_REMINDER_DEFAULT = { week: 7, month: -1, year: 1231 };
+// Wochentag 1-7, Monat 1-31 oder -1 = letzter Tag, Jahr MMTT. Standard: letzter Tag der Woche
+// (folgt dem Wochenbeginn) / letzter Tag / 31.12. (gespeichert als null).
+function periodReminderDefault(period) { return { week: weekLastIso(), month: -1, year: 1231 }[period]; }
 function periodReminderControl(f) {
-  const day = f.periodReminderDay ?? PERIOD_REMINDER_DEFAULT[f.period];
+  const day = f.periodReminderDay ?? periodReminderDefault(f.period);
   const dayOptions = (selected) => Array.from({ length: 31 }, (_, i) => i + 1)
     .map((d) => `<option value="${d}" ${d === selected ? 'selected' : ''}>${d}.</option>`).join('');
   let control;
   if (f.period === 'week') {
-    control = `<select id="habit-form-period-day">${Array.from({ length: 7 }, (_, i) => i + 1)
+    control = `<select id="habit-form-period-day">${weekdayOrder().map((i) => i + 1)
       .map((d) => `<option value="${d}" ${d === day ? 'selected' : ''}>${esc(weekdayLong(new Date(2024, 0, d)))}</option>`).join('')}</select>`;
   } else if (f.period === 'month') {
     control = `<select id="habit-form-period-day">${dayOptions(day)}<option value="-1" ${day === -1 ? 'selected' : ''}>${t('habitForm.schedule.lastDay')}</option></select>`;
@@ -5729,11 +5863,11 @@ function habitFormDefinition(f) {
   // deutet keine vorhandenen Werte um.
   // Zeitraum-Felder: keine Wiederholung, keine Gruppe, nie "Berechnet" (DB-Check
   // habit_definitions_period_combination_check). Der Erinnerungstag als null, wenn er dem
-  // Standard entspricht (Sonntag / letzter Tag / 31.12.) - eine Darstellung für "Standard".
+  // Standard entspricht (letzter Tag der Woche / des Monats / 31.12.) - eine Darstellung für "Standard".
   // Uhrzeiten nur als Tagesfeld - "ins Bett" einmal pro Woche ergibt keinen Sinn. Mehrfachauswahl
   // vorerst auch (ihre Auswertung zählt Tage).
   const period = f.kind === 'computed' || f.kind === 'time' || f.kind === 'multi' ? 'day' : f.period;
-  const periodReminderDay = period === 'day' || f.periodReminderDay === null || f.periodReminderDay === PERIOD_REMINDER_DEFAULT[period]
+  const periodReminderDay = period === 'day' || f.periodReminderDay === null || f.periodReminderDay === periodReminderDefault(period)
     ? null : f.periodReminderDay;
   if (f.kind === 'computed' || period !== 'day') {
     fields.schedule = null;
@@ -9757,7 +9891,7 @@ function renderMonth() {
   const year = state.monthAnchor.getFullYear();
   const month = state.monthAnchor.getMonth();
   const first = new Date(year, month, 1);
-  const startOffset = (first.getDay() + 6) % 7;
+  const startOffset = (first.getDay() - (weekStartIso % 7) + 7) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const cells = [];
@@ -9778,7 +9912,7 @@ function renderMonth() {
     </div>
     ${!hasAnyEntries() ? renderStatsEmpty() : `
     <div class="month-grid">
-      ${mondayFirstWeekdayShortNames().map((w) => `<div class="month-weekday">${w}</div>`).join('')}
+      ${weekdayOrder().map((i) => `<div class="month-weekday">${mondayFirstWeekdayShortNames()[i]}</div>`).join('')}
       ${cells.map((d) => {
         if (!d) return `<div class="month-cell month-cell--empty"></div>`;
         const s = dayOverallScore(d);
@@ -11497,7 +11631,8 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         </div>
       ` : `
         <div class="pill-group weekday-group" role="group" aria-label="${esc(t('habitForm.days.modeWeekdays'))}">
-          ${shortNames.map((name, i) => {
+          ${weekdayOrder().map((i) => {
+            const name = shortNames[i];
             const on = sch.days.includes(i);
             return `<button type="button" class="pill-toggle weekday-toggle${on ? ' pill-toggle--active' : ''}" data-action="habit-schedule-day" data-day="${i}" aria-pressed="${on}" aria-label="${esc(weekdayLong(new Date(2024, 0, 1 + i)))}">${esc(name)}</button>`;
           }).join('')}
@@ -12182,6 +12317,16 @@ function renderSettings() {
           <option value="en" ${currentLocale === 'en' ? 'selected' : ''}>English</option>
         </select>
       </div>
+      ${featureOn('weekstart') || state.userSettings.weekStart !== 1 ? `
+        <div class="settings-row" data-menu-target="week-start">
+          <label for="menu-week-start">${t('settings.weekStart')}</label>
+          <select id="menu-week-start" data-action="menu-week-start" aria-describedby="settings-week-start-note" ${weekStartChange.running ? 'disabled' : ''}>
+            ${WEEK_STARTS.map((iso) => `<option value="${iso}" ${state.userSettings.weekStart === iso ? 'selected' : ''}>${esc(weekdayLong(new Date(2024, 0, iso)))}</option>`).join('')}
+          </select>
+          <p class="settings-note" id="settings-week-start-note">${t('settings.weekStartNote')}</p>
+          ${weekStartChange.running ? `<p class="settings-note" id="week-start-progress" role="status">${t('settings.weekStartRunning')}</p>` : ''}
+        </div>
+      ` : ''}
       <div class="settings-row" data-menu-target="pattern">
         <label class="checkbox-field">
           <input type="checkbox" data-action="pattern-toggle" aria-describedby="settings-pattern-note" ${isPatternDisabled() ? '' : 'checked'} />
@@ -13890,6 +14035,12 @@ app.addEventListener('change', async (e) => {
     saveLocale(localeEl.value);
     return;
   }
+  const weekStartEl = e.target.closest('[data-action="menu-week-start"]');
+  if (weekStartEl) {
+    await runWeekStartChange(Number(weekStartEl.value));
+    document.getElementById('menu-week-start')?.focus({ preventScroll: true });
+    return;
+  }
   const slider = e.target.closest('[data-action="value-slider"], [data-action="preview-slider"]');
   if (slider) {
     // Loslassen/Commit — erst hier wird tatsächlich gespeichert, nicht bei jedem
@@ -14684,6 +14835,8 @@ async function completeAuthFlow(userId, password, { verifyPassword = false } = {
   saveFieldNamesForPush(); // erst nach loadUserSettings - die Textvorlage hängt an der Sprache
   repadOldEntries();
   resumeStepChanges();
+  resumeWeekStartChange();
+  presetWeekStartForNewAccount();
   checkPushStatus().then(render);
   render();
   maybeShowSpareKey();
@@ -14733,6 +14886,8 @@ supabase.auth.onAuthStateChange(async (event, session) => {
         saveFieldNamesForPush(); // siehe completeAuthFlow
         repadOldEntries();
         resumeStepChanges();
+        resumeWeekStartChange();
+        presetWeekStartForNewAccount();
         checkPushStatus().then(render);
       }
     } finally {
