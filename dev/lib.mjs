@@ -43,8 +43,6 @@ export async function launch({ device = 'handy', theme = 'light', headless = tru
   const executablePath = BROWSERS.find((p) => existsSync(p));
   if (!executablePath) throw new Error('Kein Chrome/Edge gefunden - Pfad über PREVIEW_BROWSER angeben.');
   const browser = await puppeteer.launch({ executablePath, headless, args: ['--no-first-run', '--no-default-browser-check',
-      // Deutsch wie auf dem Entwicklungsrechner - sonst wählt die App auf englischen Systemen (CI) Englisch.
-      '--lang=de-DE',
       // GitHub-Runner (Ubuntu 24.04) erlauben Chromes Sandbox nicht; nur dort, lokal bleibt sie an.
       ...(process.env.CI ? ['--no-sandbox'] : [])],
     userDataDir: profile ? fileURLToPath(new URL(`./.profile-${profile}/`, import.meta.url)) : undefined });
@@ -53,6 +51,17 @@ export async function launch({ device = 'handy', theme = 'light', headless = tru
   await page.setViewport({ width: d.width, height: d.height, deviceScaleFactor: d.deviceScaleFactor, isMobile: d.isMobile, hasTouch: d.hasTouch });
   if (d.ua) await page.setUserAgent(d.ua);
   await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: theme }]);
+  // Sprache und Zeitzone wie auf dem Entwicklungsrechner, unabhängig vom System (die CI läuft auf
+  // englischem Linux in UTC): die App wählt die Sprache nach navigator.language, Tests erwarten
+  // deutsche Texte und Berliner Tagesgrenzen.
+  const lang = process.env.PREVIEW_LANG || 'de-DE';
+  await page.evaluateOnNewDocument((l) => {
+    Object.defineProperty(navigator, 'language', { get: () => l });
+    Object.defineProperty(navigator, 'languages', { get: () => [l, l.split('-')[0]] });
+  }, lang);
+  const cdp = await page.createCDPSession();
+  await cdp.send('Emulation.setLocaleOverride', { locale: lang });
+  await page.emulateTimezone(process.env.PREVIEW_TZ || 'Europe/Berlin');
   const problems = [];
   page.on('pageerror', (err) => problems.push(`Seitenfehler: ${err.message}`));
   page.on('console', (msg) => { if (msg.type() === 'error') problems.push(`Konsole: ${msg.text()}`); });
