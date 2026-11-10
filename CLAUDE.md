@@ -32,6 +32,7 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
 | Texte/`STRINGS`/`t()`, Sprache, Datumsformate | [docs/i18n.md](docs/i18n.md) |
 | Konto löschen, Export, Feedback, Auth/Passwort, E-Mail-Versand, Secrets, Kennzahlen (`ops-stats`) | [docs/datenschutz-sicherheit.md](docs/datenschutz-sicherheit.md) |
 | Aufbau des Codes in Module, `runtime`, `init…()`, neue Module/Imports | [docs/module.md](docs/module.md) |
+| Umbau (Vite, TypeScript, Schichten, Supabase-Kapselung, React), Branch-Regeln dafür | [docs/umbau.md](docs/umbau.md) |
 | Lokale Vorschau, Screenshots, automatische Tests, CI, `dev/` (nachgebautes Supabase) | [dev/README.md](dev/README.md) |
 | Neue Funktion freigeben, Schalter (`featureOn`), Tester, Premium | [docs/freigabe.md](docs/freigabe.md) |
 
