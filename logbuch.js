@@ -10315,6 +10315,31 @@ function renderPrivacySection() {
 // Ältere Einträge ohne short zeigen im Fenster die ausführliche Fassung.
 const CHANGELOG = [
   {
+    id: '2026-11-10',
+    short: {
+      de: [
+        'Neu unter „Neues Feld“: das Startpaket, viele bewährte Felder auf einmal, die du an- und abwählst.',
+        'Ziele können jetzt ein Bereich sein (z. B. 7 bis 9 Stunden Schlaf) oder für die ganze Woche gelten (z. B. 150 Minuten Bewegung).',
+        'In den Einstellungen legst du fest, an welchem Tag deine Woche beginnt.',
+      ],
+      en: [
+        'New under “New field”: the starter set, many proven fields at once that you tick on and off.',
+        'Goals can now be a range (e.g. 7 to 9 hours of sleep) or apply to the whole week (e.g. 150 minutes of exercise).',
+        'In Settings you choose which day your week starts on.',
+      ],
+    },
+    de: [
+      'Wenn du ein neues Feld anlegst, findest du bei den Vorlagen jetzt das Startpaket: viele bewährte Felder auf einmal, z. B. zu Schlaf, Stimmung und Einflüssen wie Sport oder Wasser, die du an- und abwählst. Hast du noch keine Felder, findest du es direkt in „Heute“.',
+      'Ziele für Zahlen, Zähler und berechnete Felder können jetzt ein Bereich sein, z. B. 7 bis 9 Stunden Schlaf: Darin ist der Tag grün, je weiter darunter oder darüber, desto röter. Oder ein Ziel gilt für die ganze Woche, z. B. mindestens 150 Minuten Bewegung: In „Heute“ siehst du, wie weit du in dieser Woche bist, bewertet wird eine Woche erst, wenn sie vorbei ist.',
+      'In den Einstellungen legst du fest, ob deine Woche am Montag, Sonntag oder Samstag beginnt. Das gilt für die Wochenansicht, den Monatskalender, Felder „einmal pro Woche“ und die Wochenübersicht. Was du schon in Wochen-Felder eingetragen hast, zieht mit um.',
+    ],
+    en: [
+      'When you create a new field, you’ll now find the starter set among the templates: many proven fields at once, e.g. on sleep, mood and influences like exercise or water, that you tick on and off. If you have no fields yet, you’ll find it right in “Today”.',
+      'Goals for numbers, counters and calculated fields can now be a range, e.g. 7 to 9 hours of sleep: within it the day is green, the further below or above, the redder. Or a goal applies to the whole week, e.g. at least 150 minutes of exercise: “Today” shows how far along you are this week, and a week is only rated once it’s over.',
+      'In Settings you choose whether your week starts on Monday, Sunday or Saturday. This applies to the week view, the month calendar, “once a week” fields and the weekly summary. Anything you’ve already entered in weekly fields moves along.',
+    ],
+  },
+  {
     id: '2026-10-30',
     short: {
       de: [
