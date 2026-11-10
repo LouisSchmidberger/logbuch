@@ -247,6 +247,7 @@ function habitFromParts(row, payload) {
     createdAt: row.created_at,            // Zähler: ab wann ein leerer Tag als 0 zählt
     counterSince: payload.counterSince ?? null, // umgewandelter Zähler: 0 erst ab diesem Tag (siehe convertHabitToCounter)
     periodReminderDay: row.period_reminder_day ?? null, // Tag der Erinnerung im Zeitraum, null = Standard
+    optional: !!row.optional,             // leer = nichts eingetragen, fehlt nie (Klartext, siehe isOptionalAllowed)
     stepChange: payload.stepChange ?? null, // Stufen ändern: laufende bzw. letzte Umstellung (siehe runStepChange)
   };
 }
@@ -433,7 +434,7 @@ const SECTION_COLLAPSE_MODES = ['done', 'manual', 'start', 'never'];
 let todayAutoCollapse = null; // { dateKey, ids: Set }
 function invalidateTodayAutoCollapse() { todayAutoCollapse = null; }
 function sectionDoneOn(habits, dayEntry) {
-  const tracked = habits.filter((h) => h.kind !== 'computed');
+  const tracked = habits.filter((h) => h.kind !== 'computed' && !h.optional);
   return tracked.length > 0 && !tracked.some((h) => isOpenToday(h, dayEntry));
 }
 function todayAutoCollapsedIds(blocks, dateKey) {
@@ -2083,6 +2084,14 @@ const STRINGS = {
     'tpl.sleep.bed': 'Ins Bett',
     'tpl.sleep.up': 'Aufgestanden',
     'tpl.sleep.duration': 'Schlafdauer',
+    'tpl.sleep.quality': 'Schlafqualität',
+    'tpl.sleep.napDown': 'Mittagsschlaf: hingelegt',
+    'tpl.sleep.napUp': 'Mittagsschlaf: aufgestanden',
+    'tpl.sleep.napDuration': 'Mittagsschlaf',
+    'tpl.sleep.extra.quality': 'Schlafqualität (1 bis 5)',
+    'tpl.sleep.extra.nap': 'Mittagsschlaf: hingelegt, aufgestanden und die Dauer daraus',
+    'tpl.extras': 'Dazu',
+    'tpl.optionalNote': 'Darf leer bleiben: kein Eintrag heißt „gab es heute nicht“, das Feld fehlt nie.',
     'tpl.cycle.name': 'Zyklus',
     'tpl.cycle.note': 'Periode und der Zyklustag daraus',
     'tpl.cycle.explain': 'Die Stärke der Periode (keine bis stark, ohne Wertung) und der Zyklustag, den Logbuch daraus zählt: Tag 1 ist der erste Tag mit Periode.',
@@ -2226,6 +2235,9 @@ const STRINGS = {
     'habitForm.section': 'Gruppe',
     'habitForm.sectionNone': 'Keine Gruppe',
     'manage.hiddenInStats': 'in der Auswertung ausgeblendet',
+    'manage.optional': 'darf leer bleiben',
+    'habitForm.optional': 'Darf leer bleiben',
+    'habitForm.optionalNote': 'Für Dinge, die nicht jeden Tag vorkommen, z. B. Mittagsschlaf: Leer heißt dann „gab es heute nicht“. Das Feld gilt nie als fehlend – kein Punkt, keine Erinnerung zur Standardzeit, und „Alles eingetragen“ wartet nicht darauf.',
     'habitForm.showInStats': 'In der Auswertung anzeigen',
     'habitForm.showInStatsNote': 'Aus: erscheint nur in „Heute“, nicht in Woche, Monat, Jahr und Gesamt – z. B. wenn dir ein berechnetes Feld daraus reicht. Die Tagesfarbe rechnet es trotzdem mit ein.',
     'habitForm.more': 'Mehr Einstellungen',
@@ -2236,6 +2248,7 @@ const STRINGS = {
     'habitForm.partMore.interval': 'Alle paar Tage',
     'habitForm.partMore.goal': 'Ziel',
     'habitForm.partMore.showInStats': 'Ausblenden',
+    'habitForm.partMore.optional': 'Darf leer bleiben',
     'habitForm.textShort': 'In „Heute“ steht dafür ein Textfeld.',
     'habitForm.moreSubPeriod': 'Ziel, Erinnerung und mehr – kannst du auch später ändern',
     'habitForm.computedExplain': 'Ein berechnetes Feld fasst mehrere Felder zu einem live berechneten Wert zusammen – Skalen als Durchschnitt, Zahlenwerte z. B. als Summe, zwei Uhrzeiten als Dauer dazwischen – oder es zählt die Tage seit einem Eintrag. Selbst ausfüllen kann man es nicht.',
@@ -2498,7 +2511,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'Was ich nicht sehen kann',
     'about.privacy.cannotSee.body': 'Alles, was du einträgst, und worum es dabei geht: deine Werte, Notizen und Text-Antworten, die Namen deiner Felder und Gruppen und die Bezeichnungen ihrer Stufen. Das alles wird auf deinem Gerät verschlüsselt, bevor es überhaupt verschickt wird. Der Schlüssel dafür hängt an deinem Passwort und deinem Ersatzschlüssel, und beide kennst nur du. Selbst mit vollem Zugriff auf die Datenbank sehe ich davon nur unlesbaren Zeichensalat.',
     'about.privacy.canSee.title': 'Was ich sehen kann',
-    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>wie viele Felder und Gruppen du hast, von welcher Art die Felder sind (z. B. Skala oder Zahl), wie oft sie dran sind (z. B. täglich, an bestimmten Wochentagen oder einmal pro Woche) und welches Feld in welcher Gruppe steht – aber nicht, worum es geht oder wie Felder und Gruppen heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert – bei Zählern mit Erinnerungen und „falls weniger als“ nur, wie viele der Erinnerungen an dem Tag schon erledigt sind (z. B. „1 von 2“), nicht die Zahl selbst</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokollieren die Anbieter, bei denen Logbuch läuft, für kurze Zeit technische Zugriffsdaten wie IP-Adressen. Und ein Mail-Dienst bekommt deine E-Mail-Adresse, um dir die Mails zum Bestätigen deines Kontos und zum Zurücksetzen des Passworts zu schicken.',
+    'about.privacy.canSee.body': 'Was technisch nötig ist, damit die App funktioniert:<ul><li>deine E-Mail-Adresse und wann du dich registriert und zuletzt angemeldet hast</li><li>wie viele Felder und Gruppen du hast, von welcher Art die Felder sind (z. B. Skala oder Zahl), wie oft sie dran sind (z. B. täglich, an bestimmten Wochentagen oder einmal pro Woche), ob ein Feld leer bleiben darf und welches Feld in welcher Gruppe steht – aber nicht, worum es geht oder wie Felder und Gruppen heißen</li><li>an welchen Tagen du welches dieser Felder ausgefüllt hast (für die Erinnerungen), ohne den Wert – bei Zählern mit Erinnerungen und „falls weniger als“ nur, wie viele der Erinnerungen an dem Tag schon erledigt sind (z. B. „1 von 2“), nicht die Zahl selbst</li><li>deine Einstellungen wie Erinnerungszeit, Sprache und Zeitzone</li></ul>Dazu protokollieren die Anbieter, bei denen Logbuch läuft, für kurze Zeit technische Zugriffsdaten wie IP-Adressen. Und ein Mail-Dienst bekommt deine E-Mail-Adresse, um dir die Mails zum Bestätigen deines Kontos und zum Zurücksetzen des Passworts zu schicken.',
     'about.privacy.recoveryKey.title': 'Die Kehrseite: dein Ersatzschlüssel',
     'about.privacy.recoveryKey.body': 'Weil ich keinen Zugriff habe, kann ich dir auch nicht helfen, wenn du Passwort <strong>und</strong> Ersatzschlüssel verlierst – dann sind deine Einträge unwiederbringlich weg. Bewahre ihn deshalb gut auf. Hast du ihn verlegt, kannst du dir in den Einstellungen jederzeit einen neuen erzeugen – der alte wird dabei ungültig, und du brauchst ihn dafür nicht.',
     'about.privacy.yourData.title': 'Deine Daten gehören dir',
@@ -3253,6 +3266,14 @@ const STRINGS = {
     'tpl.sleep.bed': 'Went to bed',
     'tpl.sleep.up': 'Got up',
     'tpl.sleep.duration': 'Sleep duration',
+    'tpl.sleep.quality': 'Sleep quality',
+    'tpl.sleep.napDown': 'Nap: lay down',
+    'tpl.sleep.napUp': 'Nap: got up',
+    'tpl.sleep.napDuration': 'Nap',
+    'tpl.sleep.extra.quality': 'Sleep quality (1 to 5)',
+    'tpl.sleep.extra.nap': 'Nap: lay down, got up and the duration from that',
+    'tpl.extras': 'Add',
+    'tpl.optionalNote': 'May stay empty: no entry means “didn’t happen today”, the field is never missing.',
     'tpl.cycle.name': 'Cycle',
     'tpl.cycle.note': 'Period and the cycle day from it',
     'tpl.cycle.explain': 'How strong your period is (none to strong, without rating) and the cycle day Logbuch counts from it: day 1 is the first day with period.',
@@ -3396,6 +3417,9 @@ const STRINGS = {
     'habitForm.section': 'Group',
     'habitForm.sectionNone': 'No group',
     'manage.hiddenInStats': 'hidden in statistics',
+    'manage.optional': 'may stay empty',
+    'habitForm.optional': 'May stay empty',
+    'habitForm.optionalNote': 'For things that don’t happen every day, e.g. a nap: empty then means “didn’t happen today”. The field never counts as missing – no dot, no reminder at the default time, and “All filled in” doesn’t wait for it.',
     'habitForm.showInStats': 'Show in statistics',
     'habitForm.showInStatsNote': 'Off: only appears in “Today”, not in the week, month, year, and overall views – e.g. if a calculated field made from it is enough for you. It still counts towards the day’s color.',
     'habitForm.more': 'More settings',
@@ -3406,6 +3430,7 @@ const STRINGS = {
     'habitForm.partMore.interval': 'every few days',
     'habitForm.partMore.goal': 'goal',
     'habitForm.partMore.showInStats': 'hide',
+    'habitForm.partMore.optional': 'may stay empty',
     'habitForm.textShort': 'In “Today” there is a text box for it.',
     'habitForm.moreSubPeriod': 'Goal, reminder and more – you can change these later',
     'habitForm.computedExplain': 'A calculated field combines multiple fields into one live-calculated value – scales as an average, number fields e.g. as a sum, two times as the duration between them – or it counts the days since an entry. You cannot fill it in yourself.',
@@ -3668,7 +3693,7 @@ const STRINGS = {
     'about.privacy.cannotSee.title': 'What I cannot see',
     'about.privacy.cannotSee.body': 'Everything you enter, and what it is about: your values, notes, and text answers, the names of your fields and groups and the labels of their steps. All of this is encrypted on your device before it is even sent. The key for it is tied to your password and your spare key, and only you know them. Even with full access to the database, all I see is unreadable gibberish.',
     'about.privacy.canSee.title': 'What I can see',
-    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>how many fields and groups you have, what kind the fields are (e.g. scale or number), how often they are due (e.g. daily, on certain weekdays, or once a week), and which field is in which group – but not what they are about or what your fields and groups are called</li><li>on which days you filled in which of these fields (for reminders), without the value – for counters with reminders and “if less than” only how many of that day’s reminders are already taken care of (e.g. “1 of 2”), not the number itself</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the providers Logbuch runs on briefly log technical access data such as IP addresses. And an email service gets your email address to send you the emails for confirming your account and resetting your password.',
+    'about.privacy.canSee.body': 'What is technically necessary for the app to work:<ul><li>your email address and when you signed up and last signed in</li><li>how many fields and groups you have, what kind the fields are (e.g. scale or number), how often they are due (e.g. daily, on certain weekdays, or once a week), whether a field may stay empty, and which field is in which group – but not what they are about or what your fields and groups are called</li><li>on which days you filled in which of these fields (for reminders), without the value – for counters with reminders and “if less than” only how many of that day’s reminders are already taken care of (e.g. “1 of 2”), not the number itself</li><li>your settings such as reminder time, language, and time zone</li></ul>On top of that, the providers Logbuch runs on briefly log technical access data such as IP addresses. And an email service gets your email address to send you the emails for confirming your account and resetting your password.',
     'about.privacy.recoveryKey.title': 'The flip side: your spare key',
     'about.privacy.recoveryKey.body': 'Because I have no access, I also cannot help you if you lose your password <strong>and</strong> your spare key – your entries are then gone for good. So keep it somewhere safe. If you have misplaced it, you can create a new one in the settings anytime – the old one becomes invalid, and you do not need it to do this.',
     'about.privacy.yourData.title': 'Your data belongs to you',
@@ -5348,6 +5373,7 @@ function defaultHabitForm() {
     reminderBelow: [''], // nur Zähler: je Zeit "falls weniger als" (Text aus dem Eingabefeld, '' = immer)
     schedule: scheduleToForm(null),
     period: 'day', periodReminderDay: null, // siehe periodReminderControl
+    optional: false, // siehe isOptionalAllowed
     step: 1, // nur Zähler
     numberGoalDir: null, numberGoalValue: '', // Zahl/Zähler: Ziel 'high' = mindestens, 'low' = höchstens
     summary: 'avg', // Zahlen: in Woche/Monat/Jahr als Durchschnitt oder Summe
@@ -5428,6 +5454,7 @@ function habitToForm(h) {
     schedule: scheduleToForm(h.schedule),
     period: h.period || 'day',
     periodReminderDay: h.periodReminderDay ?? null,
+    optional: !!h.optional,
     step: h.step ?? 1,
     numberGoalDir: isNumberKind(h) || isCounterKind(h) ? h.good || null : null,
     numberGoalValue: Number.isFinite(h.target) ? String(h.target) : '',
@@ -5523,6 +5550,8 @@ function syncHabitFormFromDom() {
   if (startEl) f.schedule.start = startEl.value;
   const showInStatsEl = document.getElementById('habit-form-show-in-stats');
   if (showInStatsEl) f.showInStats = showInStatsEl.checked;
+  const optionalEl = document.getElementById('habit-form-optional');
+  if (optionalEl) f.optional = optionalEl.checked;
   const sectionEl = document.getElementById('habit-form-section');
   if (sectionEl) f.sectionId = sectionEl.value || null;
 }
@@ -5716,8 +5745,16 @@ function habitFormDefinition(f) {
     fields.schedule = result.schedule;
   }
 
-  return { name, fields, period, periodReminderDay, reminderTimes, reminderBelow };
+  const optional = isOptionalAllowed({ kind: f.kind, period }) && !!f.optional;
+  return { name, fields, period, periodReminderDay, reminderTimes, reminderBelow, optional };
 }
+// "Darf leer bleiben" (K6, Nutzer-Entscheidung 2026-11-10, z. B. Mittagsschlaf: kein Eintrag =
+// keiner gehalten): ein leeres Feld fehlt nicht - kein Punkt "noch offen", zählt nicht gegen
+// "Alles eingetragen" und das Zuklappen der Gruppe, keine Standard- und Gruppen-Erinnerung (eigene
+// Zeiten erinnern weiter, die setzt man bewusst). Nur Tagesfelder, die überhaupt fehlen können
+// (nicht berechnet, kein Zähler - der zählt leer als 0). Klartext-Spalte, weil
+// get_due_notifications sie braucht.
+function isOptionalAllowed(f) { return f.period === 'day' && f.kind !== 'computed' && f.kind !== 'counter'; }
 
 async function handleHabitSaveInner() {
   const f = state.habitForm;
@@ -5775,7 +5812,7 @@ function habitPayloadFromDefinition(f, def, key) {
 // Speichert ein Formular (neu oder geändert) -> { habit } oder { notice }. Gemeinsam für das
 // Formular und die Vorlagen (createFromTemplate).
 async function persistHabitForm(f, def) {
-  const { fields, period, periodReminderDay, reminderTimes } = def;
+  const { fields, period, periodReminderDay, reminderTimes, optional } = def;
   const key = f.defId ? state.habits.find((h) => h.defId === f.defId).id : newHabitKey();
   const payload = habitPayloadFromDefinition(f, def, key);
   const sectionId = period === 'day' && state.sections.some((sec) => sec.id === f.sectionId) ? f.sectionId : null;
@@ -5787,6 +5824,9 @@ async function persistHabitForm(f, def) {
     section_id: sectionId,
     period,
     period_reminder_day: periodReminderDay,
+    // Spalte nur mitschicken, wenn gesetzt oder schon gesetzt war - so läuft Speichern auch,
+    // solange die Spalte (Migration) noch nicht überall angekommen ist.
+    ...(optional || (f.defId && state.habits.find((h) => h.defId === f.defId)?.optional) ? { optional } : {}),
     enc: await encryptData(currentDek, payload),
     ...DEF_PLAINTEXT_CLEARED,
   };
@@ -8929,13 +8969,14 @@ function renderNote(dateKey, key, label) {
 // sie sind. Unter dem Datum "✓ Alles eingetragen", sobald alles da ist; "3 von 7" nur als
 // Option (dayStatusHtml, Nutzer-Entscheidung 2026-10-14: standardmäßig aus, weil eine nicht
 // volle Zahl Druck machen kann).
-function isOpenToday(h, dayEntry) { return h.kind !== 'computed' && !isCounterKind(h) && dayEntry[h.id] === undefined; }
+function isOpenToday(h, dayEntry) { return h.kind !== 'computed' && !isCounterKind(h) && !h.optional && dayEntry[h.id] === undefined; }
 function todayTrackedFields() {
-  return activeHabits().filter((h) => h.kind !== 'computed' && !isCounterKind(h) && !isPeriodField(h) && isPlannedOn(h, state.currentDate));
+  return activeHabits().filter((h) => h.kind !== 'computed' && !isCounterKind(h) && !h.optional && !isPeriodField(h) && isPlannedOn(h, state.currentDate));
 }
 // Punkt + Screenreader-Text; bleibt (versteckt) im DOM, damit syncTodayOpenMarkers ihn
 // beim Tippen in Text-Feldern ohne Re-Render umschalten kann.
 function openMarkerHtml(h, dayEntry) {
+  if (h.optional) return '';
   return `<span class="open-marker" data-open-for="${h.id}"${isOpenToday(h, dayEntry) ? '' : ' hidden'}><span class="open-dot" aria-hidden="true"></span><span class="visually-hidden">${t('today.openField')}</span></span>`;
 }
 // Text-Felder speichern beim Tippen ohne render() (updateTextValue) - Punkt und
@@ -8948,8 +8989,9 @@ function syncTodayOpenMarkers() {
     m.hidden = (state.entries[entryKeyFor(id, dateKey)] || {})[id] !== undefined;
   });
   document.querySelectorAll('.section-done[data-done-fields]').forEach((m) => {
-    const ids = m.dataset.doneFields.split(' ').filter(Boolean);
-    m.hidden = !ids.length || ids.some((id) => dayEntry[id] === undefined);
+    // Dieselbe Regel wie beim Zeichnen (Zähler und "darf leer bleiben" fehlen nie).
+    const ids = new Set(m.dataset.doneFields.split(' ').filter(Boolean));
+    m.hidden = !sectionDoneOn(state.habits.filter((h) => ids.has(h.id)), dayEntry);
   });
   const status = document.querySelector('.day-status');
   if (status) status.innerHTML = dayStatusHtml(dayEntry);
@@ -10531,10 +10573,14 @@ const FIELD_TEMPLATES = [
   { id: 'water', topic: 'ready', slots: [{ slot: 'main', form: () => ({ kind: 'counter', numberGoalDir: 'high', numberGoalValue: '8' }) }] },
   { id: 'meds', topic: 'ready', slots: [{ slot: 'main', form: () => ({ kind: 'scale', max: 2, good: 'high', labelsEnabled: true, labels: YES_NO(), reminderEnabled: true }) }] },
   { id: 'weight', topic: 'ready', slots: [{ slot: 'main', form: () => ({ kind: 'number', unit: 'kg' }) }] },
-  { id: 'sleep', topic: 'ready', group: true, slots: [
+  { id: 'sleep', topic: 'ready', group: true, extras: ['quality', 'nap'], slots: [
     { slot: 'bed', placeLast: true, form: () => ({ kind: 'time' }) },
     { slot: 'up', form: () => ({ kind: 'time' }) },
     { slot: 'duration', form: () => ({ kind: 'computed', computedType: 'duration', durationFrom: '@bed', durationTo: '@up' }) },
+    { slot: 'quality', extra: 'quality', form: () => ({ kind: 'scale', max: 5, good: 'high' }) },
+    { slot: 'napDown', extra: 'nap', form: () => ({ kind: 'time', optional: true }) },
+    { slot: 'napUp', extra: 'nap', form: () => ({ kind: 'time', optional: true }) },
+    { slot: 'napDuration', extra: 'nap', form: () => ({ kind: 'computed', computedType: 'duration', durationFrom: '@napDown', durationTo: '@napUp' }) },
   ] },
   { id: 'cycle', topic: 'ready', slots: [
     { slot: 'period', form: () => ({ kind: 'scale', max: 4, good: null, labelsEnabled: true, labels: STRENGTH_LABELS() }) },
@@ -10578,7 +10624,7 @@ const PACKAGE_GROUPS = [
     { id: 'grateful', on: false, slots: [{ slot: 'main', form: () => ({ kind: 'text' }) }] },
   ] },
 ];
-function packageItemTemplate(item) { return item.tpl ? templateById(item.tpl) : { id: item.id, slots: item.slots }; }
+function packageItemTemplate(item) { return item.tpl ? templateWithExtras(templateById(item.tpl)) : { id: item.id, slots: item.slots }; }
 function packageDefaultChoice() {
   return Object.fromEntries(PACKAGE_GROUPS.flatMap((g) => g.items.map((it) => [it.id, it.on])));
 }
@@ -10666,6 +10712,13 @@ function renderStarterPackage(f) {
   `;
 }
 function templateById(id) { return FIELD_TEMPLATES.find((x) => x.id === id); }
+// Zusätze einer Vorlage (extras, K6 Nutzer-Entscheidung 2026-11-10: Schlaf + Schlafqualität /
+// Mittagsschlaf) kommen nur mit, wenn man sie beim Bestätigen ankreuzt; ohne Auswahl (Startpaket)
+// nie. Die Vorlage mit nur den gewählten Teilen:
+function templateWithExtras(tpl, extras = {}) {
+  return tpl.extras ? { ...tpl, slots: tpl.slots.filter((s) => !s.extra || extras[s.extra]) } : tpl;
+}
+function templateExtrasShown(tpl) { return !!tpl.extras && featureOn('optional'); }
 function templateDisplaySlots(tpl) { return [...tpl.slots.filter((s) => !s.placeLast), ...tpl.slots.filter((s) => s.placeLast)]; }
 function templateSlotName(tpl, slot) { return tPlain(tpl.slots.length > 1 ? `tpl.${tpl.id}.${slot}` : `tpl.${tpl.id}.name`); }
 // Formular-Zustand eines Teils; refs = { slot: Schlüssel } der schon angelegten Teile.
@@ -10689,6 +10742,7 @@ function startTemplateConfirm(f, id) {
     answers: { ...(tpl.ask?.includes('good') ? { good: first.good } : {}), ...(tpl.ask?.includes('unit') ? { unit: '' } : {}) },
     groupName: tPlain(`tpl.${id}.name`),
     group: sameName ? sameName.id : tpl.group ? 'new' : (f.sectionId || 'none'),
+    extras: {},
   };
 }
 function readTemplateFromDom(f) {
@@ -10704,6 +10758,7 @@ function readTemplateFromDom(f) {
   if (groupNameEl) tp.groupName = groupNameEl.value;
   const unitEl = document.getElementById('tpl-unit');
   if (unitEl) tp.answers.unit = unitEl.value;
+  for (const el of document.querySelectorAll('[id^="tpl-extra-"]')) tp.extras = { ...tp.extras, [el.id.slice('tpl-extra-'.length)]: el.checked };
   const mergeEls = [...document.querySelectorAll('[id^="tpl-merge-"][data-def]')];
   if (mergeEls.length) tp.merge = mergeEls.filter((el) => el.checked).map((el) => el.dataset.def);
   tp.sources ??= {};
@@ -10873,7 +10928,7 @@ async function archiveIntoStats(defId) {
 async function createFromTemplate(f) {
   readTemplateFromDom(f);
   const tp = f.template;
-  const tpl = templateById(tp.id);
+  const tpl = templateWithExtras(templateById(tp.id), tp.extras);
   const names = tpl.slots.map((s) => (tp.names[s.slot] || '').trim());
   if (names.some((n) => !n)) return { notice: { type: 'error', text: t('habitForm.error.nameRequired') } };
   let sectionId = null;
@@ -11031,7 +11086,8 @@ function templateUsesExisting(tp) {
 }
 function renderTemplateConfirm(f) {
   const tp = f.template;
-  const tpl = templateById(tp.id);
+  const full = templateById(tp.id);
+  const tpl = templateWithExtras(full, tp.extras);
   const multi = tpl.slots.length > 1;
   const groupOptions = [
     ...(tpl.group ? [['new', tPlain('tpl.groupNew')]] : []),
@@ -11042,11 +11098,23 @@ function renderTemplateConfirm(f) {
     <div class="habit-form" id="habit-form">
       <h3 class="form-part-title">${t(`tpl.${tpl.id}.name`)}</h3>
       <p class="habit-form-lock-note">${t(`tpl.${tpl.id}.explain`)}</p>
+      ${templateExtrasShown(full) ? `
+        <fieldset class="auth-field tpl-extras">
+          <legend class="settings-label">${t('tpl.extras')}</legend>
+          ${full.extras.map((x) => `
+            <label class="checkbox-field">
+              <input type="checkbox" id="tpl-extra-${x}" ${tp.extras?.[x] ? 'checked' : ''} />
+              <span>${t(`tpl.${full.id}.extra.${x}`)}</span>
+            </label>
+          `).join('')}
+        </fieldset>
+      ` : ''}
       ${templateDisplaySlots(tpl).map((s) => `
         <div class="auth-field">
           <label for="tpl-name-${s.slot}">${multi ? t('tpl.nameOf', { what: templateSlotName(tpl, s.slot) }) : t('habitForm.name')}</label>
           <input type="text" id="tpl-name-${s.slot}" value="${esc(tp.names[s.slot])}" maxlength="40"${tpl.blank ? ` placeholder="${esc(tPlain(`tpl.${tpl.id}.placeholder`))}"` : ''} />
           ${s.placeLast ? `<p class="habit-form-lock-note">${t('tpl.placeLastNote')}</p>` : ''}
+          ${s.form().optional ? `<p class="habit-form-lock-note">${t('tpl.optionalNote')}</p>` : ''}
           ${templateSourceHtml(tpl, s, tp)}
         </div>
       `).join('')}
@@ -11412,6 +11480,8 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const sch = f.schedule;
   const shortNames = mondayFirstWeekdayShortNames();
   const isInterval = sch.mode === 'interval';
+  // Schalter 'optional' sperrt nur den Einstieg; wer es schon gesetzt hat, sieht den Haken weiter.
+  const optionalShown = isOptionalAllowed(f) && (featureOn('optional') || f.optional);
   const scheduleBody = `
     <div class="auth-field">
       <label id="habit-form-days-label">${t('habitForm.days')}${infoTip(tPlain(isInterval ? 'habitForm.days.intervalHint' : sch.days.length === 7 ? 'habitForm.days.hint' : 'habitForm.days.explain'))}</label>
@@ -11434,7 +11504,13 @@ function renderHabitForm({ titleInHeader = false } = {}) {
         </div>
       `}
     </div>
-    ${partMore('when', ['interval'], isInterval, `
+    ${partMore('when', ['interval', ...(optionalShown ? ['optional'] : [])], isInterval || (optionalShown && f.optional), `
+      ${optionalShown ? `
+        <label class="checkbox-field">
+          <input type="checkbox" id="habit-form-optional" ${f.optional ? 'checked' : ''} />
+          ${t('habitForm.optional')}${infoTip(tPlain('habitForm.optionalNote'))}
+        </label>
+      ` : ''}
       <div class="auth-field">
         <div class="pill-group seg" role="group" aria-label="${esc(tPlain('habitForm.days'))}">
           ${[['weekdays', 'habitForm.days.modeWeekdays'], ['interval', 'habitForm.days.modeInterval']].map(([m, key]) => `<button type="button" class="pill-toggle${sch.mode === m ? ' pill-toggle--active' : ''}" data-action="habit-schedule-mode" data-mode="${m}" aria-pressed="${sch.mode === m}">${t(key)}</button>`).join('')}
@@ -11640,6 +11716,7 @@ function manageFieldMeta(h) {
     isPeriodField(h) ? t('manage.period.' + h.period) : scheduleSummary(h.schedule),
     h.reminderTimes.length ? t('manage.reminderAt', { time: h.reminderTimes.map(minutesToTimeStr).join(', ') }) : '',
     h.hideInStats && !h.archivedAt ? t('manage.hiddenInStats') : '',
+    h.optional ? t('manage.optional') : '',
   ].filter(Boolean);
   return parts.length ? `<span class="manage-meta">${parts.join(' · ')}</span>` : '';
 }
@@ -13612,11 +13689,11 @@ app.addEventListener('change', async (e) => {
     document.getElementById(id)?.focus();
     return;
   }
-  if ((e.target.id === 'tpl-group' || e.target.id?.startsWith('tpl-source-') || e.target.id?.startsWith('tpl-merge-')) && state.habitForm?.template) {
+  if ((e.target.id === 'tpl-group' || e.target.id?.startsWith('tpl-source-') || e.target.id?.startsWith('tpl-merge-') || e.target.id?.startsWith('tpl-extra-')) && state.habitForm?.template) {
     const id = e.target.id;
     readTemplateFromDom(state.habitForm);
     render();
-    if (id.startsWith('tpl-merge-')) document.getElementById(id)?.focus();
+    if (id.startsWith('tpl-merge-') || id.startsWith('tpl-extra-')) document.getElementById(id)?.focus();
     return;
   }
   if (e.target.id === 'habit-form-since-source' && state.habitForm) {

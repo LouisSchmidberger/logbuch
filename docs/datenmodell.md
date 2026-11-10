@@ -15,7 +15,7 @@ anlegen, umbenennen, archivieren, reaktivieren.
 **Größtenteils verschlüsselt**: die Eigenschaften stehen nicht in Klartext-Spalten, sondern
 verschlüsselt in `enc` (Details siehe [verschluesselung.md](verschluesselung.md) →
 Feld-Definitionen). Im Klartext bleiben nur `kind`, `reminder_minute`, `reminder_minutes`, `schedule`, `period`,
-`period_reminder_day`, `archived_at`, `sort_order`, `section_id`. Im Client heißen die Eigenschaften wie unten.
+`period_reminder_day`, `optional` ("Darf leer bleiben", siehe felder.md), `archived_at`, `sort_order`, `section_id`. Im Client heißen die Eigenschaften wie unten.
 
 - `slug` (Key in `habit_entries.data`; verschlüsselt als `key`, bei neuen Feldern ein
   zufälliger Schlüssel aus `newHabitKey` statt aus dem Namen abgeleitet), `name`, `kind`

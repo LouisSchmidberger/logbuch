@@ -41,6 +41,8 @@ Offline-Caching). Alle Zeiten/Daten gelten in der **Ortszeit des Nutzers**
   angezeigt; im Feld-Formular sagt der Hinweis unter "Eigene Erinnerungszeit", dass die
   Gruppe die Zeit regelt (`habitFormReminderNote`, wechselt beim Ändern der Gruppe mit).
   `get_due_notifications` liefert dafür `section_missing` (`[{id, fields}]`).
+- **"Darf leer bleiben"** (`habit_definitions.optional`, siehe felder.md): fehlt nie – aus Standard-
+  und Gruppen-Erinnerung heraus; eigene Zeiten des Felds erinnern weiter (setzt man bewusst).
 - **Zähler** (`kind = 'counter'`) gelten nie als fehlend – ohne Antippen steht 0, und 0 ist ein
   gültiges Ergebnis; aus Standard- und Gruppen-Erinnerung bleiben sie heraus. Mit eigenen Zeiten
   (nur Tagesfelder) erinnern sie über `counter_due` mit eigenem Text (`Erinnerung: <Namen>`,

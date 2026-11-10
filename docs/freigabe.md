@@ -48,7 +48,7 @@ Build-Schritt.
 - Ein Schalter im Browser ist kein Schutz: wer technisch versiert ist, kann eine versteckte
   Funktion freischalten. Für Tests egal; für Premium siehe unten.
 
-**Aktuelle Schalter**: `starterpack` (Startpaket jederzeit über "Neues Feld" und im leeren "Heute").
+**Aktuelle Schalter**: `starterpack` (Startpaket jederzeit über "Neues Feld" und im leeren "Heute"), `optional` ("Darf leer bleiben" und Zusätze der Vorlage "Schlaf").
 
 ## Schalter setzen (Dashboard → SQL)
 

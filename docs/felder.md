@@ -399,6 +399,17 @@ einen Speicherweg gibt. `'@slot'` verweist auf den Schlüssel eines vorher angel
 Namen in der Sprache beim Anlegen, danach normale Felder. Bestätigen zeigt die echten Zeilen
 aus "Heute" (inert). Scheitert ein Teil, bleibt das schon Angelegte stehen.
 
+**Zusätze** (`extras`, Nutzer-Entscheidung 2026-11-10, Schalter `optional`): Teile einer Vorlage,
+die nur mitkommen, wenn man sie beim Bestätigen ankreuzt (`templateWithExtras`) – bei "Schlaf"
+Schlafqualität und Mittagsschlaf (hingelegt/aufgestanden "darf leer bleiben", Dauer daraus). Das
+Startpaket nimmt nie Zusätze mit.
+
+**Darf leer bleiben** (`optional`, Klartext-Spalte, Schalter `optional`, Haken unter "Wann?" →
+"Mehr"): für Dinge, die nicht jeden Tag vorkommen (Mittagsschlaf) – leer heißt "gab es nicht".
+Ein solches Feld fehlt nie: kein Punkt "noch offen", zählt nicht für "Alles eingetragen" und
+"✓ erledigt"/Zuklappen der Gruppe (`isOpenToday`, `sectionDoneOn`), keine Standard- und
+Gruppen-Erinnerung. Nur Tagesfelder, nicht berechnet, kein Zähler (`isOptionalAllowed`).
+
 **Startpaket auch nach dem Tutorial** (Nutzer-Entscheidung 2026-11-10, Schalter `starterpack`):
 als Karte bei "Neues Feld" und als Knopf im leeren "Heute". Einträge, von denen ein Teil wie ein
 aktives Feld heißt, sind abgewählt und als "Hast du schon" markiert (`packageExistingItems`,

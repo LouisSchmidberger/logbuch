@@ -122,6 +122,35 @@ try {
       eq('zusammenführen: ausgeblendete wieder sichtbar', merged.options[1].hidden, undefined);
       eq('Startpaket: vorausgewählt 11 Felder', f.packageFieldCount(f.packageDefaultChoice()), 11);
 
+      // --- Vorlagen: Zusätze ----------------------------------------------------
+      const sleepTpl = f.templateById('sleep');
+      eq('Zusätze: ohne Auswahl nur Schlaf', f.templateWithExtras(sleepTpl).slots.map((x) => x.slot), ['bed', 'up', 'duration']);
+      eq('Zusätze: Mittagsschlaf', f.templateWithExtras(sleepTpl, { nap: true }).slots.length, 6);
+      eq('Zusätze: Mittagsschlaf darf leer bleiben', f.templateSlotForm(sleepTpl, sleepTpl.slots[4], 'x').optional, true);
+
+      // --- Darf leer bleiben -----------------------------------------------------
+      const opt = { id: 'o', kind: 'time', optional: true, period: 'day' };
+      const req = { id: 'r', kind: 'scale', period: 'day' };
+      eq('optional: leer fehlt nicht', [f.isOpenToday(opt, {}), f.isOpenToday(req, {})], [false, true]);
+      eq('optional: Gruppe erledigt ohne das optionale', f.sectionDoneOn([opt, req], { r: 3 }), true);
+      eq('optional: nur optionale = nie erledigt', f.sectionDoneOn([opt], {}), false);
+      eq('optional: nur Tagesfelder, nicht berechnet/Zähler', ['scale', 'computed', 'counter'].map((k) => f.isOptionalAllowed({ kind: k, period: 'day' })).concat(f.isOptionalAllowed({ kind: 'scale', period: 'week' })), [true, false, false, false]);
+
+      // --- Verschieben mit ↑/↓ über Gruppengrenzen ---------------------------------
+      const savedSections = state.sections;
+      state.sections = [{ id: 'G', sortOrder: 2 }];
+      const fld = (defId, sortOrder, extra = {}) => ({ id: defId, defId, kind: 'scale', period: 'day', sortOrder, sectionId: null, archivedAt: null, ...extra });
+      state.habits = [fld('a', 1), fld('g1', 1, { sectionId: 'G' }), fld('g2', 2, { sectionId: 'G' }), fld('b', 3), fld('w', 4, { period: 'week' })];
+      const mv = (id, dir) => { const r = f.fieldMoveStep(id, dir); return r && [r.sectionId, r.items.map((x) => x.id + ('sectionId' in x ? '>' + x.sectionId : ''))]; };
+      eq('↓ vor Gruppe: an den Anfang der Gruppe', mv('a', 'down'), ['G', ['a>G', 'g1', 'g2']]);
+      eq('↑ unter Gruppe: ans Ende der Gruppe', mv('b', 'up'), ['G', ['g1', 'g2', 'b>G']]);
+      eq('↑ erstes in Gruppe: davor hinaus', mv('g1', 'up'), [null, ['a', 'g1>null', 'G', 'b', 'w']]);
+      eq('↓ letztes in Gruppe: dahinter hinaus', mv('g2', 'down'), [null, ['a', 'G', 'g2>null', 'b', 'w']]);
+      eq('innerhalb der Gruppe tauschen', mv('g1', 'down'), ['G', ['g2', 'g1']]);
+      eq('Zeitraum-Feld springt über die Gruppe', mv('w', 'up'), [null, ['a', 'G', 'w', 'b']]);
+      eq('ganz oben geht nicht weiter', mv('a', 'up'), null);
+      state.sections = savedSections;
+
       // --- Texte --------------------------------------------------------------
       // Gleiche Schlüssel in derselben Reihenfolge (CLAUDE.md), und die dynamisch gebauten gibt es.
       eq('Texte: de und en gleiche Schlüssel', Object.keys(f.STRINGS.en), Object.keys(f.STRINGS.de));
