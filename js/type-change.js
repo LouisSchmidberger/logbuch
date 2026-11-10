@@ -1,14 +1,14 @@
-import { supabase } from './config.js?v=8aaa0e5b67';
-import { containerMaxSortOrder, invalidateTodayAutoCollapse, isCounterKind, isSinceComputed, layoutBlocks, sinceUsesStages } from './fields.js?v=8aaa0e5b67';
-import { formatKey, isPeriodField } from './dates.js?v=8aaa0e5b67';
-import { runtime, state } from './state.js?v=8aaa0e5b67';
-import { esc, markFormBaseline } from './navigation.js?v=8aaa0e5b67';
-import { formatNumber, t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { errorNotice, formatDMY, infoTip } from './format.js?v=8aaa0e5b67';
-import { stepperInput } from './notices.js?v=8aaa0e5b67';
-import { CHOICE_STEP_CAP, SLIDER_STEP_CAP, habitToForm, resizeLabels, syncHabitFormFromDom } from './field-form.js?v=8aaa0e5b67';
-import { NOTE_MAX_LENGTH, PREV_KEY, getNote, saveDay, updateHabitPayload, withPrev } from './save.js?v=8aaa0e5b67';
-import { render } from './main-view.js?v=8aaa0e5b67';
+import { supabase } from './config.js?v=90bbeaa075';
+import { containerMaxSortOrder, invalidateTodayAutoCollapse, isCounterKind, isSinceComputed, layoutBlocks, sinceUsesStages } from './fields.js?v=90bbeaa075';
+import { formatKey, isPeriodField } from './dates.js?v=90bbeaa075';
+import { runtime, state } from './state.js?v=90bbeaa075';
+import { esc, markFormBaseline } from './navigation.js?v=90bbeaa075';
+import { formatNumber, t, tPlain } from './i18n.js?v=90bbeaa075';
+import { errorNotice, formatDMY, infoTip } from './format.js?v=90bbeaa075';
+import { stepperInput } from './notices.js?v=90bbeaa075';
+import { CHOICE_STEP_CAP, SLIDER_STEP_CAP, habitToForm, resizeLabels, syncHabitFormFromDom } from './field-form.js?v=90bbeaa075';
+import { NOTE_MAX_LENGTH, PREV_KEY, getNote, saveDay, updateHabitPayload, withPrev } from './save.js?v=90bbeaa075';
+import { render } from './main-view.js?v=90bbeaa075';
 
 // --- Stufen ändern (Skala mit Einträgen) -------------------------------------
 // Nutzer-Entscheidung 2026-10-29: die Anzahl Stufen einer Skala mit Einträgen ist änderbar,
@@ -481,6 +481,9 @@ export function typeEditTo(h, te) {
   const base = {
     min: null, max: null, labels: null, good: null, goalThreshold: null, target: null, unit: null,
     displayStyle: 'buttons', sliderShowValue: true, step: 1, reminderBelow: null, counterSince: null,
+    // Ziel als Bereich/Wochensumme (payload.numberGoal): sonst bliebe es gespeichert und käme
+    // bei einer späteren Umwandlung zurück in eine Zahl ungefragt wieder.
+    goalRaw: null, goal: null,
   };
   if (te.kind === 'number') return { ...base, kind: 'number', unit: te.unit.trim() || null };
   if (te.kind === 'text') return { ...base, kind: 'text' };

@@ -1,7 +1,7 @@
-import { runtime, state } from './state.js?v=8aaa0e5b67';
-import { esc } from './navigation.js?v=8aaa0e5b67';
-import { t } from './i18n.js?v=8aaa0e5b67';
-import { announce, announceAlert } from './main-view.js?v=8aaa0e5b67';
+import { runtime, state } from './state.js?v=90bbeaa075';
+import { esc } from './navigation.js?v=90bbeaa075';
+import { t } from './i18n.js?v=90bbeaa075';
+import { announce, announceAlert } from './main-view.js?v=90bbeaa075';
 
 // --- Meldungen als schwebender Kasten unten (seit 2026-10-01) -------------------
 // Vorher standen Meldungen oben unter dem Kopf - wer weiter unten etwas tat (z.B. im

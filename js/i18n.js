@@ -1,5 +1,5 @@
-import { esc } from './navigation.js?v=8aaa0e5b67';
-import { STRINGS } from './strings.js?v=8aaa0e5b67';
+import { esc } from './navigation.js?v=90bbeaa075';
+import { STRINGS } from './strings.js?v=90bbeaa075';
 
 export let currentLocale = 'de';
 

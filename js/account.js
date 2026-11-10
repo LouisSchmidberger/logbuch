@@ -1,12 +1,12 @@
-import { supabase } from './config.js?v=8aaa0e5b67';
-import { clearCachedDek, decryptData } from './crypto.js?v=8aaa0e5b67';
-import { formatKey } from './dates.js?v=8aaa0e5b67';
-import { clearCurrentDek, currentDek, runtime, state } from './state.js?v=8aaa0e5b67';
-import { t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { errorNotice } from './format.js?v=8aaa0e5b67';
-import { accessGroup, fetchAllRows } from './data.js?v=8aaa0e5b67';
-import { endPushForThisDevice } from './device.js?v=8aaa0e5b67';
-import { render } from './main-view.js?v=8aaa0e5b67';
+import { supabase } from './config.js?v=90bbeaa075';
+import { clearCachedDek, decryptData } from './crypto.js?v=90bbeaa075';
+import { formatKey } from './dates.js?v=90bbeaa075';
+import { clearCurrentDek, currentDek, runtime, state } from './state.js?v=90bbeaa075';
+import { t, tPlain } from './i18n.js?v=90bbeaa075';
+import { errorNotice } from './format.js?v=90bbeaa075';
+import { accessGroup, fetchAllRows } from './data.js?v=90bbeaa075';
+import { endPushForThisDevice } from './device.js?v=90bbeaa075';
+import { render } from './main-view.js?v=90bbeaa075';
 
 // --- Datenexport (Auskunftsrecht/Datenportabilität) -------------------------
 // Exportiert die eigenen Rohdaten (nicht das App-interne, transformierte Modell) direkt

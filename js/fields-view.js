@@ -1,18 +1,18 @@
-import { MAX_REMINDER_TIMES, MULTI_MAX_OPTIONS, computedMemberHabits, formatClock, isDurationComputed, isNumberComputed, isSinceComputed, isTimeKind, layoutBlocks, multiOptionUsed, sinceSourceCandidate, sinceUsesStages } from './fields.js?v=8aaa0e5b67';
-import { PERIODS, isNeutralScale, isPeriodField, minutesToTimeStr, reminderTimeInputHtml, scheduleSummary, weekdayOrder } from './dates.js?v=8aaa0e5b67';
-import { state } from './state.js?v=8aaa0e5b67';
-import { esc, habitHasData } from './navigation.js?v=8aaa0e5b67';
-import { t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { infoTip, mondayFirstWeekdayShortNames, weekdayLong } from './format.js?v=8aaa0e5b67';
-import { stepperInput } from './notices.js?v=8aaa0e5b67';
-import { CHOICE_STEP_CAP, canConvertToCounter, goalControlHtml, habitFormStepCap, habitFormStepCount, habitFormStepValue, habitFormSummable, isOptionalAllowed, lockedChoiceBlocked, numberGoalAllowed, numberGoalField, periodReminderControl, resizeLabels } from './field-form.js?v=8aaa0e5b67';
-import { fieldMoveStep, stepEditHtml, typeEditHtml, valueAsText } from './type-change.js?v=8aaa0e5b67';
-import { renderSectionForm } from './section-form.js?v=8aaa0e5b67';
-import { SECTION_NOTE_PREFIX, keyHasNotes } from './save.js?v=8aaa0e5b67';
-import { renderHabitFormPreview, tutorialExamplesHtml } from './row-view.js?v=8aaa0e5b67';
-import { renderStarterPackage, renderTemplateConfirm, renderTemplatePicker } from './templates.js?v=8aaa0e5b67';
-import { whyBox } from './tutorial.js?v=8aaa0e5b67';
-import { icon } from './main-view.js?v=8aaa0e5b67';
+import { MAX_REMINDER_TIMES, MULTI_MAX_OPTIONS, computedMemberHabits, formatClock, isDurationComputed, isNumberComputed, isSinceComputed, isTimeKind, layoutBlocks, multiOptionUsed, sinceSourceCandidate, sinceUsesStages } from './fields.js?v=90bbeaa075';
+import { PERIODS, isNeutralScale, isPeriodField, minutesToTimeStr, reminderTimeInputHtml, scheduleSummary, weekdayOrder } from './dates.js?v=90bbeaa075';
+import { state } from './state.js?v=90bbeaa075';
+import { esc, habitHasData } from './navigation.js?v=90bbeaa075';
+import { t, tPlain } from './i18n.js?v=90bbeaa075';
+import { infoTip, mondayFirstWeekdayShortNames, weekdayLong } from './format.js?v=90bbeaa075';
+import { stepperInput } from './notices.js?v=90bbeaa075';
+import { CHOICE_STEP_CAP, canConvertToCounter, goalControlHtml, habitFormStepCap, habitFormStepCount, habitFormStepValue, habitFormSummable, isOptionalAllowed, lockedChoiceBlocked, numberGoalAllowed, numberGoalField, periodReminderControl, resizeLabels } from './field-form.js?v=90bbeaa075';
+import { fieldMoveStep, stepEditHtml, typeEditHtml, valueAsText } from './type-change.js?v=90bbeaa075';
+import { renderSectionForm } from './section-form.js?v=90bbeaa075';
+import { SECTION_NOTE_PREFIX, keyHasNotes } from './save.js?v=90bbeaa075';
+import { renderHabitFormPreview, tutorialExamplesHtml } from './row-view.js?v=90bbeaa075';
+import { renderStarterPackage, renderTemplateConfirm, renderTemplatePicker } from './templates.js?v=90bbeaa075';
+import { whyBox } from './tutorial.js?v=90bbeaa075';
+import { icon } from './main-view.js?v=90bbeaa075';
 
 // --- Rendering: Felder-Verwaltung -------------------------------------------
 // Titel des Formulars - in der Verwaltung steht er im Seitenkopf (titleInHeader),

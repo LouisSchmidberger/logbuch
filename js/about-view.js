@@ -1,14 +1,14 @@
-import { supabase } from './config.js?v=8aaa0e5b67';
-import { hasDayGoal, hasNumberGoal, hasNumericSeries, hasWeekGoal, isCounterKind, isDurationComputed, isMultiKind, isScoredKind, isSinceComputed, isTextKind, isTimeKind, multiValue, numberGoalText, renderBySection, weekGoalChartNote } from './fields.js?v=8aaa0e5b67';
-import { NEUTRAL_FILL, addDays, applyGoal, computeHabitStats, formatKey, formatSeriesValue, habitColor, isFutureKey, isNeutralScale, isPeriodField, isPlannedOn, numberFieldStats, parseDateKey, scoreTextColor } from './dates.js?v=8aaa0e5b67';
-import { state } from './state.js?v=8aaa0e5b67';
-import { esc } from './navigation.js?v=8aaa0e5b67';
-import { currentLocale, detectLikelyCountry, formatNumber, t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { formatDMY } from './format.js?v=8aaa0e5b67';
-import { getNote } from './save.js?v=8aaa0e5b67';
-import { isAboutSectionCollapsed } from './device.js?v=8aaa0e5b67';
-import { statsFieldName } from './row-view.js?v=8aaa0e5b67';
-import { icon, render } from './main-view.js?v=8aaa0e5b67';
+import { supabase } from './config.js?v=90bbeaa075';
+import { hasDayGoal, hasNumberGoal, hasNumericSeries, hasWeekGoal, isCounterKind, isDurationComputed, isMultiKind, isScoredKind, isSinceComputed, isTextKind, isTimeKind, multiValue, numberGoalText, renderBySection, weekGoalChartNote } from './fields.js?v=90bbeaa075';
+import { NEUTRAL_FILL, addDays, applyGoal, computeHabitStats, formatKey, formatSeriesValue, habitColor, isFutureKey, isNeutralScale, isPeriodField, isPlannedOn, numberFieldStats, parseDateKey, scoreTextColor } from './dates.js?v=90bbeaa075';
+import { state } from './state.js?v=90bbeaa075';
+import { esc } from './navigation.js?v=90bbeaa075';
+import { currentLocale, detectLikelyCountry, formatNumber, t, tPlain } from './i18n.js?v=90bbeaa075';
+import { formatDMY } from './format.js?v=90bbeaa075';
+import { getNote } from './save.js?v=90bbeaa075';
+import { isAboutSectionCollapsed } from './device.js?v=90bbeaa075';
+import { statsFieldName } from './row-view.js?v=90bbeaa075';
+import { icon, render } from './main-view.js?v=90bbeaa075';
 
 // --- Rendering: Über Logbuch / Tipps -----------------------------------------
 // Ruhige, freiwillig aufsuchbare Sammelstelle für Bedienhinweise, die sonst nirgends

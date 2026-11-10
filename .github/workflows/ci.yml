@@ -32,6 +32,19 @@ jobs:
           exit 1
       - name: Tests der Rechenlogik
         run: node dev/tests.mjs
+      # Bedienabläufe: Registrieren, Onboarding, Tutorial, App - scheitern, wenn ein Knopf fehlt
+      # oder die Seite dabei einen Fehler wirft.
+      - name: Rundgänge (Handy)
+        run: node dev/rundgang.mjs alle
+      - name: Rundgang App (PC, dunkel, große Schrift)
+        run: node dev/rundgang.mjs app --device=pc --theme=dark --size=xlarge
+      - name: Screenshots bei Fehler
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: dev/screenshots/
+          retention-days: 7
       - name: Wegwerf-Datenbank aus allen Migrationen
         run: npx supabase db start
       - name: Abgleich JS <-> SQL

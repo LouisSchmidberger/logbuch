@@ -1,14 +1,14 @@
-import { MULTI_MAX_OPTIONS, habitFromParts, newMultiOptionId } from './fields.js?v=8aaa0e5b67';
-import { formatKey, isPeriodField } from './dates.js?v=8aaa0e5b67';
-import { state } from './state.js?v=8aaa0e5b67';
-import { activeHabits, esc, openHabitForm } from './navigation.js?v=8aaa0e5b67';
-import { t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { convertToCounterRow, defaultHabitForm, habitFormDefinition, habitPayloadFromDefinition, habitToForm, persistHabitForm, resizeLabels } from './field-form.js?v=8aaa0e5b67';
-import { applyStepEditPreset, handleHabitArchive, rewriteDays, typeChangeBlocker, typeChangeTargets, typeEditKindChanged, typeEditStepsChanged } from './type-change.js?v=8aaa0e5b67';
-import { handleHabitDelete, insertSection } from './section-form.js?v=8aaa0e5b67';
-import { updateHabitPayload } from './save.js?v=8aaa0e5b67';
-import { renderTodayHabitRow } from './row-view.js?v=8aaa0e5b67';
-import { icon } from './main-view.js?v=8aaa0e5b67';
+import { MULTI_MAX_OPTIONS, habitFromParts, newMultiOptionId } from './fields.js?v=90bbeaa075';
+import { formatKey, isPeriodField } from './dates.js?v=90bbeaa075';
+import { state } from './state.js?v=90bbeaa075';
+import { activeHabits, esc, openHabitForm } from './navigation.js?v=90bbeaa075';
+import { t, tPlain } from './i18n.js?v=90bbeaa075';
+import { convertToCounterRow, defaultHabitForm, habitFormDefinition, habitPayloadFromDefinition, habitToForm, persistHabitForm, resizeLabels } from './field-form.js?v=90bbeaa075';
+import { applyStepEditPreset, handleHabitArchive, rewriteDays, typeChangeBlocker, typeChangeTargets, typeEditKindChanged, typeEditStepsChanged } from './type-change.js?v=90bbeaa075';
+import { handleHabitDelete, insertSection } from './section-form.js?v=90bbeaa075';
+import { updateHabitPayload } from './save.js?v=90bbeaa075';
+import { renderTodayHabitRow } from './row-view.js?v=90bbeaa075';
+import { icon } from './main-view.js?v=90bbeaa075';
 
 // --- Vorlagen (Nutzer-Entscheidung 2026-10-30) -------------------------------------------
 // "Neues Feld" beginnt mit "Was willst du festhalten?": fertige Felder zum Antippen, das volle

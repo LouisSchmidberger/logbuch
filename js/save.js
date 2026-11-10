@@ -1,14 +1,14 @@
-import { supabase } from './config.js?v=8aaa0e5b67';
-import { decryptData, encryptData } from './crypto.js?v=8aaa0e5b67';
-import { DEF_PLAINTEXT_CLEARED, counterReminderThresholds, isCounterKind } from './fields.js?v=8aaa0e5b67';
-import { entryKeyFor, formatKey, isPeriodField, isPlannedOn } from './dates.js?v=8aaa0e5b67';
-import { currentDek, runtime, state } from './state.js?v=8aaa0e5b67';
-import { activeHabits, app } from './navigation.js?v=8aaa0e5b67';
-import { t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { haptic } from './theme.js?v=8aaa0e5b67';
-import { errorNotice } from './format.js?v=8aaa0e5b67';
-import { syncTodayOpenMarkers } from './row-view.js?v=8aaa0e5b67';
-import { render } from './main-view.js?v=8aaa0e5b67';
+import { supabase } from './config.js?v=90bbeaa075';
+import { decryptData, encryptData } from './crypto.js?v=90bbeaa075';
+import { DEF_PLAINTEXT_CLEARED, counterReminderThresholds, isCounterKind } from './fields.js?v=90bbeaa075';
+import { entryKeyFor, formatKey, isPeriodField, isPlannedOn } from './dates.js?v=90bbeaa075';
+import { currentDek, runtime, state } from './state.js?v=90bbeaa075';
+import { activeHabits, app } from './navigation.js?v=90bbeaa075';
+import { t, tPlain } from './i18n.js?v=90bbeaa075';
+import { haptic } from './theme.js?v=90bbeaa075';
+import { errorNotice } from './format.js?v=90bbeaa075';
+import { syncTodayOpenMarkers } from './row-view.js?v=90bbeaa075';
+import { render } from './main-view.js?v=90bbeaa075';
 
 // --- Notizen ---------------------------------------------------------------
 // Liegen verschlüsselt im selben Tagesobjekt wie die Werte, unter EINEM reservierten

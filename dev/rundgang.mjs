@@ -123,7 +123,12 @@ for (const name of selected) {
     await shot(page, 'FEHLER').catch(() => {});
     process.exitCode = 1;
   } finally {
-    if (problems.length) console.log('Probleme in der Seite:\n' + problems.join('\n'));
+    // Fehler in der Seite (Exception, console.error) lassen den Rundgang scheitern - so prüft er
+    // in der CI nicht nur, dass jeder Knopf da ist, sondern auch, dass dabei nichts kaputtgeht.
+    if (problems.length) {
+      console.log('Probleme in der Seite:\n' + problems.join('\n'));
+      process.exitCode = 1;
+    }
     await browser.close();
   }
 }

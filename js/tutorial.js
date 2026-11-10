@@ -1,17 +1,17 @@
-import { supabase } from './config.js?v=8aaa0e5b67';
-import { reminderTimeInputHtml } from './dates.js?v=8aaa0e5b67';
-import { state } from './state.js?v=8aaa0e5b67';
-import { activeHabits, app, esc } from './navigation.js?v=8aaa0e5b67';
-import { t } from './i18n.js?v=8aaa0e5b67';
-import { errorNotice } from './format.js?v=8aaa0e5b67';
-import { maybeShowSpareKey } from './keys.js?v=8aaa0e5b67';
-import { defaultHabitForm, newHabitForm } from './field-form.js?v=8aaa0e5b67';
-import { isIOSDevice, isStandaloneDisplay, pushBlockedHelp } from './device.js?v=8aaa0e5b67';
-import { installManualHtml, isGuided, onbProgress, sketchHtml } from './auth-view.js?v=8aaa0e5b67';
-import { CHANGELOG } from './about-view.js?v=8aaa0e5b67';
-import { packageDefaultChoice } from './templates.js?v=8aaa0e5b67';
-import { renderHabitForm } from './fields-view.js?v=8aaa0e5b67';
-import { iconSvg, render } from './main-view.js?v=8aaa0e5b67';
+import { supabase } from './config.js?v=90bbeaa075';
+import { reminderTimeInputHtml } from './dates.js?v=90bbeaa075';
+import { state } from './state.js?v=90bbeaa075';
+import { activeHabits, app, esc } from './navigation.js?v=90bbeaa075';
+import { t } from './i18n.js?v=90bbeaa075';
+import { errorNotice } from './format.js?v=90bbeaa075';
+import { maybeShowSpareKey } from './keys.js?v=90bbeaa075';
+import { defaultHabitForm, newHabitForm } from './field-form.js?v=90bbeaa075';
+import { isIOSDevice, isStandaloneDisplay, pushBlockedHelp } from './device.js?v=90bbeaa075';
+import { installManualHtml, isGuided, onbProgress, sketchHtml } from './auth-view.js?v=90bbeaa075';
+import { CHANGELOG } from './about-view.js?v=90bbeaa075';
+import { packageDefaultChoice } from './templates.js?v=90bbeaa075';
+import { renderHabitForm } from './fields-view.js?v=90bbeaa075';
+import { iconSvg, render } from './main-view.js?v=90bbeaa075';
 
 // --- Onboarding-Tutorial für neue Accounts ----------------------------------
 // state.userSettings.onboardingCompleted kommt aus der DB (Default false bei neuen

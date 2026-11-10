@@ -1,12 +1,12 @@
-import { habitNumericValue, hasDayGoal, inStats, isCounterKind, isMultiKind, isNumberKind, isScoredKind, isTextKind, renderBySection } from './fields.js?v=8aaa0e5b67';
-import { PERIODS, addDays, applyGoal, computeHabitStats, dayCellAriaLabel, dayOverallScore, formatKey, habitColor, habitScore, habitVisibleInRange, isFutureKey, isNeutralScale, isPeriodField, isPlannedOn, nextPeriodDisabled, openDayAttrs, parseDateKey, periodStart, scoreColor, scorePatternStyle, scoreTextColor, textOnScore, weekdayOrder } from './dates.js?v=8aaa0e5b67';
-import { runtime, state } from './state.js?v=8aaa0e5b67';
-import { esc } from './navigation.js?v=8aaa0e5b67';
-import { formatNumber, t } from './i18n.js?v=8aaa0e5b67';
-import { formatDMY, mondayFirstWeekdayShortNames, monthName, monthShort, weekdayShort } from './format.js?v=8aaa0e5b67';
-import { dayHasNote, getNote } from './save.js?v=8aaa0e5b67';
-import { hasAnyEntries, periodRangeLabel, renderStatsEmpty, renderStatsLegend, statsFieldName } from './row-view.js?v=8aaa0e5b67';
-import { habitAvgLong, habitAvgShort, inFieldStatsList, isYesNoScale, multiWeekRows, renderFieldStatsList, renderNumberCharts, renderStatsRows, renderTextReviews, scaleLabelAt } from './about-view.js?v=8aaa0e5b67';
+import { habitNumericValue, hasDayGoal, inStats, isCounterKind, isMultiKind, isNumberKind, isScoredKind, isTextKind, renderBySection } from './fields.js?v=90bbeaa075';
+import { PERIODS, addDays, applyGoal, computeHabitStats, dayCellAriaLabel, dayOverallScore, formatKey, habitColor, habitScore, habitVisibleInRange, isFutureKey, isNeutralScale, isPeriodField, isPlannedOn, nextPeriodDisabled, openDayAttrs, parseDateKey, periodStart, scoreColor, scorePatternStyle, scoreTextColor, textOnScore, weekdayOrder } from './dates.js?v=90bbeaa075';
+import { runtime, state } from './state.js?v=90bbeaa075';
+import { esc } from './navigation.js?v=90bbeaa075';
+import { formatNumber, t } from './i18n.js?v=90bbeaa075';
+import { formatDMY, mondayFirstWeekdayShortNames, monthName, monthShort, weekdayShort } from './format.js?v=90bbeaa075';
+import { dayHasNote, getNote } from './save.js?v=90bbeaa075';
+import { hasAnyEntries, periodRangeLabel, renderStatsEmpty, renderStatsLegend, statsFieldName } from './row-view.js?v=90bbeaa075';
+import { habitAvgLong, habitAvgShort, inFieldStatsList, isYesNoScale, multiWeekRows, renderFieldStatsList, renderNumberCharts, renderStatsRows, renderTextReviews, scaleLabelAt } from './about-view.js?v=90bbeaa075';
 
 // --- Auswertung: Zeitraum-Felder ----------------------------------------------
 // Je Zeitraum ein eigener Block ganz unten, nach allem zu den Tagesfeldern (wie die Bereiche

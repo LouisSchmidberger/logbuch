@@ -1,14 +1,14 @@
-import { supabase } from './config.js?v=8aaa0e5b67';
-import { encryptData } from './crypto.js?v=8aaa0e5b67';
-import { SECTION_COLLAPSE_MODES, containerMaxSortOrder, formatClock, invalidateTodayAutoCollapse, layoutBlocks, saveFieldNamesForPush } from './fields.js?v=8aaa0e5b67';
-import { readTimeInput, reminderTimeInputHtml } from './dates.js?v=8aaa0e5b67';
-import { currentDek, runtime, state } from './state.js?v=8aaa0e5b67';
-import { esc, markFormBaseline } from './navigation.js?v=8aaa0e5b67';
-import { t } from './i18n.js?v=8aaa0e5b67';
-import { errorNotice } from './format.js?v=8aaa0e5b67';
-import { commitLayoutOrder } from './type-change.js?v=8aaa0e5b67';
-import { NOTES_KEY, PREV_KEY, SECTION_NOTE_PREFIX, saveDay, withNote, withPrev } from './save.js?v=8aaa0e5b67';
-import { render } from './main-view.js?v=8aaa0e5b67';
+import { supabase } from './config.js?v=90bbeaa075';
+import { encryptData } from './crypto.js?v=90bbeaa075';
+import { SECTION_COLLAPSE_MODES, containerMaxSortOrder, formatClock, invalidateTodayAutoCollapse, layoutBlocks, saveFieldNamesForPush } from './fields.js?v=90bbeaa075';
+import { readTimeInput, reminderTimeInputHtml } from './dates.js?v=90bbeaa075';
+import { currentDek, runtime, state } from './state.js?v=90bbeaa075';
+import { esc, markFormBaseline } from './navigation.js?v=90bbeaa075';
+import { t } from './i18n.js?v=90bbeaa075';
+import { errorNotice } from './format.js?v=90bbeaa075';
+import { commitLayoutOrder } from './type-change.js?v=90bbeaa075';
+import { NOTES_KEY, PREV_KEY, SECTION_NOTE_PREFIX, saveDay, withNote, withPrev } from './save.js?v=90bbeaa075';
+import { render } from './main-view.js?v=90bbeaa075';
 
 // --- Gruppen (intern: sections) - Formular -------------------------------------
 // Eigene Ebene der Verwaltung wie das Feld-Formular (openHabitForm): Name + Liste aller

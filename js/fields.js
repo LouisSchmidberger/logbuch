@@ -1,14 +1,14 @@
-import { supabase } from './config.js?v=8aaa0e5b67';
-import { decryptData, encryptData } from './crypto.js?v=8aaa0e5b67';
-import { addDays, formatKey, isFutureKey, isPeriodField, minutesToTimeStr, parseDateKey, periodStart, scoreColor, scoreTextColor, startOfWeek } from './dates.js?v=8aaa0e5b67';
-import { currentDek, state } from './state.js?v=8aaa0e5b67';
-import { esc } from './navigation.js?v=8aaa0e5b67';
-import { formatNumber, t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { clockUses12h } from './format.js?v=8aaa0e5b67';
-import { CHOICE_STEP_CAP } from './field-form.js?v=8aaa0e5b67';
-import { valueAsText } from './type-change.js?v=8aaa0e5b67';
-import { isOpenToday, renderNote, renderRowMenuButton, renderSectionMenuPanel } from './row-view.js?v=8aaa0e5b67';
-import { round1 } from './about-view.js?v=8aaa0e5b67';
+import { supabase } from './config.js?v=90bbeaa075';
+import { decryptData, encryptData } from './crypto.js?v=90bbeaa075';
+import { addDays, formatKey, isFutureKey, isPeriodField, minutesToTimeStr, parseDateKey, periodStart, scoreColor, scoreTextColor, startOfWeek } from './dates.js?v=90bbeaa075';
+import { currentDek, state } from './state.js?v=90bbeaa075';
+import { esc } from './navigation.js?v=90bbeaa075';
+import { formatNumber, t, tPlain } from './i18n.js?v=90bbeaa075';
+import { clockUses12h } from './format.js?v=90bbeaa075';
+import { CHOICE_STEP_CAP } from './field-form.js?v=90bbeaa075';
+import { valueAsText } from './type-change.js?v=90bbeaa075';
+import { isOpenToday, renderNote, renderRowMenuButton, renderSectionMenuPanel } from './row-view.js?v=90bbeaa075';
+import { round1 } from './about-view.js?v=90bbeaa075';
 
 // --- Habit-Definitionen ----------------------------------------------------
 // Kommen jetzt aus der Tabelle habit_definitions (pro Nutzer frei verwaltbar, siehe

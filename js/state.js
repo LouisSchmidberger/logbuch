@@ -1,8 +1,8 @@
-import { startOfDay, startOfWeek } from './dates.js?v=8aaa0e5b67';
-import { clearFeatureAccess } from './data.js?v=8aaa0e5b67';
-import { isStandaloneDisplay } from './device.js?v=8aaa0e5b67';
-import { signedInHereBefore } from './auth-view.js?v=8aaa0e5b67';
-import { closeWhatsNew } from './about-view.js?v=8aaa0e5b67';
+import { startOfDay, startOfWeek } from './dates.js?v=90bbeaa075';
+import { clearFeatureAccess } from './data.js?v=90bbeaa075';
+import { isStandaloneDisplay } from './device.js?v=90bbeaa075';
+import { signedInHereBefore } from './auth-view.js?v=90bbeaa075';
+import { closeWhatsNew } from './about-view.js?v=90bbeaa075';
 
 // --- App-State ---------------------------------------------------------
 // Laufzeitwerte, die mehrere Module setzen (ES-Module können importierte Variablen nicht neu

@@ -1,15 +1,15 @@
-import { supabase } from './config.js?v=8aaa0e5b67';
-import { ENCRYPT_PAD_BLOCK, base64ToBuf, decryptData, encryptData } from './crypto.js?v=8aaa0e5b67';
-import { SECTION_COLLAPSE_MODES, defPayloadFromPlainRow, habitFromParts, migrateHabitDefinitions, saveFieldNamesForPush } from './fields.js?v=8aaa0e5b67';
-import { WEEK_STARTS, addDays, formatKey, parseDateKey, startOfDay, startOfWeek, startOfWeekWith } from './dates.js?v=8aaa0e5b67';
-import { currentDek, runtime, state } from './state.js?v=8aaa0e5b67';
-import { applyLocale, detectInitialLocale, t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { errorNotice } from './format.js?v=8aaa0e5b67';
-import { rewriteDays } from './type-change.js?v=8aaa0e5b67';
-import { NOTES_KEY, PREV_KEY, renderUnlessTyping, syncedEntries } from './save.js?v=8aaa0e5b67';
-import { pushOffStatus } from './device.js?v=8aaa0e5b67';
-import { unseenChangelog } from './about-view.js?v=8aaa0e5b67';
-import { render } from './main-view.js?v=8aaa0e5b67';
+import { supabase } from './config.js?v=90bbeaa075';
+import { ENCRYPT_PAD_BLOCK, base64ToBuf, decryptData, encryptData } from './crypto.js?v=90bbeaa075';
+import { SECTION_COLLAPSE_MODES, defPayloadFromPlainRow, habitFromParts, migrateHabitDefinitions, saveFieldNamesForPush } from './fields.js?v=90bbeaa075';
+import { WEEK_STARTS, addDays, formatKey, parseDateKey, startOfDay, startOfWeek, startOfWeekWith } from './dates.js?v=90bbeaa075';
+import { currentDek, runtime, state } from './state.js?v=90bbeaa075';
+import { applyLocale, detectInitialLocale, t, tPlain } from './i18n.js?v=90bbeaa075';
+import { errorNotice } from './format.js?v=90bbeaa075';
+import { rewriteDays } from './type-change.js?v=90bbeaa075';
+import { NOTES_KEY, PREV_KEY, renderUnlessTyping, syncedEntries } from './save.js?v=90bbeaa075';
+import { pushOffStatus } from './device.js?v=90bbeaa075';
+import { unseenChangelog } from './about-view.js?v=90bbeaa075';
+import { render } from './main-view.js?v=90bbeaa075';
 
 // --- Datenzugriff --------------------------------------------------------
 // PostgREST liefert höchstens api.max_rows (1000) Zeilen pro Anfrage und kappt still -

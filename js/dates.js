@@ -1,12 +1,12 @@
-import { MINUTES_PER_DAY, computedMemberHabits, computedUnit, formatClock, formatDuration, habitNumericValue, hasDayGoal, hasWeekGoal, isDurationComputed, isNumberComputed, isSinceComputed, isTimeKind, numberComputedDay, numberGoalScore } from './fields.js?v=8aaa0e5b67';
-import { runtime, state } from './state.js?v=8aaa0e5b67';
-import { esc } from './navigation.js?v=8aaa0e5b67';
-import { formatNumber, t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { isPatternDisabled } from './theme.js?v=8aaa0e5b67';
-import { formatDMY, mondayFirstWeekdayShortNames } from './format.js?v=8aaa0e5b67';
-import { saveDefaultReminderMinute } from './data.js?v=8aaa0e5b67';
-import { syncHabitFormFromDom } from './field-form.js?v=8aaa0e5b67';
-import { render } from './main-view.js?v=8aaa0e5b67';
+import { MINUTES_PER_DAY, computedMemberHabits, computedUnit, formatClock, formatDuration, habitNumericValue, hasDayGoal, hasWeekGoal, isDurationComputed, isNumberComputed, isSinceComputed, isTimeKind, numberComputedDay, numberGoalScore } from './fields.js?v=90bbeaa075';
+import { runtime, state } from './state.js?v=90bbeaa075';
+import { esc } from './navigation.js?v=90bbeaa075';
+import { formatNumber, t, tPlain } from './i18n.js?v=90bbeaa075';
+import { isPatternDisabled } from './theme.js?v=90bbeaa075';
+import { formatDMY, mondayFirstWeekdayShortNames } from './format.js?v=90bbeaa075';
+import { saveDefaultReminderMinute } from './data.js?v=90bbeaa075';
+import { syncHabitFormFromDom } from './field-form.js?v=90bbeaa075';
+import { render } from './main-view.js?v=90bbeaa075';
 
 // --- Feste Tage (habit_definitions.schedule) -------------------------------
 // null = täglich, {type:'weekly', days:[0..6]} (0 = Montag) oder "Alle N Tage"

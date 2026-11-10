@@ -1,8 +1,8 @@
-import { supabase } from './config.js?v=8aaa0e5b67';
-import { clearCurrentDek, runtime } from './state.js?v=8aaa0e5b67';
-import { esc } from './navigation.js?v=8aaa0e5b67';
-import { currentLocale, t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { endPushForThisDevice } from './device.js?v=8aaa0e5b67';
+import { supabase } from './config.js?v=90bbeaa075';
+import { clearCurrentDek, runtime } from './state.js?v=90bbeaa075';
+import { esc } from './navigation.js?v=90bbeaa075';
+import { currentLocale, t, tPlain } from './i18n.js?v=90bbeaa075';
+import { endPushForThisDevice } from './device.js?v=90bbeaa075';
 
 // --- Datum/Zeit: locale-abhängige Formatierung -----------------------------
 // Ersetzt frühere feste WEEKDAYS/MONTHS-Arrays + manuelles DD.MM.YYYY-Bauen.

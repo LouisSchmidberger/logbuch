@@ -1,15 +1,15 @@
-import { supabase } from './config.js?v=8aaa0e5b67';
-import { encryptData } from './crypto.js?v=8aaa0e5b67';
-import { DEF_PLAINTEXT_CLEARED, MAX_REMINDER_TIMES, containerMaxSortOrder, counterReminderThresholds, emptyMultiOptions, habitFromParts, hasNumberGoal, isCounterKind, isMultiKind, isTimeKind, newHabitKey, saveFieldNamesForPush, sinceSourceCandidate, sinceUsesStages } from './fields.js?v=8aaa0e5b67';
-import { formatKey, parseDateKey, readTimeInput, weekLastIso, weekdayOrder } from './dates.js?v=8aaa0e5b67';
-import { currentDek, runtime, state } from './state.js?v=8aaa0e5b67';
-import { closeHabitForm, esc, habitHasData } from './navigation.js?v=8aaa0e5b67';
-import { formatNumber, t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { errorNotice, infoTip, monthName, weekdayLong } from './format.js?v=8aaa0e5b67';
-import { saveDay } from './save.js?v=8aaa0e5b67';
-import { habitFormReminderShown } from './fields-view.js?v=8aaa0e5b67';
-import { TUTORIAL_STEP_DONE, TUTORIAL_STEP_FIELD } from './tutorial.js?v=8aaa0e5b67';
-import { render } from './main-view.js?v=8aaa0e5b67';
+import { supabase } from './config.js?v=90bbeaa075';
+import { encryptData } from './crypto.js?v=90bbeaa075';
+import { DEF_PLAINTEXT_CLEARED, MAX_REMINDER_TIMES, containerMaxSortOrder, counterReminderThresholds, emptyMultiOptions, habitFromParts, hasNumberGoal, isCounterKind, isMultiKind, isTimeKind, newHabitKey, saveFieldNamesForPush, sinceSourceCandidate, sinceUsesStages } from './fields.js?v=90bbeaa075';
+import { formatKey, parseDateKey, readTimeInput, weekLastIso, weekdayOrder } from './dates.js?v=90bbeaa075';
+import { currentDek, runtime, state } from './state.js?v=90bbeaa075';
+import { closeHabitForm, esc, habitHasData } from './navigation.js?v=90bbeaa075';
+import { formatNumber, t, tPlain } from './i18n.js?v=90bbeaa075';
+import { errorNotice, infoTip, monthName, weekdayLong } from './format.js?v=90bbeaa075';
+import { saveDay } from './save.js?v=90bbeaa075';
+import { habitFormReminderShown } from './fields-view.js?v=90bbeaa075';
+import { TUTORIAL_STEP_DONE, TUTORIAL_STEP_FIELD } from './tutorial.js?v=90bbeaa075';
+import { render } from './main-view.js?v=90bbeaa075';
 
 // --- Felder-Verwaltung -----------------------------------------------------
 // Bringt ein Bezeichnungs-Array auf die aktuelle Stufenzahl, ohne bereits eingetippten

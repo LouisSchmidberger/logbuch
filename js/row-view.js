@@ -1,15 +1,15 @@
-import { MINUTES_PER_DAY, computedMemberHabits, computedUnit, expandSection, formatClock, hasDayGoal, hasWeekGoal, isCounterKind, isDurationComputed, isMultiKind, isNumberComputed, isNumberKind, isSectionCollapsed, isSinceComputed, isTextKind, isTimeKind, numberComputedDay, renderBySection, sectionDoneOn, sinceWhichText, timeDayOffset, timeValueOn, weekGoalTodayHtml } from './fields.js?v=8aaa0e5b67';
-import { NEUTRAL_SELECTED, NEUTRAL_SELECTED_TEXT, PERIODS, addDays, entryKeyFor, formatKey, formatSeriesValue, goalSuffixHtml, goalValueStyle, habitColor, habitScore, isNeutralScale, isPeriodField, isPlannedOn, nextPeriodDisabled, normalize, parseDateKey, periodEnd, periodStart, scoreColor, startOfDay, textOnScore } from './dates.js?v=8aaa0e5b67';
-import { state } from './state.js?v=8aaa0e5b67';
-import { activeHabits, app, esc, isNoteEditorOpen, syncLayerHistory } from './navigation.js?v=8aaa0e5b67';
-import { formatNumber, t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { haptic, isDayProgressShown } from './theme.js?v=8aaa0e5b67';
-import { clockUses12h, dtf, formatDMY, longDate, weekdayLong, weekdayShort } from './format.js?v=8aaa0e5b67';
-import { habitFormStepCount, resizeLabels } from './field-form.js?v=8aaa0e5b67';
-import { DAY_NOTE_KEY, NOTE_MAX_LENGTH, findLastValue, getNote } from './save.js?v=8aaa0e5b67';
-import { isGuided } from './auth-view.js?v=8aaa0e5b67';
-import { dayHasValues } from './stats-view.js?v=8aaa0e5b67';
-import { icon, render } from './main-view.js?v=8aaa0e5b67';
+import { MINUTES_PER_DAY, computedMemberHabits, computedUnit, expandSection, formatClock, hasDayGoal, hasWeekGoal, isCounterKind, isDurationComputed, isMultiKind, isNumberComputed, isNumberKind, isSectionCollapsed, isSinceComputed, isTextKind, isTimeKind, numberComputedDay, renderBySection, sectionDoneOn, sinceWhichText, timeDayOffset, timeValueOn, weekGoalTodayHtml } from './fields.js?v=90bbeaa075';
+import { NEUTRAL_SELECTED, NEUTRAL_SELECTED_TEXT, PERIODS, addDays, entryKeyFor, formatKey, formatSeriesValue, goalSuffixHtml, goalValueStyle, habitColor, habitScore, isNeutralScale, isPeriodField, isPlannedOn, nextPeriodDisabled, normalize, parseDateKey, periodEnd, periodStart, scoreColor, startOfDay, textOnScore } from './dates.js?v=90bbeaa075';
+import { state } from './state.js?v=90bbeaa075';
+import { activeHabits, app, esc, isNoteEditorOpen, syncLayerHistory } from './navigation.js?v=90bbeaa075';
+import { formatNumber, t, tPlain } from './i18n.js?v=90bbeaa075';
+import { haptic, isDayProgressShown } from './theme.js?v=90bbeaa075';
+import { clockUses12h, dtf, formatDMY, longDate, weekdayLong, weekdayShort } from './format.js?v=90bbeaa075';
+import { habitFormStepCount, resizeLabels } from './field-form.js?v=90bbeaa075';
+import { DAY_NOTE_KEY, NOTE_MAX_LENGTH, findLastValue, getNote } from './save.js?v=90bbeaa075';
+import { isGuided } from './auth-view.js?v=90bbeaa075';
+import { dayHasValues } from './stats-view.js?v=90bbeaa075';
+import { icon, render } from './main-view.js?v=90bbeaa075';
 
 // --- Rendering: Habit-Row ---------------------------------------------
 // preview: Vorschau im Feld-Formular (renderHabitFormPreview) - gleiches Aussehen und

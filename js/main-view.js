@@ -1,23 +1,23 @@
-import { invalidateTodayAutoCollapse } from './fields.js?v=8aaa0e5b67';
-import { WEEK_STARTS, reminderTimeInputHtml } from './dates.js?v=8aaa0e5b67';
-import { currentDek, runtime, state } from './state.js?v=8aaa0e5b67';
-import { app, esc, isNoteEditorOpen, isSubpageView, syncLayerHistory } from './navigation.js?v=8aaa0e5b67';
-import { currentLocale, t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { TEXT_SIZES, getTextSize, getThemeOverride, hapticsSupported, isDayProgressShown, isHapticsDisabled, isPatternDisabled } from './theme.js?v=8aaa0e5b67';
-import { AUTH_MIN_PASSWORD_LENGTH, closeInfoTip, formatDMY, infoPop, weekdayLong } from './format.js?v=8aaa0e5b67';
-import { syncToast } from './notices.js?v=8aaa0e5b67';
-import { weekStartChange } from './data.js?v=8aaa0e5b67';
-import { renderStepDialog, stepDialogOpen } from './type-change.js?v=8aaa0e5b67';
-import { commitPendingNoteDraft } from './save.js?v=8aaa0e5b67';
-import { canInstallFromHere, isAboutSectionCollapsed, pushBlockedHelp, renderInstallHint } from './device.js?v=8aaa0e5b67';
-import { addOnbDisplayBar, passwordRuleText, renderAuth, renderConfirmLanding, renderInstallGate, renderInstallGuide, renderPasswordRecovery, renderRecoveryKeyDisplay, renderUnlockPrompt, shouldShowInstallGate } from './auth-view.js?v=8aaa0e5b67';
-import { closeTimePicker, positionFloatingRowMenu, renderToday, renderTodayDayNav, timePicker } from './row-view.js?v=8aaa0e5b67';
-import { renderGlobal, renderMonth, renderWeek, renderYear } from './stats-view.js?v=8aaa0e5b67';
-import { renderAbout, renderFeedback, renderWhatsNew } from './about-view.js?v=8aaa0e5b67';
-import { habitFormTitleKey, renderManage } from './fields-view.js?v=8aaa0e5b67';
-import { renderTutorial } from './tutorial.js?v=8aaa0e5b67';
-import { SWIPEABLE_VIEWS, lastPointerType } from './gestures.js?v=8aaa0e5b67';
-import { consumePendingFieldFocus, pendingFieldFocus } from './deeplinks.js?v=8aaa0e5b67';
+import { invalidateTodayAutoCollapse } from './fields.js?v=90bbeaa075';
+import { WEEK_STARTS, reminderTimeInputHtml } from './dates.js?v=90bbeaa075';
+import { currentDek, runtime, state } from './state.js?v=90bbeaa075';
+import { app, esc, isNoteEditorOpen, isSubpageView, syncLayerHistory } from './navigation.js?v=90bbeaa075';
+import { currentLocale, t, tPlain } from './i18n.js?v=90bbeaa075';
+import { TEXT_SIZES, getTextSize, getThemeOverride, hapticsSupported, isDayProgressShown, isHapticsDisabled, isPatternDisabled } from './theme.js?v=90bbeaa075';
+import { AUTH_MIN_PASSWORD_LENGTH, closeInfoTip, formatDMY, infoPop, weekdayLong } from './format.js?v=90bbeaa075';
+import { syncToast } from './notices.js?v=90bbeaa075';
+import { weekStartChange } from './data.js?v=90bbeaa075';
+import { renderStepDialog, stepDialogOpen } from './type-change.js?v=90bbeaa075';
+import { commitPendingNoteDraft } from './save.js?v=90bbeaa075';
+import { canInstallFromHere, isAboutSectionCollapsed, pushBlockedHelp, renderInstallHint } from './device.js?v=90bbeaa075';
+import { addOnbDisplayBar, passwordRuleText, renderAuth, renderConfirmLanding, renderInstallGate, renderInstallGuide, renderPasswordRecovery, renderRecoveryKeyDisplay, renderUnlockPrompt, shouldShowInstallGate } from './auth-view.js?v=90bbeaa075';
+import { closeTimePicker, positionFloatingRowMenu, renderToday, renderTodayDayNav, timePicker } from './row-view.js?v=90bbeaa075';
+import { renderGlobal, renderMonth, renderWeek, renderYear } from './stats-view.js?v=90bbeaa075';
+import { renderAbout, renderFeedback, renderWhatsNew } from './about-view.js?v=90bbeaa075';
+import { habitFormTitleKey, renderManage } from './fields-view.js?v=90bbeaa075';
+import { renderTutorial } from './tutorial.js?v=90bbeaa075';
+import { SWIPEABLE_VIEWS, lastPointerType } from './gestures.js?v=90bbeaa075';
+import { consumePendingFieldFocus, pendingFieldFocus } from './deeplinks.js?v=90bbeaa075';
 
 // --- Rendering: Haupt-App --------------------------------------------------
 function renderPushRow() {

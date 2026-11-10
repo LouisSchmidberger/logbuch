@@ -53,6 +53,9 @@ try {
       eq('Stufen ändern: 2,3,4 -> 2,3', f.remapSince({ values: [2, 3, 4], mode: 'start' }, sc, false, true).values, [2, 3]);
       eq('Stufen ändern rückgängig: 2,3 -> 2,3,4', f.remapSince({ values: [2, 3], mode: 'start' }, sc, true, true).values, [2, 3, 4]);
       eq('Stufen ändern: entfernte Stufe fällt weg', f.remapSince({ values: [4] }, { ...sc, map: { 4: null } }, false, true).values, []);
+      const rangeGoal = { dir: 'range', target: 5, max: 8, scope: 'day' };
+      const toText = f.typeEditTo({ kind: 'number', goal: rangeGoal, goalRaw: rangeGoal }, { kind: 'text' });
+      eq('Typ ändern: Ziel (Bereich/Woche) fällt weg', [toText.goal, toText.goalRaw], [null, null]);
 
       // --- Dauer ---------------------------------------------------------------
       const bed = { id: 'b', kind: 'time' }, up = { id: 'u', kind: 'time' };

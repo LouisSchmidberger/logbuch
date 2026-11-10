@@ -1,14 +1,14 @@
-import { supabase } from './config.js?v=8aaa0e5b67';
-import { saveFieldNamesForPush } from './fields.js?v=8aaa0e5b67';
-import { clearCurrentDek, currentDek, currentDekUserId, runtime, setCurrentDek, state } from './state.js?v=8aaa0e5b67';
-import { t } from './i18n.js?v=8aaa0e5b67';
-import { loadEntries, loadFeatureAccess, loadHabits, loadSections, loadUserSettings, presetWeekStartForNewAccount, repadOldEntries, resumeWeekStartChange } from './data.js?v=8aaa0e5b67';
-import { fetchEncryptionRow, maybeShowSpareKey, unlockEncryption, usableCachedDek } from './keys.js?v=8aaa0e5b67';
-import { resumeStepChanges } from './type-change.js?v=8aaa0e5b67';
-import { syncedEntries } from './save.js?v=8aaa0e5b67';
-import { checkPushStatus } from './device.js?v=8aaa0e5b67';
-import { rememberSignedInHere } from './auth-view.js?v=8aaa0e5b67';
-import { render } from './main-view.js?v=8aaa0e5b67';
+import { supabase } from './config.js?v=90bbeaa075';
+import { saveFieldNamesForPush } from './fields.js?v=90bbeaa075';
+import { clearCurrentDek, currentDek, currentDekUserId, runtime, setCurrentDek, state } from './state.js?v=90bbeaa075';
+import { t } from './i18n.js?v=90bbeaa075';
+import { loadEntries, loadFeatureAccess, loadHabits, loadSections, loadUserSettings, presetWeekStartForNewAccount, repadOldEntries, resumeWeekStartChange } from './data.js?v=90bbeaa075';
+import { fetchEncryptionRow, maybeShowSpareKey, unlockEncryption, usableCachedDek } from './keys.js?v=90bbeaa075';
+import { resumeStepChanges } from './type-change.js?v=90bbeaa075';
+import { syncedEntries } from './save.js?v=90bbeaa075';
+import { checkPushStatus } from './device.js?v=90bbeaa075';
+import { rememberSignedInHere } from './auth-view.js?v=90bbeaa075';
+import { render } from './main-view.js?v=90bbeaa075';
 
 // --- Auth-Status & Start ---------------------------------------------------
 export async function completeAuthFlow(userId, password, { verifyPassword = false } = {}) {

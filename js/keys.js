@@ -1,16 +1,16 @@
-import { supabase } from './config.js?v=8aaa0e5b67';
-import { PBKDF2_ITERATIONS, base64ToBuf, bufToBase64, bufToHex, cacheDek, clearCachedDek, deriveKek, encryptData, generateDek, generateRecoveryKeyBytes, hexToBuf, importRecoveryKeyAsCryptoKey, loadCachedDek, unwrapDek, wrapDek } from './crypto.js?v=8aaa0e5b67';
-import { invalidateTodayAutoCollapse, saveFieldNamesForPush } from './fields.js?v=8aaa0e5b67';
-import { formatKey, parseDateKey, startOfDay, startOfWeek } from './dates.js?v=8aaa0e5b67';
-import { currentDek, currentDekId, restoreModalFocus, runtime, setCurrentDek, state } from './state.js?v=8aaa0e5b67';
-import { currentLocale, detectInitialLocale, t } from './i18n.js?v=8aaa0e5b67';
-import { errorNotice, translateAuthError, translateDbError } from './format.js?v=8aaa0e5b67';
-import { loadEntries, loadHabits, loadSections } from './data.js?v=8aaa0e5b67';
-import { dropPendingDaySaves, renderUnlessTyping } from './save.js?v=8aaa0e5b67';
-import { isOnbInProgress, setOnbInProgress } from './auth-view.js?v=8aaa0e5b67';
-import { setTodayIntroPending } from './row-view.js?v=8aaa0e5b67';
-import { render } from './main-view.js?v=8aaa0e5b67';
-import { clearLoadedAccountState } from './session.js?v=8aaa0e5b67';
+import { supabase } from './config.js?v=90bbeaa075';
+import { PBKDF2_ITERATIONS, base64ToBuf, bufToBase64, bufToHex, cacheDek, clearCachedDek, deriveKek, encryptData, generateDek, generateRecoveryKeyBytes, hexToBuf, importRecoveryKeyAsCryptoKey, loadCachedDek, unwrapDek, wrapDek } from './crypto.js?v=90bbeaa075';
+import { invalidateTodayAutoCollapse, saveFieldNamesForPush } from './fields.js?v=90bbeaa075';
+import { formatKey, parseDateKey, startOfDay, startOfWeek } from './dates.js?v=90bbeaa075';
+import { currentDek, currentDekId, restoreModalFocus, runtime, setCurrentDek, state } from './state.js?v=90bbeaa075';
+import { currentLocale, detectInitialLocale, t } from './i18n.js?v=90bbeaa075';
+import { errorNotice, translateAuthError, translateDbError } from './format.js?v=90bbeaa075';
+import { loadEntries, loadHabits, loadSections } from './data.js?v=90bbeaa075';
+import { dropPendingDaySaves, renderUnlessTyping } from './save.js?v=90bbeaa075';
+import { isOnbInProgress, setOnbInProgress } from './auth-view.js?v=90bbeaa075';
+import { setTodayIntroPending } from './row-view.js?v=90bbeaa075';
+import { render } from './main-view.js?v=90bbeaa075';
+import { clearLoadedAccountState } from './session.js?v=90bbeaa075';
 
 // --- Verschlüsselungs-Lebenszyklus -------------------------------------------
 export async function fetchEncryptionRow(userId) {

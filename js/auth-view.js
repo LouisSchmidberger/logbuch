@@ -1,19 +1,19 @@
-import { ARRIVED_VIA_SIGNUP_CONFIRM, supabase } from './config.js?v=8aaa0e5b67';
-import { PBKDF2_ITERATIONS, bufToBase64, cacheDek, deriveKek, formatRecoveryKey, wrapDek } from './crypto.js?v=8aaa0e5b67';
-import { saveFieldNamesForPush } from './fields.js?v=8aaa0e5b67';
-import { runtime, setCurrentDek, state } from './state.js?v=8aaa0e5b67';
-import { app, esc } from './navigation.js?v=8aaa0e5b67';
-import { currentLocale, t, tPlain } from './i18n.js?v=8aaa0e5b67';
-import { TEXT_SIZES, getTextSize, getThemeOverride } from './theme.js?v=8aaa0e5b67';
-import { AUTH_MIN_PASSWORD_LENGTH, clearableInputHtml, translateAuthError } from './format.js?v=8aaa0e5b67';
-import { renderNotice } from './notices.js?v=8aaa0e5b67';
-import { loadEntries, loadFeatureAccess, loadHabits, loadSections, loadUserSettings } from './data.js?v=8aaa0e5b67';
-import { fetchEncryptionRow, maybeShowSpareKey, setupEncryption, unlockErrorText, unwrapDekWithRecoveryKey } from './keys.js?v=8aaa0e5b67';
-import { isIOSDevice, isMobileDevice, isStandaloneDisplay } from './device.js?v=8aaa0e5b67';
-import { SIGNUP_MIN_FILL_MS } from './account.js?v=8aaa0e5b67';
-import { whyBox } from './tutorial.js?v=8aaa0e5b67';
-import { announce, icon, iconSvg, render } from './main-view.js?v=8aaa0e5b67';
-import { completeAuthFlow } from './session.js?v=8aaa0e5b67';
+import { ARRIVED_VIA_SIGNUP_CONFIRM, supabase } from './config.js?v=90bbeaa075';
+import { PBKDF2_ITERATIONS, bufToBase64, cacheDek, deriveKek, formatRecoveryKey, wrapDek } from './crypto.js?v=90bbeaa075';
+import { saveFieldNamesForPush } from './fields.js?v=90bbeaa075';
+import { runtime, setCurrentDek, state } from './state.js?v=90bbeaa075';
+import { app, esc } from './navigation.js?v=90bbeaa075';
+import { currentLocale, t, tPlain } from './i18n.js?v=90bbeaa075';
+import { TEXT_SIZES, getTextSize, getThemeOverride } from './theme.js?v=90bbeaa075';
+import { AUTH_MIN_PASSWORD_LENGTH, clearableInputHtml, translateAuthError } from './format.js?v=90bbeaa075';
+import { renderNotice } from './notices.js?v=90bbeaa075';
+import { loadEntries, loadFeatureAccess, loadHabits, loadSections, loadUserSettings } from './data.js?v=90bbeaa075';
+import { fetchEncryptionRow, maybeShowSpareKey, setupEncryption, unlockErrorText, unwrapDekWithRecoveryKey } from './keys.js?v=90bbeaa075';
+import { isIOSDevice, isMobileDevice, isStandaloneDisplay } from './device.js?v=90bbeaa075';
+import { SIGNUP_MIN_FILL_MS } from './account.js?v=90bbeaa075';
+import { whyBox } from './tutorial.js?v=90bbeaa075';
+import { announce, icon, iconSvg, render } from './main-view.js?v=90bbeaa075';
+import { completeAuthFlow } from './session.js?v=90bbeaa075';
 
 // --- Rendering: Auth -------------------------------------------------------
 // Hilfe, falls die Bestätigungsmail nicht ankommt: sie landet bei manchen Anbietern im

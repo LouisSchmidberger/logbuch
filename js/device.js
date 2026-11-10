@@ -1,10 +1,10 @@
-import { VAPID_PUBLIC_KEY, supabase, urlBase64ToUint8Array } from './config.js?v=8aaa0e5b67';
-import { clearFieldNamesForPush } from './fields.js?v=8aaa0e5b67';
-import { runtime, state } from './state.js?v=8aaa0e5b67';
-import { esc } from './navigation.js?v=8aaa0e5b67';
-import { t } from './i18n.js?v=8aaa0e5b67';
-import { errorNotice, translateDbError } from './format.js?v=8aaa0e5b67';
-import { render } from './main-view.js?v=8aaa0e5b67';
+import { VAPID_PUBLIC_KEY, supabase, urlBase64ToUint8Array } from './config.js?v=90bbeaa075';
+import { clearFieldNamesForPush } from './fields.js?v=90bbeaa075';
+import { runtime, state } from './state.js?v=90bbeaa075';
+import { esc } from './navigation.js?v=90bbeaa075';
+import { t } from './i18n.js?v=90bbeaa075';
+import { errorNotice, translateDbError } from './format.js?v=90bbeaa075';
+import { render } from './main-view.js?v=90bbeaa075';
 
 // --- "Zum Homescreen hinzufügen"-Hinweis --------------------------------
 // Auf iOS funktioniert Web-Push NUR, wenn die Seite zum Home-Bildschirm hinzugefügt
