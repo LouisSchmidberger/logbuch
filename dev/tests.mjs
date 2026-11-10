@@ -187,7 +187,7 @@ try {
         ...f.SUPPORTED_KINDS.map((k) => 'tutorial.form.tip.' + k),
         ...f.FIELD_TEMPLATES.flatMap((x) => [`tpl.${x.id}.name`, `tpl.${x.id}.note`, ...(x.direct ? [] : [`tpl.${x.id}.explain`]),
           ...(x.slots.length > 1 ? x.slots.map((s) => `tpl.${x.id}.${s.slot}`) : [])]),
-        ...f.PACKAGE_GROUPS.flatMap((g) => [`pkg.group.${g.id}`, ...g.items.flatMap((it) => [`pkg.item.${it.id}`, `tpl.${it.tpl || it.id}.name`])]),
+        ...f.PACKAGE_GROUPS.flatMap((g) => [`pkg.group.${g.id}`, ...g.items.flatMap((it) => [`pkg.item.${it.id}`, it.nameKey || `tpl.${it.tpl || it.id}.name`])]),
       ];
       eq('Texte: dynamische Schlüssel vorhanden', needed.filter((k) => !(k in f.STRINGS.de)), []);
     } finally {

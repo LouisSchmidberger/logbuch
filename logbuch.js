@@ -2244,6 +2244,7 @@ const STRINGS = {
     'pkg.group.evening': 'Abends',
     'pkg.item.sleep': 'Aufgestanden und die Schlafdauer hier, „Ins Bett“ abends ganz unten',
     'pkg.item.sleepQuality': '1 bis 5',
+    'pkg.item.nap': 'Hingelegt, aufgestanden und die Dauer daraus; darf leer bleiben, wenn es keinen gab',
     'pkg.item.mood': '1 bis 5',
     'pkg.item.energy': '1 bis 5',
     'pkg.item.stress': '0 bis 10, wenig ist gut',
@@ -3450,6 +3451,7 @@ const STRINGS = {
     'pkg.group.evening': 'Evening',
     'pkg.item.sleep': 'Got up and the sleep duration here, bedtime in the evening at the very bottom',
     'pkg.item.sleepQuality': '1 to 5',
+    'pkg.item.nap': 'Lay down, got up and the duration from that; may stay empty if there was none',
     'pkg.item.mood': '1 to 5',
     'pkg.item.energy': '1 to 5',
     'pkg.item.stress': '0 to 10, less is good',
@@ -10944,9 +10946,19 @@ const PACKAGE_GROUPS = [
     { id: 'cycle', tpl: 'cycle', on: false },
     { id: 'weight', tpl: 'weight', on: false },
     { id: 'grateful', on: false, slots: [{ slot: 'main', form: () => ({ kind: 'text' }) }] },
+    // Nur die Zusätze einer Vorlage (extras): dieselben Felder wie beim Bestätigen der Vorlage.
+    { id: 'nap', tpl: 'sleep', extras: ['nap'], nameKey: 'tpl.sleep.napDuration', feature: 'optional', on: false },
   ] },
 ];
-function packageItemTemplate(item) { return item.tpl ? templateWithExtras(templateById(item.tpl)) : { id: item.id, slots: item.slots }; }
+// Ein Eintrag mit extras besteht nur aus diesen Zusätzen seiner Vorlage, ohne die Grundfelder.
+function packageItemTemplate(item) {
+  if (!item.tpl) return { id: item.id, slots: item.slots };
+  const tpl = templateById(item.tpl);
+  return item.extras ? { ...tpl, slots: tpl.slots.filter((s) => item.extras.includes(s.extra)) } : templateWithExtras(tpl);
+}
+function packageItemNameKey(item) { return item.nameKey || `tpl.${item.tpl || item.id}.name`; }
+// Einträge hinter einem Schalter erscheinen erst, wenn er für einen gilt.
+function packageItemShown(item) { return !item.feature || featureOn(item.feature); }
 function packageDefaultChoice() {
   return Object.fromEntries(PACKAGE_GROUPS.flatMap((g) => g.items.map((it) => [it.id, it.on])));
 }
@@ -10969,7 +10981,7 @@ function packageFormState() {
   return { packageChosen: chosen, packageExisting: existing, template: { stage: 'package' } };
 }
 function packageFieldCount(chosen) {
-  return PACKAGE_GROUPS.flatMap((g) => g.items).filter((it) => chosen[it.id]).reduce((n, it) => n + packageItemTemplate(it).slots.length, 0);
+  return PACKAGE_GROUPS.flatMap((g) => g.items).filter((it) => chosen[it.id] && packageItemShown(it)).reduce((n, it) => n + packageItemTemplate(it).slots.length, 0);
 }
 // Legt die gewählten Einträge an, je Gruppe erst die Gruppe. Scheitert etwas, bleibt das schon
 // Angelegte stehen (normale Felder, wie bei Vorlagen).
@@ -10977,7 +10989,7 @@ async function createStarterPackage(chosen) {
   const habits = [];
   // Erst alle Gruppen in Anzeige-Reihenfolge ("Abends" zuletzt), dann die Felder - "Ins Bett" wird
   // als Verweis für die Schlafdauer zuerst angelegt, gehört aber in die letzte Gruppe.
-  const chosenItems = (g) => g.items.filter((it) => chosen[it.id]);
+  const chosenItems = (g) => g.items.filter((it) => chosen[it.id] && packageItemShown(it));
   const sectionKeys = PACKAGE_GROUPS.filter((g) => g.id !== 'other' && chosenItems(g).length).map((g) => g.id);
   if (PACKAGE_GROUPS.some((g) => chosenItems(g).some((it) => packageItemTemplate(it).slots.some((sl) => sl.placeLast)))) sectionKeys.push('evening');
   const sections = {};
@@ -11017,10 +11029,10 @@ function renderStarterPackage(f) {
       ${PACKAGE_GROUPS.map((g) => `
         <fieldset class="pkg-group">
           <legend class="form-part-title">${t('pkg.group.' + g.id)}</legend>
-          ${g.items.map((it) => `
+          ${g.items.filter(packageItemShown).map((it) => `
             <label class="checkbox-field pkg-item">
               <input type="checkbox" id="pkg-item-${it.id}" ${chosen[it.id] ? 'checked' : ''} ${state.habitFormSaving ? 'disabled' : ''} />
-              <span><span class="pkg-item-name">${t(`tpl.${it.tpl || it.id}.name`)}</span>
+              <span><span class="pkg-item-name">${t(packageItemNameKey(it))}</span>
               <span class="pkg-item-note">${t('pkg.item.' + it.id)}</span>
               ${f.packageExisting?.includes(it.id) ? `<span class="pkg-item-note pkg-item-have">${t('pkg.have')}</span>` : ''}</span>
             </label>

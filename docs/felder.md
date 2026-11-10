@@ -401,8 +401,10 @@ aus "Heute" (inert). Scheitert ein Teil, bleibt das schon Angelegte stehen.
 
 **Zusätze** (`extras`, Nutzer-Entscheidung 2026-11-10, Schalter `optional`): Teile einer Vorlage,
 die nur mitkommen, wenn man sie beim Bestätigen ankreuzt (`templateWithExtras`) – bei "Schlaf"
-Schlafqualität und Mittagsschlaf (hingelegt/aufgestanden "darf leer bleiben", Dauer daraus). Das
-Startpaket nimmt nie Zusätze mit.
+Schlafqualität und Mittagsschlaf (hingelegt/aufgestanden "darf leer bleiben", Dauer daraus). Im
+Startpaket steht ein Zusatz als eigener Eintrag (`extras` am Eintrag, nur diese Teile ohne die
+Grundfelder, z. B. "Mittagsschlaf" unter Sonstiges; Nutzer-Entscheidung 2026-11-10: das Startpaket
+wächst mit den Vorlagen). Einträge mit `feature` erscheinen nur, wenn der Schalter gilt.
 
 **Darf leer bleiben** (`optional`, Klartext-Spalte, Schalter `optional`, Haken unter "Wann?" →
 "Mehr"): für Dinge, die nicht jeden Tag vorkommen (Mittagsschlaf) – leer heißt "gab es nicht".
