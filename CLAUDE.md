@@ -101,7 +101,9 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
   dev/README.md) Screenshots machen, bevor live geht. Neue Tabelle/Spalte/Supabase-Aufruf →
   `dev/mock-supabase.js` nachziehen.
 - **Rechenlogik geändert** → `node dev/tests.mjs` vor dem Commit, neue Logik bekommt dort einen
-  Fall. **Neue Funktion für Nutzer** → hinter einen Schalter (docs/freigabe.md).
+  Fall. **Neue Funktion für Nutzer** → ob sie einen Schalter
+  bekommt und auf welcher Stufe sie startet, entscheidet der Nutzer pro Funktion – beim Klären
+  der Aufgabe fragen (Nutzer-Entscheidung 2026-11-10; docs/freigabe.md).
 - **Mobil zuerst**: die Nutzer sind mit großem Abstand auf Handy und Tablet (Android/iOS).
   Jede Gestaltungs-/Bedienentscheidung geht von Mobilgeräten und deren Konventionen aus; der
   PC muss funktionieren, gibt aber nicht die Richtung vor.

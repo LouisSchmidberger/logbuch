@@ -119,7 +119,7 @@ als Monatsletzter), DB-Check `habit_definitions_period_check`. Beides Klartext, 
 siehe [erinnerungen.md](erinnerungen.md).
 
 **Wochenbeginn** (`user_settings.week_start`, ISO 1 Montag / 7 Sonntag / 6 Samstag, Std. 1;
-Nutzer-Entscheidung 2026-11-10, Schalter `weekstart`): Woche, Monatskalender, Reihenfolge der
+Nutzer-Entscheidung 2026-11-10): Woche, Monatskalender, Reihenfolge der
 Wochentags-Knöpfe und Wochenfelder folgen ihm; gespeicherte Wochentage (`schedule.days`, 0 =
 Montag) bleiben Montag-basiert. Beim Registrieren aus der Region vorausgewählt
 (`regionWeekStart`, ohne Intl-Wochendaten Montag). **Umstellen zieht Wochen-Einträge um**

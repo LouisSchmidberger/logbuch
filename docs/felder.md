@@ -399,20 +399,20 @@ einen Speicherweg gibt. `'@slot'` verweist auf den Schlüssel eines vorher angel
 Namen in der Sprache beim Anlegen, danach normale Felder. Bestätigen zeigt die echten Zeilen
 aus "Heute" (inert). Scheitert ein Teil, bleibt das schon Angelegte stehen.
 
-**Zusätze** (`extras`, Nutzer-Entscheidung 2026-11-10, Schalter `optional`): Teile einer Vorlage,
+**Zusätze** (`extras`, Nutzer-Entscheidung 2026-11-10): Teile einer Vorlage,
 die nur mitkommen, wenn man sie beim Bestätigen ankreuzt (`templateWithExtras`) – bei "Schlaf"
 Schlafqualität und Mittagsschlaf (hingelegt/aufgestanden "darf leer bleiben", Dauer daraus). Im
 Startpaket steht ein Zusatz als eigener Eintrag (`extras` am Eintrag, nur diese Teile ohne die
 Grundfelder, z. B. "Mittagsschlaf" unter Sonstiges; Nutzer-Entscheidung 2026-11-10: das Startpaket
-wächst mit den Vorlagen). Einträge mit `feature` erscheinen nur, wenn der Schalter gilt.
+wächst mit den Vorlagen).
 
-**Darf leer bleiben** (`optional`, Klartext-Spalte, Schalter `optional`, Haken unter "Wann?" →
+**Darf leer bleiben** (`optional`, Klartext-Spalte, Haken unter "Wann?" →
 "Mehr"): für Dinge, die nicht jeden Tag vorkommen (Mittagsschlaf) – leer heißt "gab es nicht".
 Ein solches Feld fehlt nie: kein Punkt "noch offen", zählt nicht für "Alles eingetragen" und
 "✓ erledigt"/Zuklappen der Gruppe (`isOpenToday`, `sectionDoneOn`), keine Standard- und
 Gruppen-Erinnerung. Nur Tagesfelder, nicht berechnet, kein Zähler (`isOptionalAllowed`).
 
-**Startpaket auch nach dem Tutorial** (Nutzer-Entscheidung 2026-11-10, Schalter `starterpack`):
+**Startpaket auch nach dem Tutorial** (Nutzer-Entscheidung 2026-11-10):
 als Karte bei "Neues Feld" und als Knopf im leeren "Heute". Einträge, von denen ein Teil wie ein
 aktives Feld heißt, sind abgewählt und als "Hast du schon" markiert (`packageExistingItems`,
 nur über den Namen); Gruppen gleichen Namens werden wiederverwendet statt doppelt angelegt.
@@ -525,7 +525,7 @@ Eintrag). "−" daneben zum Korrigieren statt Rückgängig-Meldung; Schritt pro 
 [erinnerungen.md](erinnerungen.md) → Zähler); nicht im Tutorial. Auf 0
 heruntergezählt wird der Schlüssel entfernt (gilt ohnehin als 0).
 
-**Bereich und Wochensumme** (G3, Nutzer-Entscheidung 2026-11-10, Schalter `goals`): Ziel auch als
+**Bereich und Wochensumme** (G3, Nutzer-Entscheidung 2026-11-10): Ziel auch als
 Bereich ("7 bis 9 h") und bei Tagesfeldern "pro Woche (Summe)" bei mindestens/höchstens; dazu
 für berechnete Zahlen-Felder und Dauern (nicht "Tage seit"). Modell `h.goal = { dir, target,
 max, scope }` aus `goalFromPayload`: "mindestens/höchstens pro Tag" einer Zahl/eines Zählers

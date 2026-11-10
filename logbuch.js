@@ -1804,7 +1804,6 @@ const STRINGS = {
     'timePicker.apply': 'Übernehmen',
     'today.jumpToday': 'Zu heute springen',
     'today.pickDate': 'Datum wählen',
-    'today.noFields': 'Noch keine Felder angelegt.',
     'today.resetDay': 'Tag zurücksetzen',
     'today.fieldOptions': 'Optionen für {name}',
     'today.dayOptions': 'Optionen für diesen Tag',
@@ -3011,7 +3010,6 @@ const STRINGS = {
     'timePicker.apply': 'Set',
     'today.jumpToday': 'Jump to today',
     'today.pickDate': 'Choose date',
-    'today.noFields': 'No fields created yet.',
     'today.resetDay': 'Reset day',
     'today.fieldOptions': 'Options for {name}',
     'today.dayOptions': 'Options for this day',
@@ -4785,7 +4783,7 @@ function regionWeekStart() {
 }
 // Neues Konto, noch nichts eingetragen: Wochenbeginn der Region übernehmen (kein Umzug nötig).
 async function presetWeekStartForNewAccount() {
-  if (!featureOn('weekstart') || state.userSettings.onboardingCompleted || Object.keys(state.entries).length) return;
+  if (state.userSettings.onboardingCompleted || Object.keys(state.entries).length) return;
   const iso = regionWeekStart();
   if (iso === state.userSettings.weekStart) return;
   const { error } = await supabase.from('user_settings').upsert({ user_id: state.session.user.id, week_start: iso }, { onConflict: 'user_id' });
@@ -5550,8 +5548,6 @@ function goalSliderText(f, value) {
 function numberGoalAllowed(f) {
   return f.kind === 'number' || f.kind === 'counter' || (f.kind === 'computed' && (f.computedType === 'number' || f.computedType === 'duration'));
 }
-// Schalter 'goals' sperrt nur den Einstieg; ein schon gesetztes neues Ziel bleibt sichtbar.
-function numberGoalExtrasShown(f) { return featureOn('goals') || f.numberGoalDir === 'range' || f.numberGoalScope === 'week'; }
 function numberGoalFormUnit(f) {
   if (f.kind === 'computed') {
     if (f.computedType === 'duration') return 'h';
@@ -5560,11 +5556,9 @@ function numberGoalFormUnit(f) {
   return (f.unit || '').trim();
 }
 function numberGoalField(f) {
-  if (f.kind === 'computed' && !numberGoalExtrasShown(f) && !f.numberGoalDir) return '';
   const unit = numberGoalFormUnit(f);
-  const extras = numberGoalExtrasShown(f);
-  const dirs = [['', 'habitForm.numberGoal.none'], ['high', 'habitForm.numberGoal.min'], ['low', 'habitForm.numberGoal.max'], ...(extras ? [['range', 'habitForm.numberGoal.range']] : [])];
-  const scopeShown = extras && f.period === 'day' && (f.numberGoalDir === 'high' || f.numberGoalDir === 'low');
+  const dirs = [['', 'habitForm.numberGoal.none'], ['high', 'habitForm.numberGoal.min'], ['low', 'habitForm.numberGoal.max'], ['range', 'habitForm.numberGoal.range']];
+  const scopeShown = f.period === 'day' && (f.numberGoalDir === 'high' || f.numberGoalDir === 'low');
   const scope = f.numberGoalScope === 'week' ? 'week' : 'day';
   const note = !f.numberGoalDir ? 'habitForm.goalNote'
     : f.numberGoalDir === 'range' ? 'habitForm.numberGoalNoteRange'
@@ -9913,11 +9907,11 @@ function renderToday() {
     ${renderTodayIntro()}
     <div class="habit-list">
       ${renderBySection(planned, 'today', (list) => list.map(renderPlannedRow).join(''))}
-      ${!allActive.length ? (featureOn('starterpack') ? `
+      ${!allActive.length ? `
         <div class="today-empty-pkg">
           <p class="manage-meta">${t('pkg.todayEmpty')}</p>
           <button type="button" class="manage-new-btn" data-action="today-starter-package">${t('pkg.todayOpen')}</button>
-        </div>` : `<p class="manage-meta">${t('today.noFields')}</p>`) : habits.length && !planned.length ? `<p class="manage-meta">${t('today.nothingPlanned')}</p>` : ''}
+        </div>` : habits.length && !planned.length ? `<p class="manage-meta">${t('today.nothingPlanned')}</p>` : ''}
     </div>
     ${unplanned.length ? `
       <details class="unplanned"${unplannedOpen ? ' open' : ''}>
@@ -10972,7 +10966,7 @@ const PACKAGE_GROUPS = [
     { id: 'weight', tpl: 'weight', on: false },
     { id: 'grateful', on: false, slots: [{ slot: 'main', form: () => ({ kind: 'text' }) }] },
     // Nur die Zusätze einer Vorlage (extras): dieselben Felder wie beim Bestätigen der Vorlage.
-    { id: 'nap', tpl: 'sleep', extras: ['nap'], nameKey: 'tpl.sleep.napDuration', feature: 'optional', on: false },
+    { id: 'nap', tpl: 'sleep', extras: ['nap'], nameKey: 'tpl.sleep.napDuration', on: false },
   ] },
 ];
 // Ein Eintrag mit extras besteht nur aus diesen Zusätzen seiner Vorlage, ohne die Grundfelder.
@@ -10982,8 +10976,6 @@ function packageItemTemplate(item) {
   return item.extras ? { ...tpl, slots: tpl.slots.filter((s) => item.extras.includes(s.extra)) } : templateWithExtras(tpl);
 }
 function packageItemNameKey(item) { return item.nameKey || `tpl.${item.tpl || item.id}.name`; }
-// Einträge hinter einem Schalter erscheinen erst, wenn er für einen gilt.
-function packageItemShown(item) { return !item.feature || featureOn(item.feature); }
 function packageDefaultChoice() {
   return Object.fromEntries(PACKAGE_GROUPS.flatMap((g) => g.items.map((it) => [it.id, it.on])));
 }
@@ -11006,7 +10998,7 @@ function packageFormState() {
   return { packageChosen: chosen, packageExisting: existing, template: { stage: 'package' } };
 }
 function packageFieldCount(chosen) {
-  return PACKAGE_GROUPS.flatMap((g) => g.items).filter((it) => chosen[it.id] && packageItemShown(it)).reduce((n, it) => n + packageItemTemplate(it).slots.length, 0);
+  return PACKAGE_GROUPS.flatMap((g) => g.items).filter((it) => chosen[it.id]).reduce((n, it) => n + packageItemTemplate(it).slots.length, 0);
 }
 // Legt die gewählten Einträge an, je Gruppe erst die Gruppe. Scheitert etwas, bleibt das schon
 // Angelegte stehen (normale Felder, wie bei Vorlagen).
@@ -11014,7 +11006,7 @@ async function createStarterPackage(chosen) {
   const habits = [];
   // Erst alle Gruppen in Anzeige-Reihenfolge ("Abends" zuletzt), dann die Felder - "Ins Bett" wird
   // als Verweis für die Schlafdauer zuerst angelegt, gehört aber in die letzte Gruppe.
-  const chosenItems = (g) => g.items.filter((it) => chosen[it.id] && packageItemShown(it));
+  const chosenItems = (g) => g.items.filter((it) => chosen[it.id]);
   const sectionKeys = PACKAGE_GROUPS.filter((g) => g.id !== 'other' && chosenItems(g).length).map((g) => g.id);
   if (PACKAGE_GROUPS.some((g) => chosenItems(g).some((it) => packageItemTemplate(it).slots.some((sl) => sl.placeLast)))) sectionKeys.push('evening');
   const sections = {};
@@ -11054,7 +11046,7 @@ function renderStarterPackage(f) {
       ${PACKAGE_GROUPS.map((g) => `
         <fieldset class="pkg-group">
           <legend class="form-part-title">${t('pkg.group.' + g.id)}</legend>
-          ${g.items.filter(packageItemShown).map((it) => `
+          ${g.items.map((it) => `
             <label class="checkbox-field pkg-item">
               <input type="checkbox" id="pkg-item-${it.id}" ${chosen[it.id] ? 'checked' : ''} ${state.habitFormSaving ? 'disabled' : ''} />
               <span><span class="pkg-item-name">${t(packageItemNameKey(it))}</span>
@@ -11077,7 +11069,6 @@ function templateById(id) { return FIELD_TEMPLATES.find((x) => x.id === id); }
 function templateWithExtras(tpl, extras = {}) {
   return tpl.extras ? { ...tpl, slots: tpl.slots.filter((s) => !s.extra || extras[s.extra]) } : tpl;
 }
-function templateExtrasShown(tpl) { return !!tpl.extras && featureOn('optional'); }
 function templateDisplaySlots(tpl) { return [...tpl.slots.filter((s) => !s.placeLast), ...tpl.slots.filter((s) => s.placeLast)]; }
 function templateSlotName(tpl, slot) { return tPlain(tpl.slots.length > 1 ? `tpl.${tpl.id}.${slot}` : `tpl.${tpl.id}.name`); }
 // Formular-Zustand eines Teils; refs = { slot: Schlüssel } der schon angelegten Teile.
@@ -11381,7 +11372,7 @@ function renderTemplatePicker(f) {
   return `
     <div class="habit-form" id="habit-form">
       ${f.revealStage !== undefined ? '' : `<h3 class="form-part-title tpl-question">${t('tpl.question')}</h3>`}
-      <div class="kind-cards tpl-cards">${f.packageChosen || featureOn('starterpack') ? card('tpl-package', '', t('pkg.backTitle'), t(f.packageChosen ? 'pkg.backNote' : 'pkg.cardNote')) : ''}${card('tpl-custom', '', t('tpl.custom'), t('tpl.customNote'))}</div>
+      <div class="kind-cards tpl-cards">${card('tpl-package', '', t('pkg.backTitle'), t(f.packageChosen ? 'pkg.backNote' : 'pkg.cardNote'))}${card('tpl-custom', '', t('tpl.custom'), t('tpl.customNote'))}</div>
       ${TEMPLATE_TOPICS.map((topic) => `
         <section class="form-part" aria-labelledby="tpl-topic-${topic}">
           <h3 class="form-part-title" id="tpl-topic-${topic}">${t('tpl.topic.' + topic)}</h3>
@@ -11457,7 +11448,7 @@ function renderTemplateConfirm(f) {
     <div class="habit-form" id="habit-form">
       <h3 class="form-part-title">${t(`tpl.${tpl.id}.name`)}</h3>
       <p class="habit-form-lock-note">${t(`tpl.${tpl.id}.explain`)}</p>
-      ${templateExtrasShown(full) ? `
+      ${full.extras ? `
         <fieldset class="auth-field tpl-extras">
           <legend class="settings-label">${t('tpl.extras')}</legend>
           ${full.extras.map((x) => `
@@ -11839,8 +11830,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   const sch = f.schedule;
   const shortNames = mondayFirstWeekdayShortNames();
   const isInterval = sch.mode === 'interval';
-  // Schalter 'optional' sperrt nur den Einstieg; wer es schon gesetzt hat, sieht den Haken weiter.
-  const optionalShown = isOptionalAllowed(f) && (featureOn('optional') || f.optional);
+  const optionalShown = isOptionalAllowed(f);
   const scheduleBody = `
     <div class="auth-field">
       <label id="habit-form-days-label">${t('habitForm.days')}${infoTip(tPlain(isInterval ? 'habitForm.days.intervalHint' : sch.days.length === 7 ? 'habitForm.days.hint' : 'habitForm.days.explain'))}</label>
@@ -11958,7 +11948,7 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     ${isPeriod ? (isCounter ? '' : periodReminderControl(f)) : scheduleBody}
     ${habitFormReminderShown(f) ? reminderBody : ''}
   `;
-  const hasGoalField = showGoal || f.kind === 'number' || f.kind === 'counter' || (numberGoalAllowed(f) && (numberGoalExtrasShown(f) || !!f.numberGoalDir));
+  const hasGoalField = showGoal || f.kind === 'number' || f.kind === 'counter' || numberGoalAllowed(f);
   const statsBody = `
     ${summaryField}
     ${partMore('stats', [...(hasGoalField ? ['goal'] : []), 'showInStats'], (showGoal && f.goal < 1) || !!f.numberGoalDir || !f.showInStats, `
@@ -12542,16 +12532,14 @@ function renderSettings() {
           <option value="en" ${currentLocale === 'en' ? 'selected' : ''}>English</option>
         </select>
       </div>
-      ${featureOn('weekstart') || state.userSettings.weekStart !== 1 ? `
-        <div class="settings-row" data-menu-target="week-start">
-          <label for="menu-week-start">${t('settings.weekStart')}</label>
-          <select id="menu-week-start" data-action="menu-week-start" aria-describedby="settings-week-start-note" ${weekStartChange.running ? 'disabled' : ''}>
-            ${WEEK_STARTS.map((iso) => `<option value="${iso}" ${state.userSettings.weekStart === iso ? 'selected' : ''}>${esc(weekdayLong(new Date(2024, 0, iso)))}</option>`).join('')}
-          </select>
-          <p class="settings-note" id="settings-week-start-note">${t('settings.weekStartNote')}</p>
-          ${weekStartChange.running ? `<p class="settings-note" id="week-start-progress" role="status">${t('settings.weekStartRunning')}</p>` : ''}
-        </div>
-      ` : ''}
+      <div class="settings-row" data-menu-target="week-start">
+        <label for="menu-week-start">${t('settings.weekStart')}</label>
+        <select id="menu-week-start" data-action="menu-week-start" aria-describedby="settings-week-start-note" ${weekStartChange.running ? 'disabled' : ''}>
+          ${WEEK_STARTS.map((iso) => `<option value="${iso}" ${state.userSettings.weekStart === iso ? 'selected' : ''}>${esc(weekdayLong(new Date(2024, 0, iso)))}</option>`).join('')}
+        </select>
+        <p class="settings-note" id="settings-week-start-note">${t('settings.weekStartNote')}</p>
+        ${weekStartChange.running ? `<p class="settings-note" id="week-start-progress" role="status">${t('settings.weekStartRunning')}</p>` : ''}
+      </div>
       <div class="settings-row" data-menu-target="pattern">
         <label class="checkbox-field">
           <input type="checkbox" data-action="pattern-toggle" aria-describedby="settings-pattern-note" ${isPatternDisabled() ? '' : 'checked'} />

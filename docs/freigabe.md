@@ -6,7 +6,7 @@ und ohne Code-Zweige.
 - **Private Beta** = die Beta-Seite (`git push beta main`): halbfertiger Stand, darf auch mal
   kaputt sein, nur Louis. Unverändert wie in CLAUDE.md "Deployment".
 - **Live** bekommt fertigen Code wie bisher gesammelt am Sitzungsende. Ob eine neue Funktion
-  dort **sichtbar** ist, entscheidet ihr Schalter, nicht der Live-Gang.
+  dort **sichtbar** ist, entscheidet ihr Schalter (falls sie einen hat), nicht der Live-Gang.
 - **Schalter** (`feature_flags.stage`): `off` → `owner` (nur Louis) → `testers` (ausgewählte
   Konten + Louis) → `all`. Welche Konten Tester sind, steht in `user_access` (`owner` |
   `tester`). Beide Tabellen sind für Nutzer nur lesbar; ändern nur über Dashboard/SQL
@@ -48,7 +48,7 @@ Build-Schritt.
 - Ein Schalter im Browser ist kein Schutz: wer technisch versiert ist, kann eine versteckte
   Funktion freischalten. Für Tests egal; für Premium siehe unten.
 
-**Aktuelle Schalter**: `starterpack` (Startpaket jederzeit über "Neues Feld" und im leeren "Heute"), `optional` ("Darf leer bleiben" und Zusätze der Vorlage "Schlaf"), `weekstart` (Wochenbeginn einstellbar), `goals` (Ziele als Bereich und Wochensumme, auch für berechnete Zahlen-Felder).
+**Aktuelle Schalter**: keine.
 
 ## Schalter setzen (Dashboard → SQL)
 
@@ -59,7 +59,7 @@ insert into public.user_access (user_id, access_group)
   select id, 'tester' from auth.users where email = '<adresse>';
 ```
 
-Neuer Schalter: Zeile per Migration anlegen (Stufe `owner`), im Code `featureOn`, in
+Neuer Schalter (ob und mit welcher Stufe, entscheidet Louis pro Funktion): Zeile per Migration anlegen, im Code `featureOn`, in
 `dev/tests.mjs` nichts nötig (die Stufenlogik ist dort getestet). Vorschau:
 `window.__logbuchPreview.admin.setFeature(key, stage)` / `setAccessGroup(email, group)`.
 
