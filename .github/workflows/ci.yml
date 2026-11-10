@@ -1,0 +1,49 @@
+# Automatische Prüfung bei jedem Push (Beta und live): Linter, Rechenlogik-Tests, Abgleich
+# JS <-> SQL auf einer frischen Wegwerf-Datenbank aus allen Migrationen, Typprüfung der Edge
+# Functions. Schlägt etwas fehl, zeigt GitHub den Push rot (Reiter "Actions") und schickt eine
+# Mail. Die Seite selbst wird trotzdem veröffentlicht - die CI ist das Warnsignal, nicht die Sperre.
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  app:
+    name: Linter, Tests, Migrationen
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Linter
+        run: npm run lint
+      - name: Vorschau-Server starten
+        run: |
+          node dev/server.mjs &
+          for i in $(seq 1 30); do curl -sf http://localhost:5180/ > /dev/null && exit 0; sleep 1; done
+          exit 1
+      - name: Tests der Rechenlogik
+        run: node dev/tests.mjs
+      - name: Wegwerf-Datenbank aus allen Migrationen
+        run: npx supabase db start
+      - name: Abgleich JS <-> SQL
+        run: node dev/sync-tests.mjs
+
+  functions:
+    name: Edge Functions (Typprüfung)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno check supabase/functions/*/index.ts

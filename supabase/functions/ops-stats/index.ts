@@ -7,7 +7,7 @@
 // Der Token öffnet nur diese Summen - bewusst nicht der Service-Key im Hub (der öffnete die
 // ganze Datenbank samt E-Mail-Adressen). Neuer Token = alter sofort ungültig.
 
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

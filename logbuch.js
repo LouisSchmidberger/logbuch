@@ -886,9 +886,10 @@ function weekdayOrder() { return Array.from({ length: 7 }, (_, i) => (weekStartI
 // public.habit_period_start (SQL) - synchron halten.
 const PERIODS = ['week', 'month', 'year'];
 function isPeriodField(h) { return !!h && !!h.period && h.period !== 'day'; }
-function periodStart(period, date) {
+function periodStart(period, date) { return periodStartWith(period, date, weekStartIso); }
+function periodStartWith(period, date, iso) {
   const d = startOfDay(date);
-  if (period === 'week') return startOfWeek(d);
+  if (period === 'week') return startOfWeekWith(d, iso);
   if (period === 'month') return new Date(d.getFullYear(), d.getMonth(), 1);
   if (period === 'year') return new Date(d.getFullYear(), 0, 1);
   return d;

@@ -23,7 +23,7 @@
 // läuft deshalb (in der SQL-Funktion) über die unverschlüsselte Spalte
 // habit_entries.filled_slugs (nur die IDs der befüllten Felder, keine Werte/Namen).
 
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 import webpush from 'npm:web-push@3.6.7';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;

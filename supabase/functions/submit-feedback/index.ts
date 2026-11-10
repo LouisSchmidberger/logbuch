@@ -14,7 +14,7 @@
 // Secrets (nie im Repo – es ist öffentlich): RESEND_FEEDBACK_KEY (eigener Resend-Key
 // nur für diesen Zweck, getrennt sperrbar) und FEEDBACK_TO_EMAIL (Empfängeradresse).
 
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

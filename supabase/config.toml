@@ -439,3 +439,18 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# Edge Functions: die CLI liest verify_jwt beim Deploy von hier - steht es hier nicht, setzt
+# ein Deploy den Standard (true). ops-stats wird vom Hub mit eigenem Token aufgerufen (kein
+# Supabase-Login) und braucht deshalb false.
+[functions.send-notifications]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
+
+[functions.submit-feedback]
+verify_jwt = true
+
+[functions.ops-stats]
+verify_jwt = false
