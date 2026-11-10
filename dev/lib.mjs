@@ -42,7 +42,10 @@ export const DEVICES = {
 export async function launch({ device = 'handy', theme = 'light', headless = true, profile = null } = {}) {
   const executablePath = BROWSERS.find((p) => existsSync(p));
   if (!executablePath) throw new Error('Kein Chrome/Edge gefunden - Pfad über PREVIEW_BROWSER angeben.');
-  const browser = await puppeteer.launch({ executablePath, headless, args: ['--no-first-run', '--no-default-browser-check',
+  const browser = await puppeteer.launch({ executablePath, headless,
+    // GitHub-Runner starten Chrome gelegentlich langsamer als die Standard-30-Sekunden.
+    timeout: process.env.CI ? 120000 : 30000,
+    args: ['--no-first-run', '--no-default-browser-check',
       // GitHub-Runner (Ubuntu 24.04) erlauben Chromes Sandbox nicht; nur dort, lokal bleibt sie an.
       ...(process.env.CI ? ['--no-sandbox'] : [])],
     userDataDir: profile ? fileURLToPath(new URL(`./.profile-${profile}/`, import.meta.url)) : undefined });
