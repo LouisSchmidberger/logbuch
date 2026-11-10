@@ -4686,6 +4686,9 @@ let accessGroup = null; // 'owner' | 'tester' | null (eigene Zeile in user_acces
 function featureVisible(stage, group) {
   return stage === 'all' || (stage === 'testers' && (group === 'tester' || group === 'owner')) || (stage === 'owner' && group === 'owner');
 }
+// Gerade ohne Aufrufer (keine Funktion hinter einem Schalter), bleibt als Schnittstelle für neue
+// Schalter (docs/freigabe.md).
+// eslint-disable-next-line no-unused-vars
 function featureOn(key) { return featureVisible(featureStages[key], accessGroup); }
 async function loadFeatureAccess() {
   const [flags, access] = await Promise.all([
@@ -6664,8 +6667,6 @@ async function resumeStepChanges() {
 // Rückgängig). Nicht möglich, weil sich daraus kein Wert ableiten lässt: Text -> anderes;
 // Berechnet hat keine eigenen Einträge. Felder, die in einem berechneten Feld stecken, erst dort
 // herausnehmen (das berechnete Feld verlangt Skalen bzw. Zahlen).
-// Alle Eigenschaften, die vom Typ abhängen - from hält sie fest, Rückgängig stellt sie wieder her.
-const TYPE_CHANGE_KEYS = ['kind', 'min', 'max', 'labels', 'good', 'goalThreshold', 'target', 'unit', 'displayStyle', 'sliderShowValue', 'step', 'reminderBelow', 'counterSince'];
 const TYPE_MAP_ROWS_MAX = 20; // mehr verschiedene alte Werte: keine Einzel-Zuordnung, nur die Regel
 function typeChangeTargets(h) {
   if (h.kind === 'scale') return ['number', 'text'];
@@ -6692,6 +6693,8 @@ function typeEditScaleMin(h, te) {
   // "Runden" mit Werten unter 1 (z.B. 0 Gläser): die Skala beginnt bei 0 statt sie alle auf 1 zu legen.
   return te.preset === 'round' && usedValueRange(h).lo < 1 ? 0 : 1;
 }
+// Alle Eigenschaften, die vom Typ abhängen: startStepChange hält genau diese Schlüssel in from
+// fest, Rückgängig stellt sie wieder her.
 function typeEditTo(h, te) {
   const base = {
     min: null, max: null, labels: null, good: null, goalThreshold: null, target: null, unit: null,
@@ -11516,8 +11519,6 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   if (f.template?.stage === 'package') return renderStarterPackage(f);
   if (f.template?.stage === 'pick') return renderTemplatePicker(f);
   if (f.template?.stage === 'confirm') return renderTemplateConfirm(f);
-  const defaultReminderMinute = state.userSettings.defaultReminderMinute;
-
   const goalField = goalControlHtml(f);
   // Selten Gebrauchtes je Abschnitt zugeklappt unter "Mehr: …" (Nutzer-Entscheidung 2026-10-30:
   // das Formular war für Neulinge zu unübersichtlich). Offen, sobald dort etwas vom Standard
@@ -11894,8 +11895,8 @@ function renderHabitForm({ titleInHeader = false } = {}) {
   // "Berechnet" nur anbieten, wenn es etwas zu berechnen gibt (mind. 2 passende Felder) -
   // beim allerersten Feld im Tutorial führte die Auswahl sonst nur zu "noch keine Felder".
   const others = state.habits.filter((h) => !h.archivedAt && h.defId !== f.defId && !isPeriodField(h));
-  const computedPossible = isComputed || (!tutorialForm && (false
-    || others.filter((h) => h.kind === 'scale' && !isNeutralScale(h)).length >= 2
+  const computedPossible = isComputed || (!tutorialForm && (
+    others.filter((h) => h.kind === 'scale' && !isNeutralScale(h)).length >= 2
     || others.filter((h) => h.kind === 'number').length >= 2
     || others.filter(isTimeKind).length >= 2
     || others.some(sinceSourceCandidate)));

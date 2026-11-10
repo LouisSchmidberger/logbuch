@@ -1,0 +1,18 @@
+{
+  "name": "logbuch",
+  "private": true,
+  "type": "module",
+  "description": "Entwicklungswerkzeuge für Logbuch (die App selbst braucht keinen Build-Schritt)",
+  "scripts": {
+    "lint": "eslint .",
+    "preview": "node dev/server.mjs",
+    "test": "node dev/tests.mjs",
+    "shots": "node dev/shoot.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "globals": "17.14.0",
+    "puppeteer-core": "24.43.1"
+  }
+}

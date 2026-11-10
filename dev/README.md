@@ -27,7 +27,8 @@ Vorschau still ab oder bricht mit "nicht nachgebaut" ab.
 
 ## Benutzen
 
-Einmalig: `cd dev && npm install` (nur `puppeteer-core`, nutzt das installierte Edge/Chrome).
+Einmalig im Projektstamm: `npm install` (Entwicklungswerkzeuge aus `package.json`: ESLint,
+`puppeteer-core` - nutzt das installierte Edge/Chrome; die App selbst braucht nichts davon).
 
 ```
 node dev/server.mjs                 # Vorschau auf http://localhost:5180/ (läuft weiter)
