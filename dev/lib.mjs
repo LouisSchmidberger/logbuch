@@ -43,6 +43,8 @@ export async function launch({ device = 'handy', theme = 'light', headless = tru
   const executablePath = BROWSERS.find((p) => existsSync(p));
   if (!executablePath) throw new Error('Kein Chrome/Edge gefunden - Pfad über PREVIEW_BROWSER angeben.');
   const browser = await puppeteer.launch({ executablePath, headless, args: ['--no-first-run', '--no-default-browser-check',
+      // Deutsch wie auf dem Entwicklungsrechner - sonst wählt die App auf englischen Systemen (CI) Englisch.
+      '--lang=de-DE',
       // GitHub-Runner (Ubuntu 24.04) erlauben Chromes Sandbox nicht; nur dort, lokal bleibt sie an.
       ...(process.env.CI ? ['--no-sandbox'] : [])],
     userDataDir: profile ? fileURLToPath(new URL(`./.profile-${profile}/`, import.meta.url)) : undefined });

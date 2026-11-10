@@ -46,4 +46,6 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno check supabase/functions/*/index.ts
+      # node_modules-Ordner automatisch: sonst sucht Deno wegen package.json im Projektstamm die
+      # npm:-Pakete dort statt sie selbst zu laden.
+      - run: deno check --node-modules-dir=auto supabase/functions/*/index.ts
