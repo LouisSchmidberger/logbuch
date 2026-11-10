@@ -2137,6 +2137,13 @@ const STRINGS = {
     'pkg.single': 'Lieber einzeln auswählen',
     'pkg.backTitle': 'Startpaket',
     'pkg.backNote': 'Zurück zur Auswahl mit Häkchen',
+    'pkg.cardNote': 'Viele bewährte Felder auf einmal, zum An- und Abwählen',
+    'pkg.introMore': 'Ein Satz Felder, die bei vielen etwas zeigen. Was du schon hast, ist abgewählt. Nimm dazu, was dich interessiert – ändern, umbenennen und ergänzen kannst du alles jederzeit.',
+    'pkg.have': 'Hast du schon',
+    'pkg.created': '{count} Felder angelegt',
+    'pkg.createdOne': '1 Feld angelegt',
+    'pkg.todayEmpty': 'Noch keine Felder. Am schnellsten geht der Anfang mit dem Startpaket: viele bewährte Felder auf einmal, die du an- und abwählst.',
+    'pkg.todayOpen': 'Startpaket ansehen',
     'tpl.yes': 'Ja',
     'tpl.no': 'Nein',
     'tpl.strength.none': 'keine',
@@ -3300,6 +3307,13 @@ const STRINGS = {
     'pkg.single': 'Rather pick one by one',
     'pkg.backTitle': 'Starter set',
     'pkg.backNote': 'Back to the list with checkboxes',
+    'pkg.cardNote': 'Many proven fields at once, to tick on and off',
+    'pkg.introMore': 'A set of fields that tell many people something. Whatever you already have is unticked. Add what interests you – you can change, rename and extend everything anytime.',
+    'pkg.have': 'You already have this',
+    'pkg.created': '{count} fields created',
+    'pkg.createdOne': '1 field created',
+    'pkg.todayEmpty': 'No fields yet. The quickest start is the starter set: many proven fields at once that you tick on and off.',
+    'pkg.todayOpen': 'View starter set',
     'tpl.yes': 'Yes',
     'tpl.no': 'No',
     'tpl.strength.none': 'none',
@@ -9535,7 +9549,11 @@ function renderToday() {
     ${renderTodayIntro()}
     <div class="habit-list">
       ${renderBySection(planned, 'today', (list) => list.map(renderPlannedRow).join(''))}
-      ${!allActive.length ? `<p class="manage-meta">${t('today.noFields')}</p>` : habits.length && !planned.length ? `<p class="manage-meta">${t('today.nothingPlanned')}</p>` : ''}
+      ${!allActive.length ? (featureOn('starterpack') ? `
+        <div class="today-empty-pkg">
+          <p class="manage-meta">${t('pkg.todayEmpty')}</p>
+          <button type="button" class="manage-new-btn" data-action="today-starter-package">${t('pkg.todayOpen')}</button>
+        </div>` : `<p class="manage-meta">${t('today.noFields')}</p>`) : habits.length && !planned.length ? `<p class="manage-meta">${t('today.nothingPlanned')}</p>` : ''}
     </div>
     ${unplanned.length ? `
       <details class="unplanned"${unplannedOpen ? ' open' : ''}>
@@ -10564,6 +10582,24 @@ function packageItemTemplate(item) { return item.tpl ? templateById(item.tpl) : 
 function packageDefaultChoice() {
   return Object.fromEntries(PACKAGE_GROUPS.flatMap((g) => g.items.map((it) => [it.id, it.on])));
 }
+const sameName = (a, b) => a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase();
+// Einträge des Startpakets, die es schon gibt: ein aktives Feld heißt wie einer ihrer Teile.
+// Nur über den Namen - mehr verrät ein Feld nicht darüber, wofür es gedacht ist.
+function packageExistingItems() {
+  const names = activeHabits().map((h) => h.name);
+  return PACKAGE_GROUPS.flatMap((g) => g.items).filter((it) => {
+    const tpl = packageItemTemplate(it);
+    return tpl.slots.some((sl) => names.some((n) => sameName(n, templateSlotName(tpl, sl.slot))));
+  }).map((it) => it.id);
+}
+// Startpaket außerhalb des Tutorials (K3, Nutzer-Entscheidung 2026-11-10): jederzeit über
+// "Neues Feld"; was es schon gibt, ist abgewählt und markiert, damit nichts doppelt entsteht.
+function packageFormState() {
+  const existing = packageExistingItems();
+  const chosen = packageDefaultChoice();
+  for (const id of existing) chosen[id] = false;
+  return { packageChosen: chosen, packageExisting: existing, template: { stage: 'package' } };
+}
 function packageFieldCount(chosen) {
   return PACKAGE_GROUPS.flatMap((g) => g.items).filter((it) => chosen[it.id]).reduce((n, it) => n + packageItemTemplate(it).slots.length, 0);
 }
@@ -10578,7 +10614,11 @@ async function createStarterPackage(chosen) {
   if (PACKAGE_GROUPS.some((g) => chosenItems(g).some((it) => packageItemTemplate(it).slots.some((sl) => sl.placeLast)))) sectionKeys.push('evening');
   const sections = {};
   for (const key of sectionKeys) {
-    const sec = await insertSection(tPlain('pkg.group.' + key), 'done');
+    // Eine Gruppe gleichen Namens gibt es schon (Startpaket ein zweites Mal): dorthinein.
+    const name = tPlain('pkg.group.' + key);
+    const existing = state.sections.find((sec) => sameName(sec.name, name));
+    if (existing) { sections[key] = existing.id; continue; }
+    const sec = await insertSection(name, 'done');
     if (sec.notice) return sec;
     sections[key] = sec.id;
   }
@@ -10605,7 +10645,7 @@ function renderStarterPackage(f) {
   const count = packageFieldCount(chosen);
   return `
     <div class="habit-form" id="habit-form">
-      <p class="pkg-intro">${t('pkg.intro')}</p>
+      <p class="pkg-intro">${t(activeHabits().length ? 'pkg.introMore' : 'pkg.intro')}</p>
       ${PACKAGE_GROUPS.map((g) => `
         <fieldset class="pkg-group">
           <legend class="form-part-title">${t('pkg.group.' + g.id)}</legend>
@@ -10613,7 +10653,8 @@ function renderStarterPackage(f) {
             <label class="checkbox-field pkg-item">
               <input type="checkbox" id="pkg-item-${it.id}" ${chosen[it.id] ? 'checked' : ''} ${state.habitFormSaving ? 'disabled' : ''} />
               <span><span class="pkg-item-name">${t(`tpl.${it.tpl || it.id}.name`)}</span>
-              <span class="pkg-item-note">${t('pkg.item.' + it.id)}</span></span>
+              <span class="pkg-item-note">${t('pkg.item.' + it.id)}</span>
+              ${f.packageExisting?.includes(it.id) ? `<span class="pkg-item-note pkg-item-have">${t('pkg.have')}</span>` : ''}</span>
             </label>
           `).join('')}
         </fieldset>
@@ -10926,7 +10967,7 @@ function renderTemplatePicker(f) {
   return `
     <div class="habit-form" id="habit-form">
       ${f.revealStage !== undefined ? '' : `<h3 class="form-part-title tpl-question">${t('tpl.question')}</h3>`}
-      <div class="kind-cards tpl-cards">${f.packageChosen ? card('tpl-package', '', t('pkg.backTitle'), t('pkg.backNote')) : ''}${card('tpl-custom', '', t('tpl.custom'), t('tpl.customNote'))}</div>
+      <div class="kind-cards tpl-cards">${f.packageChosen || featureOn('starterpack') ? card('tpl-package', '', t('pkg.backTitle'), t(f.packageChosen ? 'pkg.backNote' : 'pkg.cardNote')) : ''}${card('tpl-custom', '', t('tpl.custom'), t('tpl.customNote'))}</div>
       ${TEMPLATE_TOPICS.map((topic) => `
         <section class="form-part" aria-labelledby="tpl-topic-${topic}">
           <h3 class="form-part-title" id="tpl-topic-${topic}">${t('tpl.topic.' + topic)}</h3>
@@ -12952,6 +12993,9 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'today-new-field') {
     enterSubpage('manage');
     openHabitForm({ ...newHabitForm(), returnToTab: true });
+  } else if (action === 'today-starter-package') {
+    enterSubpage('manage');
+    openHabitForm({ ...newHabitForm(), ...packageFormState(), returnToTab: true });
   } else if (action === 'row-menu') {
     if (state.rowMenu === el.dataset.menu) closeRowMenu();
     else openRowMenu(el.dataset.menu);
@@ -13218,7 +13262,8 @@ app.addEventListener('click', async (e) => {
     render();
     window.scrollTo(0, 0);
   } else if (action === 'tpl-package') {
-    state.habitForm.template = { stage: 'package' };
+    if (state.habitForm.packageChosen) state.habitForm.template = { stage: 'package' };
+    else Object.assign(state.habitForm, packageFormState());
     render();
     window.scrollTo(0, 0);
   } else if (action === 'pkg-create') {
@@ -13233,6 +13278,8 @@ app.addEventListener('click', async (e) => {
       if (state.tutorialStep === TUTORIAL_STEP_FIELD) {
         tutorialLastFieldDefId = result.habits[0]?.defId ?? null;
         state.tutorialStep = TUTORIAL_STEP_DONE;
+      } else {
+        state.notice = { type: 'ok', text: tPlain(result.habits.length === 1 ? 'pkg.createdOne' : 'pkg.created', { count: result.habits.length }) };
       }
     }
     render();

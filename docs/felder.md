@@ -399,6 +399,11 @@ einen Speicherweg gibt. `'@slot'` verweist auf den Schlüssel eines vorher angel
 Namen in der Sprache beim Anlegen, danach normale Felder. Bestätigen zeigt die echten Zeilen
 aus "Heute" (inert). Scheitert ein Teil, bleibt das schon Angelegte stehen.
 
+**Startpaket auch nach dem Tutorial** (Nutzer-Entscheidung 2026-11-10, Schalter `starterpack`):
+als Karte bei "Neues Feld" und als Knopf im leeren "Heute". Einträge, von denen ein Teil wie ein
+aktives Feld heißt, sind abgewählt und als "Hast du schon" markiert (`packageExistingItems`,
+nur über den Namen); Gruppen gleichen Namens werden wiederverwendet statt doppelt angelegt.
+
 **Vorhandene Felder einbeziehen** ("Hast du so ein Feld schon?", pro Teil, nicht im Tutorial):
 - **Übernehmen** (`take`): das Feld wird an Ort und Stelle umgebaut, behält Schlüssel und
   Einträge. Passen Typ und Stufen nicht, öffnet danach "Stufen ändern" bzw. "Typ ändern", schon
