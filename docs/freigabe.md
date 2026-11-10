@@ -22,12 +22,19 @@ alle.
 1. `logbuch.html`, `logbuch.js`, `sw.js`, `vendor/`, `fonts/` → GitHub Pages (Root).
 2. `supabase functions deploy <name>` (Code unter `supabase/functions/<name>/index.ts`).
 3. Schema-Änderungen nur über Migrationen (`supabase/migrations/`):
-   `supabase migration new <name>`, dann `supabase db push --linked` gegen das Live-Projekt
-   (vorher `--dry-run` zeigt, was ginge). Nach Dashboard-Änderungen am Schema (Ausnahme)
+   `supabase migration new <name>`, dann `supabase db push --remote` gegen das Live-Projekt
+   (ohne `--remote` zielt die CLI auf eine lokale Datenbank; vorher `--dry-run` zeigt, was ginge). Nach Dashboard-Änderungen am Schema (Ausnahme)
    `supabase db pull` (braucht Docker Desktop für die Schatten-Datenbank).
    Vault-Secrets sind nicht Teil der Migrationen (siehe docs/datenschutz-sicherheit.md).
 4. `supabase/config.toml` spiegelt Auth-/API-/DB-Einstellungen rein dokumentarisch (kein
    `config push`); nach Dashboard-Änderungen `supabase config pull --force`.
+
+**Cache-Busting**: GitHub Pages lässt Browser Dateien 10 Min. zwischenspeichern – eine neue
+`logbuch.html` könnte auf eine alte `logbuch.js` treffen. Die HTML lädt deshalb
+`logbuch.js?v=<Kennung>`; die Kennung setzt der Hook `.githooks/pre-commit` bei jedem Commit.
+Pro Klon einmal nötig: `git config core.hooksPath .githooks` (sonst bleibt die Kennung stehen).
+Der umgekehrte Fall (alte HTML + neue JS) ist nur teilweise abgedeckt, vollständig nur mit
+Build-Schritt.
 
 ## Im Code
 

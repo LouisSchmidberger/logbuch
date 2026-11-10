@@ -104,6 +104,11 @@ der sonstigen GRANT-Regel), einziger Weg hinein ist die Function.
   `secure_password_change` (Neuanmeldung vor Passwort-Änderung) ist aus (`config.toml`).
   "Leaked password protection" (HaveIBeenPwned) bleibt aus – nur ab Supabase Pro-Plan,
   aktuell Free.
+- **"JWT issued at future" (PGRST303)**: PostgREST lehnt ein frisch ausgestelltes Token
+  gelegentlich ab (Uhren-Abweichung Auth↔PostgREST, behoben erst in PostgREST 14.18/16.3;
+  Version prüfbar per `npx supabase services`). Abgefangen in `fetchWithJwtFutureRetry`: bis
+  zu zwei Wiederholungen nach 1 s/2 s, sicher auch für Schreibzugriffe (PostgREST weist sie
+  vor der Ausführung ab).
 
 ## E-Mail-Versand (Registrierung/Passwort-Reset)
 

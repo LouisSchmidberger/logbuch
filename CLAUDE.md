@@ -80,17 +80,10 @@ Bevor du an einem dieser Bereiche etwas änderst, lies die zugehörige Datei:
 
 ## Bekannte Fallstricke
 
-- **Cache-Busting**: GitHub Pages lässt Browser Dateien 10 Min. zwischenspeichern – neue
-  `logbuch.html` könnte auf alte `logbuch.js` treffen. Die HTML lädt deshalb
-  `logbuch.js?v=<Kennung>`; die Kennung setzt der Hook `.githooks/pre-commit` bei jedem
-  Commit. **Pro Klon einmal nötig: `git config core.hooksPath .githooks`** (sonst bleibt die
-  Kennung stehen). Alte HTML + neue JS ist nur teilweise abgedeckt (vollständig nur mit
-  Build-Schritt).
-- **"JWT issued at future" (PGRST303)**: PostgREST lehnt ein frisch ausgestelltes Token
-  gelegentlich ab (Uhren-Abweichung Auth↔PostgREST, behoben erst in PostgREST 14.18/16.3;
-  Version prüfbar per `npx supabase services`). Abgefangen in `fetchWithJwtFutureRetry`:
-  bis zu zwei Wiederholungen nach 1 s/2 s, sicher auch für Schreibzugriffe (PostgREST weist
-  sie vor der Ausführung ab).
+- **Cache-Busting** über `logbuch.js?v=<Kennung>`, gesetzt vom Hook `.githooks/pre-commit`.
+  **Pro Klon einmal nötig: `git config core.hooksPath .githooks`** (Hintergrund: docs/freigabe.md).
+- **"JWT issued at future" (PGRST303)** fängt `fetchWithJwtFutureRetry` ab – nicht entfernen
+  (Hintergrund: docs/datenschutz-sicherheit.md, Anmeldung).
 - **Zeitplan-Regeln doppelt**: `isScheduledOn`/`isPlannedOn` (JS) und
   `public.habit_scheduled_on` (SQL) müssen synchron bleiben.
 - **`get_due_notifications` läuft über alle Nutzer in einem Rutsch**: neue vom Nutzer
