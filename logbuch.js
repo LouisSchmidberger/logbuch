@@ -2196,7 +2196,9 @@ const STRINGS = {
     'sectionForm.noFields': 'Noch keine Felder vorhanden.',
     'manage.sectionName': 'Name der Gruppe',
     'manage.sectionNamePlaceholder': 'z. B. Gesundheit',
-    'manage.sectionEmpty': 'Noch leer – über „Bearbeiten“ Felder hinzufügen.',
+    'manage.sectionEmpty': 'Noch leer – zieh Felder hierher oder füge sie über „Bearbeiten“ hinzu.',
+    'manage.movedIntoGroup': 'Jetzt in der Gruppe „{name}“',
+    'manage.movedOutOfGroup': 'Jetzt außerhalb der Gruppe',
     'manage.period.week': 'wöchentlich',
     'manage.period.month': 'monatlich',
     'manage.period.year': 'jährlich',
@@ -3357,7 +3359,9 @@ const STRINGS = {
     'sectionForm.noFields': 'No fields yet.',
     'manage.sectionName': 'Group name',
     'manage.sectionNamePlaceholder': 'e.g. Health',
-    'manage.sectionEmpty': 'Still empty – add fields via “Edit”.',
+    'manage.sectionEmpty': 'Still empty – drag fields here or add them via “Edit”.',
+    'manage.movedIntoGroup': 'Now in the group “{name}”',
+    'manage.movedOutOfGroup': 'Now outside the group',
     'manage.period.week': 'weekly',
     'manage.period.month': 'monthly',
     'manage.period.year': 'yearly',
@@ -6529,28 +6533,75 @@ async function handleHabitArchive(defId, archive) {
 
 // Persistiert die neue Reihenfolge EINES Behälters (oberste Ebene oder eine Gruppe) -
 // items = alle Elemente des Behälters in der gewünschten Reihenfolge, je { type:
-// 'habit'|'section', id, moveOut? }. moveOut: Feld verlässt dabei seine Gruppe (beim
-// Löschen einer Gruppe). Gemeinsamer Pfad für Ziehen UND die ↑/↓-Buttons, damit beide
-// exakt gleich speichern.
+// 'habit'|'section', id, moveOut?, sectionId? }. moveOut: Feld verlässt dabei seine Gruppe
+// (beim Löschen einer Gruppe); sectionId (auch null): Feld kommt dabei in diesen Behälter
+// (Verschieben in/aus einer Gruppe). Der Behälter, aus dem es kommt, braucht keine neue
+// Nummerierung - seine übrigen Felder behalten ihre Reihenfolge. Gemeinsamer Pfad für
+// Ziehen UND die ↑/↓-Buttons, damit beide exakt gleich speichern.
 async function commitLayoutOrder(items) {
   const order = new Map(items.map((it, i) => [it.id, i + 1]));
-  const movedOut = new Set(items.filter((it) => it.moveOut).map((it) => it.id));
+  const newSection = (it) => ('sectionId' in it ? it.sectionId : it.moveOut ? null : undefined);
+  const sectionOf = new Map(items.filter((it) => newSection(it) !== undefined).map((it) => [it.id, newSection(it)]));
   state.habits = state.habits
-    .map((h) => (order.has(h.defId) ? { ...h, sortOrder: order.get(h.defId), sectionId: movedOut.has(h.defId) ? null : h.sectionId } : h))
+    .map((h) => (order.has(h.defId) ? { ...h, sortOrder: order.get(h.defId), sectionId: sectionOf.has(h.defId) ? sectionOf.get(h.defId) : h.sectionId } : h))
     .sort((a, b) => a.sortOrder - b.sortOrder);
   state.sections = state.sections
     .map((sec) => (order.has(sec.id) ? { ...sec, sortOrder: order.get(sec.id) } : sec))
     .sort((a, b) => a.sortOrder - b.sortOrder);
+  if (sectionOf.size) invalidateTodayAutoCollapse();
   render();
 
   const results = await Promise.all(items.map((it, i) => (it.type === 'section'
     ? supabase.from('habit_sections').update({ sort_order: i + 1 }).eq('id', it.id)
-    : supabase.from('habit_definitions').update({ sort_order: i + 1, ...(it.moveOut ? { section_id: null } : {}) }).eq('id', it.id))));
+    : supabase.from('habit_definitions').update({ sort_order: i + 1, ...(sectionOf.has(it.id) ? { section_id: sectionOf.get(it.id) } : {}) }).eq('id', it.id))));
   const failed = results.find((r) => r.error);
   if (failed) {
     state.notice = errorNotice('notice.reorderFailed', failed.error.message);
     render();
   }
+}
+
+// Ein Schritt ↑/↓ für ein Feld in der Verwaltung, über Gruppengrenzen hinweg (Nutzer-
+// Entscheidung 2026-11-10): am Rand einer Gruppe verlässt es die Gruppe (landet direkt
+// davor bzw. dahinter), von außen kommend wandert es in die benachbarte Gruppe hinein
+// (von oben an den Anfang, von unten ans Ende). Zeitraum-Felder (Woche/Monat/Jahr) können
+// in keiner Gruppe stehen und springen wie bisher über sie hinweg. -> { items, sectionId }
+// für commitLayoutOrder (items = der Ziel-Behälter in neuer Reihenfolge) oder null, wenn
+// es in die Richtung nicht weitergeht.
+function fieldMoveStep(defId, dir) {
+  const blocks = layoutBlocks(state.habits.filter((h) => !h.archivedAt));
+  const topItems = (list) => list.map((b) => (b.type === 'habit' ? { type: 'habit', id: b.habit.defId } : { type: 'section', id: b.section.id }));
+  const groupItems = (habits) => habits.map((h) => ({ type: 'habit', id: h.defId }));
+  const moved = (sectionId) => ({ type: 'habit', id: defId, sectionId });
+  const inGroup = blocks.find((b) => b.type === 'section' && b.habits.some((h) => h.defId === defId));
+  if (inGroup) {
+    const others = inGroup.habits.filter((h) => h.defId !== defId);
+    const idx = inGroup.habits.findIndex((h) => h.defId === defId);
+    const to = dir === 'up' ? idx - 1 : idx + 1;
+    if (to >= 0 && to < inGroup.habits.length) {
+      const items = groupItems(others);
+      items.splice(to, 0, { type: 'habit', id: defId });
+      return { items, sectionId: inGroup.section.id };
+    }
+    // Hinaus auf die oberste Ebene, direkt vor bzw. hinter die Gruppe.
+    const items = topItems(blocks);
+    const at = items.findIndex((it) => it.id === inGroup.section.id) + (dir === 'up' ? 0 : 1);
+    items.splice(at, 0, moved(null));
+    return { items, sectionId: null };
+  }
+  const idx = blocks.findIndex((b) => b.type === 'habit' && b.habit.defId === defId);
+  if (idx < 0) return null;
+  const to = dir === 'up' ? idx - 1 : idx + 1;
+  if (to < 0 || to >= blocks.length) return null;
+  const neighbor = blocks[to];
+  if (neighbor.type === 'section' && !isPeriodField(blocks[idx].habit)) {
+    const items = groupItems(neighbor.habits);
+    items.splice(dir === 'up' ? items.length : 0, 0, moved(neighbor.section.id));
+    return { items, sectionId: neighbor.section.id };
+  }
+  const items = topItems(blocks.filter((_, i) => i !== idx));
+  items.splice(to, 0, { type: 'habit', id: defId });
+  return { items, sectionId: null };
 }
 
 // --- Gruppen (intern: sections) - Formular -------------------------------------
@@ -11583,8 +11634,8 @@ function renderManage() {
         ${!h.archivedAt ? `
           <span class="drag-handle" data-action="drag-handle" aria-label="${esc(t('ariaLabel.reorder'))}"><span></span><span></span></span>
           <span class="move-buttons">
-            <button type="button" class="move-btn" data-action="habit-move" data-id="${h.defId}" data-dir="up" ${idx === 0 ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.moveUp'))}">↑</button>
-            <button type="button" class="move-btn" data-action="habit-move" data-id="${h.defId}" data-dir="down" ${idx === list.length - 1 ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.moveDown'))}">↓</button>
+            <button type="button" class="move-btn" data-action="habit-move" data-id="${h.defId}" data-dir="up" ${!fieldMoveStep(h.defId, 'up') ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.moveUp'))}">↑</button>
+            <button type="button" class="move-btn" data-action="habit-move" data-id="${h.defId}" data-dir="down" ${!fieldMoveStep(h.defId, 'down') ? 'disabled' : ''} aria-label="${esc(t('ariaLabel.moveDown'))}">↓</button>
           </span>
         ` : ''}
         <div class="manage-info">
@@ -11625,10 +11676,8 @@ function renderManage() {
   if (state.sectionForm) return renderSectionForm();
 
   // Eine Gruppe ist in der Liste ein Block (Kopfzeile + eingerückte Felder), der sich auf
-  // oberster Ebene wie ein Feld verschieben lässt; seine Felder verschiebt man innerhalb.
-  // Umhängen zwischen Gruppen läuft bewusst über die Formulare (Gruppe bearbeiten bzw.
-  // "Gruppe" im Feld-Formular) statt per Ziehen - einfach und für Tastatur/Screenreader
-  // gleich gut bedienbar, siehe docs/design-bedienung.md.
+  // oberster Ebene wie ein Feld verschieben lässt. Felder wandern per Ziehen und ↑/↓ auch in
+  // Gruppen hinein und heraus (fieldMoveStep, fieldDragModel).
   const sectionBlock = (b, idx, list) => {
     const sec = b.section;
     const confirmingDelete = state.sectionDeleteConfirm === sec.id;
@@ -13365,11 +13414,29 @@ app.addEventListener('click', async (e) => {
   } else if (action === 'habit-delete') {
     state.habitDeleteConfirm = null;
     await handleHabitDelete(el.dataset.id);
+  } else if (action === 'habit-move' && el.closest('.manage-item')?.dataset.orderType === 'habit') {
+    // Tastatur-/Klick-Alternative zum Ziehen für ein Feld, auch in/aus Gruppen
+    // (fieldMoveStep); speichert über denselben Pfad wie das Ziehen (commitLayoutOrder).
+    const defId = el.closest('.manage-item').dataset.orderId;
+    const before = state.habits.find((h) => h.defId === defId)?.sectionId ?? null;
+    const step = fieldMoveStep(defId, el.dataset.dir);
+    if (!step) return;
+    await commitLayoutOrder(step.items);
+    // Fokus auf denselben Button am neuen Platz (render() hat das DOM ersetzt); ist er dort
+    // gesperrt (ganz oben/unten), auf den anderen.
+    const btn = (dir) => document.querySelector(`.manage-item[data-order-id="${defId}"] [data-action="habit-move"][data-dir="${dir}"]`);
+    const target = btn(el.dataset.dir);
+    (target && !target.disabled ? target : btn(el.dataset.dir === 'up' ? 'down' : 'up'))?.focus();
+    // Wechsel des Behälters ansagen - sonst merkt man ohne Blick nicht, dass das Feld jetzt
+    // in einer Gruppe steht bzw. sie verlassen hat.
+    if (step.sectionId !== before) {
+      const sec = state.sections.find((x) => x.id === step.sectionId);
+      announce(sec ? tPlain('manage.movedIntoGroup', { name: sec.name }) : tPlain('manage.movedOutOfGroup'));
+    }
   } else if (action === 'habit-move') {
-    // Tastatur-/Klick-Alternative zum Pointer-Drag — liest wie der Drag-Handler die
-    // aktuellen Geschwister-Zeilen direkt aus dem DOM (derselbe Container-Scope,
-    // row.parentElement.children), damit beide Wege exakt dieselbe Reihenfolge
-    // berechnen und über commitLayoutOrder() denselben Persistenz-Pfad nutzen.
+    // Gruppen-Block: nur auf der obersten Ebene. Liest wie der Drag-Handler die aktuellen
+    // Geschwister direkt aus dem DOM, damit beide Wege exakt dieselbe Reihenfolge berechnen
+    // und über commitLayoutOrder() denselben Persistenz-Pfad nutzen.
     const rowEl = el.closest('.manage-item');
     const rows = [...rowEl.parentElement.children].filter((r) => r.classList.contains('manage-item'));
     const fromIndex = rows.indexOf(rowEl);
@@ -14138,6 +14205,15 @@ app.addEventListener('pointerdown', (e) => {
     // ist sonst sperrig. Vor dem Messen, da sich dadurch alle Positionen verschieben; der
     // Griff sitzt in der Kopfzeile und bleibt dabei unter dem Finger.
     if (armed.row.classList.contains('manage-section')) armed.row.classList.add('manage-section--drag-collapsed');
+    const cross = fieldDragModel(armed.row);
+    if (cross) {
+      dragState = { ...cross, pointerId: armed.pointerId, row: armed.row, startY: armed.startY, startScrollY: window.scrollY, lastClientY: armed.startY };
+      dragState.row.setPointerCapture(dragState.pointerId);
+      dragState.row.classList.add('manage-row--dragging');
+      updateFieldDragPosition();
+      haptic();
+      return;
+    }
     const rects = armed.rows.map((r) => r.getBoundingClientRect());
     const tops = rects.map((rc) => rc.top + window.scrollY);
     const heights = rects.map((rc) => rc.height);
@@ -14166,11 +14242,119 @@ app.addEventListener('pointermove', (e) => {
   updateDragAutoScroll();
 });
 
+// Ein Feld (kein Zeitraum-Feld, keine Gruppe) zieht man über Gruppengrenzen hinweg
+// (Nutzer-Entscheidung 2026-11-10, wie fieldMoveStep für ↑/↓): dafür steht jede sichtbare
+// Zeile einzeln in einer flachen Liste - Felder der obersten Ebene, Kopfzeilen der Gruppen,
+// deren Felder bzw. der "Noch leer"-Hinweis - und am Ende jeder Gruppe ein Ablagebereich
+// (type 'end'), den die Liste beim Ziehen als freien Platz unten in jeder Gruppe zeigt
+// (.manage-list--field-drag). Ohne ihn lägen "letztes Feld der Gruppe" und "direkt unter der
+// Gruppe" an derselben Stelle und ein Pixel entschiede. Die übrigen Zeilen rücken einzeln auf
+// wie beim Ziehen innerhalb eines Behälters. Wohin das Feld kommt, sagt die Zeile darüber:
+// Kopfzeile oder Feld einer Gruppe = in diese Gruppe, Ablagebereich oder Feld der obersten
+// Ebene = oberste Ebene. Die gezogene Zeile rückt dabei schon ein bzw. aus.
+function fieldDragModel(row) {
+  if (row.dataset.orderType !== 'habit') return null;
+  const h = state.habits.find((x) => x.defId === row.dataset.orderId);
+  if (!h || isPeriodField(h)) return null;
+  const list = row.closest('.manage-list');
+  const topBefore = row.getBoundingClientRect().top;
+  // Ablagebereich so hoch wie eine halbe Zeile: die Zeilen sind je nach Breite und Textgröße
+  // sehr verschieden hoch (am Handy brechen die Knöpfe um).
+  list.style.setProperty('--drag-end-zone', `${Math.round(row.getBoundingClientRect().height * 0.6)}px`);
+  list.classList.add('manage-list--field-drag');
+  const els = [];
+  for (const c of list.children) {
+    if (c.dataset.orderType === 'habit') els.push({ el: c, sec: null, type: 'field', id: c.dataset.orderId });
+    else if (c.dataset.orderType === 'section') {
+      const sec = c.dataset.orderId;
+      els.push({ el: c.querySelector('.manage-section-head'), sec, type: 'head', id: sec });
+      const box = c.querySelector('.manage-section-children');
+      for (const k of box.children) {
+        els.push(k.dataset.orderType === 'habit' ? { el: k, sec, type: 'field', id: k.dataset.orderId } : { el: k, sec, type: 'empty' });
+      }
+      const rb = box.getBoundingClientRect();
+      const pad = parseFloat(getComputedStyle(box).paddingBottom) || 0;
+      els.push({ el: null, sec, type: 'end', rect: { top: rb.bottom - pad, height: pad } });
+    }
+  }
+  const from = els.findIndex((x) => x.el === row);
+  const rects = els.map((x) => x.rect ?? x.el.getBoundingClientRect());
+  const groupBox = list.querySelector('.manage-section-children');
+  const indent = groupBox ? groupBox.getBoundingClientRect().left - list.getBoundingClientRect().left : 0;
+  return {
+    cross: true, list, els, rows: els.map((x) => x.el), fromIndex: from, toIndex: from,
+    tops: rects.map((rc) => rc.top + window.scrollY), heights: rects.map((rc) => rc.height),
+    slot: rects[from].height, indent, origin: els[from].sec, target: els[from].sec,
+    // Der freie Platz in den Gruppen darüber schiebt die Zeile nach unten - die Zieh-Rechnung
+    // startet deshalb von ihrer neuen Lage, damit sie unter dem Finger bleibt.
+    startOffset: rects[from].top - topBefore,
+  };
+}
+function fieldDragShift(ds, i, toIndex) {
+  if (i === ds.fromIndex) return 0;
+  if (toIndex > ds.fromIndex && i > ds.fromIndex && i <= toIndex) return -ds.slot;
+  if (toIndex < ds.fromIndex && i < ds.fromIndex && i >= toIndex) return ds.slot;
+  return 0;
+}
+// Ziel-Behälter (Gruppen-Id oder null) für den Platz toIndex.
+function fieldDragTarget(ds, toIndex) {
+  const from = ds.fromIndex;
+  const prev = ds.els[toIndex > from ? toIndex : toIndex < from ? toIndex - 1 : from - 1];
+  if (!prev || prev.type === 'end') return null;
+  return prev.sec;
+}
+function updateFieldDragPosition() {
+  const ds = dragState;
+  const { tops, heights, fromIndex: from, rows } = ds;
+  const last = rows.length - 1;
+  const minDelta = tops[0] - tops[from];
+  const maxDelta = tops[last] + heights[last] - (tops[from] + heights[from]);
+  const rawDelta = ds.lastClientY - ds.startY + (window.scrollY - ds.startScrollY) - ds.startOffset;
+  const deltaY = Math.max(minDelta, Math.min(maxDelta, rawDelta));
+  const dragTop = tops[from] + deltaY;
+  const dragBottom = dragTop + heights[from];
+  let toIndex = from;
+  if (deltaY > 0) {
+    for (let i = from + 1; i < rows.length; i++) if (dragBottom > tops[i] + heights[i] / 2) toIndex = i;
+  } else if (deltaY < 0) {
+    for (let i = from - 1; i >= 0; i--) if (dragTop < tops[i] + heights[i] / 2) toIndex = i;
+  }
+  const target = fieldDragTarget(ds, toIndex);
+  const dx = (target ? ds.indent : 0) - (ds.origin ? ds.indent : 0);
+  // Einrücken über den Rand statt per Verschieben - sonst ragte die Zeile rechts hinaus.
+  ds.row.style.marginLeft = dx ? `${dx}px` : '';
+  ds.row.style.transform = `translateY(${deltaY}px)`;
+  if (target !== ds.target) { ds.target = target; haptic(); }
+  if (toIndex === ds.toIndex) return;
+  ds.toIndex = toIndex;
+  rows.forEach((r, i) => {
+    if (!r || r === ds.row) return;
+    const shift = fieldDragShift(ds, i, toIndex);
+    r.style.transition = 'transform 150ms ease';
+    r.style.transform = shift ? `translateY(${shift}px)` : '';
+  });
+}
+// Neue Reihenfolge des Ziel-Behälters für commitLayoutOrder, oder null ohne Änderung.
+function fieldDragDropItems(ds) {
+  const { els, fromIndex: from, toIndex, target, origin } = ds;
+  if (toIndex === from && target === origin) return null;
+  const order = els.filter((_, i) => i !== from);
+  order.splice(toIndex, 0, els[from]);
+  const items = [];
+  for (const x of order) {
+    if (x === els[from]) items.push(target === origin ? { type: 'habit', id: x.id } : { type: 'habit', id: x.id, sectionId: target });
+    else if (target === null && x.type === 'head') items.push({ type: 'section', id: x.id });
+    else if (x.type === 'field' && x.sec === target) items.push({ type: 'habit', id: x.id });
+  }
+  return items;
+}
+
 // Position der gezogenen Zeile + Verschieben der übrigen. Rechnet die inzwischen
 // gescrollte Strecke mit ein (scrollY - startScrollY), da die Seite beim Ziehen am Rand
 // von selbst weiterscrollt (siehe updateDragAutoScroll) - sonst bliebe die Zeile beim
 // Scrollen nicht unter dem Finger.
 function updateDragPosition() {
+  if (dragState.cross) { updateFieldDragPosition(); return; }
   // Auf die Liste begrenzt: weiter als bis zum ersten/letzten Platz lässt sich die Zeile
   // nicht ziehen (vorher schoss sie beliebig weit darüber hinaus und sprang erst beim
   // Loslassen zurück).
@@ -14232,7 +14416,7 @@ function updateDragAutoScroll() {
     if (!speed) return;
     // Nicht über die Liste hinaus scrollen - ist ihr Ende bzw. Anfang schon im Bild,
     // gibt es in der Richtung keinen Platz mehr, zu dem man ziehen könnte.
-    const list = dragState.row.parentElement.getBoundingClientRect();
+    const list = (dragState.list ?? dragState.row.parentElement).getBoundingClientRect();
     const top = stickyHeaderBottom();
     const bottom = window.visualViewport?.height ?? window.innerHeight;
     if ((speed > 0 && list.bottom <= bottom) || (speed < 0 && list.top >= top)) return;
@@ -14260,8 +14444,16 @@ app.addEventListener('pointerup', async (e) => {
   const { row, rows, fromIndex, toIndex } = dragState;
   row.releasePointerCapture(e.pointerId);
   row.classList.remove('manage-row--dragging', 'manage-section--drag-collapsed');
-  rows.forEach((r) => { r.style.transform = ''; r.style.transition = ''; });
+  rows.forEach((r) => { if (r) { r.style.transform = ''; r.style.transition = ''; } });
+  const ended = dragState;
   dragState = null;
+  if (ended.cross) {
+    ended.list.classList.remove('manage-list--field-drag');
+    ended.row.style.marginLeft = '';
+    const drop = fieldDragDropItems(ended);
+    if (drop) await commitLayoutOrder(drop);
+    return;
+  }
   if (toIndex === fromIndex) return;
 
   const reordered = [...rows];

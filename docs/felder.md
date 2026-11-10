@@ -338,9 +338,13 @@ Gruppe steht").
   vordere Kante (nach unten die Unterkante, nach oben die Oberkante) die Mitte eines
   Geschwisters überquert – mit der Mitte des gezogenen Elements blieb ein großer Block einen
   Platz vor dem Ende hängen. Eine gezogene Gruppe wird auf ihre Kopfzeile zusammengeklappt
-  (`.manage-section--drag-collapsed`). Umhängen zwischen Gruppen bewusst nur über die
-  Formulare (einfach und für Tastatur/Screenreader gleich gut; Ziehen zwischen Gruppen wäre
-  ein möglicher späterer Zusatz).
+  (`.manage-section--drag-collapsed`). **Felder wandern auch in Gruppen hinein und heraus**
+  (Nutzer-Entscheidung 2026-11-10), per ↑/↓ (`fieldMoveStep`: am Rand verlässt ein Feld die
+  Gruppe, von außen kommend geht es hinein – sonst könnten Tastatur-Nutzer etwas nicht, was
+  Ziehen kann) und per Ziehen (`fieldDragModel`: jede Zeile einzeln in einer flachen Liste;
+  am Ende einer Gruppe entscheidet die Höhe, obere Hälfte = in der Gruppe, die gezogene Zeile
+  rückt dabei schon ein/aus). Zeitraum-Felder springen über Gruppen hinweg (dürfen in keiner
+  stehen). Daneben weiter über die Formulare (Gruppe bearbeiten, "Gruppe" im Feld-Formular).
 - **Löschen** (zweistufig) löscht keine Felder: sie rücken an die Stelle der Gruppe;
   Notizen zur Gruppe werden mitgelöscht (Hinweis in der Bestätigung, falls es welche gibt).
 - Ein **reaktiviertes Feld** kommt ans Ende seines Bereichs (`handleHabitArchive`) – sonst

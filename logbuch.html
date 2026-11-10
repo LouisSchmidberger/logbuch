@@ -1191,6 +1191,9 @@
   .manage-section-empty { margin: 4px 0 6px; }
   .manage-inline-check { font-size: 0.875rem; margin-top: 4px; }
   .manage-section--drag-collapsed .manage-section-children { display: none; }
+  /* Beim Ziehen eines Felds: freier Platz unten in jeder Gruppe = "ans Ende der Gruppe"
+     (fieldDragModel); darunter heißt "unter der Gruppe". */
+  .manage-list--field-drag .manage-section-children { padding-bottom: var(--drag-end-zone, 2.25rem); }
   /* Einklappbare Gruppen-Überschrift ("Heute" und Auswertung). */
   .section-toggle {
     display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; cursor: pointer;
@@ -1546,6 +1549,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=3a970e6d38"></script>
+<script type="module" src="./logbuch.js?v=2bde2d3cda"></script>
 </body>
 </html>
