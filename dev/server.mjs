@@ -34,6 +34,7 @@ const HOOK = `
     templateTakeMode, templateSlotForm, templateById, yesValueOf, isYesNoField, mergedMultiOptions, packageFieldCount, packageDefaultChoice,
     templateWithExtras, isOpenToday, sectionDoneOn, isOptionalAllowed, fieldMoveStep,
     startOfWeekWith, weekMoveTarget, weekLastIso,
+    goalFromPayload, goalScore, weekGoalWeeks, parseNumberGoal,
   },
 }));
 `;

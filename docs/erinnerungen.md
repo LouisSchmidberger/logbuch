@@ -57,8 +57,8 @@ Offline-Caching). Alle Zeiten/Daten gelten in der **Ortszeit des Nutzers**
   2026-10-28: Feldnamen sind verschlüsselt, die Stufe verrät nicht, worum es geht). Ändern sich
   Bedingungen oder Zeiten, schreibt das Speichern des Felds den heutigen Stand neu.
 - **Zeitraum-Felder** (Woche/Monat/Jahr, siehe [datenmodell.md](datenmodell.md)): eine
-  Erinnerung pro Zeitraum, am Erinnerungstag (`period_reminder_day`, Standard Sonntag /
-  Monatsletzter / 31.12., `habit_period_reminder_due`; Woche: letzter Tag nach `week_start`) zur eigenen Zeit des Felds oder zur
+  Erinnerung pro Zeitraum, am Erinnerungstag (`period_reminder_day`, Standard letzter Tag
+  der Woche nach `week_start` / Monatsletzter / 31.12., `habit_period_reminder_due`) zur eigenen Zeit des Felds oder zur
   Standardzeit – nur wenn im ersten Tag des Zeitraums noch kein Wert steht. Immer mit Namen
   (in `custom_missing`), da einzeln und selten. Standard-, Gruppen- und Feld-Erinnerung der
   Tagesfelder zählen nur `period = 'day'`.

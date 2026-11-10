@@ -244,6 +244,8 @@ function habitFromParts(row, payload) {
     step: payload.step ?? 1,              // nur kind 'counter': um wie viel "+"/"−" ändern
     summary: payload.summary === 'sum' ? 'sum' : 'avg', // Zahlen: in Woche/Monat/Jahr als Durchschnitt oder Summe
     target: payload.target ?? null,       // Zahl/Zähler: Zielwert; good 'high' = mindestens, 'low' = höchstens
+    goal: goalFromPayload(row.kind, payload), // Ziel einer Zahl/eines Zählers/eines berechneten Zahlen-Felds, siehe goalFromPayload
+    goalRaw: payload.numberGoal ?? null,  // payload.numberGoal unverändert (zum Weiterreichen beim Neu-Verschlüsseln)
     createdAt: row.created_at,            // Zähler: ab wann ein leerer Tag als 0 zählt
     counterSince: payload.counterSince ?? null, // umgewandelter Zähler: 0 erst ab diesem Tag (siehe convertHabitToCounter)
     periodReminderDay: row.period_reminder_day ?? null, // Tag der Erinnerung im Zeitraum, null = Standard
@@ -268,7 +270,7 @@ function reminderTimesOf(row) {
 function counterReminderThresholds(h) {
   const n = h.reminderTimes.length;
   if (Array.isArray(h.reminderBelow)) return h.reminderTimes.map((_, i) => (Number.isFinite(h.reminderBelow[i]) ? h.reminderBelow[i] : null));
-  if (h.good === 'high' && Number.isFinite(h.target)) return h.reminderTimes.map((_, i) => Math.ceil((h.target * (i + 1)) / n - 1e-9));
+  if (hasDayGoal(h) && h.goal.dir !== 'low') return h.reminderTimes.map((_, i) => Math.ceil((h.goal.target * (i + 1)) / n - 1e-9));
   return h.reminderTimes.map(() => null);
 }
 // Noch nicht umgestellte Zeile (Klartext-Spalten) -> dieselbe payload-Form.
@@ -578,18 +580,102 @@ function sinceWhichText(h) {
 // Felder mit Gut/Schlecht-Score (Farben, Heatmap, Prozent-Statistik).
 // Zahlen und Zähler mit Ziel ("mindestens/höchstens X", Nutzer-Entscheidung 2026-10-11) sind
 // ebenfalls bewertet - ohne Ziel bleiben sie ein neutraler Verlauf.
-function numberGoalText(h) {
-  return tPlain(h.good === 'high' ? 'numberGoal.min' : 'numberGoal.max', { value: formatNumber(h.target) + (h.unit ? ` ${h.unit}` : '') });
+// Ziel als { dir: 'high'|'low'|'range', target, max (nur 'range'), scope: 'day'|'week' } (G3,
+// Nutzer-Entscheidung 2026-11-10). "Mindestens/höchstens pro Tag" einer Zahl bzw. eines Zählers
+// steht weiter in good/target - so lesen es auch ältere App-Versionen. Bereich, Wochensumme und
+// Ziele berechneter Felder stehen in payload.numberGoal: ältere Versionen kennen den Schlüssel
+// nicht und zeigen das Feld dann ohne Ziel statt falsch bewertet (eine Wochensumme in good/target
+// wäre dort ein Tagesziel). Berechnete Felder tragen in good teils ein bedeutungsloses 'high'
+// (siehe habitToForm), deshalb bei ihnen nie aus good.
+function goalFromPayload(kind, payload) {
+  const g = payload.numberGoal;
+  if (g && ['high', 'low', 'range'].includes(g.dir) && Number.isFinite(g.target)) {
+    if (g.dir === 'range' && !(Number.isFinite(g.max) && g.max >= g.target)) return null;
+    return { dir: g.dir, target: g.target, max: g.dir === 'range' ? g.max : null, scope: g.scope === 'week' && g.dir !== 'range' ? 'week' : 'day' };
+  }
+  if ((kind === 'number' || kind === 'counter') && (payload.good === 'high' || payload.good === 'low') && Number.isFinite(payload.target)) {
+    return { dir: payload.good, target: payload.target, max: null, scope: 'day' };
+  }
+  return null;
 }
-function hasNumberGoal(h) { return (isNumberKind(h) || isCounterKind(h)) && !!h.good && Number.isFinite(h.target); }
-function isScoredKind(h) { return h.kind === 'scale' || (h.kind === 'computed' && !h.aggregate) || hasNumberGoal(h); }
+// Einheit hinter Zielzahlen: Dauern in Stunden, berechnete Felder die ihrer Mitglieder.
+function goalUnit(h) { return isDurationComputed(h) ? 'h' : isNumberComputed(h) ? computedUnit(h) : h.unit; }
+function goalValueText(h) {
+  const g = h.goal;
+  return (g.dir === 'range' ? `${formatNumber(g.target)}–${formatNumber(g.max)}` : formatNumber(g.target)) + (goalUnit(h) ? ` ${goalUnit(h)}` : '');
+}
+function numberGoalText(h) {
+  const key = h.goal.dir === 'high' ? 'numberGoal.min' : h.goal.dir === 'low' ? 'numberGoal.max' : 'numberGoal.range';
+  return tPlain(key + (h.goal.scope === 'week' ? 'Week' : ''), { value: goalValueText(h) });
+}
+// Ziele gibt es für Zahlen, Zähler und berechnete Zahlen-Felder (nicht "Tage seit" - dort ist
+// das Hochzählen selbst das Ziel). Ein Wochenziel bewertet nie den einzelnen Tag (siehe
+// weekGoalWeeks), das Feld bleibt in der Auswertung ein Verlauf wie eine Zahl ohne Ziel.
+function hasNumberGoal(h) { return !!h.goal && (isNumberKind(h) || isCounterKind(h) || (isNumberComputed(h) && !isSinceComputed(h))); }
+function hasDayGoal(h) { return hasNumberGoal(h) && h.goal.scope !== 'week'; }
+function hasWeekGoal(h) { return hasNumberGoal(h) && h.goal.scope === 'week'; }
+function isScoredKind(h) { return h.kind === 'scale' || (h.kind === 'computed' && !h.aggregate) || hasDayGoal(h); }
 // Wie gut ein Zahlenwert das Ziel trifft (0-1): "mindestens 8" -> 4 ist 0,5; "höchstens 3" ->
-// bis 3 voll, darüber linear abnehmend, ab dem Doppelten (mind. Ziel + 1) 0.
-function numberGoalScore(h, v) {
+// bis 3 voll, darüber linear abnehmend, ab dem Doppelten (mind. Ziel + 1) 0. Bereich: darin
+// voll, darunter wie "mindestens Untergrenze", darüber wie "höchstens Obergrenze".
+function goalScore(goal, v) {
   if (v === null || v === undefined) return null;
-  if (h.good === 'high') return h.target > 0 ? Math.max(0, Math.min(1, v / h.target)) : 1;
-  if (v <= h.target) return 1;
-  return Math.max(0, 1 - (v - h.target) / Math.max(h.target, 1));
+  const atLeast = (lo) => (lo > 0 ? Math.max(0, Math.min(1, v / lo)) : 1);
+  const atMost = (hi) => (v <= hi ? 1 : Math.max(0, 1 - (v - hi) / Math.max(hi, 1)));
+  if (goal.dir === 'high') return atLeast(goal.target);
+  if (goal.dir === 'low') return atMost(goal.target);
+  return v < goal.target ? atLeast(goal.target) : atMost(goal.max);
+}
+function numberGoalScore(h, v) { return goalScore(h.goal, v); }
+// Wochensumme eines Felds mit Wochenziel (Woche ab dem eingestellten Wochenbeginn, siehe
+// startOfWeek): count = Tage mit Wert. Ein Zähler zählt leere vergangene Tage als 0.
+function weekGoalSum(h, weekStart) {
+  let sum = 0, count = 0;
+  for (let i = 0; i < 7; i++) {
+    const v = habitNumericValue(h, formatKey(addDays(weekStart, i)));
+    if (v !== null && v !== undefined) { sum += v; count++; }
+  }
+  return { sum, count };
+}
+// Die Wochen, deren letzter Tag in dateKeys liegt (eine Woche über den Monatswechsel gehört zu
+// dem Monat, in dem sie endet - sonst zählte sie in beiden oder in keinem). Bewertet wird eine
+// Woche erst, wenn sie vorbei ist (Nutzer-Entscheidung 2026-11-10: die laufende zeigt nur den
+// Stand), und nur mit mindestens einem Wert (vor dem Anlegen bzw. ohne Einträge gibt es nichts
+// zu bewerten).
+function weekGoalWeeks(h, dateKeys) {
+  const inRange = new Set(dateKeys);
+  const todayKey = formatKey(new Date());
+  const starts = [...new Set(dateKeys.map((k) => formatKey(startOfWeek(parseDateKey(k)))))];
+  return starts.map((sk) => {
+    const start = parseDateKey(sk);
+    const lastKey = formatKey(addDays(start, 6));
+    const { sum, count } = weekGoalSum(h, start);
+    const complete = lastKey < todayKey;
+    return { start: sk, lastKey, sum, count, complete, judged: complete && count > 0 && inRange.has(lastKey), score: goalScore(h.goal, sum) };
+  });
+}
+// Zeile unter dem Verlauf: eine einzelne Woche mit ihrer Summe, längere Zeiträume mit
+// "in n von m Wochen erreicht".
+function weekGoalChartNote(h, dateKeys) {
+  const weeks = weekGoalWeeks(h, dateKeys);
+  if (weeks.length === 1) {
+    const w = weeks[0];
+    if (!w.count) return '';
+    const text = tPlain(w.complete ? 'weekGoal.sum' : 'weekGoal.sumRunning', { sum: formatNumber(round1(w.sum)) + (goalUnit(h) ? ` ${goalUnit(h)}` : '') });
+    const color = w.complete ? scoreTextColor(scoreColor(w.score)) : 'var(--sand)';
+    return `<p class="number-chart-goal" style="color:${color}">${esc(text)}</p>`;
+  }
+  const judged = weeks.filter((w) => w.judged);
+  if (!judged.length) return '';
+  const hits = judged.filter((w) => w.score >= 0.999).length;
+  return `<p class="number-chart-goal">${esc(tPlain('stats.goalHits.week', { n: hits, total: judged.length }))}</p>`;
+}
+// "Heute" bei einem Wochenziel: der Stand der Woche des angezeigten Tags, ohne Farbe (die
+// laufende Woche wird nicht bewertet).
+function weekGoalTodayHtml(h, dateKey) {
+  const { sum } = weekGoalSum(h, startOfWeek(parseDateKey(dateKey)));
+  const unit = goalUnit(h) ? ` ${goalUnit(h)}` : '';
+  return `<span class="week-goal-progress">${t(h.goal.dir === 'high' ? 'today.weekGoal.high' : 'today.weekGoal.low', { sum: formatNumber(round1(sum)) + unit, target: formatNumber(h.goal.target) + unit })}</span>`;
 }
 // Felder mit Zahlen-Verlauf (Graph statt Farbe).
 function hasNumericSeries(h) { return isNumberKind(h) || isCounterKind(h) || isNumberComputed(h) || isTimeKind(h); }
@@ -872,7 +958,8 @@ function normalize(habit, value) {
 // eines berechneten Felds, wirkt sich das rückwirkend auf die gesamte Historie aus, da hier bei
 // jedem Aufruf live neu gerechnet wird — beabsichtigt, siehe docs/felder.md.
 function habitScore(h, dateKey) {
-  if (hasNumberGoal(h)) return numberGoalScore(h, habitNumericValue(h, dateKey));
+  if (hasDayGoal(h)) return numberGoalScore(h, habitNumericValue(h, dateKey));
+  if (hasWeekGoal(h)) return null; // bewertet wird nur die Woche, siehe weekGoalWeeks
   if (isTimeKind(h)) return null; // eine Uhrzeit ist weder gut noch schlecht
   const day = state.entries[dateKey];
   if (!day) return null;
@@ -952,12 +1039,15 @@ function scoreTextColor(color) {
 // Gläsern wäre es trotzdem rot), dahinter "/ Ziel". Bewusst ohne "max"/Haken: ob mindestens
 // oder höchstens, weiß man bei den eigenen Feldern selbst (Nutzer-Entscheidung, störte optisch).
 function goalValueStyle(h, value) {
-  if (!hasNumberGoal(h)) return '';
+  if (!hasDayGoal(h)) return '';
   const v = Number(value);
   return Number.isFinite(v) ? ` style="color:${scoreTextColor(scoreColor(numberGoalScore(h, v)))}"` : '';
 }
 function goalSuffixHtml(h) {
-  return `<span class="goal-suffix"><span aria-hidden="true">/ ${esc(formatNumber(h.target))}</span><span class="visually-hidden">${esc(tPlain('today.goalOf', { target: formatNumber(h.target) }))}</span></span>`;
+  const g = h.goal;
+  const shown = g.dir === 'range' ? `${formatNumber(g.target)}–${formatNumber(g.max)}` : formatNumber(g.target);
+  const sr = g.dir === 'range' ? tPlain('today.goalRange', { min: formatNumber(g.target), max: formatNumber(g.max) }) : tPlain('today.goalOf', { target: formatNumber(g.target) });
+  return `<span class="goal-suffix"><span aria-hidden="true">/ ${esc(shown)}</span><span class="visually-hidden">${esc(sr)}</span></span>`;
 }
 
 // Zusätzlich zur Farbe (scoreColor) ein Streifenmuster, dessen Dichte/Deckkraft mit
@@ -1009,7 +1099,7 @@ function dayOverallScore(date) {
   const dateKey = formatKey(date);
   const day = state.entries[dateKey];
   if (!day) return null;
-  const scores = state.habits.filter((h) => ((h.kind === 'scale' && !isNeutralScale(h)) || hasNumberGoal(h)) && !isPeriodField(h))
+  const scores = state.habits.filter((h) => ((h.kind === 'scale' && !isNeutralScale(h)) || hasDayGoal(h)) && !isPeriodField(h))
     .map((h) => applyGoal(h, habitScore(h, dateKey)))
     .filter((s) => s !== null);
   if (!scores.length) return null;
@@ -1025,7 +1115,7 @@ function computeHabitStats(habits, dateKeys) {
       const s = habitScore(h, k);
       if (s !== null) {
         sum += s; count++; if (s >= 0.999) hits++;
-        if (hasNumberGoal(h)) numSum += habitNumericValue(h, k);
+        if (hasDayGoal(h)) numSum += habitNumericValue(h, k);
       }
     }
     return { habit: h, avg: count ? sum / count : null, count, hits, numAvg: count ? numSum / count : null };
@@ -1945,10 +2035,25 @@ const STRINGS = {
     'habitForm.numberGoal.none': 'Keins',
     'habitForm.numberGoal.min': 'Mindestens',
     'habitForm.numberGoal.max': 'Höchstens',
+    'habitForm.numberGoal.range': 'Bereich',
+    'habitForm.numberGoal.from': 'Ziel von',
+    'habitForm.numberGoal.to': 'bis',
+    'habitForm.numberGoal.toLabel': 'Ziel bis',
+    'habitForm.numberGoal.scope': 'Ziel gilt',
+    'habitForm.numberGoal.perDay': 'Pro Tag',
+    'habitForm.numberGoal.perWeek': 'Pro Woche (Summe)',
     'habitForm.numberGoalNote': 'Ab dem Ziel ist der Tag in Woche, Monat, Jahr und Gesamt grün, je weiter davon entfernt, desto röter. „Heute“ bleibt unverändert.',
+    'habitForm.numberGoalNoteRange': 'Im Bereich ist der Tag in Woche, Monat, Jahr und Gesamt grün, je weiter darunter oder darüber, desto röter, z. B. 7 bis 9 Stunden Schlaf.',
+    'habitForm.numberGoalNoteWeek': 'Gezählt wird die Summe der Woche, z. B. 150 Minuten Bewegung. In „Heute“ siehst du, wie weit du in dieser Woche bist; bewertet wird eine Woche erst, wenn sie vorbei ist.',
     'habitForm.error.numberGoal': 'Bitte gib als Ziel eine Zahl ein (bei „Mindestens“ größer als 0).',
+    'habitForm.error.numberGoalRange': 'Bitte gib beim Bereich auch eine Obergrenze ein, mindestens so groß wie die Untergrenze.',
     'numberGoal.min': 'Ziel: mindestens {value}',
     'numberGoal.max': 'Ziel: höchstens {value}',
+    'numberGoal.range': 'Ziel: {value}',
+    'numberGoal.minWeek': 'Ziel: mindestens {value} pro Woche',
+    'numberGoal.maxWeek': 'Ziel: höchstens {value} pro Woche',
+    'weekGoal.sum': 'Summe der Woche: {sum}',
+    'weekGoal.sumRunning': 'Summe bisher: {sum} (die Woche läuft noch)',
     'stats.goalHits': 'Ziel an {n} von {total} Tagen erreicht',
     'stats.goalHits.week': 'Ziel in {n} von {total} Wochen erreicht',
     'stats.goalHits.month': 'Ziel in {n} von {total} Monaten erreicht',
@@ -1960,6 +2065,9 @@ const STRINGS = {
     'counter.less': 'Um {step} verringern',
     'counter.more': 'Um {step} erhöhen',
     'today.goalOf': 'von {target}',
+    'today.goalRange': 'Ziel {min} bis {max}',
+    'today.weekGoal.high': 'Diese Woche: {sum} von {target}',
+    'today.weekGoal.low': 'Diese Woche: {sum}, höchstens {target}',
     'charCount.sr': '{n} von {max} Zeichen',
     'habitForm.kindComputed': 'Berechnet',
     'habitForm.days': 'An welchen Tagen?',
@@ -3133,10 +3241,25 @@ const STRINGS = {
     'habitForm.numberGoal.none': 'None',
     'habitForm.numberGoal.min': 'At least',
     'habitForm.numberGoal.max': 'At most',
+    'habitForm.numberGoal.range': 'Range',
+    'habitForm.numberGoal.from': 'Goal from',
+    'habitForm.numberGoal.to': 'to',
+    'habitForm.numberGoal.toLabel': 'Goal up to',
+    'habitForm.numberGoal.scope': 'Goal applies',
+    'habitForm.numberGoal.perDay': 'Per day',
+    'habitForm.numberGoal.perWeek': 'Per week (total)',
     'habitForm.numberGoalNote': 'From the goal on, the day is green in Week, Month, Year and Overall, the further away, the redder. “Today” stays unchanged.',
+    'habitForm.numberGoalNoteRange': 'Within the range, the day is green in Week, Month, Year and Overall, the further below or above, the redder, e.g. 7 to 9 hours of sleep.',
+    'habitForm.numberGoalNoteWeek': 'The week’s total counts, e.g. 150 minutes of exercise. “Today” shows how far along you are this week; a week is only rated once it is over.',
     'habitForm.error.numberGoal': 'Please enter a number as the goal (greater than 0 for “At least”).',
+    'habitForm.error.numberGoalRange': 'Please also enter an upper limit for the range, at least as large as the lower one.',
     'numberGoal.min': 'Goal: at least {value}',
     'numberGoal.max': 'Goal: at most {value}',
+    'numberGoal.range': 'Goal: {value}',
+    'numberGoal.minWeek': 'Goal: at least {value} per week',
+    'numberGoal.maxWeek': 'Goal: at most {value} per week',
+    'weekGoal.sum': 'Week total: {sum}',
+    'weekGoal.sumRunning': 'Total so far: {sum} (the week is still running)',
     'stats.goalHits': 'Goal reached on {n} of {total} days',
     'stats.goalHits.week': 'Goal reached in {n} of {total} weeks',
     'stats.goalHits.month': 'Goal reached in {n} of {total} months',
@@ -3148,6 +3271,9 @@ const STRINGS = {
     'counter.less': 'Decrease by {step}',
     'counter.more': 'Increase by {step}',
     'today.goalOf': 'of {target}',
+    'today.goalRange': 'goal {min} to {max}',
+    'today.weekGoal.high': 'This week: {sum} of {target}',
+    'today.weekGoal.low': 'This week: {sum}, at most {target}',
     'charCount.sr': '{n} of {max} characters',
     'habitForm.kindComputed': 'Calculated',
     'habitForm.days': 'On which days?',
@@ -5417,24 +5543,71 @@ function goalSliderText(f, value) {
   const at = (v) => tPlain('habitForm.goalLabelAt', { label: goalScaleLabel(f, v - f.min), value: formatNumber(v) });
   return { text, span: lower >= upper ? at(lower) : tPlain('habitForm.goalBetween', { a: at(lower), b: at(upper) }) };
 }
-// Ziel einer Zahl / eines Zählers: keins / mindestens / höchstens + Zahl.
+// Ziel einer Zahl / eines Zählers / eines berechneten Zahlen-Felds: keins / mindestens /
+// höchstens / Bereich + Zahl(en), bei Tagesfeldern dazu "pro Tag" oder "pro Woche" (G3).
+function numberGoalAllowed(f) {
+  return f.kind === 'number' || f.kind === 'counter' || (f.kind === 'computed' && (f.computedType === 'number' || f.computedType === 'duration'));
+}
+// Schalter 'goals' sperrt nur den Einstieg; ein schon gesetztes neues Ziel bleibt sichtbar.
+function numberGoalExtrasShown(f) { return featureOn('goals') || f.numberGoalDir === 'range' || f.numberGoalScope === 'week'; }
+function numberGoalFormUnit(f) {
+  if (f.kind === 'computed') {
+    if (f.computedType === 'duration') return 'h';
+    return (state.habits.find((h) => h.id === f.members?.[0])?.unit || '').trim();
+  }
+  return (f.unit || '').trim();
+}
 function numberGoalField(f) {
-  const unit = (f.unit || '').trim();
+  if (f.kind === 'computed' && !numberGoalExtrasShown(f) && !f.numberGoalDir) return '';
+  const unit = numberGoalFormUnit(f);
+  const extras = numberGoalExtrasShown(f);
+  const dirs = [['', 'habitForm.numberGoal.none'], ['high', 'habitForm.numberGoal.min'], ['low', 'habitForm.numberGoal.max'], ...(extras ? [['range', 'habitForm.numberGoal.range']] : [])];
+  const scopeShown = extras && f.period === 'day' && (f.numberGoalDir === 'high' || f.numberGoalDir === 'low');
+  const scope = f.numberGoalScope === 'week' ? 'week' : 'day';
+  const note = !f.numberGoalDir ? 'habitForm.goalNote'
+    : f.numberGoalDir === 'range' ? 'habitForm.numberGoalNoteRange'
+    : scopeShown && scope === 'week' ? 'habitForm.numberGoalNoteWeek'
+    : 'habitForm.numberGoalNote';
   return `
     <div class="auth-field">
       <label id="habit-form-numgoal-label">${t('habitForm.numberGoal')}</label>
       <div class="pill-group seg" role="group" aria-labelledby="habit-form-numgoal-label">
-        ${[['', 'habitForm.numberGoal.none'], ['high', 'habitForm.numberGoal.min'], ['low', 'habitForm.numberGoal.max']].map(([d, key]) => `<button type="button" class="pill-toggle${(f.numberGoalDir || '') === d ? ' pill-toggle--active' : ''}" data-action="habit-numgoal" data-dir="${d}" aria-pressed="${(f.numberGoalDir || '') === d}">${t(key)}</button>`).join('')}
+        ${dirs.map(([d, key]) => `<button type="button" class="pill-toggle${(f.numberGoalDir || '') === d ? ' pill-toggle--active' : ''}" data-action="habit-numgoal" data-dir="${d}" aria-pressed="${(f.numberGoalDir || '') === d}">${t(key)}</button>`).join('')}
       </div>
       ${f.numberGoalDir ? `
         <div class="schedule-inline">
-          <input type="number" id="habit-form-numgoal-value" inputmode="decimal" step="any" min="0" value="${esc(f.numberGoalValue)}" aria-labelledby="habit-form-numgoal-label" aria-describedby="habit-form-goal-note" />
+          <input type="number" id="habit-form-numgoal-value" inputmode="decimal" step="any" min="0" value="${esc(f.numberGoalValue)}" aria-labelledby="habit-form-numgoal-label"${f.numberGoalDir === 'range' ? ` aria-label="${esc(tPlain('habitForm.numberGoal.from'))}"` : ''} aria-describedby="habit-form-goal-note" />
+          ${f.numberGoalDir === 'range' ? `
+            <span>${t('habitForm.numberGoal.to')}</span>
+            <input type="number" id="habit-form-numgoal-max" inputmode="decimal" step="any" min="0" value="${esc(f.numberGoalMax)}" aria-label="${esc(tPlain('habitForm.numberGoal.toLabel'))}" aria-describedby="habit-form-goal-note" />
+          ` : ''}
           ${unit ? `<span>${esc(unit)}</span>` : ''}
         </div>
       ` : ''}
-      <p class="habit-form-lock-note" id="habit-form-goal-note">${t(f.numberGoalDir ? 'habitForm.numberGoalNote' : 'habitForm.goalNote')}</p>
+      ${scopeShown ? `
+        <div class="pill-group seg" role="group" aria-label="${esc(tPlain('habitForm.numberGoal.scope'))}">
+          ${[['day', 'habitForm.numberGoal.perDay'], ['week', 'habitForm.numberGoal.perWeek']].map(([sc, key]) => `<button type="button" class="pill-toggle${scope === sc ? ' pill-toggle--active' : ''}" data-action="habit-numgoal-scope" data-scope="${sc}" aria-pressed="${scope === sc}">${t(key)}</button>`).join('')}
+        </div>
+      ` : ''}
+      <p class="habit-form-lock-note" id="habit-form-goal-note">${t(note)}</p>
     </div>
   `;
+}
+// Prüft das Ziel im Formular: { goal } (null = keins) oder { notice }.
+function parseNumberGoal(f) {
+  const dir = f.numberGoalDir;
+  if (!dir) return { goal: null };
+  const num = (x) => (String(x ?? '').trim() === '' ? NaN : Number(String(x).trim().replace(',', '.')));
+  const target = num(f.numberGoalValue);
+  if (!Number.isFinite(target) || target < 0 || (dir === 'high' && target === 0)) {
+    return { notice: { type: 'error', text: t('habitForm.error.numberGoal') } };
+  }
+  if (dir === 'range') {
+    const max = num(f.numberGoalMax);
+    if (!Number.isFinite(max) || max < target) return { notice: { type: 'error', text: t('habitForm.error.numberGoalRange') } };
+    return { goal: { dir, target, max, scope: 'day' } };
+  }
+  return { goal: { dir, target, max: null, scope: f.numberGoalScope === 'week' && f.period === 'day' ? 'week' : 'day' } };
 }
 function readGoalFromDom(f) {
   const el = document.getElementById('habit-form-goal');
@@ -5509,7 +5682,8 @@ function defaultHabitForm() {
     period: 'day', periodReminderDay: null, // siehe periodReminderControl
     optional: false, // siehe isOptionalAllowed
     step: 1, // nur Zähler
-    numberGoalDir: null, numberGoalValue: '', // Zahl/Zähler: Ziel 'high' = mindestens, 'low' = höchstens
+    numberGoalDir: null, numberGoalValue: '', // Ziel 'high' = mindestens, 'low' = höchstens, 'range' = von-bis (siehe parseNumberGoal)
+    numberGoalMax: '', numberGoalScope: 'day', // nur 'range': Obergrenze; 'week' = Wochensumme
     summary: 'avg', // Zahlen: in Woche/Monat/Jahr als Durchschnitt oder Summe
     durationFrom: null, durationTo: null, // nur berechnet "Dauer": Schlüssel der beiden Uhrzeit-Felder
     sinceSource: null, sinceValues: [], sinceAtLeast: '1', sinceMode: 'last', // nur berechnet "Tage seit" (siehe isSinceComputed)
@@ -5590,8 +5764,10 @@ function habitToForm(h) {
     periodReminderDay: h.periodReminderDay ?? null,
     optional: !!h.optional,
     step: h.step ?? 1,
-    numberGoalDir: isNumberKind(h) || isCounterKind(h) ? h.good || null : null,
-    numberGoalValue: Number.isFinite(h.target) ? String(h.target) : '',
+    numberGoalDir: hasNumberGoal(h) ? h.goal.dir : null,
+    numberGoalValue: hasNumberGoal(h) ? String(h.goal.target) : '',
+    numberGoalMax: hasNumberGoal(h) && h.goal.dir === 'range' ? String(h.goal.max) : '',
+    numberGoalScope: hasNumberGoal(h) ? h.goal.scope : 'day',
     summary: h.summary,
     multiOptions: isMultiKind(h) ? (h.options || []).map((o) => ({ ...o })) : emptyMultiOptions(),
   };
@@ -5673,9 +5849,11 @@ function syncHabitFormFromDom() {
     if (unitEl) f.unit = unitEl.value;
     const stepEl = document.getElementById('habit-form-step');
     if (stepEl) f.step = Number(String(stepEl.value).replace(',', '.'));
-    const numGoalEl = document.getElementById('habit-form-numgoal-value');
-    if (numGoalEl) f.numberGoalValue = numGoalEl.value;
   }
+  const numGoalEl = document.getElementById('habit-form-numgoal-value');
+  if (numGoalEl) f.numberGoalValue = numGoalEl.value;
+  const numGoalMaxEl = document.getElementById('habit-form-numgoal-max');
+  if (numGoalMaxEl) f.numberGoalMax = numGoalMaxEl.value;
   readPeriodReminderFromDom(f);
   readReminderTimesFromDom(f);
   const everyEl = document.getElementById('habit-form-every');
@@ -5752,6 +5930,13 @@ function habitFormDefinition(f) {
     ? f.goal
     : null;
 
+  let numberGoal = null;
+  if (numberGoalAllowed(f)) {
+    const g = parseNumberGoal(f);
+    if (g.notice) return g;
+    numberGoal = g.goal;
+  }
+
   let fields; // { kind, min, max, labels, good, unit, display_style, slider_show_value, group_members, goal_threshold }
   if (f.kind === 'text') {
     fields = { kind: 'text', min: null, max: null, labels: null, good: null, unit: null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
@@ -5793,13 +5978,10 @@ function habitFormDefinition(f) {
       }
       f.step = step;
     }
-    // Ziel: "mindestens/höchstens X" - mit Richtung braucht es eine Zahl (bei "mindestens" > 0).
-    const goalRaw = f.numberGoalValue;
-    const target = f.numberGoalDir ? Number(String(goalRaw).replace(',', '.')) : null;
-    if (f.numberGoalDir && (!Number.isFinite(target) || target < 0 || (f.numberGoalDir === 'high' && target === 0))) {
-      return { notice: { type: 'error', text: t('habitForm.error.numberGoal') } };
-    }
-    fields = { kind: f.kind, min: null, max: null, labels: null, good: f.numberGoalDir, target, unit: unit || null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
+    // Ziel (siehe goalFromPayload): "mindestens/höchstens pro Tag" wie bisher in good/target, alles
+    // Neue nur in numberGoal.
+    const plain = numberGoal && numberGoal.scope === 'day' && numberGoal.dir !== 'range';
+    fields = { kind: f.kind, min: null, max: null, labels: null, good: plain ? numberGoal.dir : null, target: plain ? numberGoal.target : null, numberGoal: plain ? null : numberGoal, unit: unit || null, display_style: 'buttons', slider_show_value: true, group_members: null, goal_threshold: null };
   } else if (f.kind === 'computed') {
     const memberKeys = f.members.filter((key) => state.habits.some((h) => h.id === key));
     if (memberKeys.length < 2) {
@@ -5879,6 +6061,7 @@ function habitFormDefinition(f) {
     fields.schedule = result.schedule;
   }
 
+  if (f.kind === 'computed' && fields) fields.numberGoal = numberGoal;
   const optional = isOptionalAllowed({ kind: f.kind, period }) && !!f.optional;
   return { name, fields, period, periodReminderDay, reminderTimes, reminderBelow, optional };
 }
@@ -5936,6 +6119,7 @@ function habitPayloadFromDefinition(f, def, key) {
     hideInStats: !f.showInStats,
     step: f.kind === 'counter' ? f.step : undefined,
     target: fields.target ?? undefined,
+    numberGoal: fields.numberGoal ?? undefined,
     summary: habitFormSummable(f) && f.summary === 'sum' ? 'sum' : undefined,
     archivedInStats: f.defId ? !!state.habits.find((h) => h.defId === f.defId)?.archivedInStats : false,
     counterSince: f.kind === 'counter' && f.defId ? state.habits.find((h) => h.defId === f.defId)?.counterSince ?? undefined : undefined,
@@ -6020,8 +6204,8 @@ async function convertHabitToCounter(defId) {
 async function convertToCounterRow(h) {
   // Ziel übernehmen: aus einer Skala mit Bewertung wird "mindestens/höchstens" der Wert, ab dem
   // sie voll erreicht war (z.B. Zähne 0-2, hohe Werte gut -> mindestens 2).
-  let good = null, target = null;
-  if (h.kind === 'number') { good = h.good || null; target = h.target ?? null; }
+  let good = null, target = null, numberGoal;
+  if (h.kind === 'number') { good = h.good || null; target = h.target ?? null; numberGoal = h.goalRaw ?? undefined; }
   else if (h.good) {
     const g = h.goalThreshold ?? 1;
     good = h.good;
@@ -6029,7 +6213,7 @@ async function convertToCounterRow(h) {
     target = Math.round(target * 10) / 10;
   }
   const payload = {
-    key: h.id, name: h.name, unit: h.kind === 'number' ? h.unit ?? null : null, target,
+    key: h.id, name: h.name, unit: h.kind === 'number' ? h.unit ?? null : null, target, numberGoal,
     min: null, max: null, labels: null, good, displayStyle: 'buttons', sliderShowValue: true,
     groupMembers: null, goalThreshold: null, aggregate: null,
     hideInStats: !!h.hideInStats, archivedInStats: !!h.archivedInStats,
@@ -7220,7 +7404,7 @@ async function updateHabitPayload(habit, changes) {
     goalThreshold: next.goalThreshold ?? null, aggregate: next.aggregate ?? null, since: next.since ?? undefined, options: next.options ?? undefined,
     hideInStats: !!next.hideInStats, archivedInStats: !!next.archivedInStats,
     // Ohne diese gingen Ziel/Schritt/Summe einer Zahl bzw. eines Zählers hier still verloren.
-    step: isCounterKind(next) ? next.step : undefined, target: next.target ?? undefined,
+    step: isCounterKind(next) ? next.step : undefined, target: next.target ?? undefined, numberGoal: next.goalRaw ?? undefined,
     summary: next.summary === 'sum' ? 'sum' : undefined, counterSince: next.counterSince ?? undefined,
     reminderBelow: next.reminderBelow ?? undefined, stepChange: next.stepChange ?? undefined,
   };
@@ -8945,7 +9129,8 @@ function renderComputedInfo(habit, dateKey) {
     const { value } = numberComputedDay(habit, dateKey);
     const [from, to] = (habit.members || []).map((key) => state.habits.find((x) => x.id === key));
     return `
-      <div class="computed-readout computed-readout--number">${value !== null ? esc(formatSeriesValue(habit, value)) : '–'}</div>
+      <div class="computed-readout computed-readout--number"><span${value !== null ? goalValueStyle(habit, value) : ''}>${value !== null ? esc(formatSeriesValue(habit, value)) : '–'}</span>${hasDayGoal(habit) ? goalSuffixHtml(habit) : ''}</div>
+      ${hasWeekGoal(habit) ? weekGoalTodayHtml(habit, dateKey) : ''}
       <span class="manage-meta">${t('computedInfo.durationOf', { from: from?.name || '–', to: to?.name || '–' })}</span>
     `;
   }
@@ -8960,7 +9145,8 @@ function renderComputedInfo(habit, dateKey) {
     const { value, filled, total } = numberComputedDay(habit, dateKey);
     const unit = computedUnit(habit);
     return `
-      <div class="computed-readout computed-readout--number">${value !== null ? esc(formatNumber(value)) + (unit ? ' ' + esc(unit) : '') : '–'}</div>
+      <div class="computed-readout computed-readout--number"><span${value !== null ? goalValueStyle(habit, value) : ''}>${value !== null ? esc(formatNumber(value)) + (unit ? ' ' + esc(unit) : '') : '–'}</span>${hasDayGoal(habit) ? goalSuffixHtml(habit) : ''}</div>
+      ${hasWeekGoal(habit) ? weekGoalTodayHtml(habit, dateKey) : ''}
       <span class="manage-meta">${t('computedInfo.aggOf', { agg: t('aggregate.' + habit.aggregate), names: members.map((m) => m.name).join(', '), filled, total })}</span>
     `;
   }
@@ -9195,8 +9381,8 @@ function renderNumberBox(h, dateKey, dayEntry, marker = '') {
   const nameWithUnit = `${esc(h.name)}${h.unit ? ` (${esc(h.unit)})` : ''}`;
   return `
     <div class="number-box">
-      ${renderRowHead(h, nameWithUnit + marker, lastNote ? `<span class="number-last">${lastNote}</span>` : '')}
-      <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-action="number-input" data-habit="${h.id}" value="${esc(currentValue)}" aria-label="${nameWithUnit}"${currentValue === '' ? '' : goalValueStyle(h, currentValue)} />${hasNumberGoal(h) ? goalSuffixHtml(h) : ''}
+      ${renderRowHead(h, nameWithUnit + marker, `${lastNote ? `<span class="number-last">${lastNote}</span>` : ''}${hasWeekGoal(h) ? weekGoalTodayHtml(h, dateKey) : ''}`)}
+      <input type="number" inputmode="decimal" step="any" id="number-input-${h.id}" class="number-input" data-action="number-input" data-habit="${h.id}" value="${esc(currentValue)}" aria-label="${nameWithUnit}"${currentValue === '' ? '' : goalValueStyle(h, currentValue)} />${hasDayGoal(h) ? goalSuffixHtml(h) : ''}
       ${renderNote(dateKey, h.id, noteLabel(h))}
       ${renderRowMenuPanel(h)}
     </div>
@@ -9522,10 +9708,10 @@ function renderCounterBox(h, dateKey, dayEntry) {
   const value = dayEntry[h.id] ?? 0;
   const nameWithUnit = `${esc(h.name)}${h.unit ? ` (${esc(h.unit)})` : ''}`;
   const step = formatNumber(h.step);
-  const goal = hasNumberGoal(h);
+  const goal = hasDayGoal(h);
   return `
     <div class="habit-row habit-row--counter">
-      ${renderRowHead(h, nameWithUnit)}
+      ${renderRowHead(h, nameWithUnit, hasWeekGoal(h) ? weekGoalTodayHtml(h, dateKey) : '')}
       <div class="counter-controls" role="group" aria-label="${esc(h.name)}">
         <button type="button" class="counter-btn" data-action="counter-step" data-habit="${h.id}" data-dir="-1" ${value <= 0 ? 'disabled' : ''} aria-label="${esc(tPlain('counter.less', { step }))}">−</button>
         <span class="counter-value${goal ? ' counter-value--goal' : ''}" aria-live="polite"><span${goalValueStyle(h, value)}>${esc(formatNumber(value))}</span>${goal ? goalSuffixHtml(h) : ''}</span>
@@ -9840,9 +10026,9 @@ function renderWeek() {
     const valid = scores.filter((s) => s !== null);
     const avg = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
     const hits = valid.filter((v) => v >= 0.999).length;
-    const numVals = hasNumberGoal(h) ? dayKeys.filter((k, i) => scores[i] !== null).map((k) => habitNumericValue(h, k)) : [];
+    const numVals = hasDayGoal(h) ? dayKeys.filter((k, i) => scores[i] !== null).map((k) => habitNumericValue(h, k)) : [];
     const numAvg = numVals.length ? numVals.reduce((a, b) => a + b, 0) / numVals.length : null;
-    const avgLong = avg !== null ? `${h.name}: ${habitAvgLong(h, avg, valid.length, hits, numAvg)}${isYesNoScale(h) || hasNumberGoal(h) ? '' : ` (${valid.length}×)`}` : '';
+    const avgLong = avg !== null ? `${h.name}: ${habitAvgLong(h, avg, valid.length, hits, numAvg)}${isYesNoScale(h) || hasDayGoal(h) ? '' : ` (${valid.length}×)`}` : '';
     // Unbewertete Felder: nur "eingetragen", kein Streifenmuster (das kodiert die
     // Bewertungsstufe) und kein Ø - siehe isNeutralScale.
     const neutral = isNeutralScale(h);
@@ -10420,14 +10606,14 @@ function avgMiniScale(h, avg, extraClass = '') {
 // Zahlen mit Ziel: der Durchschnitt ist die Hauptzahl (Zahlen denkt man in Schnitten - "2/7"
 // sah wie ein Wert aus), wie oft das Ziel erreicht war steht in der Langform.
 function habitAvgShort(h, avg, count, hits = 0, numAvg = null) {
-  if (hasNumberGoal(h)) return formatNumber(round1(numAvg ?? 0));
+  if (hasDayGoal(h)) return formatNumber(round1(numAvg ?? 0));
   if (isMultiStepScale(h)) return avgMiniScale(h, avg);
   if (isYesNoScale(h)) return `${Math.round(avg * count)}/${count}`;
   if (h.kind === 'scale') return formatNumber(round1(avgScaleValue(h, avg)));
   return Math.round(avg * 100) + '%';
 }
 function habitAvgLong(h, avg, count, hits = 0, numAvg = null) {
-  if (hasNumberGoal(h)) {
+  if (hasDayGoal(h)) {
     return `Ø ${formatNumber(round1(numAvg ?? 0))}${h.unit ? ` ${h.unit}` : ''} · ${tPlain('stats.goalHits' + (isPeriodField(h) ? `.${h.period}` : ''), { n: hits, total: count })}`;
   }
   if (isYesNoScale(h)) {
@@ -10514,7 +10700,7 @@ function renderStatsRows(stats) {
       <span class="habit-name">${statsFieldName(habit, 'rows')}</span>
       ${isNeutralScale(habit)
         ? `<span class="month-stat-value"><span class="month-stat-count">${count}×</span></span>`
-        : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : scoreTextColor(habitColor(habit, applyGoal(habit, avg)))}">${avg !== null && isMultiStepScale(habit) ? avgMiniScale(habit, avg, ' avg-scale--inline') : ''}${avg !== null ? esc(habitAvgLong(habit, avg, count, hits, numAvg)) : '–'}${avg !== null && !isYesNoScale(habit) && !hasNumberGoal(habit) ? ` <span class="month-stat-count">(${count}×)</span>` : ''}</span>`}
+        : `<span class="month-stat-value" style="color:${avg === null ? 'var(--sand)' : scoreTextColor(habitColor(habit, applyGoal(habit, avg)))}">${avg !== null && isMultiStepScale(habit) ? avgMiniScale(habit, avg, ' avg-scale--inline') : ''}${avg !== null ? esc(habitAvgLong(habit, avg, count, hits, numAvg)) : '–'}${avg !== null && !isYesNoScale(habit) && !hasDayGoal(habit) ? ` <span class="month-stat-count">(${count}×)</span>` : ''}</span>`}
     </div>
   `).join('');
 }
@@ -10561,25 +10747,27 @@ function renderNumberChart(habit, dateKeys, interactive) {
         ? t('numberChart.metaSum', { sum: fmt(stats.sum, true), avg: fmt(stats.avg, true), per: t('numberChart.per.' + (habit.period || 'day')), count: stats.count })
         : t('numberChart.meta', { last: fmt(stats.last), avg: fmt(stats.avg, true), count: stats.count })}${hasNumberGoal(habit) ? ` · ${esc(numberGoalText(habit))}` : ''}</span>` : ''}
     </div>
+    ${hasWeekGoal(habit) ? weekGoalChartNote(habit, dateKeys) : ''}
   `;
   if (!stats || stats.series.length < 2) {
     return `<div class="number-chart-box">${head}<p class="manage-meta">${stats ? t('numberChart.tooFewValues') : t('numberChart.noValues')}</p></div>`;
   }
   const w = 280, h = 56, pad = 4;
   const n = stats.series.length;
-  // Mit Ziel: Bereich so weit, dass die Ziellinie sichtbar ist.
-  const goal = hasNumberGoal(habit) ? habit.target : null;
-  const lo = goal !== null ? Math.min(stats.min, goal) : stats.min;
-  const hi = goal !== null ? Math.max(stats.max, goal) : stats.max;
+  // Mit Tagesziel: Bereich so weit, dass die Ziellinie(n) sichtbar sind (Bereich: zwei Linien).
+  // Ein Wochenziel ist keine Linie - die Summe liegt auf einer anderen Höhe als die Tageswerte.
+  const goals = hasDayGoal(habit) ? (habit.goal.dir === 'range' ? [habit.goal.target, habit.goal.max] : [habit.goal.target]) : [];
+  const lo = Math.min(stats.min, ...goals);
+  const hi = Math.max(stats.max, ...goals);
   const range = hi - lo || 1;
   const yOf = (v) => h - pad - ((v - lo) / range) * (h - 2 * pad);
   const points = stats.series.map((p, i) => {
     const x = pad + (i / (n - 1)) * (w - 2 * pad);
     return [x, yOf(p.value)];
   });
-  const goalLine = goal !== null
-    ? `<line x1="0" x2="${w}" y1="${yOf(goal).toFixed(1)}" y2="${yOf(goal).toFixed(1)}" style="stroke:var(--sand);stroke-width:1;stroke-dasharray:4 3" vector-effect="non-scaling-stroke" />`
-    : '';
+  const goalLine = goals
+    .map((g) => `<line x1="0" x2="${w}" y1="${yOf(g).toFixed(1)}" y2="${yOf(g).toFixed(1)}" style="stroke:var(--sand);stroke-width:1;stroke-dasharray:4 3" vector-effect="non-scaling-stroke" />`)
+    .join('');
   const pointsAttr = points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
   const dots = points.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.6" style="fill:var(--ink)" />`).join('');
   // Tage mit Notiz zu diesem Feld: Ring um den Datenpunkt. Als HTML über dem SVG statt
@@ -10948,7 +11136,7 @@ function templateSourceOf(tp, slot) {
 // nur, was nicht an den Werten hängt - den Rest stellt "Stufen/Typ ändern" um.
 function templateTakeOverlay(slotForm, mode) {
   const skip = new Set(['kind', 'min', 'max', 'multiOptions']);
-  if (mode !== 'same' && mode !== 'counter') ['labelsEnabled', 'labels', 'displayStyle', 'unit', 'numberGoalDir', 'numberGoalValue'].forEach((k) => skip.add(k));
+  if (mode !== 'same' && mode !== 'counter') ['labelsEnabled', 'labels', 'displayStyle', 'unit', 'numberGoalDir', 'numberGoalValue', 'numberGoalMax', 'numberGoalScope'].forEach((k) => skip.add(k));
   return Object.fromEntries(Object.entries(slotForm).filter(([k]) => !skip.has(k) && k in templateSlotOverrideKeys(slotForm)));
 }
 // Nur die Schlüssel, die der Teil selbst setzt (nicht die Vorgaben von defaultHabitForm).
@@ -11733,12 +11921,12 @@ function renderHabitForm({ titleInHeader = false } = {}) {
     ${isPeriod ? (isCounter ? '' : periodReminderControl(f)) : scheduleBody}
     ${habitFormReminderShown(f) ? reminderBody : ''}
   `;
-  const hasGoalField = showGoal || f.kind === 'number' || f.kind === 'counter';
+  const hasGoalField = showGoal || f.kind === 'number' || f.kind === 'counter' || (numberGoalAllowed(f) && (numberGoalExtrasShown(f) || !!f.numberGoalDir));
   const statsBody = `
     ${summaryField}
     ${partMore('stats', [...(hasGoalField ? ['goal'] : []), 'showInStats'], (showGoal && f.goal < 1) || !!f.numberGoalDir || !f.showInStats, `
       ${showGoal ? goalField : ''}
-      ${f.kind === 'number' || f.kind === 'counter' ? numberGoalField(f) : ''}
+      ${numberGoalAllowed(f) ? numberGoalField(f) : ''}
       <div class="auth-field">
         <label class="checkbox-field">
           <input type="checkbox" id="habit-form-show-in-stats" ${f.showInStats ? 'checked' : ''} />
@@ -13625,6 +13813,11 @@ app.addEventListener('click', async (e) => {
     state.habitForm.numberGoalDir = el.dataset.dir || null;
     render();
     if (state.habitForm.numberGoalDir) document.getElementById('habit-form-numgoal-value')?.focus();
+  } else if (action === 'habit-numgoal-scope') {
+    syncHabitFormFromDom();
+    state.habitForm.numberGoalScope = el.dataset.scope === 'week' ? 'week' : 'day';
+    render();
+    document.querySelector(`[data-action="habit-numgoal-scope"][data-scope="${state.habitForm.numberGoalScope}"]`)?.focus();
   } else if (action === 'habit-period') {
     syncHabitFormFromDom();
     const f = state.habitForm;

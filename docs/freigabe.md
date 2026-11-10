@@ -48,7 +48,7 @@ Build-Schritt.
 - Ein Schalter im Browser ist kein Schutz: wer technisch versiert ist, kann eine versteckte
   Funktion freischalten. Für Tests egal; für Premium siehe unten.
 
-**Aktuelle Schalter**: `starterpack` (Startpaket jederzeit über "Neues Feld" und im leeren "Heute"), `optional` ("Darf leer bleiben" und Zusätze der Vorlage "Schlaf"), `weekstart` (Wochenbeginn einstellbar).
+**Aktuelle Schalter**: `starterpack` (Startpaket jederzeit über "Neues Feld" und im leeren "Heute"), `optional` ("Darf leer bleiben" und Zusätze der Vorlage "Schlaf"), `weekstart` (Wochenbeginn einstellbar), `goals` (Ziele als Bereich und Wochensumme, auch für berechnete Zahlen-Felder).
 
 ## Schalter setzen (Dashboard → SQL)
 

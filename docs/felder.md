@@ -523,6 +523,20 @@ Eintrag). "−" daneben zum Korrigieren statt Rückgängig-Meldung; Schritt pro 
 [erinnerungen.md](erinnerungen.md) → Zähler); nicht im Tutorial. Auf 0
 heruntergezählt wird der Schlüssel entfernt (gilt ohnehin als 0).
 
+**Bereich und Wochensumme** (G3, Nutzer-Entscheidung 2026-11-10, Schalter `goals`): Ziel auch als
+Bereich ("7 bis 9 h") und bei Tagesfeldern "pro Woche (Summe)" bei mindestens/höchstens; dazu
+für berechnete Zahlen-Felder und Dauern (nicht "Tage seit"). Modell `h.goal = { dir, target,
+max, scope }` aus `goalFromPayload`: "mindestens/höchstens pro Tag" einer Zahl/eines Zählers
+bleibt in `good`/`target`, alles andere steht in `enc.numberGoal` – ältere App-Versionen sehen
+dort kein Ziel statt einer falschen Bewertung, und berechnete Felder tragen in `good` teils ein
+bedeutungsloses 'high'. Bereich: Score darin 1, darunter wie mindestens, darüber wie höchstens;
+Verlauf mit zwei Ziellinien. Wochenziel (`hasWeekGoal`): **kein Tagesscore** – das Feld bleibt
+ein Verlauf wie eine Zahl ohne Ziel (keine Tagesfarbe, keine Zeile im Raster). Bewertet wird nur
+eine **abgeschlossene** Woche mit mindestens einem Wert (`weekGoalWeeks`); die laufende zeigt in
+"Heute" unter dem Namen "Diese Woche: 90 von 150" und in der Wochenansicht "Summe bisher",
+ungefärbt. Monat/Jahr/Gesamt: "Ziel in n von m Wochen erreicht", eine Woche gehört zum Zeitraum,
+in dem sie endet. Woche = eingestellter Wochenbeginn (`startOfWeek`), rein auf dem Gerät.
+
 **Umwandeln in einen Zähler** (nur auf Wunsch, mit Rückfrage, in "Feld bearbeiten" unter dem
 gesperrten Typ): Zahlenfelder und Skalen, die bei 0 beginnen (frühere "Anzahl"-Skalen).
 Einträge bleiben unverändert (schon Zahlen), nur die Definition wird ein Zähler; "leer = 0"

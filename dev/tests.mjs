@@ -162,6 +162,24 @@ try {
       eq('Umzug Mo -> Sa', f.weekMoveTarget('2026-11-09', 6), '2026-11-07');
       eq('Umzug Sa -> So', f.weekMoveTarget('2026-11-07', 7), '2026-11-08');
 
+      // --- Ziele: Bereich und Wochensumme (G3) ---------------------------------
+      eq('Ziel aus good/target (alte Form)', f.goalFromPayload('number', { good: 'high', target: 8 }), { dir: 'high', target: 8, max: null, scope: 'day' });
+      eq('berechnet: good allein ist kein Ziel', f.goalFromPayload('computed', { good: 'high', target: 8 }), null);
+      eq('Bereich aus numberGoal', f.goalFromPayload('computed', { numberGoal: { dir: 'range', target: 7, max: 9, scope: 'week' } }), { dir: 'range', target: 7, max: 9, scope: 'day' });
+      eq('Bereich mit Obergrenze unter Untergrenze verworfen', f.goalFromPayload('number', { numberGoal: { dir: 'range', target: 9, max: 7 } }), null);
+      eq('Wochenziel', f.goalFromPayload('number', { numberGoal: { dir: 'high', target: 150, scope: 'week' } }), { dir: 'high', target: 150, max: null, scope: 'week' });
+      const range = { dir: 'range', target: 7, max: 9 };
+      eq('Bereich: Score', [3.5, 7, 8, 9, 13.5, 18].map((v) => Math.round(f.goalScore(range, v) * 100) / 100), [0.5, 1, 1, 1, 0.5, 0]);
+      eq('Formular: Bereich ohne Obergrenze', !!f.parseNumberGoal({ numberGoalDir: 'range', numberGoalValue: '7', numberGoalMax: '', period: 'day' }).notice, true);
+      eq('Formular: Wochenziel nur bei Tagesfeldern', f.parseNumberGoal({ numberGoalDir: 'high', numberGoalValue: '2', numberGoalScope: 'week', period: 'month' }).goal.scope, 'day');
+      eq('Formular: Komma', f.parseNumberGoal({ numberGoalDir: 'low', numberGoalValue: '7,5', period: 'day' }).goal.target, 7.5);
+      const wg = { id: 'mv', kind: 'number', period: 'day', goal: { dir: 'high', target: 150, max: null, scope: 'week' } };
+      state.habits = [wg];
+      state.entries = { '2026-10-05': { mv: 50 }, '2026-10-07': { mv: 60 }, '2026-10-11': { mv: 50 }, '2026-10-14': { mv: 100 } };
+      const oct = Array.from({ length: 31 }, (_, i) => `2026-10-${String(i + 1).padStart(2, '0')}`);
+      eq('Wochenziel: bewertete Wochen im Monat', f.weekGoalWeeks(wg, oct).filter((w) => w.judged).map((w) => [w.start, w.sum, w.score >= 0.999]), [['2026-10-05', 160, true], ['2026-10-12', 100, false]]);
+      eq('Wochenziel: Woche über den Monatswechsel zählt im Monat ihres Endes', f.weekGoalWeeks(wg, oct).find((w) => w.start === '2026-10-26')?.judged, false);
+
       // --- Texte --------------------------------------------------------------
       // Gleiche Schlüssel in derselben Reihenfolge (CLAUDE.md), und die dynamisch gebauten gibt es.
       eq('Texte: de und en gleiche Schlüssel', Object.keys(f.STRINGS.en), Object.keys(f.STRINGS.de));
