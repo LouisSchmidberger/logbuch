@@ -240,7 +240,7 @@ otp_expiry = 3600
 # Production-SMTP über Resend (seit 2026-09-15) - löst das eingebaute Supabase-
 # Standard-Limit von nur 2 E-Mails/Stunde ab. Domain mail.louis-schmidberger.de bei
 # Resend verifiziert (Interims-Lösung auf der bestehenden Privat-Domain, unabhängig
-# von einer künftigen eigenen Projekt-Domain - siehe CLAUDE.md). Der API-Key selbst
+# von einer künftigen eigenen Projekt-Domain - siehe docs/datenschutz-sicherheit.md). Der API-Key selbst
 # ist NUR im Supabase-Dashboard (Authentication -> Emails -> SMTP Settings) hinterlegt,
 # nie hier im Repo.
 [auth.email.smtp]

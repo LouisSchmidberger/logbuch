@@ -36,7 +36,7 @@ const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:example@example.c
 // aufzurufen — ohne diesen zusätzlichen Header könnte jede*r sie beliebig oft triggern
 // und würde dabei JEDES MAL alle fälligen Nutzer benachrichtigen (Spam-Push-Risiko).
 // Nur der Cron-Job kennt das zugehörige Vault-Secret 'cron_secret' (siehe
-// CLAUDE.md "Secrets" → Vault-Secrets).
+// docs/datenschutz-sicherheit.md, Secrets).
 const CRON_SECRET = Deno.env.get('CRON_SECRET')!;
 
 // Wie viele Abos gleichzeitig beliefert werden – parallel statt nacheinander, damit
@@ -186,7 +186,7 @@ Deno.serve(async (req) => {
 
   // Laufzeit-Messung für die Skalierungs-Beobachtung: Edge Functions haben ein
   // Zeit- und CPU-Limit pro Aufruf – steigen duration_ms/sent am 22-Uhr-Slot deutlich,
-  // ist es Zeit für Fan-out (siehe CLAUDE.md "Erinnerungen" → Skalierung). Nachlesbar
+  // ist es Zeit für Fan-out (siehe docs/erinnerungen.md, Skalierung). Nachlesbar
   // in net._http_response (Antworten der Cron-Aufrufe).
   const startedAt = Date.now();
   // Ein fester Zeitpunkt für alle Seiten dieses Laufs (siehe Migration

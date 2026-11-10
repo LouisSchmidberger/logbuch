@@ -34,7 +34,7 @@ Fläche bildet (Android-Konvention). Die untere Navigationsleiste kann eine Web-
 `--paper`, 4,7:1 auf den getönten Flächen: Gruppen-Blöcke in "Heute" mit `--ink` 5 %,
 Erklär-Kästen mit `--moss` 9 % – neue getönte Flächen dagegen nachrechnen; auf doppelt
 getönten Flächen wie dem Krisen-Kasten reicht `--sand` nicht, dort `--ink`), im dunklen
-~6,5:1. Knopf-Rahmen in `--sand`, nicht `--line` (zu blass). Text auf
+~6,5:1. Knopf- und Eingabefeld-Rahmen in `--sand`, nicht `--line` (zu blass, ~1,7:1 statt der nötigen 3:1). Text auf
 Score-Farben (gewählte Buttons, berechnete Felder in "Heute", Ø-Zellen, Tageszahlen im
 Monat) wählt `textOnScore()` je Farbe: reines Weiß oder Schwarz, je nachdem was mehr Kontrast
 hat – nur so erreicht jede Stufe der Skala 4,5:1 (fester heller Text lag auf hellen Stufen

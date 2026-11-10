@@ -8,8 +8,7 @@
 
 import { previewAdmin } from './mock-supabase.js';
 
-// Gerätespuren, die das Verhalten beim Start ändern (siehe CLAUDE.md "State that lives on
-// the device") - für einen sauberen Neuanfang mit weg.
+// Gerätespuren, die das Verhalten beim Start ändern (siehe CLAUDE.md "Konventionen", Gerätespezifisches in localStorage) - für einen sauberen Neuanfang mit weg.
 const DEVICE_KEYS = [
   'onboardingMode', 'onboardingInProgress', 'onboardingWithInstall', 'signedInHere',
   'installGateSkipped', 'installHintDismissed', 'todayIntroPending', 'groupTipDismissed',

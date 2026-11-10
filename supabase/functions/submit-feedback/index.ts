@@ -20,8 +20,8 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const RESEND_FEEDBACK_KEY = Deno.env.get('RESEND_FEEDBACK_KEY');
 const FEEDBACK_TO_EMAIL = Deno.env.get('FEEDBACK_TO_EMAIL');
-// Absender muss auf der bei Resend verifizierten Domain liegen (siehe CLAUDE.md,
-// Custom SMTP).
+// Absender muss auf der bei Resend verifizierten Domain liegen (siehe
+// docs/datenschutz-sicherheit.md, E-Mail-Versand).
 const FEEDBACK_FROM = 'Logbuch Feedback <feedback@mail.louis-schmidberger.de>';
 const MAX_LENGTH = 5000; // identisch mit dem CHECK in der Tabelle und maxlength im Frontend
 

@@ -232,7 +232,9 @@
     padding: 20px 18px 40px;
   }
 
-  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  /* gap: Mindestabstand Titel ↔ Menü - bei schmalem Handy und großer Schrift stießen sie sonst
+     direkt aneinander, und der kursive letzte Buchstabe ragte in den Knopf. */
+  .header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 14px; }
   .header h1 { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 1.5rem; margin: 0; }
   .subpage-header-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
   /* Lange Titel brechen um statt mit "…" gekürzt zu werden: bei sehr großer Schrift blieb
@@ -596,7 +598,7 @@
   }
   .number-box .number-last { display: block; font-size: 0.8125rem; color: var(--sand); margin-top: 2px; }
   .number-input {
-    width: 72px; font-family: inherit; font-size: 1rem; padding: 6px 8px; border: 1px solid var(--line);
+    width: 72px; font-family: inherit; font-size: 1rem; padding: 6px 8px; border: 1px solid var(--sand);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   .number-input[style*="color"] { font-weight: 600; } /* Wert mit Ziel: gefärbt wie beim Zähler */
@@ -612,10 +614,14 @@
     font-size: 0.875rem; color: var(--sand); width: 70px; text-align: right; flex-shrink: 0;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+  /* × zum Löschen: sichtbar 1.5rem (WCAG-Mindestmaß 24px), Tippfläche (::after) nach oben,
+     unten und rechts auf 2.75rem erweitert - links nicht, dort liegt der Regler. Rand in
+     --sand statt --line, sonst unter 3:1 und kaum als Knopf erkennbar. */
   .slider-clear {
-    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line);
+    position: relative; flex-shrink: 0; width: 1.5rem; height: 1.5rem; padding: 0; border-radius: 50%; border: 1px solid var(--sand);
     background: transparent; color: var(--sand); font-size: 0.9375rem; line-height: 1; cursor: pointer;
   }
+  .slider-clear::after { content: ''; position: absolute; left: 0; top: -0.625rem; bottom: -0.625rem; right: -0.625rem; }
   /* Ohne Wert: unsichtbarer Platzhalter in exakt derselben Größe statt gar nichts - sonst
      würde der Regler beim ersten Eintragen um die Breite des × schmaler (gleicher Grund
      wie die feste Breite von .slider-value oben). */
@@ -721,7 +727,7 @@
   .note-editor { width: 100%; display: flex; flex-direction: column; gap: 8px; }
   .note-input {
     box-sizing: border-box; width: 100%; font-family: inherit; font-size: 1rem; line-height: 1.45;
-    padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px;
+    padding: 8px 10px; border: 1px solid var(--sand); border-radius: 3px;
     background: var(--input-bg); color: var(--ink); resize: vertical;
   }
   .note-editor-actions { display: flex; gap: 8px; }
@@ -815,7 +821,7 @@
   .text-box { flex-direction: column; align-items: stretch; gap: 8px; }
   .text-field-input {
     box-sizing: border-box; width: 100%; font-family: inherit; font-size: 1rem; line-height: 1.45;
-    padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px;
+    padding: 8px 10px; border: 1px solid var(--sand); border-radius: 3px;
     background: var(--input-bg); color: var(--ink); resize: vertical;
     field-sizing: content; min-height: 3.6em; max-height: 50vh;
   }
@@ -1247,7 +1253,7 @@
     padding: 1px 5px; border: 1px solid var(--line); border-radius: 3px; color: var(--sand);
   }
   .feedback-form textarea {
-    font-family: inherit; font-size: 1rem; line-height: 1.5; padding: 9px 10px; border: 1px solid var(--line);
+    font-family: inherit; font-size: 1rem; line-height: 1.5; padding: 9px 10px; border: 1px solid var(--sand);
     border-radius: 3px; background: var(--input-bg); color: var(--ink); width: 100%; min-height: 180px; resize: vertical;
   }
   .feedback-intro { margin-bottom: 14px; }
@@ -1332,7 +1338,7 @@
   .stepper-row { display: flex; align-items: center; gap: 8px; }
   .stepper-row input[type="number"] {
     width: 60px; text-align: center; font-family: inherit; font-size: 1rem; padding: 6px 4px;
-    border: 1px solid var(--line); border-radius: 3px; background: var(--input-bg); color: var(--ink);
+    border: 1px solid var(--sand); border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   .stepper-btn {
     width: 1.875rem; height: 1.875rem; flex-shrink: 0; font-family: inherit; font-size: 1.0625rem; line-height: 1;
@@ -1391,7 +1397,7 @@
   .label-inputs { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
   .label-inputs input {
     flex: 1; min-width: 0;
-    font-family: inherit; font-size: 0.9375rem; padding: 7px 9px; border: 1px solid var(--line);
+    font-family: inherit; font-size: 0.9375rem; padding: 7px 9px; border: 1px solid var(--sand);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   /* Wert der Stufe vor jeder Bezeichnung - gebraucht, um danach "Hohe/Niedrige Werte
@@ -1412,7 +1418,7 @@
   .step-dialog-field { font-weight: 600; }
   .modal-box p.step-dialog-note { font-size: 0.875rem; color: var(--sand); }
   .step-dialog select {
-    font-family: inherit; font-size: 0.9375rem; padding: 0.4375rem 0.5625rem; border: 1px solid var(--line);
+    font-family: inherit; font-size: 0.9375rem; padding: 0.4375rem 0.5625rem; border: 1px solid var(--sand);
     border-radius: 0.1875rem; background: var(--input-bg); color: var(--ink);
   }
   .step-dialog .pill-group { margin-bottom: 0.625rem; }
@@ -1427,7 +1433,7 @@
   .field-preview .habit-options { max-width: 100%; }
   .field-preview-note { margin: 8px 0 0; }
   .habit-form select {
-    font-family: inherit; font-size: 0.9375rem; padding: 7px 9px; border: 1px solid var(--line);
+    font-family: inherit; font-size: 0.9375rem; padding: 7px 9px; border: 1px solid var(--sand);
     border-radius: 3px; background: var(--input-bg); color: var(--ink);
   }
   .checkbox-field { display: flex; align-items: center; gap: 7px; font-size: 0.9375rem; margin-bottom: 4px; }
@@ -1472,6 +1478,9 @@
   /* Gesperrt (Feld mit Daten): die gewählte Option bleibt gut lesbar, nur die anderen verblassen. */
   .seg .pill-toggle--active:disabled, .kind-card--active:disabled { opacity: 1; }
   /* Feld-Typ als Karten mit einem Satz Erklärung (die wichtigste Wahl im Formular). */
+  /* Bewusst 1fr statt minmax(0, 1fr): bei schmalem Handy und großer Schrift darf ein langes
+     Wort ("Medikament") seine Spalte etwas verbreitern - gleich breite Spalten brachen es
+     mitten im Wort, ohne Trennstrich. */
   .kind-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
   .kind-card {
     display: flex; flex-direction: column; gap: 0.125rem; padding: 0.625rem 0.75rem; text-align: left;
@@ -1537,6 +1546,6 @@
 <div id="sr-alert" class="visually-hidden" aria-live="assertive"></div>
 <div id="toast-root"></div>
 
-<script type="module" src="./logbuch.js?v=2582caf5f7"></script>
+<script type="module" src="./logbuch.js?v=3a970e6d38"></script>
 </body>
 </html>

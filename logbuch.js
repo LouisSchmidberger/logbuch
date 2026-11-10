@@ -812,7 +812,7 @@ function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n)
 
 // --- Erinnerungszeit-Helfer (Minuten seit Mitternacht <-> "HH:MM") ---------
 // Erinnerungszeiten werden seit dem Onboarding-Tutorial in 15-Minuten-Schritten
-// statt nur zur vollen Stunde gespeichert (siehe CLAUDE.md), als Minuten seit
+// statt nur zur vollen Stunde gespeichert (siehe docs/erinnerungen.md), als Minuten seit
 // Mitternacht (0-1439) statt Stunde (0-23).
 function minutesToTimeStr(min) {
   const h = Math.floor(min / 60), m = min % 60;
@@ -857,7 +857,7 @@ function normalize(habit, value) {
 // an dem Tag kein Mitglied befüllt ist — ein berechnetes Feld hält nie einen eigenen Eintrag,
 // ihr Slug taucht nie als Key in state.entries auf). Ändert man die Mitgliederliste
 // eines berechneten Felds, wirkt sich das rückwirkend auf die gesamte Historie aus, da hier bei
-// jedem Aufruf live neu gerechnet wird — beabsichtigt, siehe CLAUDE.md.
+// jedem Aufruf live neu gerechnet wird — beabsichtigt, siehe docs/felder.md.
 function habitScore(h, dateKey) {
   if (hasNumberGoal(h)) return numberGoalScore(h, habitNumericValue(h, dateKey));
   if (isTimeKind(h)) return null; // eine Uhrzeit ist weder gut noch schlecht
@@ -3812,7 +3812,7 @@ function detectInitialLocale() {
 // Browser-/Systemsprache (z.B. "de-DE" -> "DE") - bewusst KEINE IP-Geolocation oder
 // navigator.geolocation, das würde einen Drittanbieter-Roundtrip bzw. einen
 // Berechtigungsdialog für eine reine Textanzeige bedeuten und widerspräche der
-// Zero-Access-Ausrichtung der App (siehe CLAUDE.md "Datenschutz & Sicherheit").
+// Zero-Access-Ausrichtung der App (siehe docs/verschluesselung.md).
 // Unabhängig von currentLocale (der von Nutzern selbst gewählten App-Sprache) - beide
 // können auseinanderlaufen (z.B. App auf Englisch gestellt, System auf de-DE), siehe
 // Verwendung in renderMentalHealthSection. Liefert null, wenn der Browser keine
@@ -4061,8 +4061,7 @@ function translateDbError(message) {
     // Der referenzierte Account existiert serverseitig nicht mehr - z.B. von einem
     // anderen Gerät aus gelöscht, während dieses Gerät noch einen gültigen, aber
     // inzwischen verwaisten Access-Token hatte (Supabase kann bereits ausgestellte
-    // Access-Token nicht vorzeitig entziehen, siehe CLAUDE.md "Datenschutz &
-    // Sicherheit"). Statt des kryptischen FK-Fehlers hier lokal ausloggen.
+    // Access-Token nicht vorzeitig entziehen, siehe docs/datenschutz-sicherheit.md). Statt des kryptischen FK-Fehlers hier lokal ausloggen.
     forceLogoutAccountGone();
     return t('error.db.accountGone');
   }
@@ -5312,7 +5311,7 @@ function clampHabitFormSteps(f) {
 // unten). Wer andere Bezeichnungen will, nutzt dafür Bezeichnungen statt eines
 // verschobenen Zahlenbereichs. Bereits bestehende (ggf. historisch andere) Felder
 // behalten beim Bearbeiten ihr echtes min (siehe habitToForm) - nur Von/Bis sind bei
-// vorhandenen Daten ohnehin gesperrt (Tier 3, siehe CLAUDE.md).
+// vorhandenen Daten ohnehin gesperrt (siehe docs/felder.md).
 // "Neues Feld": zuerst die Vorlagen (siehe FIELD_TEMPLATES).
 function newHabitForm() {
   return { ...defaultHabitForm(), template: { stage: 'pick' } };
@@ -5529,14 +5528,6 @@ async function handleHabitSave() {
   } finally {
     state.habitFormSaving = false;
     render();
-    // Die Meldung erscheint oben auf der Seite (siehe renderApp) - bei einem langen
-    // Formular weiter unten sonst außerhalb des sichtbaren Bereichs, ohne dass man
-    // merkt, warum das Speichern scheinbar nichts getan hat.
-    if (state.notice) {
-      requestAnimationFrame(() => {
-        document.querySelector('.notice')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      });
-    }
   }
 }
 
@@ -7503,19 +7494,16 @@ async function handleExportData() {
     })
   );
 
-  // Feld-Definitionen ebenso: lesbare Eigenschaften statt des Chiffretexts in enc.
+  // Feld-Definitionen ebenso: der ganze entschlüsselte Inhalt von enc statt des Chiffretexts.
+  // Bewusst alles statt einer Auswahl - eine Auswahl vergaß neue Eigenschaften (z.B. die
+  // Antworten von "Mehrere ankreuzen", ohne die deren Einträge im Export unlesbar waren).
   const decryptedDefs = await Promise.all(
     defsRes.data.map(async (row) => {
       if (!row.enc) return row;
       const { enc, ...rest } = row;
       try {
-        const p = await decryptData(currentDek, enc);
-        return {
-          ...rest, slug: p.key, name: p.name, unit: p.unit, min: p.min, max: p.max, labels: p.labels,
-          good: p.good, display_style: p.displayStyle, slider_show_value: p.sliderShowValue,
-          group_members: p.groupMembers, goal_threshold: p.goalThreshold, aggregate: p.aggregate ?? null, since: p.since ?? null,
-          hide_in_stats: !!p.hideInStats, archived_in_stats: !!p.archivedInStats,
-        };
+        const { key, ...props } = await decryptData(currentDek, enc);
+        return { ...rest, slug: key, ...props };
       } catch {
         return { ...rest, decrypt_error: true };
       }
@@ -7526,7 +7514,7 @@ async function handleExportData() {
     exported_at: new Date().toISOString(),
     habit_definitions: decryptedDefs,
     habit_sections: await Promise.all(sectionsRes.data.map(async ({ enc, ...rest }) => {
-      try { return { ...rest, name: (await decryptData(currentDek, enc)).name }; } catch { return { ...rest, decrypt_error: true }; }
+      try { return { ...rest, ...(await decryptData(currentDek, enc)) }; } catch { return { ...rest, decrypt_error: true }; }
     })),
     habit_entries: decryptedEntries,
     user_settings: settingsRes.data,
@@ -8006,7 +7994,7 @@ function renderAuth() {
         const { data, error } = await supabase.auth.signUp({
           email, password,
           // locale landet in den Nutzer-Metadaten - die Vorlage der Bestätigungsmail
-          // (Supabase-Dashboard, siehe CLAUDE.md) wählt damit Deutsch oder Englisch.
+          // (Supabase-Dashboard, siehe docs/i18n.md) wählt damit Deutsch oder Englisch.
           options: { emailRedirectTo: window.location.origin + window.location.pathname, data: { locale: currentLocale } },
         });
         if (error) { state.authError = translateAuthError(error.message); render(); return; }
@@ -9802,8 +9790,7 @@ function tipGroup(groupTitleKey, tips, iconName) {
 // Eigener, optisch hervorgehobener Bereich (statt nur einer weiteren Tipp-Gruppe) —
 // ausdrücklicher Nutzerwunsch, das Thema sichtbar stärker zu gewichten als die
 // übrigen, eher beiläufigen Bedienungs-Tipps. Ausführlichere Texte inkl. der
-// Begründung, warum uns das wichtig ist (siehe CLAUDE.md-Präferenz "Accessibility
-// als proaktiver Standard" bzw. die dahinterliegende Motivation), nicht nur die
+// Begründung, warum uns das wichtig ist (siehe docs/design-bedienung.md), nicht nur die
 // nackten Fakten.
 function renderA11ySection() {
   const items = [
@@ -9861,7 +9848,7 @@ function renderMentalHealthSection() {
 // Betreiber sehen kann und was nicht, und warum. WICHTIG: muss mit der Technik
 // übereinstimmen - ändert sich, was der Server im Klartext sieht (neue unverschlüsselte
 // Spalte, Log, Auswertung o.ä.), diesen Text mit anpassen (siehe CLAUDE.md
-// "Verschlüsselung"). Die Punkte stehen in <div> statt <p>, da einer eine Liste enthält.
+// "Pflichten bei Änderungen"). Die Punkte stehen in <div> statt <p>, da einer eine Liste enthält.
 function renderPrivacySection() {
   const items = [
     ['about.privacy.cannotSee.title', 'about.privacy.cannotSee.body'],
@@ -9881,8 +9868,7 @@ function renderPrivacySection() {
 
 // Von Hand hochgezählt bei größeren Änderungen - kein Build-Step im Projekt, der das
 // automatisch aus Git ableiten könnte, und ein Datum genügt hier als Rückverfolgbarkeit
-// (siehe Diskussion in CLAUDE.md-Kontext: keine echte Versionsnummer nötig, solange es
-// keine Release-Branches/nennenswerten externen Nutzerkreis gibt).
+// (keine echte Versionsnummer nötig, solange es keine Release-Branches gibt).
 // "Was ist neu" (Nutzer-Entscheidung 2026-10-11): neueste zuerst, Kennung = Datum des
 // Live-Gangs (zweiter am selben Tag: "2026-10-11b" - sonst gälte er als schon gesehen). Nur,
 // was Nutzer weiterbringt (neue Möglichkeiten), keine Interna; de + en, kurz, ohne
@@ -11642,7 +11628,7 @@ function renderManage() {
   // oberster Ebene wie ein Feld verschieben lässt; seine Felder verschiebt man innerhalb.
   // Umhängen zwischen Gruppen läuft bewusst über die Formulare (Gruppe bearbeiten bzw.
   // "Gruppe" im Feld-Formular) statt per Ziehen - einfach und für Tastatur/Screenreader
-  // gleich gut bedienbar, siehe CLAUDE.md.
+  // gleich gut bedienbar, siehe docs/design-bedienung.md.
   const sectionBlock = (b, idx, list) => {
     const sec = b.section;
     const confirmingDelete = state.sectionDeleteConfirm === sec.id;
@@ -13277,7 +13263,7 @@ app.addEventListener('click', async (e) => {
     f.reminderBelow = [...f.reminderBelow, f.reminderBelow[f.reminderBelow.length - 1] ?? ''];
     render();
     const i = f.reminderTimes.length - 1;
-    document.getElementById(`habit-form-reminder-time-${i}-h`)?.focus();
+    document.getElementById(`habit-form-reminder-time-${i}`)?.focus();
   } else if (action === 'habit-reminder-remove') {
     syncHabitFormFromDom();
     const f = state.habitForm;
@@ -13286,7 +13272,9 @@ app.addEventListener('click', async (e) => {
     f.reminderBelow = f.reminderBelow.filter((_, j) => j !== i);
     render();
     // Fokus nicht ins Leere: auf die Zeile, die jetzt an dieser Stelle steht (sonst die letzte).
-    document.getElementById(`habit-form-reminder-time-${Math.min(i, f.reminderTimes.length - 1)}-h`)?.focus();
+    // Ohne Zeiten mehr: auf "+ Weitere Zeit".
+    const rest = document.getElementById(`habit-form-reminder-time-${Math.min(i, f.reminderTimes.length - 1)}`);
+    (rest || document.querySelector('[data-action="habit-reminder-add"]'))?.focus();
   } else if (action === 'habit-schedule-mode') {
     syncHabitFormFromDom();
     state.habitForm.schedule.mode = el.dataset.mode;
@@ -13647,7 +13635,7 @@ app.addEventListener('change', async (e) => {
     // macht sichtbar, dass es weiterhin dieselbe Skala ist, bis man sie überschreibt.
     f.labels = resizeLabels(f.labels, habitFormStepCount(f), f.labelsEnabled ? (i) => String(habitFormStepValue(f, i)) : undefined);
     // Mit eigenen Bezeichnungen sind die Zahlen unsichtbar - intern wieder ab 1 (beim
-    // Speichern ohnehin, siehe saveHabitForm); die vorbelegten Texte behalten "0 …".
+    // Speichern ohnehin, siehe habitFormDefinition); die vorbelegten Texte behalten "0 …".
     if (f.labelsEnabled && !f.locked && f.min !== 1) { f.max = f.max - f.min + 1; f.min = 1; }
     render();
     return;
@@ -14482,7 +14470,7 @@ function clearLoadedAccountState() {
 }
 
 // Verhindert versehentliches Verlassen/Reload mitten im geführten Feld-Anlegen
-// (Tutorial Schritt 3 mit offenem Formular, siehe CLAUDE.md).
+// (Tutorial mit offenem Formular, siehe docs/onboarding.md).
 window.addEventListener('beforeunload', (e) => {
   if (state.tutorialStep === TUTORIAL_STEP_FIELD && state.habitForm) { e.preventDefault(); e.returnValue = ''; }
 });

@@ -33,7 +33,10 @@ siehe [verschluesselung.md](verschluesselung.md).
 - **Datenexport** (Art. 15/20 DSGVO): "Meine Daten exportieren" in den Einstellungen
   (`handleExportData`) lädt die eigenen Rohdaten aus allen fünf Tabellen mit Nutzerdaten
   (Felder, Einträge, Gruppen, Einstellungen, Push-Abos; RLS scoped automatisch) direkt im
-  Browser als JSON-Datei herunter – keine eigene Function nötig. Feedback ist bewusst
+  Browser als JSON-Datei herunter – keine eigene Function nötig. Verschlüsseltes kommt
+  entschlüsselt und **vollständig** hinein (der ganze Inhalt von `enc`, keine Auswahl
+  einzelner Eigenschaften – eine Auswahl vergaß neue, z.B. die Antworten von "Mehrere
+  ankreuzen"). Feedback ist bewusst
   **nicht** Teil des Exports (Nutzer-Entscheidung).
 
 ## Feedback
